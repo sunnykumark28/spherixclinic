@@ -1,0 +1,376 @@
+{% extends 'layout.html' %}
+
+{% block title %}Pharmacy • MediConnect{% endblock %}
+
+{% block content %}
+
+<!-- Premium Styles -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+        --primary: #0f172a;
+        --accent: #0d9488;
+        --soft-bg: #f8fafc;
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: var(--soft-bg);
+        color: var(--primary);
+    }
+
+    /* Smooth Scroll Behavior */
+    html { scroll-behavior: smooth; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Glass Morphism Utility */
+    .glass {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    }
+
+    /* Premium Card Hover */
+    .product-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px -5px rgba(15, 23, 42, 0.08); 
+    }
+
+    /* Search Input Animation */
+    .search-focus-ring {
+        transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    .search-focus-ring:focus-within {
+        box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+        border-color: var(--accent);
+    }
+    
+    /* Fade In Animation for Products */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+</style>
+
+<div class="min-h-screen flex flex-col">
+    
+    <!-- Sticky Glass Header / Search Bar -->
+    <div class="sticky top-0 z-50 glass w-full">
+        <div class="max-w-8xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            
+            <!-- Logo Area / Breadcrumb -->
+            <div class="hidden md:block">
+                <h1 class="text-xl font-bold tracking-tight text-slate-800">DEV <span class="text-teal-600">Pharmacy</span></h1>
+                <p class="text-xs text-slate-500 font-medium">Verified Medication Catalog by S iCons</p>
+            </div>
+
+            <!-- Central Search -->
+            <div class="w-full md:max-w-lg relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-slate-400"></i>
+                </div>
+                <input type="text" 
+                       id="productSearch" 
+                       class="search-focus-ring block w-full pl-11 pr-4 py-3 bg-slate-100/50 border border-slate-200 rounded-full text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white transition-all"
+                       placeholder="Search generic or brand names (e.g. Atorvastatin)...">
+            </div>
+
+            <!-- Cart Action -->
+            <a href="{{ url_for('view_cart') }}" class="relative p-3 rounded-full hover:bg-slate-200 transition-colors group">
+                <i class="fas fa-shopping-bag text-xl text-slate-600 group-hover:text-teal-700 transition-colors"></i>
+                <span id="cart-count-badge" class="absolute top-1 right-1 h-5 w-5 bg-teal-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full ring-2 ring-white transform scale-{% if cart_item_count > 0 %}100{% else %}0{% endif %} transition-transform duration-300">
+                    {{ cart_item_count }}
+                </span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Hero Banner (Subtle & Clean) -->
+    <div class="relative bg-slate-900 overflow-hidden">
+        <div class="absolute inset-0">
+            <img src="{{ url_for('static', filename='images/drugbg.jpg') }}" alt="Pharmacy" class="w-full h-full object-cover opacity-20">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
+        </div>
+        
+        <div class="relative max-w-7xl mx-auto px-6 py-16 sm:py-24 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between">
+            <div class="max-w-2xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold uppercase tracking-wider mb-6">
+                    <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+                    Now Delivering Nationwide
+                </div>
+                <h2 class="text-4xl md:text-6xl font-bold text-white tracking-tight mb-6">
+                    Professional Care, <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-400">Simplified.</span>
+                </h2>
+                <p class="text-lg text-slate-300 font-light leading-relaxed max-w-lg">
+                    Browse our extensive catalog of prescription and OTC medications. 
+                    Verified quality, discreet packaging, and express delivery.
+                </p>
+            </div>
+            
+            <!-- Trust Indicators -->
+            <div class="hidden lg:grid grid-cols-2 gap-4 mt-8 lg:mt-0">
+                <div class="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
+                    <i class="fas fa-shield-alt text-3xl text-teal-400 mb-3"></i>
+                    <h4 class="text-white font-semibold">100% Genuine</h4>
+                    <p class="text-slate-400 text-xs mt-1">Sourced directly from manufacturers</p>
+                </div>
+                <div class="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
+                    <i class="fas fa-shipping-fast text-3xl text-teal-400 mb-3"></i>
+                    <h4 class="text-white font-semibold">24h Dispatch</h4>
+                    <!-- Updated symbol here -->
+                    <p class="text-slate-400 text-xs mt-1">Free shipping on orders over ₹500</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow max-w-8xl mx-auto px-6 py-12 w-full">
+        
+        <div class="flex items-center justify-between mb-8">
+            <h3 class="text-2xl font-bold text-slate-800">Medicines</h3>
+            
+            <!-- Filter Dropdown (Visual) -->
+            <div class="relative group">
+                <button class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
+                    <span>Sort by: Relevance</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div id="productList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {% set medicines = [
+                "Abacavir", "Abemaciclib", "Abiraterone", "Acalabrutinib", "Acamprosate", "Acarbose", "Acebutolol",
+                "Acetaminophen", "Acetazolamide", "Acetylcysteine", "Aciclovir", "Acitretin",
+                "Adalimumab", "Adapalene", "Adefovir", "Adenosine", "Albendazole", "Albuterol",
+                "Alendronic acid", "Alfuzosin", "Allopurinol", "Almotriptan", "Alogliptin", "Alprazolam",
+                "Alprostadil", "Amantadine", "Ambrisentan", "Amikacin", "Amiloride", "Aminophylline",
+                "Amiodarone", "Amitriptyline", "Amlodipine", "Amoxapine", "Amoxicillin", "Amphotericin B",
+                "Ampicillin", "Anagrelide", "Anastrozole", "Apixaban", "Aripiprazole", "Artemether", "Artesunate",
+                "Ascorbic Acid", "Aspirin", "Atazanavir", "Atenolol", "Atezolizumab", "Atomoxetine",
+                "Atorvastatin", "Atovaquone", "Azathioprine", "Azelastine", "Azithromycin", "Baclofen",
+                "Beclometasone", "Benazepril", "Bendamustine", "Bendroflumethiazide", "Benzonatate",
+                "Benzoyl peroxide", "Benztropine", "Betahistine", "Betamethasone", "Bicalutamide", "Bimatoprost",
+                "Bisacodyl", "Bisoprolol", "Bortezomib", "Bosutinib", "Brimonidine", "Brinzolamide",
+                "Bromocriptine", "Budesonide", "Bumetanide", "Bupivacaine", "Buprenorphine", "Bupropion",
+                "Buspirone", "Busulfan", "Cabergoline", "Cabozantinib", "Calcipotriol", "Calcitonin",
+                "Calcitriol", "Candesartan", "Capecitabine", "Capsaicin", "Captopril", "Carbamazepine",
+                "Carbimazole", "Carboplatin", "Carfilzomib", "Carisoprodol", "Carvedilol", "Cefaclor",
+                "Cefadroxil", "Cefazolin", "Cefdinir", "Cefepime", "Cefixime", "Cefpodoxime", "Cefprozil",
+                "Ceftazidime", "Ceftriaxone", "Cefuroxime", "Celecoxib", "Cephalexin", "Cetirizine",
+                "Chloramphenicol", "Chlordiazepoxide", "Chlorhexidine", "Chlorphenamine", "Chlorpromazine",
+                "Chlorthalidone", "Cholestyramine", "Ciclopirox", "Cilostazol", "Cimetidine", "Ciprofloxacin",
+                "Cisplatin", "Citalopram", "Clarithromycin", "Clindamycin", "Clobetasol", "Clomipramine",
+                "Clonazepam", "Clonidine", "Clopidogrel", "Clotrimazole", "Clozapine", "Co-amoxiclav", "Codeine",
+                "Colchicine", "Colesevelam", "Cyclizine", "Cyclobenzaprine", "Cyclophosphamide", "Cyclosporine",
+                "Cytarabine", "Dabigatran", "Dapagliflozin", "Dapsone", "Daptomycin", "Darunavir", "Dasatinib",
+                "Dexamethasone", "Dexlansoprazole", "Dexmethylphenidate", "Dextroamphetamine",
+                "Dextromethorphan", "Diazepam", "Diclofenac", "Dicyclomine", "Digoxin",
+                "Dihydrocodeine", "Diltiazem", "Diphenhydramine", "Dipyridamole", "Disulfiram",
+                "Divalproex", "Docetaxel", "Docusate", "Domperidone", "Donepezil", "Dorzolamide", "Doxazosin",
+                "Doxepin", "Doxorubicin", "Doxycycline", "Duloxetine", "Dutasteride", "Efavirenz", "Eletriptan",
+                "Enalapril", "Enoxaparin", "Entacapone", "Entecavir", "Enzalutamide", "Epirubicin", "Eplerenone",
+                "Epoetin alfa", "Eprosartan", "Erlotinib", "Ertapenem", "Erythromycin", "Escitalopram",
+                "Esomeprazole", "Estradiol", "Eszopiclone", "Etanercept", "Ethambutol", "Ethinyl estradiol",
+                "Ethosuximide", "Etoposide", "Etoricoxib", "Everolimus", "Exemestane", "Exenatide", "Ezetimibe",
+                "Famotidine", "Febuxostat", "Felodipine", "Fenofibrate", "Fentanyl", "Ferrous sulfate",
+                "Fexofenadine", "Finasteride", "Flecainide", "Flucloxacillin", "Fluconazole", "Fludrocortisone",
+                "Fluorouracil", "Fluoxetine", "Fluticasone", "Fluvastatin", "Fluvoxamine", "Folic acid",
+                "Fondaparinux", "Formoterol", "Fosfomycin", "Fosinopril", "Furosemide", "Fusidic acid",
+                "Gabapentin", "Galantamine", "Gemcitabine", "Gemfibrozil", "Gentamicin", "Gliclazide",
+                "Glimepiride", "Glipizide", "Glyburide", "Goserelin", "Granisetron", "Guaifenesin",
+                "Griseofulvin", "Haloperidol", "Heparin", "Hydralazine", "Hydrochlorothiazide", "Hydrocortisone",
+                "Hydromorphone", "Hydroxychloroquine", "Hydroxyurea", "Hydroxyzine", "Hyoscine", "Ibandronic acid",
+                "Ibrutinib", "Ibuprofen", "Idarubicin", "Ifosfamide"
+            ] %}
+
+            {% for med in medicines %}
+            <div class="product-item product-card bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden relative group animate-fade-in" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+                
+                <!-- Quick Add Overlay (Desktop) -->
+                <div class="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="bg-white text-slate-400 hover:text-rose-500 p-2 rounded-full shadow-md border border-slate-100">
+                        <i class="far fa-heart"></i>
+                    </button>
+                </div>
+
+                <!-- Minimalist Image Area -->
+                <div class="h-40 bg-slate-50 flex items-center justify-center p-6 relative">
+                    <!-- Dynamic Initials Avatar matching theme -->
+                    <img src="https://ui-avatars.com/api/?name={{ med }}&background=f1f5f9&color=0d9488&font-size=0.35&length=2&bold=true" 
+                         alt="{{ med }}" 
+                         class="w-20 h-20 rounded-full shadow-inner object-cover opacity-90 group-hover:scale-110 transition-transform duration-500">
+                </div>
+
+                <!-- Content -->
+                <div class="p-5 flex flex-col flex-grow">
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 uppercase tracking-wider">RX</span>
+                            {% if loop.index % 5 == 0 %}
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 uppercase tracking-wider">Best Seller</span>
+                            {% endif %}
+                        </div>
+                        <h4 class="text-base font-bold text-slate-800 leading-tight mb-1 truncate" title="{{ med }}">
+                            {{ med }}
+                        </h4>
+                        <p class="text-xs text-slate-400 font-medium">Tablet • 10mg</p>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-slate-50 flex items-end justify-between">
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Price</p>
+                            <div class="flex items-baseline gap-1">
+                                <!-- Updated symbol here -->
+                                <span class="text-lg font-bold text-slate-800">₹{{ (9.99 + loop.index0 * 0.5) | round(2) }}</span>
+                            </div>
+                        </div>
+
+                        <button class="add-to-cart-btn h-9 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-teal-700 transition-colors shadow-lg shadow-slate-200 flex items-center gap-2"
+                                data-name="{{ med }}"
+                                data-price="{{ (9.99 + loop.index0 * 0.5) | round(2) }}">
+                            <span>Add</span>
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Empty State for Search (Hidden by default) -->
+            <div id="noResults" class="hidden col-span-full py-20 text-center">
+                <div class="inline-block p-4 rounded-full bg-slate-50 mb-4">
+                    <i class="fas fa-search text-3xl text-slate-300"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-700">No medicines found</h3>
+                <p class="text-slate-500">Try checking your spelling or search for a different keyword.</p>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- Footer (Minimal) -->
+    <footer class="bg-white/10 border-t border-slate-200 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <p class="text-slate-400 text-sm">&copy; {{ 2024 }} MediConnect Pharmacy. Licensed & Certified.</p>
+            <p class="text-slate-400 text-sm mt-1">S iCons</p>
+        </div>
+    </footer>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('productSearch');
+    const productItems = document.querySelectorAll('.product-item');
+    const noResults = document.getElementById('noResults');
+
+    // Debounce function for smoother search performance
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    const performSearch = debounce(function() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        productItems.forEach(item => {
+            const name = item.querySelector('h4').textContent.toLowerCase();
+            
+            if (name.includes(searchTerm)) {
+                item.classList.remove('hidden');
+                item.classList.add('flex'); // Restore flex display
+                visibleCount++;
+            } else {
+                item.classList.add('hidden');
+                item.classList.remove('flex');
+            }
+        });
+
+        // Toggle Empty State
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+    }, 150); // 150ms delay
+
+    searchInput.addEventListener('input', performSearch);
+
+    // Add to Cart Logic
+    document.getElementById('productList').addEventListener('click', function(e) {
+        const btn = e.target.closest('.add-to-cart-btn');
+        if (!btn || btn.disabled) return;
+
+        const originalHtml = btn.innerHTML;
+        const productName = btn.dataset.name;
+        const productPrice = parseFloat(btn.dataset.price);
+
+        // Loading State
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+        btn.classList.add('bg-slate-700');
+
+        fetch('/add-to-cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: productName, price: productPrice }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Success Feedback
+                btn.classList.remove('bg-slate-900', 'bg-slate-700', 'hover:bg-teal-600');
+                btn.classList.add('bg-teal-500', 'text-white');
+                btn.innerHTML = '<i class="fas fa-check"></i> <span>Added</span>';
+                
+                // Update Cart Badge with Animation
+                const badge = document.getElementById('cart-count-badge');
+                badge.textContent = data.cart_item_count;
+                badge.classList.remove('scale-0');
+                badge.classList.add('scale-125'); // Pulse effect
+                setTimeout(() => badge.classList.remove('scale-125'), 200);
+
+                // Reset Button
+                setTimeout(() => {
+                    btn.classList.add('bg-slate-900', 'hover:bg-teal-600');
+                    btn.classList.remove('bg-teal-500');
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }, 2000);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        });
+    });
+});
+</script>
+
+{% endblock %}

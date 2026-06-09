@@ -1,0 +1,580 @@
+{% extends 'layout.html' %}
+
+{% block title %}AI Symptoms Analyzer - Step 2: Clinical Details{% endblock %}
+
+{% block head %}
+<!-- Google Font & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    :root {
+        --primary-accent: #666767;
+        --glass-bg: rgba(255, 255, 255, 0.07);
+        --glass-border: rgba(255, 255, 255, 0.15);
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background: #000000;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        color: #fafafa;
+    }
+
+    /* BEAUTIFUL DYNAMIC BACKGROUND */
+    .bg-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        background: radial-gradient(circle at 0% 0%, #0c4a6e 0%, transparent 50%),
+                    radial-gradient(circle at 100% 0%, #1e1b4b 0%, transparent 50%),
+                    radial-gradient(circle at 100% 100%, #4c1d95 0%, transparent 50%),
+                    radial-gradient(circle at 0% 100%, #082f49 0%, transparent 50%);
+        background-color: #020617;
+    }
+
+    .bg-orb {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        border-radius: 50%;
+        filter: blur(100px);
+        opacity: 0.5;
+        z-index: -1;
+        animation: floatOrb 20s infinite alternate ease-in-out;
+    }
+
+    @keyframes floatOrb {
+        from { transform: translate(-10%, -10%) rotate(0deg); }
+        to { transform: translate(20%, 20%) rotate(360deg); }
+    }
+
+    /* PREMIUM GLASS CLASSES */
+    .glass-main {
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(30px) saturate(150%);
+        -webkit-backdrop-filter: blur(30px) saturate(150%);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .glass-input {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(5px);
+        color: white;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-input:focus {
+        background: rgba(0, 0, 0, 0.4);
+        border-color: var(--primary-accent);
+        box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        outline: none;
+    }
+
+    .glow-button {
+        background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+        box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .glow-button:hover {
+        box-shadow: 0 0 40px rgba(14, 165, 233, 0.6);
+        transform: scale(1.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Animated Background Elements -->
+<div class="bg-wrapper">
+    <div class="bg-orb" style="background: #0ea5e9; top: 10%; left: 10%;"></div>
+    <div class="bg-orb" style="background: #6366f1; bottom: 10%; right: 10%; animation-delay: -5s;"></div>
+</div>
+
+<div class="min-h-screen w-full flex items-center justify-center p-4 lg:p-8">
+    <div class="w-full max-w-9xl flex flex-col xl:flex-row gap-8 items-start">
+        
+        <!-- LEFT: MAIN ANALYSIS INTERFACE -->
+        <div class="glass-main rounded-2xl w-full flex flex-col lg:flex-row relative z-10 min-h-[800px] overflow-hidden border border-blue-500/20">
+  
+            <!-- FORM CONTENT -->
+            <div class="w-full lg:w-7/12 p-8 lg:p-14 border-r border-white/5">
+                
+                <!-- Progress Stepper -->
+                <div class="flex items-center gap-4 mb-10">
+                    <div class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-green-400">
+                        <i class="fas fa-check text-lg"></i>
+                    </div>
+                    <div class="flex-1 h-[2px] bg-white/10 rounded-full overflow-hidden">
+                        <div class="h-full w-full bg-sky-500 rounded-full"></div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl glow-button flex items-center justify-center text-white">
+                            <i class="fas fa-notes-medical text-lg"></i>
+                        </div>
+                        <div class="hidden sm:block">
+                            <span class="block text-[12px] font-extrabold text-sky-400 uppercase tracking-widest">Stage 02</span>
+                            <span class="block text-sm font-bold text-white">Clinical Details</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h1 class="text-4xl lg:text-5xl font-extrabold text-blue-400 mb-4 leading-tight">
+                    Symptom <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Analysis.</span>
+                </h1>
+                <p class="text-slate-300 text-lg mb-10">
+                    Describe your condition in detail. You may optionally capture an image.
+                </p>
+
+                <!-- FLASH MESSAGES -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="mb-6 space-y-2">
+                            {% for category, message in messages %}
+                                <div class="p-4 rounded-lg text-sm font-semibold {{ 'bg-red-500/20 text-red-200 border border-red-500/50' if category == 'error' else 'bg-green-500/20 text-green-200 border border-green-500/50' }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- ACTUAL FORM -->
+                <form method="POST" action="{{ url_for('symptoms_step2') }}" class="space-y-10" id="symptomsForm">
+                    <input type="hidden" name="camera_image_data" id="camera_image_data">
+                    <input type="hidden" name="body_part" id="selected_body_part">
+                    <input type="hidden" name="selected_symptoms" id="selected_symptoms">
+
+                    <!-- SECTION 1: SELECT BODY PARTS & SYMPTOMS -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-full bg-sky-500 flex items-center justify-center text-white font-bold">1</div>
+                            <div>
+                                <label class="text-xs font-bold text-sky-400 uppercase tracking-widest">Step 1: Select Body Parts</label>
+                                <p class="text-sm text-slate-400">Choose affected areas and symptoms</p>
+                            </div>
+                        </div>
+
+                        <!-- Body Parts Grid -->
+                        <div class="space-y-3">
+                            <label class="text-xs font-bold text-slate-300 uppercase tracking-widest ml-1">Affected Body Areas</label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="bodyPartsGrid">
+                                <button type="button" class="body-part-btn glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-500" data-body="Head">
+                                    <i class="fas fa-head-side-virus text-2xl text-sky-400"></i>
+                                    <span class="text-sm font-semibold">Head & Neck</span>
+                                </button>
+                                <button type="button" class="body-part-btn glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-500" data-body="Chest">
+                                    <i class="fas fa-heart text-2xl text-red-400"></i>
+                                    <span class="text-sm font-semibold">Chest</span>
+                                </button>
+                                <button type="button" class="body-part-btn glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-500" data-body="Abdomen">
+                                    <i class="fas fa-child text-2xl text-orange-400"></i>
+                                    <span class="text-sm font-semibold">Abdomen</span>
+                                </button>
+                                <button type="button" class="body-part-btn glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-500" data-body="Back">
+                                    <i class="fas fa-spine text-2xl text-purple-400"></i>
+                                    <span class="text-sm font-semibold">Back</span>
+                                </button>
+                                <button type="button" class="body-part-btn glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-500" data-body="Arms">
+                                    <i class="fas fa-hands text-2xl text-indigo-400"></i>
+                                    <span class="text-sm font-semibold">Arms & Hands</span>
+                                </button>
+                                <button type="button" class="body-part-btn glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-500" data-body="Legs">
+                                    <i class="fas fa-person-hiking text-2xl text-green-400"></i>
+                                    <span class="text-sm font-semibold">Legs & Feet</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Common Symptoms Chips -->
+                        <div class="space-y-3 mt-6">
+                            <label class="text-xs font-bold text-slate-300 uppercase tracking-widest ml-1">Common Symptoms</label>
+                            <div class="flex flex-wrap gap-2" id="symptomsChips">
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="Headache">
+                                    <i class="fas fa-head-side-virus mr-2"></i>Headache
+                                </button>
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="Fever">
+                                    <i class="fas fa-thermometer mr-2"></i>Fever
+                                </button>
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="Cough">
+                                    <i class="fas fa-lungs mr-2"></i>Cough
+                                </button>
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="Chest Pain">
+                                    <i class="fas fa-heart mr-2"></i>Chest Pain
+                                </button>
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="Stomach Pain">
+                                    <i class="fas fa-child mr-2"></i>Stomach Pain
+                                </button>
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="back pain">
+                                    <i class="fas fa-spine mr-2"></i>Back Pain
+                                </button>
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="Fatigue">
+                                    <i class="fas fa-battery-quarter mr-2"></i>Fatigue
+                                </button>
+                                <button type="button" class="symptom-chip glass-card rounded-full px-4 py-2 text-sm font-semibold border-2 border-slate-700 hover:border-sky-500 transition-all cursor-pointer" data-symptom="Nausea">
+                                    <i class="fas fa-face-dizzy mr-2"></i>Nausea
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Selected Summary -->
+                        <div class="p-4 glass-card rounded-2xl border-l-4 border-sky-500 flex justify-between items-center">
+                            <p class="text-sm text-slate-300"><span class="font-bold text-sky-400">Selected:</span> <span id="selectionSummary">None yet</span></p>
+                            <button type="button" id="clearSelectionBtn" class="text-xs text-red-400 hover:text-red-700 transition-colors hidden">
+                                <i class="fas fa-times-circle mr-1"></i>Clear All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: DETAILED DESCRIPTION -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-full bg-sky-500/50 flex items-center justify-center text-white font-bold">2</div>
+                            <div>
+                                <label class="text-xs font-bold text-sky-400 uppercase tracking-widest">Step 2: Describe in Detail</label>
+                                <p class="text-sm text-slate-400">Provide additional information about your symptoms</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <textarea name="symptoms" id="symptoms" rows="6" placeholder="E.g., I have had a severe headache and mild fever for the past 2 days. It started suddenly after exposure to cold. I also have a runny nose and mild cough..." class="w-full glass-input rounded-2xl p-6 text-lg border-2 border-slate-700 focus:border-blue-400 resize-none"></textarea>
+                            <p class="text-xs text-slate-500">Be as detailed as possible to get accurate analysis</p>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: IMAGE/CAMERA UPLOAD -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center text-white font-bold">3</div>
+                            <div>
+                                <label class="text-xs font-bold text-sky-400 uppercase tracking-widest">Step 3: Visual Evidence (Optional)</label>
+                                <p class="text-sm text-slate-400">Upload an image or use your camera</p>
+                            </div>
+                        </div>
+
+                        <!-- Camera Preview -->
+                        <div id="camera-container" class="hidden w-full rounded-2xl overflow-hidden border-2 border-slate-700 relative bg-black">
+                            <video id="video" autoplay playsinline class="w-full object-cover max-h-[400px]"></video>
+                            <button type="button" id="capture-btn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-sky-500 hover:bg-sky-400 text-white rounded-full p-4 shadow-lg transition-colors">
+                                <i class="fas fa-camera text-xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- Canvas Preview (After Capture) -->
+                        <div id="canvas-container" class="hidden w-full rounded-2xl overflow-hidden border-2 border-slate-700 relative bg-black">
+                            <canvas id="canvas" class="w-full max-h-[400px] object-cover"></canvas>
+                            <button type="button" id="retake-btn" class="absolute top-4 right-4 bg-slate-900/80 hover:bg-slate-900 text-white rounded-lg px-4 py-2 text-sm font-bold backdrop-blur-sm transition-colors border border-white/10">
+                                <i class="fas fa-redo mr-2"></i>Retake
+                            </button>
+                        </div>
+
+                        <!-- Camera/Upload Buttons -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" id="start-camera-btn" class="glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-700">
+                                <i class="fas fa-camera text-2xl text-sky-400"></i>
+                                <span class="text-sm font-semibold">Open Camera</span>
+                            </button>
+                            <label class="glass-card rounded-2xl p-5 text-center hover:bg-white/10 transition-all flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-700 hover:border-sky-700">
+                                <i class="fas fa-image text-2xl text-indigo-400"></i>
+                                <span class="text-sm font-semibold">Upload Image</span>
+                                <input type="file" id="image-upload" accept="image/*" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit / Analyze Button -->
+                    <div class="pt-6 border-t border-slate-700 flex flex-col sm:flex-row gap-4">
+                        <button type="button" id="reset-form-btn" class="w-full sm:w-2/3 relative overflow-hidden group glass-card text-slate-600 hover:text-white rounded-2xl font-bold py-6 px-6 transition-all hover:bg-red-600 flex items-center justify-center gap-3 cursor-pointer border border-slate-600 hover:border-red-400">
+                            <i class="fas fa-redo-alt group-hover:-rotate-180 transition-transform duration-500 text-white"></i>
+                            <span class="tracking-widest uppercase text-sm">Clear All</span>
+                        </button>
+                            <button type="submit" id="submit-btn" class="w-full sm:w-2/3 relative overflow-hidden group glass-card text-slate-600 hover:text-white rounded-2xl font-bold py-6 px-6 transition-all hover:bg-green-800 flex items-center justify-center gap-3 cursor-pointer border border-slate-600 hover:border-green-600">
+                            <span class="tracking-widest uppercase text-base">Analyze</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- RIGHT: PREVIEW/INFO PANEL -->
+            <div class="hidden lg:flex w-5/12 bg-black/30 p-10 flex-col justify-between relative overflow-hidden">
+                <div class="absolute inset-0 z-0">
+                    <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=1000" 
+                         class="w-full h-full object-cover opacity-30 mix-blend-overlay">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent"></div>
+                </div>
+                
+                <div class="relative z-10">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card border-white/20 mb-6">
+                        <div class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></div>
+                        <span class="text-[10px] font-bold text-white uppercase tracking-widest">Neural Engine Ready</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-sky-400 mb-4 leading-snug">Pattern <br>Recognition</h3>
+                    <p class="text-slate-900 text-sm leading-relaxed mb-8">
+                        The AI will analyze your described symptoms alongside any visual context to identify the most probable conditions from our medical knowledge base.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 p-4 glass-card rounded-2xl">
+                            <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 mt-1 shrink-0"><i class="fas fa-shield-alt text-sm"></i></div>
+                            <div>
+                                <span class="text-sm font-bold text-white block mb-1">Privacy Focused</span>
+                                <span class="text-xs text-slate-900">Your images and descriptions are processed securely and discarded after analysis.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Elements
+        const bodyPartBtns = document.querySelectorAll('.body-part-btn');
+        const symptomChips = document.querySelectorAll('.symptom-chip');
+        const selectedBodyPartInput = document.getElementById('selected_body_part');
+        const selectedSymptomsInput = document.getElementById('selected_symptoms');
+        const selectionSummary = document.getElementById('selectionSummary');
+        const symptomTextarea = document.getElementById('symptoms');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+        
+        // Camera elements
+        const startCameraBtn = document.getElementById('start-camera-btn');
+        const imageUploadInput = document.getElementById('image-upload');
+        const cameraContainer = document.getElementById('camera-container');
+        const canvasContainer = document.getElementById('canvas-container');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const cameraImageDataInput = document.getElementById('camera_image_data');
+        
+        const resetFormBtn = document.getElementById('reset-form-btn');
+        const form = document.getElementById('symptomsForm');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        let stream = null;
+        let selectedBodyPart = null;
+        let selectedSymptoms = [];
+
+        // ===== BODY PART SELECTION =====
+        bodyPartBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const bodyPart = btn.dataset.body;
+                
+                if (selectedBodyPart === bodyPart) {
+                    // Deselect if already selected
+                    selectedBodyPart = null;
+                    btn.classList.remove('bg-sky-500/20', 'border-sky-500');
+                    btn.classList.add('border-slate-700');
+                } else {
+                    // Select new
+                    bodyPartBtns.forEach(b => {
+                        b.classList.remove('bg-sky-500/20', 'border-sky-500');
+                        b.classList.add('border-slate-700');
+                    });
+                    btn.classList.add('bg-sky-500/20', 'border-sky-500');
+                    selectedBodyPart = bodyPart;
+                }
+                selectedBodyPartInput.value = selectedBodyPart || '';
+                updateSummary();
+            });
+        });
+
+        // ===== SYMPTOM SELECTION =====
+        symptomChips.forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
+                const symptom = chip.dataset.symptom;
+                
+                if (selectedSymptoms.includes(symptom)) {
+                    selectedSymptoms = selectedSymptoms.filter(s => s !== symptom);
+                    chip.classList.remove('bg-sky-500/20', 'border-sky-500', 'text-sky-300');
+                    chip.classList.add('border-slate-700');
+                } else {
+                    selectedSymptoms.push(symptom);
+                    chip.classList.add('bg-sky-500/20', 'border-sky-500', 'text-sky-300');
+                    chip.classList.remove('border-slate-700');
+                }
+                
+                selectedSymptomsInput.value = JSON.stringify(selectedSymptoms);
+                updateSummary();
+            });
+        });
+
+        // ===== UPDATE SUMMARY =====
+        function updateSummary() {
+            let summary = [];
+            if (selectedBodyPart) {
+                summary.push(`<span class="text-sky-300">${selectedBodyPart}</span>`);
+            }
+            if (selectedSymptoms.length > 0) {
+                summary.push(`<span class="text-sky-300">${selectedSymptoms.join(', ')}</span>`);
+            }
+            
+            if (summary.length > 0) {
+                selectionSummary.innerHTML = summary.join(' &bull; ');
+                clearSelectionBtn.classList.remove('hidden');
+            } else {
+                selectionSummary.innerHTML = '<span class="text-slate-500">None yet</span>';
+                clearSelectionBtn.classList.add('hidden');
+            }
+        }
+        
+        // ===== CLEAR SELECTION =====
+        clearSelectionBtn.addEventListener('click', () => {
+            selectedBodyPart = null;
+            selectedBodyPartInput.value = '';
+            bodyPartBtns.forEach(b => {
+                b.classList.remove('bg-sky-500/20', 'border-sky-500');
+                b.classList.add('border-slate-700');
+            });
+            selectedSymptoms = [];
+            selectedSymptomsInput.value = '';
+            symptomChips.forEach(chip => {
+                chip.classList.remove('bg-sky-500/20', 'border-sky-500', 'text-sky-300');
+                chip.classList.add('border-slate-700');
+            });
+            updateSummary();
+        });
+
+        // ===== GLOBAL FORM RESET =====
+        resetFormBtn.addEventListener('click', () => {
+            // Clear selections
+            clearSelectionBtn.click();
+            
+            // Clear text area
+            symptomTextarea.value = '';
+            
+            // Clear images
+            cameraImageDataInput.value = '';
+            imageUploadInput.value = '';
+            cameraContainer.classList.add('hidden');
+            canvasContainer.classList.add('hidden');
+            startCameraBtn.classList.remove('hidden');
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // ===== CAMERA FUNCTIONS =====
+        startCameraBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                video.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                cameraContainer.classList.remove('hidden');
+            } catch (err) {
+                console.error("Camera error: ", err);
+                alert("Could not access camera. Please check permissions.");
+            }
+        });
+
+        // Capture Image
+        captureBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.85);
+            cameraImageDataInput.value = imageData;
+
+            // Stop camera
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            cameraContainer.classList.add('hidden');
+            canvasContainer.classList.remove('hidden');
+        });
+
+        // Retake Image
+        retakeBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            cameraImageDataInput.value = "";
+            canvasContainer.classList.add('hidden');
+            
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                video.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                cameraContainer.classList.remove('hidden');
+            } catch (err) {
+                console.error("Camera error: ", err);
+                alert("Could not access camera.");
+                startCameraBtn.classList.remove('hidden');
+                cameraContainer.classList.add('hidden');
+            }
+        });
+
+        // Image Upload
+        imageUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        cameraImageDataInput.value = canvas.toDataURL('image/jpeg', 0.85);
+                        startCameraBtn.classList.add('hidden');
+                        cameraContainer.classList.add('hidden');
+                        canvasContainer.classList.remove('hidden');
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form Submit
+        form.addEventListener('submit', (e) => {
+            // Ensure at least symptoms are provided
+            if (!symptomTextarea.value.trim()) {
+                e.preventDefault();
+                alert('Please describe your symptoms in the text area.');
+                return;
+            }
+
+            // If symptoms were selected via chips but not in textarea, add them
+            if (selectedSymptoms.length > 0 && !symptomTextarea.value.includes(selectedSymptoms[0])) {
+                symptomTextarea.value = selectedSymptoms.join(', ') + '\n\n' + symptomTextarea.value;
+            }
+
+            submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Analyzing...';
+            submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            submitBtn.disabled = true;
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    });
+</script>
+{% endblock %}

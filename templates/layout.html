@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth antialiased">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Dev AI+ | Intelligent Health Companion{% endblock %}</title>
+
+  <!-- Premium Fonts: Outfit (Headings) & Inter (Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Pro (Free CDN) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Advanced Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif'],
+          },
+          colors: {
+            glass: {
+              100: 'rgba(255, 255, 255, 0.1)',
+              200: 'rgba(255, 255, 255, 0.2)',
+              800: 'rgba(255, 255, 255, 0.8)',
+            },
+            primary: {
+              500: '#3b82f6',
+              600: '#2563eb',
+            }
+          },
+          boxShadow: {
+            'glow-blue': '0 0 40px -10px rgba(37, 99, 235, 0.4)',
+            'glass-edge': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.6), 0 4px 30px rgba(0, 0, 0, 0.05)',
+            'inner-light': 'inset 0 2px 4px 0 rgba(255, 255, 255, 0.3)',
+            'floating': '0 20px 40px -5px rgba(0, 0, 0, 0.1), 0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+          },
+          animation: {
+            'blob': 'blob 7s infinite',
+            'float-slow': 'float 6s ease-in-out infinite',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            blob: {
+              '0%': { transform: 'translate(0px, 0px) scale(1)' },
+              '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+              '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+              '100%': { transform: 'translate(0px, 0px) scale(1)' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* --- REALISTIC TEXTURE & BACKGROUND --- */
+    body {
+        background-color: #ffffff;
+        color: #1e293b;
+        overflow-x: hidden;
+    }
+    
+    /* Grain overlay for tactile realism */
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 9999;
+    }
+
+    /* Ambient Background blobs */
+    .ambient-light {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: -1;
+        overflow: hidden;
+        background: radial-gradient(circle at 15% 50%, rgba(219, 234, 254, 0.5), transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(224, 231, 255, 0.5), transparent 25%);
+    }
+
+    /* --- PREMIUM GLASSMORPHISM UTILITIES --- */
+    .glass-panel {
+        background: rgba(209, 209, 209, 0.75);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid rgba(255, 0, 0, 0.5);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+    }
+
+    .glass-nav {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* --- COMPONENT STYLES --- */
+    .nav-link { position: relative; }
+    .nav-link::after {
+        content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px;
+        background: linear-gradient(90deg, #2563eb, #4f46e5);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateX(-50%);
+    }
+    .nav-link:hover::after { width: 80%; }
+
+    /* Button Shine Effect */
+    .btn-shine {
+        position: relative; overflow: hidden;
+    }
+    .btn-shine::before {
+        content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+        transform: skewX(-20deg); transition: 0.5s;
+    }
+    .btn-shine:hover::before { left: 150%; transition: 0.7s; }
+
+    /* Vertical Text Utility */
+    .vertical-text { writing-mode: vertical-rl; transform: rotate(180deg); }
+
+    /* Chatbot Message Bubbles */
+    .chat-bubble-user {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .chat-bubble-bot {
+        background: #ffffff;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+<!-- Ambient Background Animation -->
+<div class="ambient-light">
+    <div class="absolute top-0 -left-4 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+    <div class="absolute top-0 -right-4 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+    <div class="absolute -bottom-8 left-20 w-96 h-96 bg-rose-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+</div>
+
+<!-- Emergency Button (Physical/Realistic Style) -->
+<a href="tel:102" 
+   class="fixed top-1/2 -translate-y-1/2 left-0 z-[1001] group flex flex-col items-center justify-center pl-2 pr-3 py-6 bg-white/90 backdrop-blur-md border border-red-100 rounded-r-2xl shadow-floating hover:shadow-red-500/20 transition-all duration-300 hover:translate-x-1 cursor-pointer overflow-hidden">
+    <!-- Red stripe accent -->
+    <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-500 to-red-600"></div>
+    <i class="fas fa-ambulance text-2xl text-red-500 group-hover:scale-110 transition-transform duration-300 mb-3 drop-shadow-sm"></i>
+    <span class="vertical-text text-[10px] font-bold tracking-[0.2em] text-slate-800 uppercase font-display group-hover:text-red-600 transition-colors">Emergency</span>
+    <div class="absolute inset-0 bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity -z-10"></div>
+</a>
+
+<!-- Navigation Bar (Frosted Glass) -->
+<nav class="glass-nav sticky top-0 z-50 transition-all duration-300">
+  <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-24">
+      
+      <!-- Brand Identity -->
+      <a href="/" class="flex items-center gap-4 group">
+        <div class="relative">
+            <!-- Glow effect behind logo -->
+            <div class="absolute inset-0 bg-blue-500/30 rounded-full blur-md group-hover:blur-lg transition-all duration-300"></div>
+            <img src="{{ url_for('static', filename='images/devai.jpg') }}" alt="DEV AI+" class="relative h-12 w-12 rounded-xl object-cover ring-2 ring-white shadow-lg group-hover:scale-105 transition-transform duration-300" />
+        </div>
+        <div class="flex flex-col">
+            <span class="font-display font-extrabold text-2xl text-slate-800 tracking-tight leading-none group-hover:text-blue-600 transition-colors">
+              DEV Ai<span class="text-transparent bg-clip-text bg-gradient-to-br from-rose-500 to-orange-500">+</span>
+            </span>
+            <span class="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-500 mt-1">Health Intelligence</span>
+        </div>
+      </a>
+
+      <!-- Desktop Menu (Pill Design) -->
+      <div class="hidden lg:flex items-center p-1.5 bg-slate-100/50 rounded-full border border-slate-300 backdrop-blur-sm">
+        <div class="flex space-x-1">
+            <a href="{{ url_for('home') }}" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm {% if request.endpoint == 'home' %}bg-white text-blue-600 shadow-sm shadow-blue-500/10{% endif %}">Home</a>
+            <a href="/doctors" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm {% if request.endpoint == 'doctors' %}bg-white text-blue-600 shadow-sm{% endif %}">Specialists</a>
+            <a href="{{ url_for('hospitals_list') }}" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm {% if request.endpoint == 'hospitals_list' %}bg-white text-blue-600 shadow-sm{% endif %}">Hospitals</a>
+            <a href="{{ url_for('research') }}" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm {% if request.endpoint == 'research' %}bg-white text-blue-600 shadow-sm{% endif %}">Research</a>
+            <a href="{{ url_for('medical_shop') }}" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm {% if request.endpoint == 'medical_shop' %}bg-white text-blue-600 shadow-sm{% endif %}">DEV Pharmacy</a>
+             </a>
+            
+            <!-- Services Dropdown -->
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open = !open" @click.away="open = false" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm flex items-center gap-1.5">
+                    Services <i class="fas fa-chevron-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <div x-show="open" x-cloak x-transition.opacity.scale.origin.top.right class="absolute top-full right-0 mt-3 w-64 bg-white/90 backdrop-blur-xl rounded-2xl shadow-floating border border-slate-100 p-2 z-50">
+                    <a href="{{ url_for('symptoms') }}" class="flex items-center p-3 rounded-xl hover:bg-indigo-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform"><i class="fas fa-heart-pulse"></i></span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">AI Diagnosis</span><span class="text-[10px] text-slate-500">AI Analysis</span></div>
+                    </a> 
+                    <a href="{{ url_for('first_aid') }}" class="flex items-center p-3 rounded-xl hover:bg-red-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform"><i class="fas fa-kit-medical"></i></span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Smart First Aid</span><span class="text-[10px] text-slate-500">Emergency AI Guide</span></div>
+                    </a>
+                    <a href="{{ url_for('ayurveda') }}" class="flex items-center p-3 rounded-xl hover:bg-green-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform"><i class="fas fa-seedling"></i></span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Vedic Ayurveda</span><span class="text-[10px] text-slate-500">Holistic AI Healing</span></div>
+                    </a>
+                    <a href="{{ url_for('patient_login') }}" class="flex items-center p-3 rounded-xl hover:bg-blue-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform"><i class="fas fa-calendar-check"></i></span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Book Appointment</span><span class="text-[10px] text-slate-500">Schedule a visit</span></div>
+                    </a>
+                    <a href="{{ url_for('drugs') }}" class="flex items-center p-3 rounded-xl hover:bg-emerald-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform"><i class="fas fa-pills"></i></span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Drugs & Supplements</span><span class="text-[10px] text-slate-500">Database & Info</span></div>
+                    </a>
+                    <a href="{{ url_for('conditions') }}" class="flex items-center p-3 rounded-xl hover:bg-emerald-50 transition-colors group"><span class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform"><i class="fas fa-stethoscope"></i>
+                        </span><div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Conditions</span><span class="text-[10px] text-slate-500">Database & Info</span></div>
+                    </a>
+                    <a href="{{ url_for('patient_login') }}" class="flex items-center p-3 rounded-xl hover:bg-purple-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform"><i class="fas fa-flask"></i></span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Medical Lab</span><span class="text-[10px] text-slate-500">Tests & Diagnostics</span></div>
+                    </a>
+                    <a href="{{ url_for('telemedicine') }}" class="flex items-center p-3 rounded-xl hover:bg-teal-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-video"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Telemedicine</span><span class="text-[10px] text-slate-500">Virtual Consultations</span></div>
+                    </a>
+                    <a href="{{ url_for('bmi_calculator') }}" class="flex items-center p-3 rounded-xl hover:bg-yellow-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-weight-scale"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">BMI Calculator</span><span class="text-[10px] text-slate-500">Check Body Mass</span></div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Organ Legacy Dropdown -->
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open = !open" @click.away="open = false" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm flex items-center gap-1.5">
+                    Organ Legacy <i class="fas fa-chevron-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <div x-show="open" x-cloak x-transition.opacity.scale.origin.top.right class="absolute top-full right-0 mt-3 w-64 bg-white/90 backdrop-blur-xl rounded-2xl shadow-floating border border-slate-100 p-2 z-50">
+                    <a href="{{ url_for('organ_donors_list') }}" class="flex items-center p-3 rounded-xl hover:bg-sky-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Registry Network</span><span class="text-[10px] text-slate-500">Search Donors</span></div>
+                    </a>
+                    <a href="{{ url_for('organ_donor_register') }}" class="flex items-center p-3 rounded-xl hover:bg-indigo-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-hand-holding-heart"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Pledge Organs</span><span class="text-[10px] text-slate-500">Become a Donor</span></div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Blood Network Dropdown -->
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open = !open" @click.away="open = false" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm flex items-center gap-1.5">
+                    Blood Network <i class="fas fa-chevron-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <div x-show="open" x-cloak x-transition.opacity.scale.origin.top.right class="absolute top-full right-0 mt-3 w-64 bg-white/90 backdrop-blur-xl rounded-2xl shadow-floating border border-slate-100 p-2 z-50">
+                    <a href="{{ url_for('blood_donation_camps') }}" class="flex items-center p-3 rounded-xl hover:bg-red-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-tent"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Donation Camps</span><span class="text-[10px] text-slate-500">Join Events</span></div>
+                    </a>
+                    <a href="{{ url_for('blood_bank') }}" class="flex items-center p-3 rounded-xl hover:bg-rose-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-layer-group"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Blood Bank</span><span class="text-[10px] text-slate-500">Live Inventory</span></div>
+                    </a>
+                    <a href="{{ url_for('blood_donors_list') }}" class="flex items-center p-3 rounded-xl hover:bg-pink-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Find Donors</span><span class="text-[10px] text-slate-500">Search Community</span></div>
+                    </a>
+                    <a href="{{ url_for('blood_donor_register') }}" class="flex items-center p-3 rounded-xl hover:bg-orange-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-hand-holding-heart"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Become a Donor</span><span class="text-[10px] text-slate-500">Register Now</span></div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- More Dropdown -->
+
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open = !open" @click.away="open = false" class="px-5 py-2.5 rounded-full text-sm font-medium text-slate-600 transition-all duration-300 hover:text-blue-600 hover:bg-white hover:shadow-sm flex items-center gap-1.5">
+                    More <i class="fas fa-chevron-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <div x-show="open" x-cloak x-transition.opacity.scale.origin.top.right class="absolute top-full right-0 mt-3 w-64 bg-white/90 backdrop-blur-xl rounded-2xl shadow-floating border border-slate-100 p-2 z-50">
+                    <a href="{{ url_for('careers') }}" class="flex items-center p-3 rounded-xl hover:bg-blue-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-briefcase"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Careers</span><span class="text-[10px] text-slate-500">Join our team</span></div>
+                    </a>
+                    <a href="{{ url_for('legal_hub', policy_id='privacy-policy') }}" class="flex items-center p-3 rounded-xl hover:bg-slate-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-shield-halved"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Policy</span><span class="text-[10px] text-slate-500">Terms & Privacy</span></div>
+                    </a>
+                    <a href="{{ url_for('blog') }}" class="flex items-center p-3 rounded-xl hover:bg-orange-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-newspaper"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Advertisement</span><span class="text-[10px] text-slate-500">News & Articles</span></div>
+                    </a>
+                    
+                    <a href="{{ url_for('health_tips') }}" class="flex items-center p-3 rounded-xl hover:bg-rose-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-lightbulb"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Health Tips</span><span class="text-[10px] text-slate-500">Wellness Advice</span></div>
+                    </a>
+                    <a href="{{ url_for('gallery') }}" class="flex items-center p-3 rounded-xl hover:bg-lime-50 transition-colors group">
+                        <span class="w-10 h-10 rounded-lg bg-lime-100 text-lime-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-images"></i>
+                        </span>
+                        <div class="flex flex-col"><span class="text-sm font-semibold text-slate-700">Gallery</span><span class="text-[10px] text-slate-500">Photos & Videos</span></div>
+                    </a>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <!-- Account Access Dropdown (Clean Design) -->
+     <div class="relative inline-block text-left z-50">
+    <!-- Simple Button -->
+    <button id="loginBtn" class="group relative inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-full shadow-sm ring-1 ring-slate-400 hover:ring-blue-500 hover:text-blue-600 hover:shadow-md transition-all duration-200">
+        <span class="flex items-center gap-2">
+            <!-- Simple User Icon -->
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            Account Access
+        </span>
+        <!-- Chevron -->
+        <svg class="w-3 h-3 text-slate-400 group-hover:text-blue-500 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+    </button>
+
+    <!-- Clean Menu -->
+    <div id="loginMenu" class="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] ring-1 ring-slate-100 p-2 transform scale-95 opacity-0 invisible transition-all duration-200 origin-top-right">
+        
+        <div class="space-y-1">
+            <a href="{{ url_for('doctor_login') }}" class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition-colors group">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-user-md text-xs"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-slate-800">Doctor Portal</span>
+                    <span class="text-[11px] text-slate-500">Authorized Access</span>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('patient_login') }}" class="flex items-center p-3 rounded-lg hover:bg-emerald-50 transition-colors group">
+                <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-user-injured text-xs"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-slate-800">Patient Portal</span>
+                    <span class="text-[11px] text-slate-500">Personal Records</span>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('blood_donor_login') }}" class="flex items-center p-3 rounded-lg hover:bg-red-50 transition-colors group">
+                <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-3 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-heartbeat text-xs"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-slate-800">Donor Portal</span>
+                    <span class="text-[11px] text-slate-500">Blood Donation</span>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('organ_donor_login') }}" class="flex items-center p-3 rounded-lg hover:bg-sky-50 transition-colors group">
+                <div class="w-8 h-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mr-3 group-hover:bg-sky-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-hand-holding-heart text-xs"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-slate-800">Organ Donor Portal</span>
+                    <span class="text-[11px] text-slate-500">Manage Your Pledge</span>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('hospital_login') }}" class="flex items-center p-3 rounded-lg hover:bg-purple-50 transition-colors group">
+                <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-hospital text-xs"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-semibold text-slate-800">Hospital Portal</span>
+                    <span class="text-[11px] text-slate-500">Facility Admin</span>
+                </div>
+            </a>
+            
+            <div class="h-px bg-slate-100 my-2 mx-2"></div>
+            
+            <a href="{{ url_for('staff_login') }}" class="block text-center p-2 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                Staff Login
+            </a>
+        </div>
+    </div>
+</div>
+
+        <!-- Mobile Menu Toggle -->
+        <button id="mobileMenuBtn" class="lg:hidden w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+           <i id="mobileMenuIconOpen" class="fas fa-bars text-lg"></i>
+           <i id="mobileMenuIconClose" class="fas fa-times text-lg hidden"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobileMenu" class="hidden lg:hidden bg-white border-b border-slate-100 shadow-xl">
+    <div class="px-4 pt-2 pb-6 space-y-2">
+      <a href="{{ url_for('home') }}" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700">Home</a>
+      <a href="/doctors" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700">Specialists</a>
+      <a href="{{ url_for('hospitals_list') }}" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700">Hospitals</a>
+      <a href="/drugs" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700">Medical Shop</a>
+      <a href="{{ url_for('first_aid') }}" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 hover:bg-red-50 hover:text-red-700"><i class="fas fa-kit-medical w-6 text-center mr-2"></i>Smart First Aid</a>
+      <a href="{{ url_for('ayurveda') }}" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 hover:bg-green-50 hover:text-green-700"><i class="fas fa-seedling w-6 text-center mr-2"></i>Vedic Ayurveda</a>
+      <div class="border-t border-slate-100 my-2"></div>
+      <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Blood Network</p>
+      <a href="{{ url_for('blood_donation_camps') }}" class="block px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600">Donation Camps</a>
+      <a href="{{ url_for('blood_bank') }}" class="block px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600">Blood Bank</a>
+      <a href="{{ url_for('blood_donors_list') }}" class="block px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600">Find Donors</a>
+      <a href="{{ url_for('blood_donor_register') }}" class="block px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600">Become a Donor</a>
+      <div class="border-t border-slate-100 my-2"></div>
+      <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Organ Legacy</p>
+      <a href="{{ url_for('organ_donors_list') }}" class="block px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-sky-50 hover:text-sky-600">Registry Network</a>
+      <a href="{{ url_for('organ_donor_register') }}" class="block px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-600">Pledge Organs</a>
+      <div class="border-t border-slate-100 my-2"></div>
+      <div class="grid grid-cols-2 gap-3 px-2">
+          <a href="{{ url_for('doctor_login') }}" class="flex justify-center items-center py-3 rounded-xl bg-indigo-50 text-indigo-700 font-semibold text-sm">Doctor</a>
+          <a href="{{ url_for('patient_login') }}" class="flex justify-center items-center py-3 rounded-xl bg-blue-50 text-blue-700 font-semibold text-sm">Patient</a>
+          <a href="{{ url_for('blood_donor_login') }}" class="flex justify-center items-center py-3 rounded-xl bg-red-50 text-red-700 font-semibold text-sm">Donor</a>
+          <a href="{{ url_for('hospital_login') }}" class="flex justify-center items-center py-3 rounded-xl bg-purple-50 text-purple-700 font-semibold text-sm">Hospital</a>
+          <a href="{{ url_for('staff_login') }}" class="flex justify-center items-center py-3 rounded-xl bg-slate-50 text-slate-700 font-semibold text-sm">Staff</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content Area -->
+<main class="flex-grow relative z-10">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="max-w-4xl mx-auto px-4 mt-8 space-y-4">
+        {% for cat, msg in messages %}
+          <div class="glass-panel p-4 rounded-2xl flex items-center gap-4 animate-float-slow
+                      {{ 'border-emerald-200 text-emerald-800' if cat=='success' else 'border-rose-200 text-rose-800' }}">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-inner-light {{ 'bg-emerald-400 text-white' if cat=='success' else 'bg-rose-400 text-white' }}">
+                <i class="{{ 'fas fa-check' if cat=='success' else 'fas fa-exclamation' }}"></i>
+            </div>
+            <div>
+                <p class="font-bold text-sm">{{ 'Success' if cat=='success' else 'Attention' }}</p>
+                <p class="text-sm opacity-90">{{ msg }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ============================================== -->
+<!--        PREMIUM WIDGETS & INTERACTION           -->
+<!-- ============================================== -->
+
+<!-- Feedback Button (Physical/Realistic Style) -->
+            <button id="feedback-toggle-btn"
+            class="fixed top-1/2 -translate-y-1/2 right-0 z-[1001] group
+                    flex flex-col items-center justify-center
+                    pl-3 pr-2 py-6
+                    bg-white/90 backdrop-blur-md border border-indigo-100
+                    rounded-l-2xl shadow-[0_8px_30px_rgba(0,0,0,0.15)]
+                    hover:shadow-indigo-500/20 transition-all duration-300
+                    hover:-translate-x-1 cursor-pointer overflow-hidden">
+
+                <!-- Blue stripe accent -->
+                <div class="absolute right-0 top-0 bottom-0 w-1 
+                            bg-gradient-to-b from-indigo-500 to-indigo-600"></div>
+
+                <!-- Icon -->
+                <i class="fas fa-comment-dots text-2xl text-indigo-600
+                        group-hover:scale-110 transition-transform duration-300
+                        mb-3 drop-shadow-sm"></i>
+
+                <!-- Vertical Text -->
+                <span class="vertical-text text-[10px] font-bold tracking-[0.2em]
+                            text-slate-800 uppercase font-display
+                            group-hover:text-indigo-600 transition-colors">
+                    Feedback
+                </span>
+
+                <!-- Hover Light Layer -->
+                <div class="absolute inset-0 bg-indigo-50 opacity-0 
+                            group-hover:opacity-100 transition-opacity -z-10"></div>
+            </button>
+
+
+<div class="fixed bottom-6 right-6 z-[60]">
+    <button id="chatbot-toggle-btn" class="group relative cursor-pointer outline-none transition-transform duration-300 hover:scale-110 active:scale-95">
+        
+        <div class="absolute inset-0 bg-blue-400 rounded-full blur-xl opacity-0 group-hover:opacity-40 animate-pulse transition-opacity duration-300"></div>
+
+        <div class="relative z-10 w-20 h-20 flex items-end justify-center">
+            <img src="{{ url_for('static', filename='images/chatbot.png') }}" 
+                 alt="AI Assistant" 
+                 class="w-full h-full object-contain drop-shadow-2xl transition-all duration-300 group-hover:-translate-y-2">
+        </div>
+    </button>
+</div>
+
+<div id="chatbot-widget" 
+     class="fixed bottom-24 right-6 w-[360px] h-[600px] max-h-[80vh] bg-white/80 backdrop-blur-2xl border border-white/60 z-50 rounded-[2.5rem] shadow-[0_30px_60px_-12px_rgba(50,50,93,0.25)] flex flex-col overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transform origin-bottom-right scale-90 opacity-0 translate-y-10 pointer-events-none">
+    
+    <div class="bg-white/40 backdrop-blur-md p-5 border-b border-white/50 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <i class="fas fa-robot text-white text-xl"></i>
+                </div>
+                <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
+            </div>
+            <div>
+                <h4 class="font-bold text-slate-800 leading-none text-lg">Talk to Devin</h4>
+                <p class="text-[11px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                </p>
+            </div>
+        </div>
+        
+        <button id="chatbot-close-btn" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors">
+            <i class="fas fa-times text-sm"></i>
+        </button>
+    </div>
+
+    <div id="chat-log" class="flex-1 p-5 space-y-4 overflow-y-auto relative scrollbar-hide">
+        <div class="flex gap-3 items-end animate-fade-in-up">
+             <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-md text-white text-xs">
+                <i class="fas fa-robot"></i>
+             </div>
+             <div class="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm border border-slate-100 text-slate-600 text-sm max-w-[85%]">
+                👋 Hello! I'm Devin, your AI health assistant. I can help with symptom analysis, medication information, appointment booking, and general health questions. How can I assist you today?
+             </div>
+        </div>
+    </div>
+
+    <div class="bg-white/50 border-t border-white/60 backdrop-blur-xl">
+        <div class="p-4">
+            <form id="chat-form" class="relative flex items-center gap-2">
+                <input type="text" id="chat-input" placeholder="Ask about symptoms, medications, appointments..." 
+                       class="flex-1 pl-5 pr-4 py-3 bg-white border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm transition-all">
+                <button type="submit" class="w-11 h-11 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all active:scale-90">
+                    <i class="fas fa-paper-plane text-xs"></i>
+                </button>
+            </form>
+            <div class="flex justify-between items-center mt-2 text-xs text-slate-400">
+                <span>Press Enter to send</span>
+                <button id="clear-chat-btn" class="hover:text-slate-600 transition-colors">Clear chat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Open State */
+    #chatbot-widget.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up { animation: fadeInUp 0.5s ease forwards; }
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+    /* Chat Bubble Styles */
+    .chat-bubble-user {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.3);
+    }
+    
+    .chat-bubble-bot {
+        background: white;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+    }
+</style>
+<!-- Feedback Modal (High End Card) -->
+<div id="feedback-modal" class="fixed inset-0 z-[1001] hidden" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity opacity-0" id="feedback-backdrop"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div id="feedback-panel" class="relative transform overflow-hidden rounded-[32px] bg-white text-left shadow-2xl transition-all sm:w-full sm:max-w-lg opacity-0 translate-y-10 scale-95 border border-white/60">                
+                <!-- Decorative Header Image/Gradient -->
+                <div class="h-24 w-full bg-gradient-to-r from-blue-600 to-indigo-600 relative overflow-hidden">
+                    <div class="absolute -bottom-6 -right-6 w-24 h-24 bg-white/20 rounded-full blur-xl"></div>
+                    <div class="absolute top-4 left-6 text-white">
+                        <h3 class="font-display font-bold text-2xl">Feedback</h3>
+                        <p class="text-blue-100 text-xs opacity-90">Help us improve.</p>
+                    </div>
+                </div>
+                <button type="button" id="feedback-close-modal-btn" class="absolute top-4 right-4 w-8 h-8 bg-black/20 hover:bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white transition-colors">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+                <div class="px-8 py-8">
+                    <!-- Success Message -->
+                    <div id="feedback-success-message" class="hidden flex-col items-center justify-center py-6 text-center animate-fade-in">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 text-2xl shadow-inner-light">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-slate-800">Thank You!</h4>
+                        <p class="text-slate-500 text-sm mt-1">Your feedback has been received.</p>
+                    </div>
+                    <!-- Form -->
+                    <form id="feedback-form" class="space-y-5">
+                        <div class="grid grid-cols-3 gap-3">
+                            <!-- Radio Cards -->
+                            <label class="cursor-pointer group">
+                                <input type="radio" name="type" value="suggestion" class="peer sr-only" checked>
+                                <div class="flex flex-col items-center p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:shadow-md hover:-translate-y-1 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 transition-all duration-300">
+                                    <i class="fas fa-lightbulb text-xl mb-2 text-amber-500"></i>
+                                    <span class="text-xs font-semibold">Idea</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer group">
+                                <input type="radio" name="type" value="bug" class="peer sr-only">
+                                <div class="flex flex-col items-center p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:shadow-md hover:-translate-y-1 peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-700 transition-all duration-300">
+                                    <i class="fas fa-bug text-xl mb-2 text-red-500"></i>
+                                    <span class="text-xs font-semibold">Bug</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer group">
+                                <input type="radio" name="type" value="other" class="peer sr-only">
+                                <div class="flex flex-col items-center p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:shadow-md hover:-translate-y-1 peer-checked:border-indigo-500 peer-checked:bg-indigo-50 peer-checked:text-indigo-700 transition-all duration-300">
+                                    <i class="fas fa-heart text-xl mb-2 text-pink-500"></i>
+                                    <span class="text-xs font-semibold">Love</span>
+                                </div>
+                            </label>
+                        </div>
+                        <div>
+                            <textarea id="feedback-message" name="message" rows="4" required
+                                class="block w-full rounded-2xl border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 shadow-inner focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all resize-none placeholder-slate-400"
+                                placeholder="Share your thoughts..."></textarea>
+                        </div>
+                        <button type="submit" class="w-full btn-shine rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                            Send Feedback
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-[#0b1120] text-slate-400 font-sans relative overflow-hidden border-t border-slate-800">
+
+    <!-- Background Ambience (Enhanced) -->
+    <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
+    <div class="absolute -bottom-40 -left-20 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-600/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+    <div class="max-w-[1400px] mx-auto z-10 relative">
+        
+        <!-- TOP SECTION: Highly Organized Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 divide-y md:divide-y-0 lg:divide-x divide-slate-800 border-b border-slate-800">
+            
+            <!-- COLUMN 1: Brand Identity -->
+            <div class="p-8 lg:p-10 flex flex-col h-full bg-slate-900/10">
+                <div class="flex-grow">
+                    <h3 class="font-display font-black text-3xl text-white tracking-tighter mb-5">
+                        DEV Ai<span class="text-red-500 italic">+</span>
+                    </h3>
+                    <p class="text-[13px] leading-relaxed text-slate-500 mb-8 italic">
+                       Ai healthcare intelligent platform connecting patients, doctors, hospitals, research, and AI-driven diagnosis to deliver smarter care, faster decisions, and a healthier future.
+                    </p> 
+                <div class="flex flex-wrap gap-4 order-1 md:order-2">
+                <a href="#" class="w-10 h-10 rounded-full border border-slate-800 flex items-center justify-center text-slate-500 hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all duration-300"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full border border-slate-800 flex items-center justify-center text-slate-500 hover:text-white hover:border-white/50 hover:bg-white/5 transition-all duration-300"><i class="fab fa-x-twitter"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full border border-slate-800 flex items-center justify-center text-slate-500 hover:text-pink-500 hover:border-pink-500/50 hover:bg-pink-500/5 transition-all duration-300"><i class="fab fa-instagram"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full border border-slate-800 flex items-center justify-center text-slate-500 hover:text-red-600 hover:border-red-600/50 hover:bg-red-600/5 transition-all duration-300"><i class="fab fa-youtube"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full border border-slate-800 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:border-blue-600/50 hover:bg-blue-600/5 transition-all duration-300"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#" class="w-10 h-10 rounded-full border border-slate-800 flex items-center justify-center text-slate-500 hover:text-green-600 hover:border-green-600/50 hover:bg-blue-600/5 transition-all duration-300"><i class="fab fa-whatsapp"></i></a>
+
+            </div>
+                </div>
+            
+                <!-- Admin Access (Refined) 
+                <div class="pt-6 border-t border-dashed border-slate-800">
+                    <div class="relative group">
+                        <button id="footer-brand-btn" class="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-slate-600 group-hover:text-blue-400 transition-all duration-300">
+                            <span class="w-2 h-2 rounded-full bg-slate-800 group-hover:bg-blue-500 animate-pulse"></span>
+                            Admin Access
+                        </button>
+                        <a href="{{ url_for('admin_login') }}" id="admin-login-footer-btn" class="hidden absolute bottom-full mb-3 left-0 px-4 py-2 bg-blue-600 rounded-lg text-white text-[10px] font-bold shadow-[0_10px_20px_rgba(37,99,235,0.3)] transition-all">
+                            SECURE LOGIN →
+                        </a>
+                   </div>
+                </div>-->
+            </div>
+
+            <!-- COLUMN 2: Navigation Group A -->
+            <div class="p-8 lg:p-10">
+                <div class="space-y-10">
+                    <div>
+                        <h4 class="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                            <span class="w-5 h-px bg-blue-500"></span> Platform Services
+                        </h4>
+                        <ul class="space-y-3 text-[13px]">
+                            <li><a href="/check" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>AI Diagnosis</a></li>
+                            <li><a href="/doctors" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Specialists</a></li>
+                            <li><a href="/hospitals" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Hospitals</a></li>
+                            <li><a href="/research" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Research</a></li>
+                            <li><a href="/medical-shop" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>DEV Pharmacy</a></li>
+                            <li><a href="/conditions" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Conditions</a></li>
+                            <li><a href="{{ url_for('first_aid') }}" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Smart First Aid</a></li>
+                            <li><a href="{{ url_for('ayurveda') }}" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Vedic Ayurveda</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMN 3: Navigation Group B -->
+            <div class="p-8 lg:p-10 bg-slate-900/20">
+                <div class="space-y-10">
+                    <div>
+                        <h4 class="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                            <span class="w-5 h-px bg-blue-500"></span> Patient Care
+                        </h4>
+                        <ul class="space-y-3 text-[13px]">
+                            <li><a href="/drugs" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Drugs & Supplements</a></li>
+                            <li><a href="{{ url_for('patient_login') }}" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Book Appointment</a></li>
+                            <li><a href="/telemedicine" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Telemedicine</a></li>
+                            <li><a href="/health-consult" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Health Evolution</a></li>
+                            <li><a href="/health-tips" class="hover:text-blue-400 flex items-center group transition-all duration-300"><span class="w-0 group-hover:w-3 h-[1px] bg-blue-500 mr-0 group-hover:mr-2 transition-all"></span>Health Tips</a></li>
+                        </ul>
+                    </div>
+                    <div class="pt-6 border-t border-slate-800">
+                         <h4 class="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-4">Legal Hub</h4>
+                         <ul class="space-y-2 text-xs opacity-70">
+                            <li><a href="{{ url_for('legal_hub', policy_id='privacy-policy') }}" class="hover:text-blue-400 transition-colors">Privacy Policy</a></li>
+                            <li><a href="{{ url_for('legal_hub', policy_id='terms-of-service') }}" class="hover:text-blue-400 transition-colors">Terms of Service</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMN 4: Operations & Contact -->
+            <div class="p-8 lg:p-10">
+                <h4 class="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                    <span class="w-5 h-px bg-red-500"></span> Operations
+                </h4>
+                
+                <!-- Hours Table (Modern Card) -->
+                <div class="bg-slate-950/50 rounded-xl p-4 border border-slate-800 mb-6 shadow-inner">
+                    <div class="space-y-3 text-[11px]">
+                        <div class="flex justify-between border-b border-slate-800/50 pb-2">
+                            <span class="text-slate-500">Mon - Fri</span>
+                            <span class="text-white font-mono">08:00 - 21:00</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-800/50 pb-2">
+                            <span class="text-slate-500">Saturday</span>
+                            <span class="text-white font-mono">09:00 - 17:00</span>
+                        </div>
+                        <div class="flex justify-between pt-1">
+                            <span class="text-slate-500">Sunday</span>
+                            <span class="text-red-500 font-black animate-pulse">EMERGENCY ONLY</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Button -->
+                <a href="/emergency" class="flex items-center justify-between bg-gradient-to-r from-red-600/20 to-red-900/20 border border-red-500/30 rounded-xl p-4 hover:border-red-500/60 transition-all duration-500 group mb-8">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-red-500 p-2 rounded-lg text-white group-hover:scale-110 transition">
+                            <i class="fas fa-ambulance text-xs"></i>
+                        </div>
+                        <span class="text-[11px] text-white font-black tracking-widest uppercase">Emergency 911</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-red-500 text-[10px] group-hover:translate-x-1 transition"></i>
+                </a>
+
+                <!-- Contact List -->
+                <ul class="space-y-4 text-[13px]">
+                    <li class="flex items-center gap-3 group">
+                        <i class="fas fa-phone text-blue-500 text-xs"></i>
+                        <span class="group-hover:text-white transition">+91 933 4325 920</span>
+                    </li>
+                    <li class="flex items-center gap-3 group">
+                        <i class="fas fa-envelope text-blue-500 text-xs"></i>
+                        <span class="group-hover:text-white transition">support@devai.com</span>
+                    </li>
+                    <li class="flex items-start gap-3 group">
+                        <i class="fas fa-map-marker-alt text-blue-500 text-xs mt-1"></i>
+                        <span class="text-[12px] leading-tight">Motihari East Champaran,<br>Bihar - 845401</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- COLUMN 5: Network & Insights -->
+            <div class="p-8 lg:p-10 bg-slate-900/40">
+                <h4 class="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                    <span class="w-5 h-px bg-blue-500"></span> Donor Networks
+                </h4>
+                <ul class="space-y-3 text-[13px] mb-10">
+                    <li><a href="{{ url_for('blood_donation_camps') }}" class="hover:text-red-400 flex items-center gap-2 transition-colors"><i class="fas fa-caret-right text-[10px] text-red-500"></i>Donation Camps</a></li>
+                    <li><a href="{{ url_for('blood_bank') }}" class="hover:text-red-400 flex items-center gap-2 transition-colors"><i class="fas fa-caret-right text-[10px] text-red-500"></i>Blood Bank</a></li>
+                    <li><a href="{{ url_for('blood_donors_list') }}" class="hover:text-red-400 flex items-center gap-2 transition-colors"><i class="fas fa-caret-right text-[10px] text-red-500"></i>Find Donors</a></li>
+                    <li><a href="{{ url_for('blood_donor_register') }}" class="hover:text-red-400 flex items-center gap-2 transition-colors"><i class="fas fa-caret-right text-[10px] text-red-500"></i>Become Donor</a></li>
+                    <li class="pt-2"><a href="{{ url_for('organ_donors_list') }}" class="hover:text-sky-400 flex items-center gap-2 transition-colors"><i class="fas fa-caret-right text-[10px] text-sky-500"></i>Organ Registry</a></li>
+                    <li><a href="{{ url_for('organ_donor_register') }}" class="hover:text-sky-400 flex items-center gap-2 transition-colors"><i class="fas fa-caret-right text-[10px] text-sky-500"></i>Pledge Organs</a></li>
+                </ul>
+
+                <!-- App Box -->
+                <div class="bg-slate-300 rounded-2xl p-5 relative overflow-hidden group shadow-2xl">
+                    <div class="absolute -right-5 -bottom-5 text-blue-500/20 text-7xl transform -rotate-12 group-hover:scale-110 transition duration-700">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h5 class="text-slate-700 font-black text-xs uppercase tracking-widest mb-1">Get the App</h5>
+                        <p class="text-[10px] text-sky-600 mb-4">Health in your pocket</p>
+                        <form class="flex gap-1">
+                            <input type="email" placeholder="Email" class="w-full bg-black border border-red-300 text-black placeholder:text-blue-200 text-[10px] rounded-lg px-3 py-2 focus:outline-none focus:bg-white/20 transition">
+                            <button class="bg-black text-blue-600 px-3 rounded-lg hover:bg-white transition"><i class="fas fa-arrow-right text-[10px]"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INSIGHTS & EXTRA LINKS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 px-8 lg:px-10 py-8 gap-8 border-b border-slate-800/50">
+             <div class="flex flex-wrap items-center gap-x-8 gap-y-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                <a href="{{ url_for('about') }}" class="hover:text-white transition-colors">About</a>
+                <a href="{{ url_for('gallery') }}" class="hover:text-white transition-colors">Gallery</a>
+                <a href="{{ url_for('blog') }}" class="hover:text-white transition-colors">Advertisement</a>
+                <a href="/careers" class="hover:text-white transition-colors">Careers</a>
+                <a href="/contact" class="hover:text-white transition-colors">Contact</a>
+                <a href="/faq" class="hover:text-white transition-colors">FAQ</a>
+            </div>
+            <div class="flex items-center lg:justify-end gap-6">
+                <a href="/health-tips" class="flex items-center gap-3 group">
+                    <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-blue-500 transition">
+                        <i class="fas fa-heart-pulse text-xs text-blue-400"></i>
+                    </div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-white transition">Heart Health Tips</span>
+                </a>
+                <a href="/blog" class="flex items-center gap-3 group">
+                    <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-purple-500 transition">
+                        <i class="fas fa-brain text-xs text-purple-400"></i>
+                    </div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-white transition">Mind & Stress</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- BOTTOM BAR: Socials & Copyrights -->
+        <div class="px-8 lg:px-10 py-8 flex flex-col md:text-center justify-between items-center gap-8 bg-slate-950/30">
+            <div class="order-2 md:order-1 text-center md:text-left">
+                <h1 class="text-[13px] text-slate-400">&copy; {{ current_year | default(2025) }} <span class="text-white font-bold">DEV Ai+</span> | All rights reserved</h1>
+                <p class="text-[10px] text-slate-600 mt-1 uppercase tracking-widest">Designed by <a href="/sicons" class="text-red-900 font-black hover:text-red-500 transition">S iCons</a></p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+<!-- Logic Scripts -->
+<script>
+  // Login Dropdown
+  const loginBtn = document.getElementById('loginBtn');
+  const loginMenu = document.getElementById('loginMenu');
+  const loginBtnArrow = document.getElementById('loginBtnArrow');
+
+  function toggleLoginMenu() {
+    const isOpen = !loginMenu.classList.contains('invisible');
+    if (isOpen) {
+        loginMenu.classList.add('invisible', 'opacity-0', 'scale-95');
+        loginBtnArrow.style.transform = 'rotate(0deg)';
+    } else {
+        loginMenu.classList.remove('invisible', 'opacity-0', 'scale-95');
+        loginBtnArrow.style.transform = 'rotate(180deg)';
+    }
+  }
+  
+  // Close logic
+  loginBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLoginMenu(); });
+  document.addEventListener('click', (e) => {
+    if (!loginBtn.contains(e.target) && !loginMenu.contains(e.target)) {
+        loginMenu.classList.add('invisible', 'opacity-0', 'scale-95');
+        loginBtnArrow.style.transform = 'rotate(0deg)';
+    }
+  });
+
+  // Mobile Menu
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  mobileMenuBtn.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+    document.getElementById('mobileMenuIconOpen').classList.toggle('hidden');
+    document.getElementById('mobileMenuIconClose').classList.toggle('hidden');
+  });
+
+  // Chatbot Logic
+
+  
+  const chatbotToggleBtn = document.getElementById('chatbot-toggle-btn');
+  const chatbotWidget = document.getElementById('chatbot-widget');
+  const chatbotCloseBtn = document.getElementById('chatbot-close-btn');
+  const chatLog = document.getElementById('chat-log');
+  const chatInput = document.getElementById('chat-input');
+  const chatForm = document.getElementById('chat-form');
+  const clearChatBtn = document.getElementById('clear-chat-btn');
+
+  let chatHistory = [];
+
+  function toggleChatbot() {
+    const isActive = chatbotWidget.classList.contains('active');
+    if (!isActive) {
+        chatbotWidget.classList.add('active');
+        chatInput.focus();
+    } else {
+        chatbotWidget.classList.remove('active');
+    }
+  }
+
+  chatbotToggleBtn.addEventListener('click', toggleChatbot);
+  chatbotCloseBtn.addEventListener('click', toggleChatbot);
+
+  function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      appendMessage('user', text);
+      chatHistory.push({ role: 'user', content: text });
+      
+      chatInput.value = '';
+
+      // Loading State
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'flex gap-3 items-end mb-4';
+      typingDiv.innerHTML = `
+          <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mb-1"><i class="fas fa-robot text-[10px] text-indigo-600"></i></div>
+          <div class="bg-white p-4 rounded-2xl rounded-bl-none border border-slate-100 shadow-sm flex gap-1.5 items-center h-12">
+             <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+             <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+             <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+          </div>`;
+      chatLog.appendChild(typingDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+
+      // Fetch Response from Backend
+      fetch('/api/chatbot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ history: chatHistory })
+      })
+      .then(response => response.json())
+      .then(data => {
+          chatLog.removeChild(typingDiv);
+          appendMessage('bot', data.reply);
+          chatHistory.push({ role: 'assistant', content: data.reply });
+      })
+      .catch(error => {
+          chatLog.removeChild(typingDiv);
+          appendMessage('bot', "I'm having trouble connecting to my neural network. Please try again later.");
+      });
+  }
+
+  function appendMessage(sender, message) {
+      const wrapper = document.createElement('div');
+      const innerDiv = document.createElement('div');
+      
+      if (sender === 'user') {
+          wrapper.className = 'flex justify-end mb-4 animate-fade-in-up';
+          innerDiv.className = 'chat-bubble-user text-white p-4 rounded-2xl rounded-br-none text-[14px] leading-relaxed max-w-[85%] shadow-md';
+          innerDiv.textContent = message;
+          wrapper.appendChild(innerDiv);
+      } else {
+          wrapper.className = 'flex gap-3 items-end mb-4 animate-fade-in-up';
+          wrapper.innerHTML = `<div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mb-1"><i class="fas fa-robot text-[10px] text-indigo-600"></i></div>`;
+          innerDiv.className = 'chat-bubble-bot p-4 rounded-2xl rounded-bl-none text-slate-700 text-[14px] leading-relaxed max-w-[85%]';
+          innerDiv.textContent = message;
+          wrapper.appendChild(innerDiv);
+      }
+      chatLog.appendChild(wrapper);
+      chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      sendMessage();
+  });
+
+  if (clearChatBtn) {
+      clearChatBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          chatHistory = [];
+          chatLog.innerHTML = `
+              <div class="flex gap-3 items-end animate-fade-in-up">
+                   <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-md text-white text-xs">
+                      <i class="fas fa-robot"></i>
+                   </div>
+                   <div class="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm border border-slate-100 text-slate-600 text-sm max-w-[85%]">
+                      👋 Hello! I'm Devin, your AI health assistant. I can help with symptom analysis, medication information, appointment booking, and general health questions. How can I assist you today?
+                   </div>
+              </div>`;
+      });
+  }
+
+  // Feedback Modal
+  const feedbackBtn = document.getElementById('feedback-toggle-btn');
+  const feedbackModal = document.getElementById('feedback-modal');
+  const feedbackBackdrop = document.getElementById('feedback-backdrop');
+  const feedbackPanel = document.getElementById('feedback-panel');
+  const feedbackClose = document.getElementById('feedback-close-modal-btn');
+  const feedbackForm = document.getElementById('feedback-form');
+
+  if(feedbackBtn) {
+      feedbackBtn.addEventListener('click', () => {
+          feedbackModal.classList.remove('hidden');
+          setTimeout(() => {
+              feedbackBackdrop.classList.remove('opacity-0');
+              feedbackPanel.classList.remove('opacity-0', 'translate-y-10', 'scale-95');
+          }, 10);
+      });
+  }
+
+  function closeFeedback() {
+      feedbackBackdrop.classList.add('opacity-0');
+      feedbackPanel.classList.add('opacity-0', 'translate-y-10', 'scale-95');
+      setTimeout(() => {
+          feedbackModal.classList.add('hidden');
+          feedbackForm.reset();
+          feedbackForm.classList.remove('hidden');
+          document.getElementById('feedback-success-message').classList.add('hidden');
+      }, 300);
+  }
+
+  if(feedbackClose) feedbackClose.addEventListener('click', closeFeedback);
+  
+  // Close on outside click
+  if(feedbackModal) {
+      feedbackModal.addEventListener('click', (e) => {
+          if(e.target === feedbackBackdrop || e.target.closest('.fixed.inset-0.z-10') === e.target) {
+              closeFeedback();
+          }
+      });
+  }
+
+  if(feedbackForm) {
+      feedbackForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const btn = feedbackForm.querySelector('button');
+          const originalText = btn.innerText;
+          btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Sending...';
+          btn.disabled = true;
+
+          const formData = new FormData(feedbackForm);
+          const data = {
+              type: formData.get('type'),
+              message: formData.get('message')
+          };
+
+          fetch('/api/feedback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
+          })
+          .then(res => res.json())
+          .then(data => {
+              if (data.success) {
+                  feedbackForm.classList.add('hidden');
+                  document.getElementById('feedback-success-message').classList.remove('hidden');
+                  document.getElementById('feedback-success-message').classList.add('flex');
+                  btn.innerText = originalText;
+                  btn.disabled = false;
+                  setTimeout(closeFeedback, 2500);
+              } else {
+                  throw new Error(data.error);
+              }
+          })
+          .catch(err => {
+              console.error(err);
+              btn.innerText = 'Error! Try Again';
+              btn.disabled = false;
+              setTimeout(() => { btn.innerText = originalText; }, 2000);
+          });
+      });
+  }
+
+  // Footer Admin
+  document.getElementById('footer-brand-btn').addEventListener('click', () => {
+      document.getElementById('admin-login-footer-btn').classList.toggle('hidden');
+  });
+</script>
+
+<style>
+    /* Add animation utility for chat */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+</style>
+</body>
+</html>

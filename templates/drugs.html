@@ -1,0 +1,358 @@
+{% extends 'layout.html' %}
+
+{% block title %}Drugs & Supplements - MediConnect{% endblock %}
+
+{% block head %}
+<!-- Add Premium Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+    
+    /* Hide scrollbar for category list but allow scrolling */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Glass effect utility */
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col">
+    
+    <!-- Hero Section -->
+    <div class="relative bg-slate-900 pt-20 pb-24 px-6 sm:px-12 lg:px-20 overflow-hidden">
+        <!-- Abstract Background Shapes -->
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+            <div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-sky-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse"></div>
+            <div class="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse" style="animation-delay: 2s;"></div>
+        </div>
+
+        <!-- Content -->
+        <div class="relative z-10 max-w-4xl mx-auto text-center">
+            <span class="inline-block py-1 px-3 rounded-full bg-sky-500/10 border border-sky-400/30 text-sky-300 text-xs font-semibold tracking-wider uppercase mb-6 backdrop-blur-sm">
+                Healthcare Intelligence
+            </span>
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
+                Find Your <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-indigo-300">Medication</span>
+            </h1>
+            <p class="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+                Access a comprehensive, AI-enhanced library of drugs and supplements. 
+                Search verified information to make smarter health decisions.
+            </p>
+
+            <!-- Premium Search Bar -->
+            <div class="relative max-w-2xl mx-auto group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-sky-400 to-indigo-400 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
+                <div class="relative flex items-center bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-2xl overflow-hidden">
+                    <div class="pl-6 text-sky-300">
+                        <i class="fas fa-search text-xl"></i>
+                    </div>
+                    <input type="text" id="drugSearch" 
+                           placeholder="Search brand name, generic, or supplement..."
+                           class="w-full bg-transparent text-white placeholder-slate-400 px-4 py-4 focus:outline-none text-lg">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-grow -mt-10 z-20 px-4 sm:px-8 lg:px-16">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Insight Card (Did you know) -->
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6 mb-12 animate-fade-in-up">
+                <div class="flex-shrink-0 bg-indigo-50 p-4 rounded-xl">
+                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="text-indigo-900 font-bold text-lg mb-1">Medical Insight</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Many common medications originate from natural sources. For instance, <span class="font-semibold text-indigo-600">Aspirin's</span> active ingredient was first isolated from willow tree bark. Always consult a healthcare professional.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Categories Header -->
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Browse Categories</h2>
+                <span class="text-sm text-slate-400 hidden sm:block">Filter by therapeutic class</span>
+            </div>
+
+            <!-- Scrollable Category Filters -->
+            <div class="relative group mb-10 ">
+                <!-- Fade overlays for scrolling indication -->
+                <div class="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#f8fafc] to-transparent z-10 pointer-events-none hidden md:block"></div>
+                <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#f8fafc] to-transparent z-10 pointer-events-none hidden md:block"></div>
+                
+                <div class="flex gap-3 overflow-x-auto no-scrollbar pb-4" id="categoryFilters">
+                    <button data-category="all" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 bg-slate-800 text-white shadow-lg shadow-slate-200 ring-2 ring-slate-800 ring-offset-2">
+                        View All
+                    </button>
+                    <!-- Loop creates these -->
+                    <button data-category="Pain & Inflammation" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md">Pain & Inflammation</button>
+                    <button data-category="Gastrointestinal" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md">Gastrointestinal</button>
+                    <button data-category="Cardiovascular" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md">Cardiovascular</button>
+                    <button data-category="Respiratory & Allergy" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md">Respiratory & Allergy</button>
+                    <button data-category="Antibiotics & Anti-Infectives" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md">Antibiotics</button>
+                    <button data-category="Vitamins & Supplements" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md">Supplements</button>
+                    <button data-category="Mental Health & Neurology" class="category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md">Mental Health</button>
+                </div>
+            </div>
+
+            <!-- Drug Grid -->
+            <div id="drugsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                {% for category, drugs_in_category in categorized_drugs.items() %}
+                    {% for drug in drugs_in_category %}
+                        <div class="drug-item group relative bg-white rounded-2xl p-6 border border-slate-100 hover:border-sky-100 shadow-sm hover:shadow-xl hover:shadow-sky-100/50 transition-all duration-300 cursor-pointer overflow-hidden" 
+                             data-category="{{ category }}" 
+                             data-drug-name="{{ drug }}"
+                             data-drug-search="{{ (drug + ' ' + category)|lower }}">
+                            
+                            <!-- Decorative Gradient Line -->
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 to-indigo-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="bg-sky-50 rounded-lg p-3 group-hover:bg-sky-500 transition-colors duration-300">
+                                    <svg class="w-6 h-6 text-sky-600 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                </div>
+                                <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-2 group-hover:translate-x-0">
+                                    <i class="fas fa-arrow-right text-slate-300"></i>
+                                </div>
+                            </div>
+
+                            <h3 class="text-lg font-bold text-slate-800 group-hover:text-sky-700 transition-colors mb-1">{{ drug }}</h3>
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wide">{{ category }}</p>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+            
+            <!-- Empty State (Hidden by default) -->
+            <div id="noResults" class="hidden text-center py-20">
+                <div class="inline-block p-4 rounded-full bg-slate-100 mb-4">
+                    <i class="fas fa-search text-2xl text-slate-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-slate-700">No medications found</h3>
+                <p class="text-slate-500 mt-2">Try adjusting your search or category filter.</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Premium Modal -->
+<div id="drug-modal" class="fixed inset-0 z-[1001] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Backdrop with Blur -->
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modal-backdrop"></div>
+
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <!-- Modal Panel -->
+            <div id="drug-modal-content" class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-xl opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                
+                <!-- Decorative Header Background -->
+                <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-sky-50 to-indigo-50 z-0"></div>
+                
+                <!-- Close Button -->
+                <button type="button" id="drug-modal-close-btn" class="absolute top-4 right-4 z-20 rounded-full p-2 bg-white/50 hover:bg-white text-slate-400 hover:text-slate-600 transition-all focus:outline-none">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <div class="relative z-10 px-8 pt-10 pb-8">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="h-16 w-16 rounded-2xl bg-white shadow-lg flex items-center justify-center border border-slate-100 text-sky-500 text-2xl">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-sky-600 uppercase tracking-wider mb-1">Medication Details</p>
+                            <h3 class="text-3xl font-bold text-slate-800" id="modal-drug-name">Drug Name</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="prose prose-slate max-w-none">
+                        <div id="modal-drug-info" class="text-slate-600 leading-7">
+                            <!-- Content Injected Here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-slate-50 px-8 py-4 flex justify-between items-center border-t border-slate-100">
+                    <span class="text-xs text-slate-400 font-medium">Verified by AI+ Engine</span>
+                    <button type="button" onclick="closeModal()" class="text-sm font-semibold text-sky-600 hover:text-sky-700">Close Details</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* --- State Management --- */
+    const searchInput = document.getElementById('drugSearch');
+    const drugItems = document.querySelectorAll('.drug-item');
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    const noResults = document.getElementById('noResults');
+
+    /* --- Filter Logic --- */
+    function filterDrugs(query, category) {
+        let visibleCount = 0;
+
+        drugItems.forEach(item => {
+            const drugName = item.dataset.drugName.toLowerCase();
+            const drugCategory = item.dataset.category;
+            const searchData = item.dataset.drugSearch || '';
+
+            const matchesSearch = query === '' || searchData.includes(query) || drugName.includes(query);
+            const matchesCategory = category === 'all' || drugCategory === category;
+
+            if (matchesSearch && matchesCategory) {
+                item.classList.remove('hidden');
+                // Add a small fade-in animation when appearing
+                item.animate([
+                    { opacity: 0, transform: 'translateY(10px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], { duration: 300, easing: 'ease-out' });
+                visibleCount++;
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+
+        // Toggle Empty State
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+    }
+
+    searchInput.addEventListener('keyup', function() {
+        const query = this.value.toLowerCase();
+        // Find active button
+        let activeCategory = 'all';
+        categoryButtons.forEach(btn => {
+            if(btn.classList.contains('bg-slate-800')) activeCategory = btn.dataset.category;
+        });
+        filterDrugs(query, activeCategory);
+    });
+
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Reset styles for all
+            categoryButtons.forEach(btn => {
+                btn.className = 'category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 hover:shadow-md';
+            });
+            
+            // Set Active Style
+            this.className = 'category-btn whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 bg-slate-800 text-white shadow-lg shadow-slate-200 ring-2 ring-slate-800 ring-offset-2';
+
+            const selectedCategory = this.dataset.category;
+            const currentQuery = searchInput.value.toLowerCase();
+            filterDrugs(currentQuery, selectedCategory);
+        });
+    });
+
+    /* --- Modal Logic --- */
+    const drugModal = document.getElementById('drug-modal');
+    const drugModalContent = document.getElementById('drug-modal-content');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    const modalDrugName = document.getElementById('modal-drug-name');
+    const modalDrugInfo = document.getElementById('modal-drug-info');
+
+    function openModal(drugName) {
+        modalDrugName.textContent = drugName;
+        
+        // Skeleton Loading State
+        modalDrugInfo.innerHTML = `
+            <div class="space-y-3 animate-pulse">
+                <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                <div class="h-4 bg-slate-200 rounded w-full"></div>
+                <div class="h-4 bg-slate-200 rounded w-5/6"></div>
+                <div class="h-4 bg-slate-200 rounded w-1/2"></div>
+            </div>`;
+        
+        drugModal.classList.remove('hidden');
+        
+        // Slight delay to allow display:block to render before transitioning opacity
+        requestAnimationFrame(() => {
+            modalBackdrop.classList.remove('opacity-0');
+            drugModalContent.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+            drugModalContent.classList.add('opacity-100', 'translate-y-0', 'sm:scale-100');
+        });
+
+        // Fetch Data
+        fetch(`/drug-info/${encodeURIComponent(drugName)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    modalDrugInfo.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg text-sm">${data.error}</div>`;
+                } else {
+                    const sideEffects = Array.isArray(data.common_side_effects) && data.common_side_effects.length > 0
+                        ? `<div class="mt-4"><h4 class="text-sm font-semibold text-slate-800 mb-2">Common Side Effects</h4><ul class="list-disc list-inside text-slate-600">${data.common_side_effects.map(effect => `<li>${effect}</li>`).join('')}</ul></div>`
+                        : '';
+                    const primaryUse = data.primary_use ? `<p class="text-slate-700"><span class="font-semibold">Primary use:</span> ${data.primary_use}</p>` : '';
+                    const caution = data.caution ? `<div class="mt-4 p-4 bg-rose-50 text-rose-700 rounded-2xl"><span class="font-semibold">Caution:</span> ${data.caution}</div>` : '';
+                    const clinicalNotes = data.clinical_notes ? `<div class="mt-4 p-4 bg-slate-100 rounded-2xl text-slate-700"><span class="font-semibold">Clinical notes:</span> ${data.clinical_notes}</div>` : '';
+
+                    modalDrugInfo.style.opacity = '0';
+                    modalDrugInfo.innerHTML = `
+                        <p class="text-slate-600 leading-7">${data.description}</p>
+                        ${primaryUse}
+                        ${sideEffects}
+                        ${caution}
+                        ${clinicalNotes}
+                        <p class="mt-4 text-xs text-slate-400">Source: ${data.source === 'ai' ? 'AI-generated reference' : 'Local drug database'}</p>
+                    `;
+                    setTimeout(() => {
+                        modalDrugInfo.style.transition = 'opacity 0.3s';
+                        modalDrugInfo.style.opacity = '1';
+                    }, 50);
+                }
+            })
+            .catch(error => {
+                modalDrugInfo.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg text-sm">Failed to load data.</div>`;
+            });
+    }
+
+    function closeModal() {
+        // Reverse transitions
+        modalBackdrop.classList.add('opacity-0');
+        drugModalContent.classList.remove('opacity-100', 'translate-y-0', 'sm:scale-100');
+        drugModalContent.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+
+        setTimeout(() => {
+            drugModal.classList.add('hidden');
+        }, 300); // Match transition duration
+    }
+
+    drugItems.forEach(item => {
+        item.addEventListener('click', () => {
+            openModal(item.dataset.drugName);
+        });
+    });
+
+    document.getElementById('drug-modal-close-btn').addEventListener('click', closeModal);
+    
+    // Close on backdrop click
+    drugModal.addEventListener('click', (e) => {
+        if (e.target.closest('#drug-modal-content') === null) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !drugModal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

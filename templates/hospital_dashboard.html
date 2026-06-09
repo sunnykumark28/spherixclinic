@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Dashboard | DEV AI+</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f0fdf4; color: #334155; }
+        .sidebar { width: 260px; background: #064e3b; height: 100vh; position: fixed; color: white; padding-top: 20px; }
+        .sidebar .brand { font-size: 1.5rem; font-weight: 800; padding: 0 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .nav-item { padding: 12px 24px; color: #a7f3d0; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .main-content { margin-left: 260px; padding: 30px; }
+        .card-box { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 24px; border: 1px solid #e2e8f0; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #10b981; }
+        .table th { background: #f8fafc; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; color: #64748b; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .bg-green-soft { background: #dcfce7; color: #15803d; }
+        .bg-yellow-soft { background: #fef3c7; color: #b45309; }
+        .bg-red-soft { background: #fee2e2; color: #b91c1c; }
+        
+        /* Tab Content Logic */
+        .content-section { display: none; }
+        .content-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand">
+        {% if current_user.logo_url %}
+            <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ current_user.logo_url) }}" alt="Hospital Logo" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px;">
+        {% else %}
+            <i class="fas fa-hospital-alt"></i>
+        {% endif %}
+        <span>Hospital Portal</span>
+    </div>
+    <div class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-pie"></i> Overview</div>
+    <div class="nav-item" onclick="switchTab('doctors', this)"><i class="fas fa-user-md"></i> Doctors</div>
+    <div class="nav-item" onclick="switchTab('patients', this)"><i class="fas fa-procedures"></i> Patients</div>
+    <div class="nav-item" onclick="switchTab('staff', this)"><i class="fas fa-users"></i> Staff</div>
+    <div class="nav-item" onclick="switchTab('camps', this)"><i class="fas fa-tent"></i> Blood Camps</div>
+    <div class="nav-item" onclick="switchTab('beds', this)"><i class="fas fa-bed"></i> Bed Management</div>
+    <div class="nav-item" onclick="switchTab('settings', this)"><i class="fas fa-cog"></i> Settings</div>
+    <div style="margin-top: auto; padding: 24px;">
+        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light w-100">Logout</a>
+    </div>
+</div>
+
+<div class="main-content">
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert {{ 'alert-success' if category == 'success' else 'alert-danger' }} alert-dismissible fade show mb-4" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- ================= SECTION: DASHBOARD ================= -->
+    <div id="dashboard" class="content-section active">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold text-dark">Hospital Dashboard</h2>
+                <p class="text-muted">Welcome back, {{ current_user.name }}</p>
+            </div>
+            <div class="d-flex gap-3">
+                <div class="stat-card">
+                    <div class="small text-muted fw-bold">Total Appointments</div>
+                    <div class="fs-4 fw-bold">{{ appointments|length }}</div>
+                </div>
+                <div class="stat-card" style="border-color: #f59e0b;">
+                    <div class="small text-muted fw-bold">Pending</div>
+                    <div class="fs-4 fw-bold">{{ appointments|selectattr('status', 'equalto', 'pending')|list|length }}</div>
+                </div>
+                <div class="stat-card" style="border-color: #3b82f6;">
+                    <div class="small text-muted fw-bold">Doctors</div>
+                    <div class="fs-4 fw-bold">{{ doctors|length }}</div>
+                </div>
+                <div class="stat-card" style="border-color: #ef4444;">
+                    <div class="small text-muted fw-bold">Available Beds</div>
+                    <div class="fs-4 fw-bold">{{ current_user.available_beds }} <span class="fs-6 text-muted">/ {{ current_user.total_beds }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-box mb-4">
+            <h5 class="fw-bold text-dark mb-4">Daily Appointments Trend</h5>
+            <div style="height: 300px;">
+                <canvas id="appointmentsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card-box">
+            <h5 class="fw-bold text-dark mb-4">Recent Appointments</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Patient Name</th>
+                            <th>Doctor</th>
+                            <th>Date & Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in appointments[:5] %}
+                        <tr>
+                            <td><span class="text-muted">#{{ appt.id }}</span></td>
+                            <td>
+                                <div class="fw-bold">{{ appt.patient_name }}</div>
+                            </td>
+                            <td>
+                                {% if appt.doctor %}
+                                    Dr. {{ appt.doctor.last_name }}
+                                {% else %}
+                                    <span class="text-danger">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ appt.appointment_date }}</div>
+                                <div class="small text-muted">{{ appt.appointment_time }}</div>
+                            </td>
+                            <td>
+                                {% if appt.status == 'confirmed' %}
+                                    <span class="status-badge bg-green-soft">Confirmed</span>
+                                {% elif appt.status == 'pending' %}
+                                    <span class="status-badge bg-yellow-soft">Pending</span>
+                                {% elif appt.status == 'cancelled' %}
+                                    <span class="status-badge bg-red-soft">Cancelled</span>
+                                {% else %}
+                                    <span class="status-badge bg-light text-dark">{{ appt.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">No appointments found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SECTION: DOCTORS ================= -->
+    <div id="doctors" class="content-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-dark">Medical Staff</h2>
+            <button class="btn btn-success text-white fw-bold" data-bs-toggle="modal" data-bs-target="#addDoctorModal" onclick="setDepartment('')">
+                <i class="fas fa-plus me-2"></i> Add Doctor
+            </button>
+        </div>
+
+        {% set grouped_doctors = doctors|sort(attribute='department')|groupby('department') %}
+        
+        {% if grouped_doctors %}
+            {% for department, dept_doctors in grouped_doctors %}
+            <div class="card-box bg-white/0 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <h5 class="fw-bold text-primary m-0"><i class="fas fa-clinic-medical me-2"></i>{{ department }}</h5>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addDoctorModal" onclick="setDepartment('{{ department }}')">
+                        <i class="fas fa-plus me-1"></i> Add to {{ department }}
+                    </button>
+                </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Specialization</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doctor in dept_doctors %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-slate-100 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <i class="fas fa-user-md text-slate-500"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</div>
+                                        <div class="small text-muted">{{ doctor.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ doctor.specialization or 'General' }}</td>
+                            <td>{{ doctor.phone or 'N/A' }}</td>
+                            <td><span class="status-badge bg-green-soft">Active</span></td>
+                            <td class="text-end">
+                                <form action="{{ url_for('hospital_dashboard') }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to remove this doctor?');">
+                                    <input type="hidden" name="delete_doctor" value="true">
+                                    <input type="hidden" name="doctor_id" value="{{ doctor.id }}">
+                                    <button type="submit" class="btn btn-sm btn-light text-danger" title="Remove">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+            {% endfor %}
+        {% else %}
+            <div class="card-box">
+                <div class="text-center py-5 text-muted">No doctors registered yet.</div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ================= SECTION: PATIENTS ================= -->
+    <div id="patients" class="content-section">
+        <h2 class="fw-bold text-dark mb-4">Patient Records</h2>
+        <div class="card-box">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ patient.name }}</div>
+                            </td>
+                            <td>{{ patient.email }}</td>
+                            <td>{{ patient.age or 'N/A' }}</td>
+                            <td>{{ patient.gender or 'N/A' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center py-5 text-muted">No patients associated with this hospital yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SECTION: STAFF ================= -->
+    <div id="staff" class="content-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-dark">Support Staff</h2>
+            <button class="btn btn-primary text-white fw-bold" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+                <i class="fas fa-plus me-2"></i> Add Staff
+            </button>
+        </div>
+
+        <div class="card-box">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in staff %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-slate-100 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <i class="fas fa-user text-slate-500"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ s.name }}</div>
+                                        <div class="small text-muted">{{ s.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ s.role }}</span></td>
+                            <td>{{ s.phone or 'N/A' }}</td>
+                            <td><span class="status-badge bg-green-soft">Active</span></td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-light text-primary me-1" title="Edit" onclick="openEditStaffModal('{{ s.id }}', '{{ s.name }}', '{{ s.email }}', '{{ s.role }}', '{{ s.phone or '' }}')">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <form action="{{ url_for('hospital_dashboard') }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to remove this staff member?');">
+                                    <input type="hidden" name="delete_staff" value="true">
+                                    <input type="hidden" name="staff_id" value="{{ s.id }}">
+                                    <button type="submit" class="btn btn-sm btn-light text-danger" title="Remove">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">No staff members registered yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SECTION: BEDS ================= -->
+    <div id="beds" class="content-section">
+        <h2 class="fw-bold text-dark mb-4">Bed & ICU Management</h2>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card-box">
+                    <h5 class="fw-bold text-dark mb-4">Update Availability</h5>
+                    <form action="{{ url_for('hospital_dashboard') }}" method="POST">
+                        <input type="hidden" name="update_beds" value="true">
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label fw-bold">Total General Beds</label>
+                                <input type="number" name="total_beds" class="form-control" value="{{ current_user.total_beds }}" required min="0">
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label fw-bold">Available General Beds</label>
+                                <input type="number" name="available_beds" class="form-control" value="{{ current_user.available_beds }}" required min="0">
+                            </div>
+                            <div class="col-6 mb-4">
+                                <label class="form-label fw-bold">Total ICU Beds</label>
+                                <input type="number" name="icu_beds" class="form-control" value="{{ current_user.icu_beds|default(0) }}" required min="0">
+                            </div>
+                            <div class="col-6 mb-4">
+                                <label class="form-label fw-bold">Available ICU Beds</label>
+                                <input type="number" name="available_icu_beds" class="form-control" value="{{ current_user.available_icu_beds|default(0) }}" required min="0">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Update Status</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card-box h-100 d-flex flex-column justify-content-center">
+                    <h5 class="fw-bold text-dark mb-4 text-center">Occupancy Overview</h5>
+                    <div class="row align-items-center flex-grow-1">
+                        <!-- General Beds Chart -->
+                        <div class="col-6 d-flex flex-column align-items-center">
+                            <h6 class="text-muted mb-3">General Beds</h6>
+                            <div style="width: 140px; height: 140px; position: relative;">
+                                <canvas id="generalBedChart"></canvas>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                    {% set occupancy = 0 %}
+                                    {% if current_user.total_beds > 0 %}
+                                        {% set occupancy = ((current_user.total_beds - current_user.available_beds) / current_user.total_beds * 100) | round(1) %}
+                                    {% endif %}
+                                    <h4 class="mb-0 fw-bold {{ 'text-danger' if occupancy > 90 else 'text-success' }}">{{ occupancy }}%</h4>
+                                </div>
+                            </div>
+                            <p class="text-muted mt-3 small fw-bold">{{ current_user.total_beds - current_user.available_beds }} / {{ current_user.total_beds }} <span class="fw-normal">Occupied</span></p>
+                        </div>
+                        
+                        <!-- ICU Beds Chart -->
+                        <div class="col-6 d-flex flex-column align-items-center">
+                            <h6 class="text-muted mb-3">ICU Beds</h6>
+                            <div style="width: 140px; height: 140px; position: relative;">
+                                <canvas id="icuBedChart"></canvas>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                    {% set icu_occupancy = 0 %}
+                                    {% if current_user.icu_beds and current_user.icu_beds > 0 %}
+                                        {% set icu_occupancy = ((current_user.icu_beds - current_user.available_icu_beds) / current_user.icu_beds * 100) | round(1) %}
+                                    {% endif %}
+                                    <h4 class="mb-0 fw-bold {{ 'text-danger' if icu_occupancy > 90 else 'text-success' }}">{{ icu_occupancy }}%</h4>
+                                </div>
+                            </div>
+                            <p class="text-muted mt-3 small fw-bold">{{ (current_user.icu_beds|default(0)) - (current_user.available_icu_beds|default(0)) }} / {{ current_user.icu_beds|default(0) }} <span class="fw-normal">Occupied</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Bed Requests -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card-box">
+                    <h5 class="fw-bold text-dark mb-4"><i class="fas fa-procedures text-danger me-2"></i>Emergency Bed Requests</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Patient Info</th>
+                                    <th>Bed Type</th>
+                                    <th>Reason / Condition</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in bed_bookings %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ booking.patient_name }}</div>
+                                        <div class="small text-muted"><i class="fas fa-phone-alt me-1"></i>{{ booking.patient_phone }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if booking.bed_type == 'ICU' %}bg-danger{% else %}bg-primary{% endif %}">
+                                            {{ booking.bed_type }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small" style="max-width: 250px;">{{ booking.reason }}</td>
+                                    <td>
+                                        {% if booking.status == 'pending' %}
+                                            <span class="status-badge bg-yellow-soft">Pending Approval</span>
+                                        {% elif booking.status == 'approved' %}
+                                            <span class="status-badge bg-green-soft">Approved</span>
+                                        {% elif booking.status == 'awaiting_payment' %}
+                                            <span class="status-badge bg-blue-soft">Awaiting Payment</span>
+                                        {% else %}
+                                            <span class="status-badge bg-red-soft">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if booking.status == 'pending' %}
+                                        <form action="{{ url_for('handle_bed_booking', booking_id=booking.id, action='approve') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success text-white" title="Approve Booking"><i class="fas fa-check"></i></button>
+                                        </form>
+                                        <form action="{{ url_for('handle_bed_booking', booking_id=booking.id, action='reject') }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-danger text-white" title="Reject Booking" onsubmit="return confirm('Reject this bed request?');"><i class="fas fa-times"></i></button>
+                                        </form>
+                                        {% elif booking.status == 'awaiting_payment' %}
+                                        <span class="text-muted small">Awaiting Payment</span>
+                                        {% elif booking.status == 'approved' %}
+                                        <a href="{{ url_for('bed_booking_invoice', booking_id=booking.id) }}" class="btn btn-sm btn-primary text-white" title="Download Invoice"><i class="fas fa-file-invoice"></i></a>
+                                        <form action="{{ url_for('email_bed_booking_invoice', booking_id=booking.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Email invoice to patient?');">
+                                            <button type="submit" class="btn btn-sm btn-info text-white" title="Email Invoice"><i class="fas fa-envelope"></i></button>
+                                        </form>
+                                        {% else %}
+                                        <span class="text-muted small">Processed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No emergency bed requests currently pending.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ================= SECTION: CAMPS ================= -->
+    <div id="camps" class="content-section">
+        <h2 class="fw-bold text-dark mb-4">Blood Donation Camps</h2>
+        
+        <div class="row">
+            <!-- Add Camp Form -->
+            <div class="col-lg-4 mb-4">
+                <div class="card-box h-100">
+                    <h5 class="fw-bold mb-4">Organize New Camp</h5>
+                    <form action="{{ url_for('hospital_dashboard') }}" method="POST">
+                        <input type="hidden" name="add_camp" value="true">
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold">Camp Name</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold">Location</label>
+                            <input type="text" name="location" class="form-control" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label class="small text-muted fw-bold">Date</label>
+                                <input type="date" name="date" class="form-control" required>
+                            </div>
+                            <div class="col">
+                                <label class="small text-muted fw-bold">Time</label>
+                                <input type="text" name="time" class="form-control" placeholder="e.g. 9AM - 5PM" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold">Contact Number</label>
+                            <input type="text" name="contact" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Create Camp</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- List of Camps -->
+            <div class="col-lg-8 mb-4">
+                <div class="card-box h-100">
+                    <h5 class="fw-bold mb-4">Your Active Camps</h5>
+                    <div class="list-group list-group-flush">
+                        {% for camp in camps %}
+                        <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center border-bottom">
+                            <div>
+                                <div class="fw-bold text-dark">{{ camp.name }}</div>
+                                <div class="small text-muted"><i class="fas fa-map-marker-alt me-1"></i> {{ camp.location }} &bull; {{ camp.date }}</div>
+                            </div>
+                            <form action="{{ url_for('hospital_dashboard') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this camp?');">
+                                <input type="hidden" name="delete_camp" value="true">
+                                <input type="hidden" name="camp_id" value="{{ camp.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">No camps scheduled.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SECTION: SETTINGS ================= -->
+    <div id="settings" class="content-section">
+        <h2 class="fw-bold text-dark mb-4">Hospital Settings & Profile</h2>
+        
+        <div class="row">
+            <!-- General Details Form -->
+            <div class="col-md-6 mb-4">
+                <form action="{{ url_for('hospital_dashboard') }}" method="POST" enctype="multipart/form-data" class="h-100">
+                    <input type="hidden" name="update_profile" value="true">
+                    <div class="card-box h-100 d-flex flex-column">
+                        <h5 class="fw-bold text-dark mb-4">General Details</h5>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Hospital Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ current_user.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email Address</label>
+                            <input type="email" name="email" class="form-control" value="{{ current_user.email }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control" value="{{ current_user.phone or '' }}" placeholder="Hospital Phone">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Address</label>
+                            <input type="text" name="address" class="form-control" value="{{ current_user.address or '' }}" placeholder="Hospital Address">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">City</label>
+                                <input type="text" name="city" class="form-control" value="{{ current_user.city or '' }}" placeholder="City">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">State</label>
+                                <input type="text" name="state" class="form-control" value="{{ current_user.state or '' }}" placeholder="State">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold">ZIP</label>
+                                <input type="text" name="zip_code" class="form-control" value="{{ current_user.zip_code or '' }}" placeholder="ZIP">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Hospital Logo</label>
+                            <input type="file" name="logo" class="form-control" accept="image/*">
+                            {% if current_user.logo_url %}
+                                <div class="mt-2">
+                                    <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ current_user.logo_url) }}" alt="Current Logo" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                                    <small class="text-muted">Current logo will be replaced if you upload a new one.</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mt-auto pt-3">
+                            <button type="submit" class="btn btn-success text-white fw-bold w-100">Save Profile</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Security Settings Form -->
+            <div class="col-md-6 mb-4">
+                <form action="{{ url_for('hospital_dashboard') }}" method="POST" class="h-100">
+                    <input type="hidden" name="update_security" value="true">
+                    <div class="card-box h-100 d-flex flex-column">
+                        <h5 class="fw-bold text-dark mb-4">Security Settings</h5>
+                        <div class="alert alert-info small mb-3">
+                            <i class="fas fa-info-circle me-1"></i> Enter your current password to make changes to your password.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Current Password <span class="text-danger">*</span></label>
+                            <input type="password" name="current_password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">New Password <span class="text-danger">*</span></label>
+                            <input type="password" name="new_password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Confirm New Password <span class="text-danger">*</span></label>
+                            <input type="password" name="confirm_password" class="form-control" required>
+                        </div>
+                        <div class="mt-auto pt-3">
+                            <button type="submit" class="btn btn-success text-white fw-bold w-100">Update Password</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Resources & Availability Form -->
+            <div class="col-12 mb-4">
+                <form action="{{ url_for('hospital_dashboard') }}" method="POST">
+                    <input type="hidden" name="update_resources" value="true">
+                    <div class="card-box">
+                        <h5 class="fw-bold text-dark mb-4">Resources & Availability</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Total Beds</label>
+                                <input type="number" name="total_beds" class="form-control" value="{{ current_user.total_beds }}" required min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Available Beds</label>
+                                <input type="number" name="available_beds" class="form-control" value="{{ current_user.available_beds }}" required min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Total ICU Beds</label>
+                                <input type="number" name="icu_beds" class="form-control" value="{{ current_user.icu_beds|default(0) }}" required min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Available ICU Beds</label>
+                                <input type="number" name="available_icu_beds" class="form-control" value="{{ current_user.available_icu_beds|default(0) }}" required min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">General Bed Fee (₹)</label>
+                                <input type="number" name="general_bed_fee" class="form-control" value="{{ current_user.general_bed_fee|default(50.0) }}" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">ICU Bed Fee (₹)</label>
+                                <input type="number" name="icu_bed_fee" class="form-control" value="{{ current_user.icu_bed_fee|default(150.0) }}" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Doctors Availability Status</label>
+                            <select name="doctors_available" class="form-select">
+                                <option value="Available" {% if current_user.doctors_available == 'Available' %}selected{% endif %}>Fully Available</option>
+                                <option value="Limited" {% if current_user.doctors_available == 'Limited' %}selected{% endif %}>Limited Availability</option>
+                                <option value="Unavailable" {% if current_user.doctors_available == 'Unavailable' %}selected{% endif %}>Currently Unavailable</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success text-white fw-bold px-5 py-2 w-100">Save Resources</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Doctor Modal -->
+<div class="modal fade" id="addDoctorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add New Doctor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('hospital_dashboard') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="add_doctor" value="true">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">First Name</label>
+                            <input type="text" name="first_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Last Name</label>
+                            <input type="text" name="last_name" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Password</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Department</label>
+                            <input type="text" name="department" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Specialization</label>
+                            <input type="text" name="specialization" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Phone</label>
+                            <input type="text" name="phone" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success text-white">Add Doctor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Staff Modal -->
+<div class="modal fade" id="addStaffModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add New Staff Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('hospital_dashboard') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="add_staff" value="true">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Full Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Role</label>
+                            <select name="role" class="form-select" required>
+                                <option value="Nurse">Nurse</option>
+                                <option value="Receptionist">Receptionist</option>
+                                <option value="Lab Technician">Lab Technician</option>
+                                <option value="Pharmacist">Pharmacist</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Phone</label>
+                            <input type="text" name="phone" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary text-white">Add Staff</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Staff Modal -->
+<div class="modal fade" id="editStaffModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Edit Staff Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('hospital_dashboard') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="edit_staff" value="true">
+                    <input type="hidden" name="staff_id" id="edit_staff_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Full Name</label>
+                        <input type="text" name="name" id="edit_staff_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email</label>
+                        <input type="email" name="email" id="edit_staff_email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">New Password (Optional)</label>
+                        <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Role</label>
+                            <select name="role" id="edit_staff_role" class="form-select" required>
+                                <option value="Nurse">Nurse</option>
+                                <option value="Receptionist">Receptionist</option>
+                                <option value="Lab Technician">Lab Technician</option>
+                                <option value="Pharmacist">Pharmacist</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Phone</label>
+                            <input type="text" name="phone" id="edit_staff_phone" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary text-white">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Tab Switching Logic
+    function setDepartment(dept) {
+        const deptInput = document.querySelector('input[name="department"]');
+        if(deptInput) {
+            deptInput.value = dept;
+        }
+    }
+
+    function switchTab(sectionId, navElement) {
+        // Hide all sections
+        document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+        // Show target
+        document.getElementById(sectionId).classList.add('active');
+        
+        // Update Sidebar
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        navElement.classList.add('active');
+    }
+
+    // Chart Initialization
+    document.addEventListener('DOMContentLoaded', function() {
+        const apptChartEl = document.getElementById('appointmentsChart');
+        if (apptChartEl) {
+            new Chart(apptChartEl.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: {{ chart_labels | tojson }},
+                    datasets: [{
+                        label: 'Appointments',
+                        data: {{ chart_data | tojson }},
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#10b981',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { borderDash: [2, 4] } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Bed Occupancy Charts
+        const totalBeds = {{ current_user.total_beds|default(0) }};
+        const availableBeds = {{ current_user.available_beds|default(0) }};
+        const occupiedBeds = Math.max(0, totalBeds - availableBeds);
+
+        const totalIcu = {{ current_user.icu_beds|default(0) }};
+        const availableIcu = {{ current_user.available_icu_beds|default(0) }};
+        const occupiedIcu = Math.max(0, totalIcu - availableIcu);
+
+        const genCtx = document.getElementById('generalBedChart');
+        if (genCtx) {
+            new Chart(genCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Occupied', 'Available'],
+                    datasets: [{
+                        data: [occupiedBeds, availableBeds],
+                        backgroundColor: ['#ef4444', '#10b981'],
+                        borderWidth: 0,
+                        cutout: '75%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: true } }
+                }
+            });
+        }
+
+        const icuCtx = document.getElementById('icuBedChart');
+        if (icuCtx) {
+            new Chart(icuCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Occupied', 'Available'],
+                    datasets: [{
+                        data: [occupiedIcu, availableIcu],
+                        backgroundColor: ['#f59e0b', '#3b82f6'],
+                        borderWidth: 0,
+                        cutout: '75%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: true } }
+                }
+            });
+        }
+    });
+
+    function openEditStaffModal(id, name, email, role, phone) {
+        document.getElementById('edit_staff_id').value = id;
+        document.getElementById('edit_staff_name').value = name;
+        document.getElementById('edit_staff_email').value = email;
+        document.getElementById('edit_staff_role').value = role;
+        document.getElementById('edit_staff_phone').value = phone;
+        
+        var myModal = new bootstrap.Modal(document.getElementById('editStaffModal'));
+        myModal.show();
+    }
+</script>
+</body>
+</html>

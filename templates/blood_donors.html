@@ -1,0 +1,172 @@
+{% extends 'layout.html' %}
+
+{% block title %}Find Blood Donors | Search Heroes{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <!-- Premium Hero Section -->
+        <div class="text-center mb-16">
+            <span class="px-4 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold uppercase tracking-widest border border-red-100 mb-6 inline-block">
+                Emergency Response Network
+            </span>
+            <h1 class="text-5xl font-black text-slate-900 mb-4 tracking-tight">
+                Search <span class="text-red-600 underline decoration-red-200 decoration-4 underline-offset-8">Life Savers</span>
+            </h1>
+            <p class="text-lg text-slate-500 max-w-2xl mx-auto font-medium">
+                Connect with our verified community of donors ready to assist in your time of need.
+            </p>
+        </div>
+
+        <!-- Sleek Search Form -->
+        <div class="max-w-4xl mx-auto mb-16">
+            <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 p-3 border border-slate-100">
+                <form action="{{ url_for('blood_donors_list') }}" method="GET" class="flex flex-col md:flex-row items-center gap-2">
+                    <div class="relative flex-1 w-full">
+                        <i class="fas fa-map-marker-alt absolute left-5 top-1/2 -translate-y-1/2 text-red-400"></i>
+                        <input type="text" name="city" value="{{ city or '' }}" placeholder="Enter City (e.g. New York)" 
+                            class="w-full pl-12 pr-6 py-4 rounded-3xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-red-500 transition-all outline-none text-slate-700 font-medium">
+                    </div>
+                    
+                    <div class="relative w-full md:w-64">
+                        <i class="fas fa-tint absolute left-5 top-1/2 -translate-y-1/2 text-red-500"></i>
+                        <select name="blood_group" class="w-full pl-12 pr-10 py-4 rounded-3xl bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-red-500 transition-all outline-none text-slate-700 font-bold appearance-none cursor-pointer">
+                            <option value="">All Groups</option>
+                            {% for bg in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+                                <option value="{{ bg }}" {% if blood_group == bg %}selected{% endif %}>{{ bg }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full md:w-auto px-10 py-4 bg-slate-900 text-white font-bold rounded-3xl hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-3 group">
+                        <span>Search</span>
+                        <i class="fas fa-search text-sm group-hover:scale-110 transition-transform"></i>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Quick Filter Chips (Optional/Static) -->
+            <div class="flex flex-wrap justify-center gap-4 mt-6">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Trending:</span>
+                <a href="?city=London&blood_group=O%2B" class="text-xs font-bold text-slate-600 hover:text-red-500 transition-colors">O+ in London</a>
+                <a href="?blood_group=AB-" class="text-xs font-bold text-slate-600 hover:text-red-500 transition-colors">AB- (Rare)</a>
+            </div>
+        </div>
+
+        <!-- Donor Results Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% if donors %}
+                {% for donor in donors %}
+                <div class="group relative bg-white rounded-[2rem] border border-slate-200/60 p-8 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+                    <!-- Top Section: Avatar & Blood Group -->
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="relative">
+                            {% if donor.profile_picture_url %}
+                                <img src="{{ url_for('static', filename='uploads/' ~ donor.profile_picture_url) }}" alt="{{ donor.name }}" class="w-16 h-16 rounded-2xl object-cover shadow-inner group-hover:scale-105 transition-transform duration-500">
+                            {% else %}
+                                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-2xl font-black text-slate-400 group-hover:from-red-500 group-hover:to-rose-600 group-hover:text-white transition-all duration-500 shadow-inner">
+                                    {{ donor.name[0] | upper }}
+                                </div>
+                            {% endif %}
+                            <!-- Verified Badge -->
+                            <div class="absolute -bottom-2 -right-2 bg-white p-1 rounded-full shadow-md">
+                                <i class="fas fa-check-circle text-emerald-500 text-lg"></i>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <div class="text-3xl font-black text-red-600 tracking-tighter">{{ donor.blood_group }}</div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Blood Group</span>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-slate-900 group-hover:text-red-600 transition-colors">{{ donor.name }}</h3>
+                        <div class="flex items-center gap-2 text-slate-500 font-medium mt-1">
+                            <i class="fas fa-location-dot text-red-400 text-sm"></i>
+                            <span>{{ donor.city }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Stats Table -->
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Age</p>
+                            <p class="text-sm font-black text-slate-700">{{ donor.age }} Years</p>
+                        </div>
+                        <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Status</p>
+                            <p class="text-sm font-black text-emerald-600">Available</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-3">
+                        <a href="tel:{{ donor.phone }}" class="flex-1 py-4 rounded-2xl bg-slate-900 text-white font-bold text-center hover:bg-red-600 transition-all shadow-xl shadow-slate-200">
+                            <i class="fas fa-phone-alt mr-2 text-xs"></i> Contact
+                        </a>
+                        <a href="mailto:{{ donor.email }}" class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-all">
+                            <i class="far fa-envelope text-lg"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-span-full py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-200 text-center">
+                    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-user-slash text-3xl text-slate-300"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-800">No Match Found</h3>
+                    <p class="text-slate-500 mt-2">Try expanding your search to "All Groups" or nearby cities.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- PREMIUM ADVERTISEMENT: LAB PARTNER -->
+        <div class="mt-24 relative group">
+            <div class="absolute inset-0 bg-gradient-to-r from-red-600 to-rose-700 rounded-[3rem] blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+            <div class="relative bg-white rounded-[3rem] border border-slate-200 p-8 md:p-12 overflow-hidden">
+                <!-- Background Decorative Pattern -->
+                <div class="absolute top-0 right-0 w-1/3 h-full bg-slate-50 -skew-x-12 translate-x-1/2"></div>
+                
+                <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
+                    <div class="flex-1 text-center lg:text-left">
+                        <div class="flex items-center justify-center lg:justify-start gap-3 mb-6">
+                            <img src="https://cdn-icons-png.flaticon.com/512/822/822118.png" alt="Lab" class="w-10 h-10">
+                            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Premium Partner Spotlight</span>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-black text-slate-900 mb-4">Complete Health Screening for <span class="text-red-600">Active Donors</span></h2>
+                        <p class="text-slate-500 text-lg max-w-xl font-medium">Our partner labs are offering <span class="text-slate-900 font-bold">40% Discount</span> on full-body checkups for everyone registered on this platform.</p>
+                        
+                        <div class="flex flex-wrap justify-center lg:justify-start gap-6 mt-8">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check-circle text-emerald-500"></i>
+                                <span class="text-sm font-bold text-slate-600">ISO Certified Labs</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check-circle text-emerald-500"></i>
+                                <span class="text-sm font-bold text-slate-600">Home Sample Pickup</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 p-10 rounded-[2.5rem] text-center min-w-[320px] shadow-2xl">
+                        <p class="text-red-500 font-black text-xs uppercase tracking-[0.2em] mb-4">Limited Time Offer</p>
+                        <div class="mb-8">
+                            <span class="text-slate-500 text-sm font-bold line-through">$149</span>
+                            <div class="text-6xl font-black text-white">$89</div>
+                        </div>
+                        <a href="{{ url_for('book_appointment') }}"
+                        class="block w-full text-center py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-red-900/20">
+                        Book Appointment Now
+                        </a>
+
+                        <p class="text-slate-500 text-[10px] mt-4 uppercase font-bold tracking-tighter">Powered by Global Diagnostics Inc.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

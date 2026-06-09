@@ -1,0 +1,125 @@
+{% extends 'layout.html' %}
+
+{% block title %}Registered Hospitals{% endblock %}
+
+{% block content %}
+<!-- Main Container -->
+<div class="min-h-screen bg-[#FDFBF7] font-sans selection:bg-emerald-200 selection:text-emerald-900 pb-24 relative">
+
+    <!-- Background texture -->
+    <div class="absolute inset-0 z-0 opacity-40 pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/cream-paper.png');"></div>
+
+    <!-- ================= HERO SECTION ================= -->
+    <div class="relative pt-32 pb-20 overflow-hidden z-10">
+        
+        <!-- Background Decor -->
+        <div class="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-emerald-100/50 rounded-full blur-[100px] mix-blend-multiply opacity-70"></div>
+        <div class="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-teal-100/60 rounded-full blur-[100px] mix-blend-multiply opacity-70"></div>
+
+        <!-- Hero Content -->
+        <div class="relative z-10 max-w-7xl mx-auto px-6 text-center">
+            
+            <div class="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white border border-slate-200 shadow-sm mb-8 animate-fade-in-up">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-bold text-slate-600 tracking-[0.2em] uppercase font-serif">Network Partners</span>
+            </div>
+
+            <h1 class="text-5xl md:text-7xl font-serif text-slate-900 mb-6 leading-[1.1] tracking-tight">
+                Available <span class="italic text-emerald-600 relative inline-block">
+                    Hospitals
+                    <svg class="absolute w-full h-3 -bottom-1 left-0 text-emerald-200/50 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 10 100 5" stroke="currentColor" stroke-width="8" fill="none" /></svg>
+                </span>
+            </h1>
+            <p class="text-lg md:text-xl text-slate-500 font-light max-w-2xl mx-auto leading-relaxed mb-12">
+                Browse our network of accredited medical facilities. Find the right hospital for your needs and book appointments with their specialists.
+            </p>
+        </div>
+    </div>
+
+    <!-- ================= LIST SECTION ================= -->
+    <div class="max-w-7xl mx-auto px-6 relative z-20">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for hospital in hospitals %}
+            <!-- HOSPITAL CARD -->
+            <div class="group relative bg-white rounded-[2rem] overflow-hidden transition-all duration-500 hover:-translate-y-2 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.15)] border border-slate-100 flex flex-col">
+                
+                <!-- Header Pattern -->
+                <div class="h-32 bg-slate-50 relative overflow-hidden flex items-center justify-center">
+                    <div class="absolute inset-0 opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/architect.png')]"></div>
+                    {% if hospital.logo_url %}
+                        <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) }}" alt="{{ hospital.name }}" class="w-16 h-16 rounded-2xl shadow-sm object-cover z-10 bg-white">
+                    {% else %}
+                        <div class="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl text-emerald-600 z-10">
+                            <i class="fas fa-hospital"></i>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Content -->
+                <div class="px-8 pb-8 pt-6 flex-grow flex flex-col items-center text-center">
+                    <h3 class="text-2xl font-serif font-bold text-slate-900 mb-2 group-hover:text-emerald-600 transition-colors">
+                        {{ hospital.name }}
+                    </h3>
+                    <p class="text-sm text-slate-500 font-medium mb-6">
+                        {{ hospital.email }}
+                    </p>
+                    
+                    <!-- Bed Availability -->
+                    <div class="w-full mb-6 space-y-3">
+                        {% if hospital.total_beds > 0 %}
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">General Beds</span>
+                                <span class="text-xs font-bold {{ 'text-red-500' if hospital.available_beds < 5 else 'text-emerald-600' }}">
+                                    {{ hospital.available_beds }} <span class="text-slate-400 font-normal">/ {{ hospital.total_beds }}</span>
+                                </span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                {% set occupancy_pct = ((hospital.total_beds - hospital.available_beds) / hospital.total_beds * 100) %}
+                                <div class="h-full rounded-full {{ 'bg-red-500' if occupancy_pct > 90 else 'bg-emerald-500' }}" style="width: {{ occupancy_pct }}%"></div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if hospital.icu_beds and hospital.icu_beds > 0 %}
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ICU Beds</span>
+                                <span class="text-xs font-bold {{ 'text-red-500' if hospital.available_icu_beds < 2 else 'text-emerald-600' }}">
+                                    {{ hospital.available_icu_beds }} <span class="text-slate-400 font-normal">/ {{ hospital.icu_beds }}</span>
+                                </span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                {% set icu_occupancy_pct = ((hospital.icu_beds - hospital.available_icu_beds) / hospital.icu_beds * 100) %}
+                                <div class="h-full rounded-full {{ 'bg-red-500' if icu_occupancy_pct > 90 else 'bg-emerald-500' }}" style="width: {{ icu_occupancy_pct }}%"></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex items-center justify-between text-xs font-bold bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                            <span class="text-slate-400 uppercase tracking-wider">Doctors Status</span>
+                            <span class="{{ 'text-emerald-600' if hospital.doctors_available == 'Available' else ('text-amber-500' if hospital.doctors_available == 'Limited' else 'text-red-500') }}">{{ hospital.doctors_available|default('Available') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto w-full">
+                        <a href="{{ url_for('hospital_detail', hospital_id=hospital.id) }}" 
+                           class="flex items-center justify-center w-full py-3 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all duration-300 shadow-lg">
+                            View Details <i class="fas fa-arrow-right ml-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center py-20">
+                <p class="text-slate-500 text-lg">No hospitals registered yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

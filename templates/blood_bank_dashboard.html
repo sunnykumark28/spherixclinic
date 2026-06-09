@@ -1,0 +1,124 @@
+{% extends 'dashboard_layout.html' %}
+
+{% block title %}Blood Bank Manager | Dashboard{% endblock %}
+
+{% block content %}
+<!-- Import Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+</style>
+
+<div class="min-h-screen pb-12">
+    
+    <!-- Hero / Welcome Section -->
+    <div class="bg-rose-900 pb-24 pt-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <button type="button" onclick="history.back()"
+                        class="px-6 py-2 rounded-2xl bg-rose-800 text-white font-medium shadow-lg hover:bg-rose-700 hover:shadow-red-500/40 transition-all duration-300 hover:scale-105 tracking-wide">
+                        ←Back
+                        </button>
+                        <br>
+                        <bR>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="px-3 py-1 rounded-full bg-rose-800 text-rose-200 text-xs font-medium border border-rose-700">Manager Portal</span>
+                        <span class="text-rose-300 text-xs"><i class="fas fa-hospital-alt mr-1"></i> Blood Bank Unit</span>
+                    </div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Inventory & Donations</h1>
+                    <p class="text-rose-200 mt-1 text-sm md:text-base">Manage stock levels and oversee donor registrations.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{{ url_for('blood_bank') }}" class="px-5 py-2.5 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-all flex items-center gap-2 backdrop-blur-sm">
+                        <i class="fas fa-eye"></i> Public View
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16">
+        
+        <!-- Inventory Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            {% for group, count in stock.items() %}
+            <div class="bg-white rounded-xl p-5 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col justify-between relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-16 h-16 bg-rose-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150"></div>
+                
+                <div class="flex justify-between items-start relative z-10">
+                    <div>
+                        <h3 class="text-3xl font-black text-slate-800">{{ group }}</h3>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Blood Group</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-bold {{ 'text-red-500' if count < 5 else 'text-emerald-600' }}">{{ count }}</span>
+                        <p class="text-[10px] text-slate-400">Units</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex items-center gap-2 relative z-10">
+                    <form action="{{ url_for('update_blood_stock') }}" method="POST" class="flex-1">
+                        <input type="hidden" name="group" value="{{ group }}">
+                        <input type="hidden" name="operation" value="sub">
+                        <button type="submit" class="w-full py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-600 transition-colors text-sm font-bold">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </form>
+                    <form action="{{ url_for('update_blood_stock') }}" method="POST" class="flex-1">
+                        <input type="hidden" name="group" value="{{ group }}">
+                        <input type="hidden" name="operation" value="add">
+                        <button type="submit" class="w-full py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-emerald-100 hover:text-emerald-600 transition-colors text-sm font-bold">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Donors List -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-users text-rose-500"></i> Registered Donors
+                </h2>
+                <span class="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full">{{ donors|length }} Total</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
+                        <tr>
+                            <th class="px-6 py-4">Donor Name</th>
+                            <th class="px-6 py-4">Blood Group</th>
+                            <th class="px-6 py-4">Contact</th>
+                            <th class="px-6 py-4">Location</th>
+                            <th class="px-6 py-4">Last Donation</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for donor in donors %}
+                        <tr class="hover:bg-slate-50/80 transition duration-150">
+                            <td class="px-6 py-4 font-medium text-slate-900">{{ donor.name }}</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-rose-50 text-rose-600 font-bold text-xs border border-rose-100">
+                                    {{ donor.blood_group }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-600">
+                                <div>{{ donor.phone }}</div>
+                                <div class="text-xs text-slate-400">{{ donor.email }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-600">{{ donor.city }}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600">{{ donor.last_donation or 'Never' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

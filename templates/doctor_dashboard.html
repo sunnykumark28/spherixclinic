@@ -1,0 +1,848 @@
+{% extends 'dashboard_layout.html' %}
+{% block title %}Doctor Portal | Dashboard{% endblock %}
+
+{% block content %}
+<!-- Import Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc;
+        background-image: radial-gradient(at 0% 0%, rgba(224, 48, 48, 0.952) 0px, transparent 50%), 
+                          radial-gradient(at 100% 0%, rgba(211, 216, 218, 0.633) 0px, transparent 50%);
+        background-attachment: fixed;
+    }
+
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, #eaecef 0%, #fbfdff 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Smooth Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #ffffff; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+
+<div class="min-h-screen relative overflow-x-hidden">
+    
+    <!-- Top Decorative Background -->
+    <div class="absolute top-0 w-full h-80 bg-gradient-to-r from-blue-600 via-red-500 to-white-400 overflow-hidden z-0">
+        <svg class="absolute right-0 top-0 h-full w-1/2 opacity-10 transform translate-x-1/3" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M0 100 C 20 0 50 0 100 100 Z" fill="black" />
+        </svg>
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row justify-between items-end md:items-center mb-10 gap-4">
+            <div>
+                <p class="text-white/80 font-medium mb-2 tracking-wide uppercase text-xs">Welcome</p>
+                <h1 class="text-4xl md:text-5xl font-bold text-white tracking-tight">Dr. {{ doctor.last_name }}</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="px-4 py-2 rounded-full bg-slate-800/50 text-slate-200 text-sm border border-slate-700 backdrop-blur-md">
+                    <i class="far fa-clock mr-2"></i> <span id="currentDate"></span>
+                </span>
+                <a href="{{ url_for('logout') }}" class="group flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-400 text-white hover:bg-red-700 transition-all border border-white/10 backdrop-blur-md font-medium text-sm">
+                    <span>Logout</span>
+                    <i class="fas fa-sign-out-alt transition-transform group-hover:translate-x-1"></i>
+                </a>
+            </div>
+        </div>
+
+
+        <!-- Quick Stats Row (Realistic Addition) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Stat Card 1 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Total Appointments</p>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-1">{{ total_appointments|default('0') }}</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+            <!-- Stat Card 2 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Pending Requests</p>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-1">{{ upcoming_appointments|selectattr("status", "equalto", "pending")|list|length }}</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+            <!-- Stat Card 3 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Experience</p>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-1">{{ doctor.experience }} <span class="text-sm font-normal text-slate-400">Years</span></h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <i class="fas fa-user-md"></i>
+                </div>
+            </div>
+            <!-- Stat Card 4 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Total Earnings</p>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-1">${{ "%.2f"|format(total_income) }}</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <i class="fas fa-wallet"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-8 space-y-3">
+                    {% for category, message in messages %}
+                        <div class="flex items-center p-4 rounded-lg shadow-sm border-l-4 {{ 'bg-emerald-50 text-emerald-800 border-emerald-500' if category == 'success' else 'bg-red-50 text-red-800 border-red-500' }}">
+                            <i class="{{ 'fas fa-check-circle text-emerald-500' if category == 'success' else 'fas fa-exclamation-circle text-red-500' }} mr-3 text-lg"></i>
+                            <span class="font-medium">{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Main Layout Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Profile -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Profile Card -->
+                <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden relative group">
+                    <div class="h-32 bg-gradient-to-r from-slate-700 to-slate-900"></div>
+                    <div class="px-6 pb-6 relative">
+                        <!-- Avatar -->
+                        <div class="relative -mt-16 mb-4 inline-block">
+                            <img id="profilePreview" 
+                                 src="{{ url_for('get_doctor_image', doc_id=doctor.id) if doctor.profile_picture_url == 'db:image' else (url_for('static', filename='uploads/' ~ doctor.profile_picture_url) if doctor.profile_picture_url else 'https://ui-avatars.com/api/?name=' ~ doctor.first_name ~ '+' ~ doctor.last_name ~ '&background=random&size=256') }}" 
+                                 alt="Dr. {{ doctor.last_name }}" 
+                                 class="w-32 h-32 rounded-xl object-cover border-4 border-white shadow-md bg-white">
+                            <label for="profilePictureInput" class="absolute bottom-[-5px] right-[-5px] bg-slate-800 text-white p-2 rounded-lg cursor-pointer hover:bg-indigo-600 transition shadow-sm">
+                                <i class="fas fa-camera text-xs"></i>
+                            </label>
+                            <input id="profilePictureInput" type="file" name="profilePicture" accept="image/*" class="hidden" form="editProfileForm"/>
+                        </div>
+                        
+                        <!-- Name & Info -->
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                                {{ doctor.first_name }} {{ doctor.last_name }}
+                                <i class="fas fa-check-circle text-blue-500 text-base" title="Verified Doctor"></i>
+                            </h2>
+                            <p class="text-indigo-600 font-medium mb-1">{{ doctor.specialization }}</p>
+                            <p class="text-slate-500 text-sm flex items-center gap-1">
+                                <i class="fas fa-hospital-alt text-slate-400"></i> {{ doctor.hospital_name or 'Independent Practice' }}
+                            </p>
+                        </div>
+
+                        <hr class="my-6 border-slate-100">
+
+                        <div class="space-y-4 text-sm">
+                            <div class="flex items-center gap-3 text-slate-600">
+                                <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                    <i class="fas fa-id-badge"></i>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <p class="text-xs text-slate-400 font-medium uppercase">License</p>
+                                    <p class="font-medium truncate">{{ doctor.license_number or 'N/A' }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 text-slate-600">
+                                <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <p class="text-xs text-slate-400 font-medium uppercase">Contact</p>
+                                    <p class="font-medium truncate">{{ doctor.phone }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 text-slate-600">
+                                <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <p class="text-xs text-slate-400 font-medium uppercase">Email</p>
+                                    <p class="font-medium truncate">{{ doctor.email }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <button id="editBtn" class="w-full py-2.5 rounded-lg bg-slate-800 text-white font-medium hover:bg-slate-700 transition shadow-lg shadow-slate-200">
+                                Edit Profile Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Feed (Realistic Mockup) -->
+                <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-stream text-indigo-500"></i> Activity Log
+                    </h3>
+                    <div class="relative border-l-2 border-slate-100 ml-3 space-y-6">
+                        <div class="mb-8 ml-6 relative">
+                            <span class="absolute -left-[31px] top-1 bg-green-500 h-3 w-3 rounded-full border-2 border-white ring-2 ring-green-100"></span>
+                            <h4 class="text-sm font-semibold text-slate-800">System Login</h4>
+                            <p class="text-xs text-slate-500">Logged in successfully via web.</p>
+                            <span class="text-xs text-slate-400 mt-1 block">Just now</span>
+                        </div>
+                        <div class="mb-8 ml-6 relative">
+                            <span class="absolute -left-[31px] top-1 bg-blue-500 h-3 w-3 rounded-full border-2 border-white ring-2 ring-blue-100"></span>
+                            <h4 class="text-sm font-semibold text-slate-800">Appointment Sync</h4>
+                            <p class="text-xs text-slate-500">Calendar synchronized with hospital db.</p>
+                            <span class="text-xs text-slate-400 mt-1 block">2 hours ago</span>
+                        </div>
+                        <div class="ml-6 relative">
+                            <span class="absolute -left-[31px] top-1 bg-slate-300 h-3 w-3 rounded-full border-2 border-white"></span>
+                            <h4 class="text-sm font-semibold text-slate-800">Profile Updated</h4>
+                            <p class="text-xs text-slate-500">Updated consultation hours.</p>
+                            <span class="text-xs text-slate-400 mt-1 block">Yesterday</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Content -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                 <!-- Edit Form -->
+                <div id="editForm" class="hidden bg-white rounded-2xl shadow-xl border border-indigo-100 overflow-hidden">
+                    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800">Update Profile Information</h3>
+                        <button id="cancelBtnTop" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('doctor_dashboard') }}" enctype="multipart/form-data" id="editProfileForm" class="p-6">
+                        <!-- Section 1: Personal -->
+                        <div class="mb-8">
+                            <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Personal Information</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                                    <input type="text" name="first_name" value="{{ doctor.first_name }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                                    <input type="text" name="last_name" value="{{ doctor.last_name }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                                    <input type="text" name="phone" value="{{ doctor.phone }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                                    <input type="email" name="email" value="{{ doctor.email }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Professional -->
+                        <div class="mb-8 border-t border-slate-100 pt-6">
+                            <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Professional Profile</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Specialization</label>
+                                    <input type="text" name="specialization" value="{{ doctor.specialization }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">License No.</label>
+                                    <input type="text" name="license_number" value="{{ doctor.license_number }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                                <div class="col-span-full">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Professional Bio</label>
+                                    <textarea name="bio" rows="3" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm p-3">{{ doctor.bio }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Clinic & Settings -->
+                        <div class="mb-6 border-t border-slate-100 pt-6">
+                            <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Clinic & Location</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Hospital Name</label>
+                                    <input type="text" name="hospital_name" value="{{ doctor.hospital_name }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Fee (₹)</label>
+                                    <input type="number" name="consultation_fee" value="{{ doctor.consultation_fee }}" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3">
+                                </div>
+                                <div class="col-span-full">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Full Address</label>
+                                    <input type="text" name="hospital_address" value="{{ doctor.hospital_address }}" placeholder="Street Address" class="w-full rounded-lg border border-slate-400 text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm py-2 px-3 mb-4">
+                                    
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">District</label>
+                                            <input type="text" name="district" value="{{ doctor.district }}" placeholder="District" class="w-full rounded-lg border border-slate-400 text-slate-900 text-sm py-2 px-3">
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">State</label>
+                                            <input type="text" name="state" value="{{ doctor.state }}" placeholder="State" class="w-full rounded-lg border border-slate-400 text-slate-900 text-sm py-2 px-3">
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Pincode</label>
+                                            <input type="text" name="pincode" value="{{ doctor.pincode }}" placeholder="PIN" class="w-full rounded-lg border border-slate-400 text-slate-900 text-sm py-2 px-3">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+                            <button type="button" id="cancelBtn" class="px-6 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition">Cancel</button>
+                            <button type="submit" class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition shadow-lg">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Appointments Section -->
+                <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 class="font-bold text-slate-800 text-lg">Appointments</h3>
+                        
+                        <!-- Filters -->
+                        <div class="flex gap-2">
+                            <select class="text-xs border-slate-300 rounded-md text-slate-600 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm">
+                                <option>All Status</option>
+                                <option>Pending</option>
+                                <option>Confirmed</option>
+                            </select>
+                            <button class="text-xs bg-white border border-slate-300 px-3 py-1.5 rounded-md text-slate-600 shadow-sm hover:bg-slate-50"><i class="fas fa-download mr-1"></i> Export</button>
+                        </div>
+                    </div>
+
+                    {% if upcoming_appointments %}
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs font-semibold tracking-wide text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                                        <th class="px-4 py-4">Patient</th>
+                                        <th class="px-4 py-4">Date & Time</th>
+                                        <th class="px-4 py-4">Status</th>
+                                        <th class="px-4 py-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    {% for appointment in upcoming_appointments %}
+                                    <tr class="hover:bg-slate-50/80 transition group">
+                                        <!-- Patient Info -->
+                                        <td class="px-4 py-4">
+                                            <div class="flex items-center">
+                                                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold mr-3">
+                                                    {{ appointment.patient_name[0] }}
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-slate-800 text-sm">{{ appointment.patient_name }}</p>
+                                                    <p class="text-xs text-slate-500">{{ appointment.reason or 'General Checkup' }}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        
+                                        <!-- Date -->
+                                        <td class="px-4 py-4">
+                                            <p class="text-sm text-slate-700 font-medium">{{ appointment.appointment_date.strftime('%b %d, %Y') }}</p>
+                                            <p class="text-xs text-slate-400">{{ appointment.appointment_time.strftime('%I:%M %p') if appointment.appointment_time else 'TBD' }}</p>
+                                        </td>
+
+                                        <!-- Status -->
+                                        <td class="px-4 py-4">
+                                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold
+                                                {% if appointment.status == 'confirmed' %} bg-emerald-100 text-emerald-700
+                                                {% elif appointment.status == 'pending' %} bg-amber-100 text-amber-700
+                                                {% elif appointment.status == 'cancelled' %} bg-red-100 text-red-700
+                                                {% else %} bg-slate-100 text-slate-600 {% endif %}">
+                                                {{ appointment.status | capitalize }}
+                                            </span>
+                                        </td>
+
+                                        <!-- Actions -->
+                                        <td class="px-4 py-4 text-center">
+                                            {% if appointment.status == 'pending' %}
+                                                <div class="flex items-center justify-center gap-2">
+                                                    <!-- Approve -->
+                                                    <form action="{{ url_for('approve_appointment', appointment_id=appointment.id) }}" method="POST">
+                                                        <button type="submit" class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition flex items-center justify-center shadow-sm" title="Approve">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    </form>
+                                                    <!-- Cancel -->
+                                                    <form action="{{ url_for('doctor_cancel_appointment', appointment_id=appointment.id) }}" method="POST">
+                                                        <button type="submit" class="w-8 h-8 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition flex items-center justify-center shadow-sm" title="Reject">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                    <!-- Reschedule Toggle -->
+                                                    <button onclick="toggleRescheduleForm({{ appointment.id | tojson }})" class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition flex items-center justify-center shadow-sm" title="Reschedule">
+                                                        <i class="fas fa-calendar-alt"></i>
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Reschedule Dropdown -->
+                                                <div id="reschedule-form-{{ appointment.id }}" class="hidden mt-3 p-3 bg-white border border-slate-200 rounded-lg shadow-lg absolute right-10 z-20 w-64">
+                                                    <h6 class="text-xs font-bold text-slate-600 mb-2">Propose New Time</h6>
+                                                    <form action="{{ url_for('reschedule_appointment', appointment_id=appointment.id) }}" method="POST" class="space-y-2">
+                                                        <input type="date" name="reschedule_date" class="w-full text-xs border-slate-300 rounded" required>
+                                                        <input type="time" name="reschedule_time" class="w-full text-xs border-slate-300 rounded" required>
+                                                        <button type="submit" class="w-full bg-blue-600 text-white text-xs py-1.5 rounded hover:bg-blue-700">Send Request</button>
+                                                    </form>
+                                                </div>
+                                            {% elif appointment.status == 'confirmed' %}
+                                                <div class="flex items-center justify-center gap-4">
+                                                    <a href="#" class="text-xs text-indigo-600 font-medium hover:underline">Details</a>
+                                                    <a href="{{ url_for('appointment_invoice', appointment_id=appointment.id) }}" target="_blank" class="text-slate-400 hover:text-indigo-600 transition" title="View Invoice">
+                                                        <i class="fas fa-file-invoice-dollar"></i>
+                                                    </a>
+                                                    <a href="{{ url_for('telemedicine', appointment_id=appointment.id) }}" class="text-sky-500 hover:text-sky-700 transition" title="Join Video Call">
+                                                        <i class="fas fa-video"></i>
+                                                    </a>
+                                                    <form action="{{ url_for('complete_appointment', appointment_id=appointment.id) }}" method="POST" onsubmit="return confirm('Mark this appointment as completed?');" class="leading-none">
+                                                        <button type="submit" class="text-emerald-500 hover:text-emerald-700 transition" title="Mark as Completed">
+                                                            <i class="fas fa-check-circle"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-slate-400 text-xs">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination (Clean) -->
+                        {% if total_pages > 1 %}
+                        <div class="px-6 py-4 border-t border-slate-100 flex justify-center">
+                            <div class="flex gap-1">
+                                {% set query_params = request.args.to_dict() %}
+                                <a href="{{ url_for('doctor_dashboard', page=page-1, **query_params) }}" class="px-3 py-1 text-sm border rounded hover:bg-slate-50 {{ 'pointer-events-none opacity-50' if page == 1 }}">Prev</a>
+                                <span class="px-3 py-1 text-sm bg-slate-100 text-slate-600 font-medium">{{ page }} / {{ total_pages }}</span>
+                                <a href="{{ url_for('doctor_dashboard', page=page+1, **query_params) }}" class="px-3 py-1 text-sm border rounded hover:bg-slate-50 {{ 'pointer-events-none opacity-50' if page == total_pages }}">Next</a>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    {% else %}
+                        <!-- Empty State -->
+                        <div class="p-12 text-center">
+                            <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                                <i class="far fa-calendar text-2xl"></i>
+                            </div>
+                            <h3 class="text-slate-800 font-medium">No Appointments Found</h3>
+                            <p class="text-slate-500 text-sm mt-1">You don't have any appointments scheduled for this criteria.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-Time Messaging Section -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-900">Patient Messages</h3>
+                    <p class="text-xs text-slate-500">Real-time communication</p>
+                </div>
+            </div>
+            <span id="docUnreadBadge" class="hidden px-3 py-1 rounded-full bg-red-100 text-red-600 text-sm font-bold animate-pulse">
+                <i class="fas fa-bell mr-1"></i><span id="docUnreadCount">0</span> New
+            </span>
+        </div>
+
+        <!-- Two-Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-x divide-slate-100">
+            <!-- Messages Display -->
+            <div class="lg:col-span-2 min-h-96">
+                <div id="doctorChatContainer" class="h-96 overflow-y-auto bg-slate-50 p-6 space-y-4 custom-scrollbar">
+                    <div class="text-center text-slate-400 py-20">
+                        <i class="fas fa-inbox text-5xl mb-4 opacity-20"></i>
+                        <p class="font-medium text-lg">Select a patient to view messages</p>
+                        <p class="text-sm mt-2">Messages from your patients will appear here</p>
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <div id="docChatInputArea" class="hidden border-t border-slate-100 bg-white p-4">
+                    <div class="flex gap-3 items-end">
+                        <input type="text" id="doctorMessageInput" placeholder="Reply to patient..."
+                               class="flex-1 px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition" autocomplete="off">
+                        <button id="doctorMessageSendBtn" title="Send message" class="w-11 h-11 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center font-medium">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversations List -->
+            <div class="lg:col-span-1 bg-slate-50 max-h-96 overflow-y-auto">
+                <div class="p-4 border-b border-slate-100 bg-white sticky top-0 z-10">
+                    <h4 class="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                        <i class="fas fa-users text-blue-600"></i> Recent Patients
+                    </h4>
+                </div>
+                <div id="docConversationsList" class="divide-y divide-slate-200">
+                    <div class="p-6 text-center text-slate-400">
+                        <i class="fas fa-spinner text-xl animate-spin mb-2"></i>
+                        <p class="text-sm">Loading conversations...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden state for messaging -->
+<input type="hidden" id="docActivePatientId" value="">
+<input type="hidden" id="docCurrentUserId" value="{{ current_user.id }}">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatContainer = document.getElementById('doctorChatContainer');
+    const conversationsList = document.getElementById('docConversationsList');
+    const chatInputArea = document.getElementById('docChatInputArea');
+    const messageInput = document.getElementById('doctorMessageInput');
+    const sendBtn = document.getElementById('doctorMessageSendBtn');
+    const activePatientId = document.getElementById('docActivePatientId');
+    const unreadBadge = document.getElementById('docUnreadBadge');
+    const unreadCount = document.getElementById('docUnreadCount');
+    
+    let activeRoom = null;
+    const socket = io();
+
+    // Load conversations
+    async function loadConversations() {
+        try {
+            const response = await fetch('/api/doctor/conversations');
+            const data = await response.json();
+            
+            conversationsList.innerHTML = '';
+            
+            if (data.conversations && data.conversations.length > 0) {
+                // Update unread count
+                const totalUnread = data.conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+                if (totalUnread > 0) {
+                    unreadBadge.classList.remove('hidden');
+                    unreadCount.textContent = totalUnread;
+                } else {
+                    unreadBadge.classList.add('hidden');
+                }
+
+                data.conversations.forEach(conv => {
+                    const convEl = document.createElement('div');
+                    const isActive = activePatientId.value == conv.patient_id;
+                    convEl.className = `p-4 border-b border-slate-200 cursor-pointer hover:bg-blue-50 transition flex items-center gap-3 ${isActive ? 'bg-blue-100 border-l-4 border-blue-600' : ''}`;
+                    
+                    const hasUnread = conv.unread_count > 0;
+                    convEl.innerHTML = `
+                        <div class="relative flex-shrink-0">
+                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(conv.patient_name)}&background=random&size=40&bold=true" 
+                                 alt="${conv.patient_name}" class="w-10 h-10 rounded-full object-cover">
+                            ${hasUnread ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>' : ''}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-900 text-sm">${conv.patient_name}</p>
+                            <p class="text-xs text-slate-600 truncate">${conv.last_message || 'No messages yet'}</p>
+                        </div>
+                        ${hasUnread ? `<span class="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full flex-shrink-0">${conv.unread_count}</span>` : ''}
+                    `;
+                    
+                    convEl.addEventListener('click', () => selectPatient(conv.patient_id, conv.patient_name));
+                    conversationsList.appendChild(convEl);
+                });
+            } else {
+                conversationsList.innerHTML = `
+                    <div class="p-8 text-center text-slate-400">
+                        <i class="fas fa-envelope-open-text text-3xl mb-3 opacity-30"></i>
+                        <p class="text-sm font-medium">No messages yet</p>
+                        <p class="text-xs mt-1">When your patients message, they'll appear here</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+            conversationsList.innerHTML = '<div class="p-4 text-red-500 text-sm">Error loading conversations</div>';
+        }
+    }
+
+    function selectPatient(patientId, patientName) {
+        activePatientId.value = patientId;
+        // Extract actual doctor ID from current_user.id (format: "doctor-{id}")
+        const currentUserId = document.getElementById('docCurrentUserId').value;
+        const actualDoctorId = currentUserId.split('-')[1] || currentUserId;
+        activeRoom = `chat_${patientId}_${actualDoctorId}`;
+        chatInputArea.classList.remove('hidden');
+        messageInput.placeholder = `Message ${patientName}...`;
+        messageInput.focus();
+        loadMessages(patientId);
+        socket.emit('join', { room: activeRoom });
+        loadConversations(); // Refresh to highlight active patient
+    }
+
+    async function loadMessages(patientId) {
+        try {
+            const response = await fetch(`/api/doctor/chat/${patientId}/messages`);
+            const messages = await response.json();
+            
+            chatContainer.innerHTML = '';
+            
+            if (messages.length === 0) {
+                chatContainer.innerHTML = '<div class="text-center text-slate-400 py-12"><i class="fas fa-comments text-3xl mb-3 opacity-20"></i><p class="text-sm font-medium">No messages yet</p><p class="text-xs mt-2">Start the conversation!</p></div>';
+            } else {
+                messages.forEach(msg => appendMessage(msg));
+            }
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } catch (error) {
+            console.error('Error loading messages:', error);
+        }
+    }
+
+    function appendMessage(msg) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `flex ${msg.sender === 'doctor' ? 'justify-end' : 'justify-start'} gap-2 items-end`;
+        
+        const msgTime = new Date(msg.created_at);
+        const timeStr = msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        msgDiv.innerHTML = `
+            <div class="max-w-xs px-4 py-2.5 rounded-2xl text-sm ${
+                msg.sender === 'doctor' 
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md' 
+                    : 'bg-white border border-slate-200 text-slate-900'
+            }">
+                <p class="break-words">${escapeHtml(msg.content)}</p>
+                <p class="text-xs mt-1.5 ${msg.sender === 'doctor' ? 'text-blue-100' : 'text-slate-400'}">${timeStr}</p>
+            </div>
+        `;
+        
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async function sendMessage() {
+        const content = messageInput.value.trim();
+        const patientId = activePatientId.value;
+        
+        if (!content) {
+            alert('Please enter a message.');
+            return;
+        }
+        
+        if (!patientId) {
+            alert('Please select a patient to send the message to.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/doctor/chat/${patientId}/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                messageInput.value = '';
+                appendMessage({
+                    sender: 'doctor',
+                    content: content,
+                    created_at: new Date().toISOString()
+                });
+            } else {
+                alert('Failed to send message: ' + (result.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('Error sending message');
+        }
+    }
+
+    // Socket.IO listeners
+    socket.on('new_message', function(msg) {
+        if (msg.sender === 'patient') {
+            appendMessage(msg);
+            loadConversations();
+        }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Initial load and auto-refresh
+    loadConversations();
+    setInterval(loadConversations, 3000);
+});
+</script>
+
+<!-- Cropper Modal -->
+<div id="cropperModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Crop Profile Picture</h3>
+                        <div class="mt-2">
+                            <div class="img-container w-full h-96 bg-gray-100 rounded-lg overflow-hidden">
+                                <img id="imageToCrop" src="" alt="Picture to crop" class="max-w-full h-auto block mx-auto">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="cropBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">Crop & Save</button>
+                <button type="button" id="cancelCropBtn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+    // Set Current Date
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', options);
+
+    // Toggle Forms
+    function toggleRescheduleForm(id) {
+        const form = document.getElementById(`reschedule-form-${id}`);
+        // Close others
+        document.querySelectorAll('[id^="reschedule-form-"]').forEach(el => {
+            if(el.id !== `reschedule-form-${id}`) el.classList.add('hidden');
+        });
+        form.classList.toggle('hidden');
+    }
+
+    // Profile Edit Logic
+    const editBtn = document.getElementById('editBtn');
+    const editForm = document.getElementById('editForm');
+    const cancelBtns = [document.getElementById('cancelBtn'), document.getElementById('cancelBtnTop')];
+
+    editBtn.addEventListener('click', () => {
+        editForm.classList.remove('hidden');
+        window.scrollTo({ top: editForm.offsetTop - 100, behavior: 'smooth' });
+    });
+
+    cancelBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            editForm.classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    // Image Preview & Cropping Logic
+    const profileInput = document.getElementById('profilePictureInput');
+    const profilePreview = document.getElementById('profilePreview');
+    const cropperModal = document.getElementById('cropperModal');
+    const imageToCrop = document.getElementById('imageToCrop');
+    const cropBtn = document.getElementById('cropBtn');
+    const cancelCropBtn = document.getElementById('cancelCropBtn');
+    let cropper;
+
+    profileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imageToCrop.src = e.target.result;
+                cropperModal.classList.remove('hidden');
+                
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(imageToCrop, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    cancelCropBtn.addEventListener('click', () => {
+        cropperModal.classList.add('hidden');
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+        profileInput.value = ''; // Reset input
+    });
+
+    cropBtn.addEventListener('click', () => {
+        if (cropper) {
+            cropper.getCroppedCanvas({
+                width: 400,
+                height: 400,
+            }).toBlob((blob) => {
+                // Create a new file from the blob
+                const file = new File([blob], "profile_cropped.jpg", { type: "image/jpeg" });
+                
+                // Update the file input with the cropped file
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                profileInput.files = dataTransfer.files;
+
+                // Update preview
+                profilePreview.src = URL.createObjectURL(blob);
+
+                // Close modal
+                cropperModal.classList.add('hidden');
+                cropper.destroy();
+                cropper = null;
+            }, 'image/jpeg');
+        }
+    });
+</script>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}

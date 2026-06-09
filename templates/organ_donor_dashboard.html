@@ -1,0 +1,452 @@
+{% extends 'dashboard_layout.html' %}
+
+{% block title %}Organ Donor Dashboard - DEV AI+{% endblock %}
+
+{% block head %}
+<!-- Premium Typography -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+
+<style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    
+    /* Hide the global header and footer on the dashboard */
+    nav.glass-nav, footer {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] pb-20">
+    <!-- Premium Header with Mesh Gradient -->
+    <div class="relative overflow-hidden bg-slate-900 pt-12 pb-28">
+        <!-- Abstract Background Shapes -->
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-sky-600 rounded-full blur-[100px]"></div>
+            <div class="absolute top-1/2 -right-24 w-80 h-80 bg-emerald-500 rounded-full blur-[100px]"></div>
+        </div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+                <div class="text-left">
+                    <span class="inline-block px-3 py-1 rounded-full bg-sky-500/20 border border-sky-400/30 text-sky-300 text-xs font-bold uppercase tracking-widest mb-3">
+                        Organ Donor Registry
+                    </span>
+                    <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+                        Hello, <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-200 to-indigo-100">{{ donor.name }}</span>
+                    </h1>
+                    <p class="text-slate-400 mt-2 flex items-center gap-2">
+                        <i class="fas fa-hand-holding-heart text-emerald-400"></i> Thank you for your lifesaving pledge.
+                    </p>
+                </div>
+                
+                <div class="flex gap-4">
+                    <a href="{{ url_for('download_organ_certificate', donor_id=donor.id) }}" class="group relative px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-xl shadow-[0_10px_20px_rgba(16,185,129,0.2)] hover:shadow-[0_10px_20px_rgba(16,185,129,0.4)] transition-all duration-300 hover:-translate-y-1 flex items-center gap-2 overflow-hidden">
+                        <span class="relative z-10 flex items-center gap-2">
+                            <i class="fas fa-certificate text-emerald-100 group-hover:rotate-12 transition-transform duration-300"></i> Download Pledge
+                        </span>
+                    </a>
+                    <a href="{{ url_for('download_organ_certificate', donor_id=donor.id, action='email') }}" class="group relative px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-xl shadow-[0_10px_20px_rgba(14,165,233,0.2)] hover:shadow-[0_10px_20px_rgba(14,165,233,0.4)] transition-all duration-300 hover:-translate-y-1 flex items-center gap-2 overflow-hidden">
+                        <span class="relative z-10 flex items-center gap-2">
+                            <i class="fas fa-envelope text-sky-100 group-hover:-translate-y-1 transition-transform duration-300"></i> Email Pledge
+                        </span>
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="px-6 py-3 bg-slate-800/50 backdrop-blur-md text-white border border-slate-700 font-semibold rounded-xl hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 transition-all duration-300 flex items-center gap-2">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Overlap -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-20">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6 space-y-3">
+                    {% for category, message in messages %}
+                        <div class="flex p-4 rounded-xl border shadow-sm {{ 'bg-emerald-50 border-emerald-200 text-emerald-800' if category == 'success' else 'bg-rose-50 border-rose-200 text-rose-800' }}">
+                            <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-triangle' }} mt-0.5 mr-3"></i>
+                            <span class="text-sm font-medium">{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- LEFT COLUMN: Donor Card & Impact (4 cols) -->
+            <div class="lg:col-span-4 space-y-8">
+                <!-- Donor ID Card -->
+                <div class="bg-gradient-to-br from-sky-600 to-indigo-800 rounded-3xl p-8 text-white shadow-xl shadow-sky-900/20 relative overflow-hidden">
+                    <!-- Decor -->
+                    <div class="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10"></div>
+                    <div class="absolute bottom-0 right-0 opacity-10 transform translate-x-4 translate-y-4">
+                        <i class="fas fa-id-card text-9xl"></i>
+                    </div>
+
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-start mb-8">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-white/50 bg-white/20 flex-shrink-0">
+                                    {% if donor.profile_picture_url %}
+                                        <img src="{{ url_for('static', filename='uploads/' ~ donor.profile_picture_url) }}" class="w-full h-full object-cover" alt="Profile">
+                                    {% else %}
+                                        <div class="w-full h-full flex items-center justify-center text-2xl font-bold text-white bg-sky-500/30">
+                                            {{ donor.name[0] | upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <p class="text-sky-200 text-xs font-bold uppercase tracking-widest mb-1">Donor ID</p>
+                                    <p class="text-xl font-mono tracking-wider font-semibold">OD-{{ donor.id }}</p>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                                <i class="fas fa-heartbeat text-2xl text-white"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-sky-200 text-[10px] font-bold uppercase tracking-widest">Full Name</p>
+                                <p class="text-lg font-bold">{{ donor.name }}</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sky-200 text-[10px] font-bold uppercase tracking-widest">Blood Type</p>
+                                    <div class="inline-flex items-center justify-center mt-1 px-3 py-1 bg-red-500/20 text-red-100 border border-red-400/30 rounded-lg font-bold">
+                                        {{ donor.blood_group }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-sky-200 text-[10px] font-bold uppercase tracking-widest">Member Since</p>
+                                    <p class="text-sm font-semibold mt-1">{{ donor.created_at.strftime('%b %Y') if donor.created_at else 'N/A' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info/Impact Card -->
+                <div class="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100">
+                    <h3 class="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-sm"><i class="fas fa-info"></i></div>
+                        Your Impact
+                    </h3>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                        One organ donor can save up to <strong>8 lives</strong> and enhance the lives of over <strong>75 people</strong> through tissue donation.
+                    </p>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Pledged Organs</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% if donor.organs %}
+                                {% for org in donor.organs %}
+                                    <span class="px-2.5 py-1 bg-white text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5">
+                                        <i class="fas fa-check text-emerald-500"></i> {{ org }}
+                                    </span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-sm text-slate-500 italic">No specific organs pledged.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Settings Form (8 cols) -->
+            <div class="lg:col-span-8 space-y-8">
+                
+                <!-- Profile Details View -->
+                <div id="profile-view" class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                    <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                            <span class="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm text-sky-600 border border-slate-100">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            Profile Details
+                        </h2>
+                        <button onclick="toggleEdit(true)" class="px-4 py-2 bg-sky-50 text-sky-600 font-bold rounded-xl hover:bg-sky-100 transition-colors text-sm flex items-center gap-2">
+                            <i class="fas fa-pen"></i> Edit Profile
+                        </button>
+                    </div>
+                    <div class="p-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Email Address</p>
+                                <p class="font-semibold text-slate-800">{{ donor.email }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Phone Number</p>
+                                <p class="font-semibold text-slate-800">{{ donor.phone }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">City</p>
+                                <p class="font-semibold text-slate-800">{{ donor.city }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Age</p>
+                                <p class="font-semibold text-slate-800">{{ donor.age }} Years</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="profile-edit" class="hidden bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                    <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+                            <span class="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm text-sky-600 border border-slate-100">
+                                <i class="fas fa-user-edit"></i>
+                            </span>
+                            Edit Profile Settings
+                        </h2>
+                        <button onclick="toggleEdit(false)" type="button" class="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors text-sm flex items-center gap-2">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <div class="p-8">
+                        <form id="delete-pic-form" method="POST" class="hidden">
+                            <input type="hidden" name="delete_picture" value="true">
+                        </form>
+                    
+                        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                            <input type="hidden" name="update_profile" value="true">
+                            
+                            <!-- Profile Picture section -->
+                            <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-100">
+                                <div id="profilePreviewContainer" class="w-20 h-20 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shadow-sm flex-shrink-0">
+                                    {% if donor.profile_picture_url %}
+                                        <img src="{{ url_for('static', filename='uploads/' ~ donor.profile_picture_url) }}" alt="Profile" class="w-full h-full object-cover">
+                                    {% else %}
+                                        <div class="w-full h-full flex items-center justify-center text-slate-400 text-2xl">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="space-y-2 flex-grow">
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Profile Picture</label>
+                                    <div class="flex items-center gap-3">
+                                        <input type="file" id="profileImageInput" name="profilePicture" accept="image/*" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 transition-all cursor-pointer">
+                                        {% if donor.profile_picture_url %}
+                                            <button type="submit" form="delete-pic-form" class="px-3 py-2 text-xs text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 font-bold rounded-lg transition-colors">
+                                                Remove
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Name -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Full Name</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <i class="far fa-user text-slate-400"></i>
+                                        </div>
+                                        <input type="text" name="name" value="{{ donor.name }}" required 
+                                               class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all text-sm font-medium text-slate-700">
+                                    </div>
+                                </div>
+
+                                <!-- Email -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email Address</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <i class="far fa-envelope text-slate-400"></i>
+                                        </div>
+                                        <input type="email" name="email" value="{{ donor.email }}" required 
+                                               class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all text-sm font-medium text-slate-700">
+                                    </div>
+                                </div>
+
+                                <!-- Phone -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <i class="fas fa-phone text-slate-400"></i>
+                                        </div>
+                                        <input type="tel" name="phone" value="{{ donor.phone }}" required 
+                                               class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all text-sm font-medium text-slate-700">
+                                    </div>
+                                </div>
+
+                                <!-- City -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">City</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <i class="fas fa-map-marker-alt text-slate-400"></i>
+                                        </div>
+                                        <input type="text" name="city" value="{{ donor.city }}" required 
+                                               class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all text-sm font-medium text-slate-700">
+                                    </div>
+                                </div>
+
+                                <!-- Age -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Age</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <i class="fas fa-birthday-cake text-slate-400"></i>
+                                        </div>
+                                        <input type="number" name="age" value="{{ donor.age }}" min="18" required 
+                                               class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all text-sm font-medium text-slate-700">
+                                    </div>
+                                </div>
+
+                                <!-- Blood Group (Readonly in form, display only) -->
+                                <div class="space-y-2">
+                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Blood Group</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <i class="fas fa-tint text-slate-400"></i>
+                                        </div>
+                                        <input type="text" value="{{ donor.blood_group }}" readonly disabled
+                                               class="w-full pl-11 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 cursor-not-allowed">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-2 space-y-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Pledged Organs</label>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {% for org in ["Heart", "Lungs", "Liver", "Kidneys", "Pancreas", "Intestines", "Corneas", "Tissues"] %}
+                                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-sky-300 cursor-pointer transition-colors">
+                                        <input type="checkbox" name="organs" value="{{ org }}" {% if donor.organs and org in donor.organs %}checked{% endif %} class="text-sky-600 focus:ring-sky-500 rounded">
+                                        <span class="text-sm font-medium text-slate-700">{{ org }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="pt-6 flex justify-end">
+                                <button type="submit" class="px-8 py-3.5 bg-sky-600 text-white font-bold rounded-xl shadow-lg shadow-sky-200 hover:bg-sky-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="bg-rose-50/50 rounded-3xl border border-rose-100 p-8">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-rose-900">Danger Zone</h3>
+                            <p class="text-sm text-rose-700 mt-1 mb-4">Deleting your account will permanently remove your pledge from our registry. This action cannot be undone.</p>
+                            <form method="POST" onsubmit="return confirm('Are you sure you want to permanently withdraw your pledge and delete your account?');">
+                                <input type="hidden" name="delete_account" value="true">
+                                <button type="submit" class="px-6 py-2.5 bg-white border border-rose-200 text-rose-600 font-bold rounded-xl shadow-sm hover:bg-rose-600 hover:text-white transition-all text-sm">
+                                    Withdraw Pledge & Delete Account
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cropper Modal -->
+<div id="cropperModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/80 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+        <h3 class="text-xl font-bold text-slate-800 mb-4">Crop Profile Picture</h3>
+        <div class="w-full h-64 bg-slate-100 rounded-xl overflow-hidden mb-6 relative">
+            <img id="cropperImage" class="max-w-full block" src="">
+        </div>
+        <div class="flex justify-end gap-3">
+            <button type="button" id="cancelCrop" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
+            <button type="button" id="applyCrop" class="px-5 py-2.5 bg-sky-600 text-white font-bold rounded-xl hover:bg-sky-700 transition-colors">Apply Crop</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cropper.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+    let cropper;
+    const imageInput = document.getElementById('profileImageInput');
+    const cropperModal = document.getElementById('cropperModal');
+    const cropperImage = document.getElementById('cropperImage');
+    const profilePreviewContainer = document.getElementById('profilePreviewContainer');
+
+    imageInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                cropperImage.src = e.target.result;
+                cropperModal.classList.remove('hidden');
+                cropperModal.classList.add('flex');
+                
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1, // Enforces a square crop
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    background: false
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('cancelCrop').addEventListener('click', function() {
+        cropperModal.classList.add('hidden');
+        cropperModal.classList.remove('flex');
+        imageInput.value = ''; // Reset input selection
+        if (cropper) { cropper.destroy(); cropper = null; }
+    });
+
+    document.getElementById('applyCrop').addEventListener('click', function() {
+        if (!cropper) return;
+        cropper.getCroppedCanvas({ width: 400, height: 400 }).toBlob(function(blob) {
+            const newFile = new File([blob], 'profile.jpg', { type: 'image/jpeg', lastModified: new Date().getTime() });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(newFile);
+            imageInput.files = dataTransfer.files; // Replace the input file with the cropped version
+            
+            profilePreviewContainer.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="Profile" class="w-full h-full object-cover">`;
+            
+            cropperModal.classList.add('hidden');
+            cropperModal.classList.remove('flex');
+            cropper.destroy(); cropper = null;
+        }, 'image/jpeg', 0.9);
+    });
+
+    function toggleEdit(showEdit) {
+        if (showEdit) {
+            document.getElementById('profile-view').classList.add('hidden');
+            document.getElementById('profile-edit').classList.remove('hidden');
+        } else {
+            document.getElementById('profile-view').classList.remove('hidden');
+            document.getElementById('profile-edit').classList.add('hidden');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<div class="absolute inset-0 bg-repeat opacity-5" style="background-image: url('https://www.transparenttextures.com/patterns/clean-gray-paper.png');"></div>
+<!-- Staff/Office themed background image (Abstract Tech/Clean) -->
+<div class="absolute inset-0 bg-cover bg-center opacity-10" style="background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2940'); background-blend-mode: overlay;"></div>
+
+<div class=" min-h-screen py-16 sm:py-20 lg:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+
+        <!-- Header Section -->
+        <div class="text-center mb-16 space-y-4">
+            <h1 class="text-5xl font-extrabold text-sky-800 drop-shadow-md">Our Creative Gallery</h1>
+            <p class="text-xl text-gray-700 max-w-2xl mx-auto">
+                Dive into a visual journey. Explore our collection of captivating images and insightful videos, designed to inspire and inform.
+            </p>
+        </div>
+
+        <!-- IMAGE GALLERY -->
+        <section class="mb-20">
+            <h3 class="text-4xl font-bold text-sky-700 text-center mb-10 pb-4 border-b-2 border-sky-300 relative group">
+                Images
+                <span class="absolute left-1/2 bottom-0 w-16 h-1 bg-sky-500 transform -translate-x-1/2 transition-all duration-300 group-hover:w-24"></span>
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                {% for img in images %}
+                <div class="group relative overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 ease-in-out cursor-pointer"
+                     onclick="openModal(&quot;{{ url_for('static', filename='images/' ~ img) }}&quot;)">
+                    <img src="{{ url_for('static', filename='images/' ~ img) }}" 
+                         alt="Gallery Image {{ loop.index }}" 
+                         class="w-full h-64 object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ease-in-out filter group-hover:brightness-90">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-4">
+                        <p class="text-white text-lg font-semibold translate-y-4 group-hover:translate-y-0 transition-transform duration-500">View Image</p>
+                    </div>
+                    <div class="absolute top-3 right-3 bg-white/80 text-sky-700 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        Image
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- VIDEO GALLERY -->
+        <section>
+            <h3 class="text-4xl font-bold text-sky-700 text-center mb-10 pb-4 border-b-2 border-sky-300 relative group">
+                Videos
+                <span class="absolute left-1/2 bottom-0 w-16 h-1 bg-sky-500 transform -translate-x-1/2 transition-all duration-300 group-hover:w-24"></span>
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {% for video in videos %}
+                <div class="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 ease-in-out overflow-hidden transform hover:-translate-y-1">
+                    <div class="aspect-w-16 aspect-h-9">
+                        <iframe class="w-full h-full"
+                                src="{{ video.url | replace('watch?v=', 'embed/') }}"
+                                title="{{ video.title }}"
+                                frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-lg font-semibold text-gray-800 leading-snug">{{ video.title }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<!-- Modal for images -->
+<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden p-4"
+     onclick="closeModal()">
+    <div class="relative max-w-4xl max-h-full">
+        <img id="modalImg" src="" alt="Full Image" class="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl animate-fade-in-up">
+        <button class="absolute top-4 right-4 bg-white/30 hover:bg-white/50 text-white rounded-full p-2 
+                       backdrop-blur-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white"
+                onclick="event.stopPropagation(); closeModal()">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+    </div>
+</div>
+
+<script>
+// Tailwind CSS custom animation for modal content
+const style = document.createElement('style');
+style.innerHTML = `
+@keyframes fadeInFromBottom {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.animate-fade-in-up {
+    animation: fadeInFromBottom 0.3s ease-out forwards;
+}
+`;
+document.head.appendChild(style);
+
+
+function openModal(src) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImg');
+    modalImg.src = src;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+    // Add animation class
+    modalImg.classList.add('animate-fade-in-up');
+}
+
+function closeModal() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.add('hidden');
+    document.getElementById('modalImg').src = '';
+    document.body.style.overflow = ''; // Restore scrolling
+     // Remove animation class
+    document.getElementById('modalImg').classList.remove('animate-fade-in-up');
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    const modal = document.getElementById('imageModal');
+    if(e.key === 'Escape' && !modal.classList.contains('hidden')){
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

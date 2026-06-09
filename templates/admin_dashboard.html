@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Admin Portal | DEV AI+</title>
+    
+    <!-- 1. Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- 2. Fonts (Premium Interface Font) -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- 3. Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 4. Chart JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            /* Premium Medical Palette */
+            --primary: #4361ee;       /* Royal Blue */
+            --primary-light: #eef2ff;
+            --secondary: #3f37c9;
+            --success: #10b981;       
+            --warning: #f59e0b;       
+            --danger: #ef4444;        
+            --info: #0ea5e9;
+            --dark-bg: #0f172a;       /* Slate 900 */
+            --sidebar-bg: #111827;    /* Deep Gray/Black */
+            --body-bg: #f3f4f6;       /* Cool Gray */
+            
+            --sidebar-width: 280px;
+            --header-height: 80px;
+            
+            /* Shadows & Radius */
+            --card-radius: 20px;
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+            --hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--body-bg);
+            background-image: radial-gradient(at 0% 0%, rgb(254, 153, 153) 0px, transparent 50%), 
+                              radial-gradient(at 100% 0%, rgb(39, 42, 188) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #334155;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        ul { list-style: none; padding: 0; margin: 0; }
+        
+        /* Smooth Fade In Animation */
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgb(31, 13, 13);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid rgb(121, 35, 35);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1050;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+        }
+
+        .brand {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            color: rgb(30, 251, 49);
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .brand i { 
+            background: linear-gradient(135deg, var(--primary), #4cc9f0);
+            
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-right: 12px; 
+            font-size: 1.8rem;
+        }
+
+        .nav-links { padding: 25px 15px; flex-grow: 1; overflow-y: auto; }
+        .nav-links::-webkit-scrollbar { width: 4px; }
+        .nav-links::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+
+        .nav-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #00ff15;
+            font-weight: 700;
+            margin: 25px 0 10px 18px;
+            letter-spacing: 1.2px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 18px;
+            color: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 4px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.4);
+            font-weight: 600;
+        }
+        
+        .nav-item i { width: 24px; font-size: 1.1rem; margin-right: 12px; text-align: center; }
+        .nav-item .badge { margin-left: auto; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); font-weight: 600; font-size: 0.7rem; padding: 4px 8px; border-radius: 6px;}
+
+        /* ================= MAIN CONTENT ================= */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            transition: margin-left 0.3s ease-in-out;
+            display: flex; flex-direction: column;
+        }
+
+        /* Top Header */
+        .top-header {
+            height: var(--header-height);
+            background: rgba(197, 195, 195, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            position: sticky; top: 0; z-index: 900;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+        }
+        
+        .search-wrapper { position: relative; }
+        .search-wrapper input {
+            border: 1px solid #e2e8f0;
+            border-radius: 50px;
+            padding: 10px 20px 10px 45px;
+            width: 320px;
+            background: white;
+            outline: none;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s;
+        }
+        .search-wrapper input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); width: 350px; }
+        .search-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9rem; }
+
+        .btn-icon {
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; background: white; border: 1px solid #e2e8f0; color: #64748b;
+            transition: 0.2s; cursor: pointer; position: relative;
+        }
+        .btn-icon:hover { background: #f8fafc; color: var(--primary); transform: translateY(-2px); }
+
+        /* Content Sections */
+        .page-content { padding: 40px; max-width: 1600px; margin: 0 auto; width: 100%; }
+        .content-section { display: none; }
+        .content-section.active { display: block; animation: fadeIn 0.4s; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 28px;
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: var(--hover-shadow); }
+        .stat-icon-bg {
+            width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin-bottom: 15px;
+        }
+
+        /* Cards & Tables */
+        .card-box {
+            background: white;
+            border-radius: var(--card-radius);
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 30px;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+        
+        .custom-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .custom-table th {
+            text-align: left; padding: 18px 24px; color: #64748b;
+            font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+        }
+        .custom-table th:first-child { border-top-left-radius: 12px; }
+        .custom-table th:last-child { border-top-right-radius: 12px; }
+        
+        .custom-table td { padding: 18px 24px; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; vertical-align: middle; color: #334155; }
+        .custom-table tr:hover td { background: #f8fafc; }
+        .custom-table tr:last-child td { border-bottom: none; }
+
+        /* Badges & Avatars */
+        .status-badge { 
+            padding: 6px 14px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
+        
+        .bg-green-soft { background: #dcfce7; color: #15803d; }
+        .bg-red-soft { background: #fee2e2; color: #b91c1c; }
+        .bg-blue-soft { background: #e0f2fe; color: #0369a1; }
+        .bg-yellow-soft { background: #fef3c7; color: #b45309; }
+        .bg-purple-soft { background: #f3e8ff; color: #7e22ce; }
+
+        .avatar-sm { width: 42px; height: 42px; border-radius: 12px; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .avatar-lg { width: 50px; height: 50px; border-radius: 14px; object-fit: cover; }
+
+        /* Timeline */
+        .timeline { border-left: 2px solid #e2e8f0; margin-left: 10px; padding: 10px 0; }
+        .timeline-item { position: relative; padding-left: 30px; margin-bottom: 25px; }
+        .timeline-item::after {
+            content: ''; position: absolute; left: -6px; top: 5px; width: 10px; height: 10px;
+            border-radius: 50%; background: white; border: 2px solid var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+        .timeline-time { font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-bottom: 4px; }
+        .timeline-content { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+
+        /* Chart Container */
+        .chart-container { position: relative; height: 320px; width: 100%; display: flex; justify-content: center; }
+        .chart-center-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; pointer-events: none;
+        }
+
+        /* Hover Shadow for Cards */
+        .hover-lift { transition: all 0.2s; }
+        .hover-lift:hover { transform: translateY(-5px); box-shadow: var(--hover-shadow); }
+
+        /* Form Styling */
+        .form-control {
+            border-radius: 10px; padding: 12px 15px; border: 1px solid #e2e8f0; font-size: 0.95rem;
+        }
+        .form-control:focus { box-shadow: 0 0 0 4px var(--primary-light); border-color: var(--primary); }
+        
+        /* Mobile Responsive */
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .sidebar-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1040; backdrop-filter: blur(2px);}
+            .sidebar-overlay.show { display: block; }
+            .page-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+    <a href="{{ url_for('admin_dashboard') }}" class="brand">
+        <i class="fas fa-heart-pulse"></i> 
+        <span>DEV Ai<span style="color: var(--primary);">+</span></span>
+    </a>
+
+    <div class="nav-links">
+        <div class="nav-header">Overview</div>
+        <div class="nav-item active" data-section="dashboard" onclick="switchTab('dashboard', this)">
+            <i class="fas fa-th-large"></i> Dashboard
+        </div>
+        <div class="nav-item" data-section="appointments" onclick="switchTab('appointments', this)">
+            <i class="fas fa-calendar-check"></i> Appointments
+        </div>
+        
+        <div class="nav-header">People</div>
+        <div class="nav-item" data-section="doctors" onclick="switchTab('doctors', this)">
+            <i class="fas fa-user-md"></i> Doctors <span class="badge">{{ doctors|length }}</span>
+        </div>
+        <div class="nav-item" data-section="patients" onclick="switchTab('patients', this)">
+            <i class="fas fa-user-injured"></i> Patients <span class="badge">{{ patients|length }}</span>
+        </div>
+        <div class="nav-item" data-section="staff" onclick="switchTab('staff', this)">
+            <i class="fas fa-id-card"></i> Staffs <span class="badge">{{ staffs |length }}</span>
+        </div>
+        <div class="nav-item" data-section="hospitals" onclick="switchTab('hospitals', this)">
+            <i class="fas fa-hospital"></i> Hospitals <span class="badge">{{ hospitals|length }}</span>
+        </div>
+
+        <div class="nav-header">Health Services</div>
+        <div class="nav-item" data-section="bed_bookings" onclick="switchTab('bed_bookings', this)">
+            <i class="fas fa-bed"></i> Bed Bookings <span class="badge">{{ bed_bookings|length }}</span>
+        </div>
+        <div class="nav-item" data-section="blood_donors" onclick="switchTab('blood_donors', this)">
+            <i class="fas fa-donate-blood"></i> Blood Donors <span class="badge">{{ blood_donors|length }}</span>
+        </div>
+        <div class="nav-item" data-section="bloodbank" onclick="switchTab('bloodbank', this)">
+            <i class="fas fa-burn"></i> Blood Bank
+        </div>
+        <div class="nav-item" data-section="organ_donors" onclick="switchTab('organ_donors', this)">
+            <i class="fas fa-hand-holding-heart"></i> Organ Donors <span class="badge">{{ organ_donors|length }}</span>
+        </div>
+
+        <div class="nav-header">Community Programs</div>
+        <div class="nav-item" data-section="camp_regs" onclick="switchTab('camp_regs', this)">
+            <i class="fas fa-tent"></i> Camp Regs
+        </div>
+        <div class="nav-item" data-section="camps" onclick="switchTab('camps', this)">
+            <i class="fas fa-map-signs"></i> Manage Camps
+        </div>
+
+        <div class="nav-header">Clinical Services</div>
+        <div class="nav-item" data-section="pharmacy" onclick="switchTab('pharmacy', this)">
+            <i class="fas fa-pills"></i> Pharmacy
+        </div>
+        <div class="nav-item" data-section="lab" onclick="switchTab('lab', this)">
+            <i class="fas fa-microscope"></i> Lab Reports
+        </div>
+        <div class="nav-item" data-section="orders" onclick="switchTab('orders', this)">
+            <i class="fas fa-shopping-cart"></i> Orders <span class="badge">{{ orders|length }}</span>
+        </div>
+        <div class="nav-item" data-section="billing" onclick="switchTab('billing', this)">
+            <i class="fas fa-file-invoice-dollar"></i> Billing
+        </div>
+        <div class="nav-item" data-section="messages" onclick="switchTab('messages', this)">
+            <i class="fas fa-comments"></i> Messages <span class="badge">{{ unread_messages }}</span>
+        </div>
+
+        <div class="nav-header">Support</div>
+        <div class="nav-item" data-section="inquiries" onclick="switchTab('inquiries', this)">
+            <i class="fas fa-envelope-open-text"></i> Inquiries
+        </div>
+
+        <div class="nav-header">System</div>
+        <div class="nav-item" data-section="settings" onclick="switchTab('settings', this)">
+            <i class="fas fa-cog"></i> Settings
+        </div>
+    </div>
+    
+    <!-- User Profile Footer -->
+    <div class="p-3 border-top border-secondary border-opacity-10 mt-auto">
+        <div class="d-flex align-items-center gap-3 p-2 rounded hover-bg-dark" style="background: rgb(0, 255, 51) ;">
+            <img src="{{url_for('static', filename='images/devai.jpg')}}" alt="Admin" class="avatar-sm">
+            <div style="font-size: 0.85rem; flex-grow: 1; overflow: hidden;">
+                <div class="fw-bold text-red-900 text-truncate">Administrator</div>
+                <div class="small text-secondary">Admin</div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-danger rounded-3" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+    
+    <!-- TOP HEADER -->
+    <header class="top-header">
+        <div class="d-flex align-items-center">
+            <button class="btn btn-icon d-lg-none me-3 border-0 bg-transparent shadow-none" onclick="toggleSidebar()">
+                <i class="fas fa-bars fs-5 text-dark"></i>
+            </button>
+            <div>
+                <h5 class="m-0 fw-bold text-dark" id="page-title">Dashboard</h5>
+                <small class="text-muted d-none d-md-block">Welcome Administrator</small>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+            <div class="search-wrapper d-none d-md-block">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search patients, drugs, etc...">
+            </div>
+            
+            <button class="btn-icon">
+                <i class="far fa-bell"></i>
+                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 10px; height: 10px;"></span>
+            </button>
+            <button class="btn-icon">
+                <i class="far fa-envelope"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN BODY -->
+    <div class="page-content">
+
+        <!-- ================= SECTION: DASHBOARD ================= -->
+        <div id="dashboard" class="content-section active">
+            <!-- Stats Grid - Row 1 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Total Patients</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">{{ patients|length }}</div>
+                            <div class="small text-success fw-bold mt-1 bg-green-soft px-2 py-1 rounded d-inline-block">
+                                <i class="fas fa-check-circle me-1"></i> Active
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-blue-soft text-primary">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Appointments</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">{{ appointments|length }}</div>
+                            <div class="small text-warning fw-bold mt-1 bg-yellow-soft px-2 py-1 rounded d-inline-block">
+                                <i class="far fa-clock me-1"></i> {{ pending_appointments_count }} Pending
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-purple-soft text-purple">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Total Revenue</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">₹{{ "%.2f"|format(total_earnings) }}</div>
+                            <div class="small text-success fw-bold mt-1">
+                                <i class="fas fa-chart-line me-1"></i> This Month
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-green-soft text-success">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Total Doctors</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">{{ doctors|length }}</div>
+                            <div class="small text-info fw-bold mt-1">
+                                <i class="fas fa-user-md me-1"></i> Specialists
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-red-soft text-info">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid - Row 2 (Additional Metrics) -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Occupied Beds</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">{{ occupied_beds }} / {{ total_beds }}</div>
+                            <div class="small text-info fw-bold mt-1">
+                                <i class="fas fa-bed me-1"></i> {{ "%.0f"|format((occupied_beds/total_beds*100) if total_beds > 0 else 0) }}% Occupancy
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-info bg-opacity-10 text-info">
+                            <i class="fas fa-hospital-user"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Orders Processed</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">{{ order_count }}</div>
+                            <div class="small text-success fw-bold mt-1">
+                                <i class="fas fa-shopping-cart me-1"></i> ₹{{ "%.2f"|format(total_order_amount) }} Sales
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-orange-soft" style="background: #fff2e5; color: #f59e0b;">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Blood Donors</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">{{ blood_donors|length }}</div>
+                            <div class="small text-danger fw-bold mt-1">
+                                <i class="fas fa-heart me-1"></i> Lives Saved
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-red-soft text-danger">
+                            <i class="fas fa-donate-blood"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Messages</div>
+                            <div class="fs-2 fw-bolder text-dark mt-2">{{ unread_messages }}</div>
+                            <div class="small text-warning fw-bold mt-1">
+                                <i class="fas fa-envelope me-1"></i> Unread
+                            </div>
+                        </div>
+                        <div class="stat-icon-bg bg-yellow-soft text-warning">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Analytics Chart -->
+                <div class="col-lg-8 mb-4">
+                    <div class="card-box h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h6 class="fw-bold m-0 fs-5">Earnings Overview</h6>
+                                <small class="text-muted">Revenue over time</small>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Timeline -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card-box h-100">
+                        <h6 class="fw-bold mb-4 fs-5">Today's Schedule</h6>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-time">09:00 AM</div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-dark">General Checkup</div>
+                                    <div class="small text-muted mb-2">Patient: Sarah Connor</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-time">10:30 AM</div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-dark">Emergency Surgery</div>
+                                    <div class="small text-muted mb-2">OT Room 3 - Dr. Smith</div>
+                                    <span class="badge bg-danger bg-opacity-10 text-danger">Critical</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="card-box h-100">
+                        <h5 class="fw-bold text-dark mb-4">Appointments by Hospital</h5>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="hospitalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-4">
+                    <div class="card-box h-100">
+                        <h5 class="fw-bold text-dark mb-4">Top Earning Doctors</h5>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="doctorEarningsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Earnings by Doctor Table -->
+            <div class="card-box mb-4">
+                <h5 class="fw-bold text-dark mb-4">Earnings by Doctor</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Doctor Name</th>
+                                <th>Department</th>
+                                <th>Appointments</th>
+                                <th>Total Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in doctor_earnings %}
+                            <tr>
+                                <td class="fw-bold">{{ doc.name }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ doc.department }}</span></td>
+                                <td>{{ doc.appointments }}</td>
+                                <td class="fw-bold text-success">₹{{ "%.2f"|format(doc.earnings) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center py-3 text-muted">No earnings recorded yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: DOCTORS ================= -->
+        <div id="doctors" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Medical Specialists ({{ doctors|length }})</h5>
+                        <small class="text-muted">Manage doctor profiles and departments</small>
+                    </div>
+                    <a href="{{ url_for('admin_add_doctor') }}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-medium"><i class="fas fa-plus me-2"></i> Add Doctor</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Doctor Profile</th>
+                                <th>Department</th>
+                                <th>Patients</th>
+                                <th>Email</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doctor in doctors %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                            <img src="{{ url_for('get_doctor_image', doc_id=doctor.id) if doctor.profile_picture_url == 'db:image' else (url_for('static', filename='uploads/' ~ doctor.profile_picture_url) if doctor.profile_picture_url else 'https://ui-avatars.com/api/?name=' ~ doctor.first_name ~ '+' ~ doctor.last_name ~ '&background=random&size=256') }}" 
+                                            onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ doctor.first_name }}+{{ doctor.last_name }}&background=random&size=256';"
+                                            alt="Dr. {{ doctor.last_name }}" 
+                                            class="w-56 h-64 object-cover object-top transition-transform duration-300 group-hover:scale-105">
+                                    <div>
+                                            <div class="fw-bold text-dark">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</div>
+                                            <div class="small text-muted">ID: #{{ doctor.id }}</div>
+                                            {% if not doctor.is_verified %}
+                                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Pending Verification</span>
+                                            {% else %}
+                                                <span class="badge bg-success" style="font-size: 0.6rem;">Verified</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">{{ doctor.department }}</span></td>
+                                <td><span class="status-badge bg-blue-soft">{{ doctor.appointments|length }} Active</span></td>
+                                <td>{{ doctor.email }}</td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm btn-icon border-0" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                            {% if not doctor.is_verified %}
+                                            <li>
+                                                <form action="{{ url_for('admin_verify_doctor', doc_id=doctor.id) }}" method="POST">
+                                                    <button type="submit" class="dropdown-item text-success"><i class="fas fa-check-circle me-2"></i> Verify</button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+                                            <li><a class="dropdown-item" href="{{ url_for('admin_view_doctor', doc_id=doctor.id) }}"><i class="fas fa-eye me-2 text-info"></i> View</a></li>
+                                            <li><a class="dropdown-item" href="{{ url_for('admin_edit_doctor', doc_id=doctor.id) }}"><i class="fas fa-pen me-2 text-primary"></i> Edit</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form action="{{ url_for('admin_delete_doctor', doc_id=doctor.id) }}" method="POST" onsubmit="return confirm('Delete Dr. {{ doctor.last_name }}?');"><button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash me-2"></i> Delete</button></form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-5">
+                                    <i class="fas fa-user-md fs-1 mb-3 opacity-25"></i><br>
+                                    No doctors found in the system.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: PATIENTS ================= -->
+        <div id="patients" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Patient Records ({{ patients|length }})</h5>
+                        <small class="text-muted">Directory of registered patients</small>
+                    </div>
+                    <a href="{{ url_for('admin_add_patient') }}" class="btn btn-success rounded-pill px-4 shadow-sm fw-medium"><i class="fas fa-plus me-2"></i> Add Patient</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Contact Email</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in patients %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ patient.name }}" class="avatar-sm">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ patient.name }}</div>
+                                            <div class="small text-muted">ID: P-{{ patient.id }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ patient.email }}</td>
+                                <td>{{ patient.age or 'N/A' }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ patient.gender or 'N/A' }}</span></td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('admin_edit_patient', patient_id=patient.id) }}" class="btn btn-sm btn-light text-primary mx-1" title="Edit"><i class="fas fa-pen"></i></a>
+                                    <form action="{{ url_for('admin_delete_patient', patient_id=patient.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete {{ patient.name }}?');">
+                                        <button type="submit" class="btn btn-sm btn-light text-danger mx-1" title="Delete"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No patients found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: ORGAN DONORS ================= -->
+        <div id="organ_donors" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Organ Donors ({{ organ_donors|length }})</h5>
+                        <small class="text-muted">Manage registered organ donors</small>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Donor Profile</th>
+                                <th>Contact Details</th>
+                                <th>Blood Group & Organs</th>
+                                <th>Location & Age</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for donor in organ_donors %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        {% if donor.profile_picture_url %}
+                                            <img src="{{ url_for('static', filename='uploads/' ~ donor.profile_picture_url) }}" class="avatar-sm" style="object-fit: cover;">
+                                        {% else %}
+                                            <div class="avatar-sm bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-5">{{ donor.name[0]|upper }}</div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ donor.name }}</div>
+                                            <div class="small text-muted">ID: OD-{{ donor.id }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>{{ donor.email }}</div>
+                                    <div class="small text-muted">{{ donor.phone }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger text-white mb-1">{{ donor.blood_group }}</span>
+                                    <div class="small text-muted text-truncate" style="max-width: 180px;" title="{{ donor.organs|join(', ') }}">{{ donor.organs|join(', ') }}</div>
+                                </td>
+                                <td>
+                                    <div>{{ donor.city }}</div>
+                                    <div class="small text-muted">{{ donor.age }} Years</div>
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('admin_edit_organ_donor', donor_id=donor.id) }}" class="btn btn-sm btn-light text-primary mx-1" title="Edit"><i class="fas fa-pen"></i></a>
+                                    <form action="{{ url_for('admin_delete_organ_donor', donor_id=donor.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this organ donor ({{ donor.name }})?');">
+                                        <button type="submit" class="btn btn-sm btn-light text-danger mx-1" title="Delete"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No organ donors registered.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: HOSPITALS ================= -->
+        <div id="hospitals" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Registered Hospitals ({{ hospitals|length }})</h5>
+                        <small class="text-muted">Partner medical facilities</small>
+                    </div>
+                    <a href="{{ url_for('admin_add_hospital') }}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-medium"><i class="fas fa-plus me-2"></i> Add Hospital</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Hospital Name</th>
+                                <th>Email</th>
+                                <th>Doctors</th>
+                                <th>ID</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hospital in hospitals %}
+                            <tr>
+                                <td class="fw-bold text-dark">
+                                    {{ hospital.name }}
+                                    {% if not hospital.is_verified %}
+                                        <span class="badge bg-warning text-dark ms-2" style="font-size: 0.6rem;">Pending Verification</span>
+                                    {% else %}
+                                        <span class="badge bg-success ms-2" style="font-size: 0.6rem;">Verified</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ hospital.email }}</td>
+                                <td>
+                                    <a href="{{ url_for('admin_dashboard', q=hospital.name) }}#doctors" class="text-decoration-none" title="Filter doctors by this hospital">
+                                        <span class="badge bg-blue-soft text-primary hover-lift">{{ hospital.doctor_count }}</span>
+                                    </a>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">#{{ hospital.id }}</span></td>
+                                <td class="text-end">
+                                    {% if not hospital.is_verified %}
+                                    <form action="{{ url_for('admin_verify_hospital', hospital_id=hospital.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-light text-success mx-1" title="Verify"><i class="fas fa-check-circle"></i></button>
+                                    </form>
+                                    {% endif %}
+                                    <a href="{{ url_for('admin_edit_hospital', hospital_id=hospital.id) }}" class="btn btn-sm btn-light text-primary mx-1" title="Edit"><i class="fas fa-pen"></i></a>
+                                    <form action="{{ url_for('admin_delete_hospital', hospital_id=hospital.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete {{ hospital.name }}?');">
+                                        <button type="submit" class="btn btn-sm btn-light text-danger mx-1" title="Delete"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No hospitals registered.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: BLOOD BANK ================= -->
+        <div id="bloodbank" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Blood Bank Inventory</h5>
+                        <small class="text-muted">Live stock levels</small>
+                    </div>
+                    <a href="{{ url_for('blood_bank_dashboard') }}" class="btn btn-danger rounded-pill px-4 shadow-sm fw-medium">
+                        <i class="fas fa-external-link-alt me-2"></i> Open Manager Dashboard
+                    </a>
+                </div>
+                <div class="row g-3">
+                    {% for group, count in blood_stock.items() %}
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-3 border rounded-3 text-center bg-light position-relative overflow-hidden">
+                            <div class="fw-bold fs-4 text-dark">{{ group }}</div>
+                            <div class="fs-5 fw-bold {{ 'text-danger' if count < 5 else 'text-success' }}">{{ count }}</div>
+                            <div class="small text-muted">Units</div>
+                            <div class="position-absolute top-0 end-0 p-2 opacity-10">
+                                <i class="fas fa-tint fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: CAMP REGISTRATIONS ================= -->
+        <div id="camp_regs" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Camp Registrations</h5>
+                        <small class="text-muted">Users interested in donation camps</small>
+                    </div>
+                    <a href="{{ url_for('export_camp_registrations') }}" class="btn btn-success rounded-pill px-4 shadow-sm fw-medium">
+                        <i class="fas fa-file-csv me-2"></i> Export CSV
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Camp Name</th>
+                                <th>User Name</th>
+                                <th>Contact</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reg in camp_registrations %}
+                            <tr>
+                                <td class="text-muted small">{{ reg.date }}</td>
+                                <td class="fw-bold">{{ reg.camp_name }}</td>
+                                <td>{{ reg.name }}</td>
+                                <td>
+                                    <div>{{ reg.email }}</div>
+                                    <div class="small text-muted">{{ reg.phone }}</div>
+                                </td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('admin_delete_camp_registration', reg_id=reg.id) }}" method="POST" onsubmit="return confirm('Delete this registration?');" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-light text-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">No registrations found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: MANAGE CAMPS ================= -->
+        <div id="camps" class="content-section">
+            <div class="row">
+                <!-- Add Camp Form -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card-box h-100">
+                        <h5 class="fw-bold mb-4">Add New Camp</h5>
+                        <form action="{{ url_for('admin_add_camp') }}" method="POST">
+                            <div class="mb-3">
+                                <label class="small text-muted fw-bold">Camp Name</label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted fw-bold">Location</label>
+                                <input type="text" name="location" class="form-control" required>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col">
+                                    <label class="small text-muted fw-bold">Date</label>
+                                    <input type="date" name="date" class="form-control" required>
+                                </div>
+                                <div class="col">
+                                    <label class="small text-muted fw-bold">Time</label>
+                                    <input type="text" name="time" class="form-control" placeholder="e.g. 9AM - 5PM" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted fw-bold">Organizer</label>
+                                <input type="text" name="organizer" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted fw-bold">Contact</label>
+                                <input type="text" name="contact" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold">Create Camp</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- List of Camps -->
+                <div class="col-lg-8 mb-4">
+                    <div class="card-box h-100">
+                        <h5 class="fw-bold mb-4">Active Camps</h5>
+                        <div class="list-group list-group-flush">
+                            {% for camp in camps %}
+                            <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center border-bottom">
+                                <div>
+                                    <div class="fw-bold text-dark">{{ camp.name }}</div>
+                                    <div class="small text-muted"><i class="fas fa-map-marker-alt me-1"></i> {{ camp.location }} &bull; {{ camp.date }}</div>
+                                </div>
+                                <form action="{{ url_for('admin_delete_camp', camp_id=camp.id) }}" method="POST" onsubmit="return confirm('Delete this camp?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4 text-muted">No camps scheduled.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: INQUIRIES ================= -->
+        <div id="inquiries" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Contact Inquiries</h5>
+                        <small class="text-muted">Messages from the contact form</small>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Message</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for msg in contact_messages %}
+                            <tr>
+                                <td class="text-muted small">{{ msg.date }}</td>
+                                <td class="fw-bold">{{ msg.name }}</td>
+                                <td><a href="mailto:{{ msg.email }}" class="text-primary">{{ msg.email }}</a></td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 300px;" title="{{ msg.message }}">
+                                        {{ msg.message }}
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <a href="mailto:{{ msg.email }}" class="btn btn-sm btn-light text-primary">
+                                        <i class="fas fa-reply"></i> Reply
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">No inquiries found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: PHARMACY ================= -->
+        <div id="pharmacy" class="content-section">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card-box">
+                        <h5 class="fw-bold mb-4">Inventory Status</h5>
+                        <div class="table-responsive">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>Medicine Name</th>
+                                        <th>Category</th>
+                                        <th>Stock Level</th>
+                                        <th>Expiry</th>
+                                        <th>Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">Paracetamol 500mg</td>
+                                        <td>Tablet</td>
+                                        <td style="width: 30%;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 6px; border-radius: 10px; background-color: #f1f5f9;">
+                                                    <div class="progress-bar bg-success" style="width: 80%; border-radius: 10px;"></div>
+                                                </div>
+                                                <small class="fw-bold">2400</small>
+                                            </div>
+                                        </td>
+                                        <td>2025-12-01</td>
+                                        <td>₹5.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Amoxicillin</td>
+                                        <td>Antibiotic</td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 6px; border-radius: 10px; background-color: #f1f5f9;">
+                                                    <div class="progress-bar bg-danger" style="width: 15%; border-radius: 10px;"></div>
+                                                </div>
+                                                <small class="fw-bold text-danger">45</small>
+                                            </div>
+                                        </td>
+                                        <td>2024-05-15</td>
+                                        <td>₹12.50</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card-box bg-purple-soft border-0 position-relative overflow-hidden">
+                        <div style="position: relative; z-index: 2;">
+                            <h6 class="fw-bold text-purple-800 fs-5 mb-3">Critical Alerts</h6>
+                            <ul class="list-group list-group-flush bg-transparent">
+                                <li class="list-group-item bg-transparent border-0 px-0 py-2 d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-exclamation-circle text-danger me-2"></i> Amoxicillin</span>
+                                    <span class="badge bg-danger shadow-sm">Critical</span>
+                                </li>
+                                <li class="list-group-item bg-transparent border-0 px-0 py-2 d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-exclamation-triangle text-warning me-2"></i> Cetirizine</span>
+                                    <span class="badge bg-warning text-dark shadow-sm">Low</span>
+                                </li>
+                            </ul>
+                            <button class="btn btn-dark w-100 mt-4 shadow-sm">Create Purchase Order</button>
+                        </div>
+                        <i class="fas fa-pills position-absolute bottom-0 end-0 p-3" style="font-size: 8rem; opacity: 0.05;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: BILLING ================= -->
+        <div id="billing" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Invoices & Billing</h5>
+                        <small class="text-muted">Financial records and payments</small>
+                    </div>
+                    <button class="btn btn-primary rounded-pill px-4 shadow-sm"><i class="fas fa-file-invoice me-2"></i> Create Invoice</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Invoice ID</th>
+                                <th>Patient Name</th>
+                                <th>Date Issued</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-bold text-primary">#INV-2023-001</td>
+                                <td>John Doe</td>
+                                <td>Oct 24, 2023</td>
+                                <td class="fw-bold">₹1,200.00</td>
+                                <td><span class="status-badge bg-green-soft">Paid</span></td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-light btn-icon"><i class="fas fa-download"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-primary">#INV-2023-002</td>
+                                <td>Jane Smith</td>
+                                <td>Oct 25, 2023</td>
+                                <td class="fw-bold">₹450.00</td>
+                                <td><span class="status-badge bg-yellow-soft">Pending</span></td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-light btn-icon"><i class="fas fa-paper-plane"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: LAB REPORTS ================= -->
+        <div id="lab" class="content-section">
+            <div class="card-box">
+                <h5 class="fw-bold mb-4">Laboratory Management</h5>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-dna fa-3x text-primary mb-3"></i>
+                            <div class="fw-bold fs-5">Blood Test</div>
+                            <small class="text-muted fw-bold">12 Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-lungs fa-3x text-info mb-3"></i>
+                            <div class="fw-bold fs-5">X-Ray / MRI</div>
+                            <small class="text-muted fw-bold">5 Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-vial fa-3x text-danger mb-3"></i>
+                            <div class="fw-bold fs-5">Pathology</div>
+                            <small class="text-success fw-bold">All Clear</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                         <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light d-flex flex-column justify-content-center align-items-center cursor-pointer" style="border-style: dashed !important;">
+                            <i class="fas fa-plus fa-2x text-muted mb-2"></i>
+                            <div class="fw-bold text-muted">New Test</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h6 class="mt-5 fw-bold text-muted text-uppercase small letter-spacing-1">Recent Reports</h6>
+                <div class="table-responsive">
+                    <table class="custom-table mt-2">
+                        <thead>
+                            <tr>
+                                <th>Report ID</th>
+                                <th>Test Name</th>
+                                <th>Patient</th>
+                                <th>Technician</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-bold">#LAB-992</td>
+                                <td>Complete Blood Count</td>
+                                <td>Alice Johnson</td>
+                                <td>Tech. Mike</td>
+                                <td><span class="status-badge bg-green-soft">Normal</span></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">#LAB-993</td>
+                                <td>MRI Scan (Head)</td>
+                                <td>Robert Brown</td>
+                                <td>Dr. House</td>
+                                <td><span class="status-badge bg-yellow-soft">Review</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: SETTINGS ================= -->
+        <div id="settings" class="content-section">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card-box h-100 p-0 overflow-hidden">
+                        <div class="p-4 border-bottom">
+                             <h6 class="fw-bold m-0">System Settings</h6>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            <a href="#" class="list-group-item list-group-item-action p-3 active border-start border-4 border-primary bg-light fw-bold text-primary">General Info</a>
+                            <a href="#" class="list-group-item list-group-item-action p-3">Roles & Permissions</a>
+                            <a href="#" class="list-group-item list-group-item-action p-3">Email Notifications</a>
+                            <a href="#" class="list-group-item list-group-item-action p-3">Backup & Restore</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8 mb-4">
+                    <div class="card-box h-100">
+                        <h6 class="fw-bold mb-4">Hospital Information</h6>
+                        <form onsubmit="event.preventDefault(); alert('Saved!');">
+                            <div class="row mb-3">
+                                <div class="col">
+                                    <label class="small text-muted mb-1 fw-bold">Hospital Name</label>
+                                    <input type="text" class="form-control" value="DevAI Medical Center">
+                                </div>
+                                <div class="col">
+                                    <label class="small text-muted mb-1 fw-bold">Contact Email</label>
+                                    <input type="email" class="form-control" value="admin@devai.com">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted mb-1 fw-bold">Address</label>
+                                <textarea class="form-control" rows="3">845303 - Motihari, Bihar, India</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted mb-1 fw-bold">About</label>
+                                </textarea>
+                            </div>
+                            <div class="form-check form-switch mb-4 p-3 border rounded bg-light">
+                                <input class="form-check-input ms-0 me-3" type="checkbox" id="maintenanceMode">
+                                <label class="form-check-label fw-bold" for="maintenanceMode">Enable Maintenance Mode</label>
+                                <div class="small text-muted mt-1">Prevents non-admins from accessing the system.</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary px-4 rounded-pill shadow-sm">Save Changes</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Danger Zone for Reset -->
+                    <div class="card-box border border-danger mt-4 bg-white">
+                        <h6 class="fw-bold text-danger mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h6>
+                        <p class="text-muted small mb-3">These actions are irreversible. Resetting the system will delete all doctors, patients, appointments, and staff data.</p>
+                        <form action="{{ url_for('admin_system_reset') }}" method="POST" onsubmit="return confirm('CRITICAL WARNING: This will delete ALL data in the system. Are you sure you want to reset?');">
+                            <button type="submit" class="btn btn-outline-danger w-100 fw-bold">
+                                <i class="fas fa-trash-alt me-2"></i> Factory Reset System Data
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: STAFF ================= -->
+        <div id="staff" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                         <h5 class="fw-bold m-0">Staff Management ({{ staff_members|length }})</h5>
+                         <small class="text-muted">Nurses, technicians, and admin staff</small>
+                    </div>
+                    <a href="{{ url_for('admin_add_staff') }}" class="btn btn-primary rounded-pill px-4 shadow-sm"><i class="fas fa-plus me-2"></i> Add Staff</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Staff Member</th>
+                                <th>Role</th>
+                                <th>Contact</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for staff in staff_members %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ staff.name }}" alt="Avatar" class="avatar-sm">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ staff.name }}</div>
+                                            <div class="small text-muted">{{ staff.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-secondary bg-opacity-10 text-secondary border">{{ staff.role }}</span></td>
+                                <td>{{ staff.phone or 'N/A' }}</td>
+                                <td class="text-end">                                    
+                                    <a href="{{ url_for('admin_edit_staff', staff_id=staff.id) }}" class="btn btn-sm btn-light text-primary mx-1"><i class="fas fa-pen"></i></a>
+                                    <form action="{{ url_for('admin_delete_staff', staff_id=staff.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete {{ staff.name }}?');">
+                                        <button type="submit" class="btn btn-sm btn-light text-danger mx-1"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>                                
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-5">No staff members found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: APPOINTMENTS ================= -->
+        <div id="appointments" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                     <div>
+                         <h5 class="fw-bold m-0">Appointment Calendar</h5>
+                         <small class="text-muted">Overview of weekly tasks</small>
+                     </div>
+                     <div class="btn-group shadow-sm">
+                         <button class="btn btn-outline-secondary btn-sm bg-white">Day</button>
+                         <button class="btn btn-outline-secondary btn-sm bg-white active">Week</button>
+                         <button class="btn btn-outline-secondary btn-sm bg-white">Month</button>
+                     </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle" style="border-color: #f1f5f9;">
+                        <thead class="bg-light">
+                            <tr style="height: 50px;">
+                                <th class="text-muted fw-light" style="width: 100px;">Time</th>
+                                <th>Mon</th>
+                                <th>Tue</th>
+                                <th>Wed</th>
+                                <th>Thu</th>
+                                <th>Fri</th>
+                                <th>Sat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="height: 100px;">
+                                <td class="text-muted small fw-bold">09:00 AM</td>
+                                <td class="p-1">
+                                    <div class="bg-blue-soft text-primary small p-2 rounded text-start border border-primary border-opacity-25 shadow-sm h-100">
+                                        <strong>John Doe</strong><br><span class="text-muted" style="font-size: 0.75rem">Dr. Smith</span>
+                                    </div>
+                                </td>
+                                <td></td>
+                                <td class="p-1">
+                                    <div class="bg-green-soft text-success small p-2 rounded text-start border border-success border-opacity-25 shadow-sm h-100">
+                                        <strong>Alice</strong><br><span class="text-muted" style="font-size: 0.75rem">Dr. Lee</span>
+                                    </div>
+                                </td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr style="height: 100px;">
+                                <td class="text-muted small fw-bold">10:00 AM</td>
+                                <td></td>
+                                <td class="p-1">
+                                    <div class="bg-yellow-soft text-warning small p-2 rounded text-start border border-warning border-opacity-25 shadow-sm h-100">
+                                        <strong>Mike</strong><br><span class="text-muted" style="font-size: 0.75rem">Surgery (OT)</span>
+                                    </div>
+                                </td>
+                                <td></td>
+                                <td class="p-1">
+                                    <div class="bg-purple-soft text-purple small p-2 rounded text-start border border-purple border-opacity-25 shadow-sm h-100">
+                                        <strong>Staff Meeting</strong><br><span class="text-muted" style="font-size: 0.75rem">Conf. Room</span>
+                                    </div>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: BED BOOKINGS ================= -->
+        <div id="bed_bookings" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Bed Booking Management</h5>
+                        <small class="text-muted">Hospital bed occupancy & bookings</small>
+                    </div>
+                </div>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-bed fa-3x text-primary mb-3"></i>
+                            <div class="fw-bold fs-5">Total Beds</div>
+                            <small class="text-muted fw-bold">{{ total_beds }} Available</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-door-open fa-3x text-success mb-3"></i>
+                            <div class="fw-bold fs-5">Free Beds</div>
+                            <small class="text-success fw-bold">{{ available_beds }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-door-closed fa-3x text-danger mb-3"></i>
+                            <div class="fw-bold fs-5">Occupied Beds</div>
+                            <small class="text-danger fw-bold">{{ occupied_beds }} ({{ "%.0f"|format((occupied_beds/total_beds*100) if total_beds > 0 else 0) }}%)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-plus fa-3x text-info mb-3"></i>
+                            <div class="fw-bold fs-5">ICU Beds</div>
+                            <small class="text-info fw-bold">{{ available_icu_beds }} / {{ total_icu_beds }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>Patient Name</th>
+                                <th>Hospital</th>
+                                <th>Room Number</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bed_bookings[:5] %}
+                            <tr>
+                                <td class="fw-bold">#BED-{{ booking.id | default('N/A') }}</td>
+                                <td>{{ booking.patient_name | default('N/A') }}</td>
+                                <td>{{ booking.hospital_name | default('N/A') }}</td>
+                                <td>{{ booking.room_number | default('N/A') }}</td>
+                                <td>
+                                    {% if booking.status | default('active') == 'active' %}
+                                    <span class="status-badge bg-green-soft">Active</span>
+                                    {% else %}
+                                    <span class="status-badge bg-blue-soft">Completed</span>
+                                    {% endif %}
+                                </td>
+                                <td><small class="text-muted">{{ booking.duration | default('N/A') }} days</small></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No bed bookings yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: BLOOD DONORS ================= -->
+        <div id="blood_donors" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Blood Donor Management</h5>
+                        <small class="text-muted">Track active blood donors</small>
+                    </div>
+                </div>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-donate-blood fa-3x text-danger mb-3"></i>
+                            <div class="fw-bold fs-5">Active Donors</div>
+                            <small class="text-muted fw-bold">{{ blood_donors|length }} Registered</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-droplet fa-3x text-info mb-3"></i>
+                            <div class="fw-bold fs-5">Blood Stock</div>
+                            <small class="text-info fw-bold">{{ blood_stock.keys()|length }} Groups</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-heart-pulse fa-3x text-success mb-3"></i>
+                            <div class="fw-bold fs-5">Lives Saved</div>
+                            <small class="text-success fw-bold">{{ blood_donors|length * 3 }}+ People</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Donor Name</th>
+                                <th>Blood Group</th>
+                                <th>Contact</th>
+                                <th>Last Donation</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for donor in blood_donors[:8] %}
+                            <tr>
+                                <td class="fw-bold">{{ donor.name | default('N/A') }}</td>
+                                <td><span class="badge bg-danger bg-opacity-10 text-danger fw-bold">{{ donor.blood_group | default('N/A') }}</span></td>
+                                <td><small>{{ donor.phone | default('N/A') }}</small></td>
+                                <td><small class="text-muted">{{ donor.last_donation_date | default('Never') }}</small></td>
+                                <td><span class="status-badge bg-green-soft">Eligible</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No blood donors registered</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: ORDERS ================= -->
+        <div id="orders" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Medical Shop Orders</h5>
+                        <small class="text-muted">E-commerce and pharmacy orders</small>
+                    </div>
+                </div>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-shopping-cart fa-3x text-primary mb-3"></i>
+                            <div class="fw-bold fs-5">Total Orders</div>
+                            <small class="text-muted fw-bold">{{ order_count }} Processed</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-wallet fa-3x text-success mb-3"></i>
+                            <div class="fw-bold fs-5">Total Sales</div>
+                            <small class="text-success fw-bold">₹{{ "%.2f"|format(total_order_amount) }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-box fa-3x text-info mb-3"></i>
+                            <div class="fw-bold fs-5">Avg Order Value</div>
+                            <small class="text-info fw-bold">₹{{ "%.2f"|format((total_order_amount / order_count) if order_count > 0 else 0) }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-truck fa-3x text-warning mb-3"></i>
+                            <div class="fw-bold fs-5">Pending</div>
+                            <small class="text-warning fw-bold">See Orders</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders[:8] %}
+                            <tr>
+                                <td class="fw-bold text-primary">#ORD-{{ order.id }}</td>
+                                <td>{{ order.patient_name | default('Customer') }}</td>
+                                <td><small>{{ order.items | default([]) | length }} items</small></td>
+                                <td class="fw-bold">₹{{ "%.2f"|format(order.total_price) }}</td>
+                                <td><small>{{ order.order_date.strftime('%Y-%m-%d') if order.order_date else 'N/A' }}</small></td>
+                                <td><span class="status-badge bg-green-soft">Delivered</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No orders yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: MESSAGES ================= -->
+        <div id="messages" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Real-Time Messaging</h5>
+                        <small class="text-muted">Doctor-Patient conversations</small>
+                    </div>
+                </div>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-comments fa-3x text-primary mb-3"></i>
+                            <div class="fw-bold fs-5">Total Messages</div>
+                            <small class="text-muted fw-bold">{{ messages|length }} Conversations</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-envelope fa-3x text-warning mb-3"></i>
+                            <div class="fw-bold fs-5">Unread</div>
+                            <small class="text-warning fw-bold badge bg-warning">{{ unread_messages }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
+                            <i class="fas fa-check-double fa-3x text-success mb-3"></i>
+                            <div class="fw-bold fs-5">Read</div>
+                            <small class="text-success fw-bold">{{ (messages|length) - unread_messages }}</small>
+                        </div>
+                    </div>
+                </div>
+                <h6 class="fw-bold mb-3">Recent Conversations</h6>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Last Message</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for msg in messages[-5:] | reverse %}
+                            <tr>
+                                <td class="fw-bold">{{ msg.sender | default('User') }}</td>
+                                <td>{% if msg.patient %}{{ msg.patient.name | default('Patient') }}{% elif msg.doctor %}Dr. {{ msg.doctor.first_name | default('Doctor') }}{% else %}Recipient{% endif %}</td>
+                                <td><small class="text-muted text-truncate">{{ msg.content | default('No content') | truncate(40) }}</small></td>
+                                <td><small>{{ msg.created_at.strftime('%H:%M') if msg.created_at else 'N/A' }}</small></td>
+                                <td>
+                                    <span class="status-badge bg-green-soft">Delivered</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No messages yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Toggle Sidebar Mobile
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('show');
+    }
+
+    // SPA Navigation Logic
+    function switchTab(sectionId, navElement) {
+        // 1. Hide all sections
+        document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+        
+        // 2. Show target section
+        const target = document.getElementById(sectionId);
+        if(target) target.classList.add('active');
+        
+        // 3. Update Sidebar Active State
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        if(navElement) navElement.classList.add('active');
+        
+        // 4. Update Header Title
+        const titleMap = {
+            'dashboard': 'Dashboard Overview',
+            'appointments': 'Appointments Calendar',
+            'bed_bookings': 'Bed Booking Management',
+            'blood_donors': 'Blood Donor Management',
+            'bloodbank': 'Blood Bank Management',
+            'organ_donors': 'Organ Donor Registry',
+            'camps': 'Manage Donation Camps',
+            'camp_regs': 'Camp Registrations',
+            'doctors': 'Medical Specialists',
+            'patients': 'Patient Management',
+            'staff': 'Staff Management',
+            'hospitals': 'Hospital Management',
+            'orders': 'Medical Shop Orders',
+            'pharmacy': 'Pharmacy Inventory',
+            'lab': 'Lab Reports',
+            'billing': 'Billing & Invoices',
+            'messages': 'Real-Time Messaging',
+            'inquiries': 'Contact Inquiries',
+            'settings': 'System Settings'
+        };
+        document.getElementById('page-title').innerText = titleMap[sectionId] || 'Dashboard';
+
+        // Close mobile sidebar if open
+        if(window.innerWidth < 992) {
+            const sidebar = document.getElementById('sidebar');
+            if(sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+        }
+    }
+
+    // Initialize Chart
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        
+        const labels = {{ earnings_dates | tojson }};
+        const data = {{ earnings_values | tojson }};
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Earnings (₹)',
+                    data: data,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#10b981',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [2, 4], color: '#f1f5f9' },
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return '₹' + value;
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // Doctor Earnings Chart
+        const ctxDoctor = document.getElementById('doctorEarningsChart').getContext('2d');
+        new Chart(ctxDoctor, {
+            type: 'bar',
+            data: {
+                labels: {{ doctor_names_labels | tojson }},
+                datasets: [{
+                    label: 'Earnings (₹)',
+                    data: {{ doctor_earnings_values | tojson }},
+                    backgroundColor: 'rgba(67, 97, 238, 0.6)',
+                    borderColor: '#4361ee',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [2, 4], color: '#f1f5f9' },
+                        ticks: { callback: function(value) { return '₹' + value; } }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Check hash for tab switching on load (e.g. coming from hospital filter link)
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            const navElement = document.querySelector(`.nav-item[data-section="${hash}"]`);
+            if (navElement) {
+                switchTab(hash, navElement);
+            }
+        }
+    });
+</script>
+</body>
+</html>

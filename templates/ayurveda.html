@@ -1,0 +1,162 @@
+{% extends 'layout.html' %}
+
+{% block title %}Ayurvedic AI Diagnosis - DEV AI+{% endblock %}
+
+{% block content %}
+<div class="min-h-[85vh] bg-stone-50 py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <!-- Decorative Background Pattern -->
+    <div class="absolute inset-0 opacity-5 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:20px_20px]"></div>
+    
+    <!-- Ambient Glow -->
+    <div class="absolute top-0 right-0 w-96 h-96 bg-emerald-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-96 h-96 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 pointer-events-none"></div>
+
+    <div class="max-w-4xl mx-auto relative z-10">
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 mb-6 shadow-lg shadow-emerald-200 border border-emerald-200">
+                <i class="fas fa-leaf text-4xl"></i>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-stone-900 mb-4 tracking-tight">Ayurvedic <span class="text-emerald-600">AI Diagnosis</span></h1>
+            <p class="text-lg text-stone-500 max-w-2xl mx-auto">Discover holistic healing. Describe your symptoms and body constitution to generate personalized Ayurvedic insights, Dosha analysis, and natural remedies.</p>
+            
+            <!-- Holistic Warning Banner -->
+            <div class="mt-8 inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold shadow-sm">
+                <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                    <i class="fas fa-info-circle"></i> 
+                </div>
+                <span>Ayurveda is a complementary therapy. Always consult a modern medical professional for severe conditions.</span>
+            </div>
+        </div>
+
+        <!-- Generation Card -->
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-stone-100">
+            <div class="p-8 md:p-12">
+                <form id="ayurvedaForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-stone-600 uppercase tracking-wider mb-3">Primary Dosha (Optional)</label>
+                            <div class="relative">
+                                <select id="doshaInput" class="w-full pl-5 pr-10 py-4 bg-stone-50 rounded-2xl border border-stone-200 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all text-stone-800 text-lg shadow-inner font-medium appearance-none cursor-pointer">
+                                    <option value="Unknown">I don't know my Dosha</option>
+                                    <option value="Vata">Vata (Air & Space - Creative, Active)</option>
+                                    <option value="Pitta">Pitta (Fire & Water - Intense, Logical)</option>
+                                    <option value="Kapha">Kapha (Earth & Water - Calm, Solid)</option>
+                                </select>
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"><i class="fas fa-chevron-down"></i></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-stone-600 uppercase tracking-wider mb-3">Digestion / Appetite</label>
+                            <div class="relative">
+                                <select id="digestionInput" class="w-full pl-5 pr-10 py-4 bg-stone-50 rounded-2xl border border-stone-200 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all text-stone-800 text-lg shadow-inner font-medium appearance-none cursor-pointer">
+                                    <option value="Normal">Normal / Regular</option>
+                                    <option value="Irregular">Irregular / Bloating</option>
+                                    <option value="Strong">Strong / Acidic</option>
+                                    <option value="Sluggish">Sluggish / Heavy</option>
+                                </select>
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"><i class="fas fa-chevron-down"></i></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-stone-600 uppercase tracking-wider mb-3">Describe your symptoms / concerns</label>
+                        <textarea id="symptomsInput" required rows="3" placeholder="e.g., I have been feeling very anxious, my skin is dry, and I have trouble sleeping..."
+                                  class="w-full px-5 py-4 bg-stone-50 rounded-2xl border border-stone-200 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all text-stone-800 text-lg shadow-inner font-medium resize-none"></textarea>
+                    </div>
+                    <button type="submit" id="generateBtn" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-[0_10px_20px_rgba(5,150,105,0.2)] hover:shadow-[0_10px_20px_rgba(5,150,105,0.4)] flex justify-center items-center gap-3 group active:scale-[0.98]">
+                        <span class="tracking-wide">Analyze Dosha & Symptoms</span>
+                        <i class="fas fa-seedling text-emerald-200 group-hover:scale-110 transition-transform"></i>
+                    </button>
+                </form>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden mt-12 text-center py-8">
+                    <div class="inline-block w-12 h-12 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+                    <p class="text-stone-500 font-medium animate-pulse">Consulting Ayurvedic Knowledge Base...</p>
+                </div>
+
+                <!-- Results Area -->
+                <div id="resultsArea" class="hidden mt-12">
+                    <div class="bg-stone-50 rounded-3xl p-6 md:p-10 border border-stone-200 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-white/50 rounded-bl-full pointer-events-none"></div>
+                        
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 border-b border-stone-200 pb-6 relative z-10 gap-4">
+                            <h3 class="text-2xl font-extrabold text-stone-800 flex items-center gap-3">
+                                <i class="fas fa-mortar-pestle text-emerald-600"></i> Ayurvedic Protocol
+                            </h3>
+                            <span class="text-xs font-bold bg-white px-4 py-2 rounded-full text-stone-500 border border-stone-200 shadow-sm flex items-center gap-2">
+                                <i class="fas fa-robot text-blue-500"></i> AI Generated
+                            </span>
+                        </div>
+                        
+                        <div id="ayurvedaContent" class="prose prose-stone max-w-none text-stone-700 leading-loose text-lg relative z-10">
+                            <!-- Content injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('ayurvedaForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const symptoms = document.getElementById('symptomsInput').value.trim();
+        const dosha = document.getElementById('doshaInput').value;
+        const digestion = document.getElementById('digestionInput').value;
+        if (!symptoms) return;
+
+        // UI Updates
+        const btn = document.getElementById('generateBtn');
+        const originalBtnHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-xl"></i> <span class="ml-2 tracking-wide">Processing...</span>';
+        btn.disabled = true;
+        btn.classList.add('opacity-80', 'cursor-not-allowed');
+        
+        document.getElementById('resultsArea').classList.add('hidden');
+        document.getElementById('loadingState').classList.remove('hidden');
+
+        // API Call
+        const prompt = `Act as an expert Ayurvedic practitioner. A user reports the following symptoms: "${symptoms}". Their primary dosha tendency is: "${dosha}". Their digestion is described as: "${digestion}". Provide a structured Ayurvedic perspective. Include: 1) Possible Dosha Imbalances, 2) Dietary Recommendations, 3) Lifestyle/Yoga advice, and 4) Herbal suggestions. Format neatly using markdown headings (##), bullet points, and bold text. Keep it practical, deeply informative, and add a brief disclaimer that this is not a substitute for modern allopathic medicine.`;
+
+        fetch('/api/chatbot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: prompt })
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Parse basic markdown to HTML
+            let formattedHTML = data.reply
+                .replace(/### (.*?)(\n|$)/g, '<h3 class="text-xl font-bold mt-8 mb-4 text-stone-800 border-l-4 border-emerald-500 pl-3">$1</h3>')
+                .replace(/## (.*?)(\n|$)/g, '<h2 class="text-2xl font-black mt-8 mb-4 text-stone-900">$1</h2>')
+                .replace(/# (.*?)(\n|$)/g, '<h1 class="text-3xl font-black mt-8 mb-5 text-stone-900">$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-stone-900">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/- (.*?)(\n|$)/g, '<li class="ml-6 list-disc mb-2 pl-2 marker:text-emerald-600">$1</li>')
+                .replace(/\n/g, '<br>');
+
+            document.getElementById('ayurvedaContent').innerHTML = formattedHTML;
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('resultsArea').classList.remove('hidden');
+            
+            // Restore button
+            btn.innerHTML = originalBtnHtml;
+            btn.disabled = false;
+            btn.classList.remove('opacity-80', 'cursor-not-allowed');
+        })
+        .catch(err => {
+            document.getElementById('ayurvedaContent').innerHTML = '<div class="bg-red-50 p-4 border border-red-200 rounded-xl text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i> Failed to generate Ayurvedic insights. Please try again.</div>';
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('resultsArea').classList.remove('hidden');
+            
+            // Restore button
+            btn.innerHTML = originalBtnHtml;
+            btn.disabled = false;
+            btn.classList.remove('opacity-80', 'cursor-not-allowed');
+        });
+    });
+</script>
+{% endblock %}

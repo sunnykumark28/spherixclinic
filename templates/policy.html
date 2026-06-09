@@ -1,0 +1,227 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ policy.title }} — Legal Center{% endblock %}
+
+{% block head %}
+<!-- 🖋️ Premium Typography -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,600..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    :root {
+        --font-ui: 'Inter', sans-serif;
+        --font-legal: 'Newsreader', serif;
+        --color-accent: #2563EB; /* Royal Blue */
+    }
+    
+    body {
+        font-family: var(--font-ui);
+        background-color: #F3F4F6; /* Light Stone */
+        color: #111827;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* 📄 The "Paper" Effect */
+    .legal-paper {
+        background: #ffffff;
+        box-shadow: 
+            0 1px 3px rgba(0,0,0,0.05), 
+            0 20px 50px -10px rgba(0,0,0,0.05),
+            0 0 0 1px rgba(0,0,0,0.02);
+    }
+
+    /* 🖋️ Legal Prose Customization */
+    .prose-legal {
+        font-family: var(--font-legal);
+        font-size: 1.125rem; /* 18px */
+        line-height: 1.7;
+        color: #374151;
+        max-width: none;
+    }
+    
+    .prose-legal h1, .prose-legal h2, .prose-legal h3 {
+        font-family: var(--font-ui);
+        color: #111827;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+    }
+    
+    .prose-legal h2 { margin-top: 2.5em; border-bottom: 1px solid #E5E7EB; padding-bottom: 0.5em; }
+    .prose-legal a { color: var(--color-accent); text-decoration-color: rgba(37, 99, 235, 0.3); text-underline-offset: 3px; }
+    .prose-legal a:hover { text-decoration-color: var(--color-accent); }
+    .prose-legal ul { list-style-type: disc; padding-left: 1.5em; }
+    .prose-legal li::marker { color: #9CA3AF; }
+
+    /* Custom Scrollbar for Sidebar */
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+    
+    /* Print Styles */
+    @media print {
+        body { background: white; }
+        .no-print { display: none !important; }
+        .legal-paper { box-shadow: none; border: none; padding: 0; }
+        .prose-legal { font-size: 11pt; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen relative flex flex-col">
+    
+    <!-- 🟢 Minimal Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white text-xs font-bold">L</div>
+                <span class="font-semibold text-gray-900 tracking-tight">Legal Center</span>
+            </div>
+            <div class="text-xs text-gray-500 font-medium bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+                Current Version: 2025.1.0
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        <div class="flex flex-col lg:flex-row gap-12">
+
+            <!-- ================= LEFT SIDEBAR (Navigation) ================= -->
+            <aside class="w-full lg:w-64 flex-shrink-0 no-print">
+                <div class="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scroll pr-2">
+                    
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 px-3">Agreements</h3>
+                    
+                    <nav class="space-y-0.5">
+                        {% for key, item in all_policies.items() %}
+                        {% set active = (key == current_id) %}
+                        <a href="{{ url_for('legal_hub', policy_id=key) }}"
+                           class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
+                                  {% if active %}
+                                    bg-white text-gray-900 shadow-sm border border-gray-200/60
+                                  {% else %}
+                                    text-gray-500 hover:text-gray-900 hover:bg-gray-100/50
+                                  {% endif %}">
+                            <i class="fas {{ item.icon }} w-4 text-center {% if active %}text-blue-600{% else %}text-gray-400{% endif %}"></i>
+                            {{ item.title }}
+                        </a>
+                        {% endfor %}
+                    </nav>
+
+                    <div class="mt-8 pt-6 border-t border-gray-200 px-3">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Support</h3>
+                        <a href="{{ url_for('contact') }}" class="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                            <i class="far fa-envelope text-gray-400"></i> Legal Inquiry
+                        </a>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ================= MAIN CONTENT (The Contract) ================= -->
+            <main class="flex-1 min-w-0">
+                
+                <!-- Action Bar -->
+                <div class="flex items-center justify-between mb-6 no-print">
+                    <nav class="flex" aria-label="Breadcrumb">
+                        <ol class="flex items-center space-x-2">
+                            <li><a href="#" class="text-gray-400 hover:text-gray-500"><i class="fas fa-home"></i></a></li>
+                            <li><span class="text-gray-300">/</span></li>
+                            <li class="text-sm font-medium text-gray-500">Policies</li>
+                        </ol>
+                    </nav>
+                    <div class="flex items-center gap-3">
+                        <button onclick="window.print()" class="text-gray-400 hover:text-gray-900 transition-colors" title="Print Document">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button onclick="copyLink()" class="text-gray-400 hover:text-gray-900 transition-colors" title="Copy Link">
+                            <i class="fas fa-link"></i>
+                        </button>
+                        <a href="#" class="px-4 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-black transition-colors shadow-lg shadow-gray-900/10">
+                            Download PDF
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Paper Container -->
+                <article class="legal-paper rounded-xl overflow-hidden">
+                    
+                    <!-- Decorative Status Bar -->
+                    <div class="h-1 w-full bg-blue-600"></div>
+
+                    <div class="p-8 md:p-14 lg:p-16">
+                        
+                        <!-- Document Header -->
+                        <header class="mb-12 pb-8 border-b border-gray-100">
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-100 uppercase tracking-wide">
+                                    Active & Verified
+                                </span>
+                                <span class="text-xs text-gray-400">Last updated: {{ current_date }}</span>
+                            </div>
+                            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight font-sans">
+                                {{ policy.title }}
+                            </h1>
+                            <p class="mt-4 text-lg text-gray-500 font-serif leading-relaxed">
+                                Please read this document carefully. It contains important information regarding your rights and obligations.
+                            </p>
+                        </header>
+
+                        <!-- Document Body -->
+                        <div class="prose-legal prose-slate">
+                            {{ policy.content | markdown | safe }}
+                        </div>
+
+                        <!-- Signature Block (Aesthetic) -->
+                        <div class="mt-20 pt-12 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-8">
+                            <div>
+                                <div class="h-12 mb-2 flex items-end">
+                                    <img src="{{ url_for('static', filename='images/sunny.jpg') }}" class="h-8 opacity-40 grayscale" alt="Signature">
+                                </div>
+                                <div class="border-t border-gray-300 pt-2">
+                                    <p class="text-sm font-bold text-gray-900">Chief Compliance Officer</p>
+                                    <p class="text-xs text-gray-500">FutureHealth Inc.</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col justify-end">
+                                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <p class="text-xs text-gray-500 leading-relaxed text-justify">
+                                        This document is electronically generated and is valid without a physical signature. 
+                                        Reference ID: <span class="font-mono text-gray-700">DOC-{{ range(1000, 9999) | random }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </article>
+                
+                <!-- Footer within Main -->
+                <p class="text-center text-gray-400 text-sm mt-8 pb-8">
+                    &copy; 2025 FutureHealth Inc. All rights reserved. • <a href="#" class="hover:text-gray-600 underline">Privacy Manager</a>
+                </p>
+
+            </main>
+        </div>
+    </div>
+</div>
+
+<!-- Simple Toast -->
+<div id="toast" class="fixed top-20 right-1/2 translate-x-1/2 sm:right-8 sm:translate-x-0 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl transform transition-all duration-300 opacity-0 scale-95 pointer-events-none z-50 flex items-center gap-3">
+    <i class="fas fa-check-circle text-green-400"></i>
+    <span class="text-sm font-medium">Link copied to clipboard</span>
+</div>
+
+<script>
+    function copyLink() {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('opacity-0', 'scale-95');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-95');
+            }, 2000);
+        });
+    }
+</script>
+{% endblock %}

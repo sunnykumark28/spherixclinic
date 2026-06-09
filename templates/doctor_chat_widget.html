@@ -1,0 +1,198 @@
+<!-- Real-Time Messaging Widget for Doctor Dashboard -->
+<div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden h-[600px] flex flex-col">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                <i class="fas fa-comments"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-900">Patient Messages</h3>
+                <p class="text-xs text-slate-500">Real-time updates</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <span id="unreadBadge" class="hidden px-2 py-1 rounded-full bg-red-100 text-red-600 text-xs font-bold">
+                <span id="unreadCount">0</span>
+            </span>
+            <button onclick="toggleChatPanel()" class="text-slate-400 hover:text-slate-600 transition">
+                <i class="fas fa-times-circle text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="doctorChatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+        <div class="text-center text-slate-400 py-8">
+            <i class="fas fa-inbox text-3xl mb-2"></i>
+            <p>No messages yet</p>
+        </div>
+    </div>
+
+    <!-- Active Chat Section or Conversation List -->
+    <div id="chatConversationList" class="border-t border-slate-100 bg-slate-50 max-h-48 overflow-y-auto">
+        <!-- Conversations will be populated here -->
+    </div>
+
+    <!-- Input Area -->
+    <div id="chatInputArea" class="hidden border-t border-slate-100 bg-white p-4">
+        <div class="flex gap-2 items-end">
+            <input type="text" id="doctorChatInput" placeholder="Type a message..."
+                   class="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            <button id="doctorSendBtn" class="w-9 h-9 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center shadow-md">
+                <i class="fas fa-paper-plane text-sm"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden fields for chat state -->
+<input type="hidden" id="activeChatPatientId" value="">
+<input type="hidden" id="doctorId" value="{{ current_user.id }}">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const doctorChatMessages = document.getElementById('doctorChatMessages');
+    const chatInputArea = document.getElementById('chatInputArea');
+    const doctorChatInput = document.getElementById('doctorChatInput');
+    const doctorSendBtn = document.getElementById('doctorSendBtn');
+    const conversationList = document.getElementById('chatConversationList');
+    const activeChatPatientId = document.getElementById('activeChatPatientId');
+    const doctorId = document.getElementById('doctorId').value;
+    const unreadBadge = document.getElementById('unreadBadge');
+    const unreadCount = document.getElementById('unreadCount');
+    
+    let unreadMessages = 0;
+    const socket = io();
+    let activeRoom = null;
+
+    // Join doctor namespace
+    socket.emit('join_doctor', { doctor_id: doctorId });
+
+    // Load conversations list
+    function loadConversations() {
+        fetch(`/api/doctor/conversations`)
+            .then(r => r.json())
+            .then(data => {
+                conversationList.innerHTML = '';
+                if (data.conversations && data.conversations.length > 0) {
+                    data.conversations.forEach(conv => {
+                        const convEl = document.createElement('div');
+                        convEl.className = 'p-3 border-b border-slate-100 cursor-pointer hover:bg-slate-100 transition flex items-center gap-3';
+                        convEl.innerHTML = `
+                            <img src="https://ui-avatars.com/api/?name=${conv.patient_name}&background=random&size=32" 
+                                 class="w-8 h-8 rounded-full">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-sm text-slate-900 truncate">${conv.patient_name}</p>
+                                <p class="text-xs text-slate-500 truncate">${conv.last_message || 'No messages'}</p>
+                            </div>
+                            ${conv.unread_count > 0 ? `<span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">${conv.unread_count}</span>` : ''}
+                        `;
+                        convEl.onclick = () => selectConversation(conv.patient_id, conv.patient_name);
+                        conversationList.appendChild(convEl);
+                    });
+                } else {
+                    conversationList.innerHTML = '<div class="p-6 text-center text-slate-400"><p>No conversations yet</p></div>';
+                }
+            })
+            .catch(e => console.error('Failed to load conversations:', e));
+    }
+
+    function selectConversation(patientId, patientName) {
+        activeChatPatientId.value = patientId;
+        activeRoom = `doctor_patient_${doctorId}_${patientId}`;
+        chatInputArea.classList.remove('hidden');
+        loadMessages(patientId);
+        socket.emit('join', { room: activeRoom });
+    }
+
+    function loadMessages(patientId) {
+        fetch(`/api/doctor/chat/${patientId}/messages`)
+            .then(r => r.json())
+            .then(messages => {
+                doctorChatMessages.innerHTML = '';
+                messages.forEach(msg => {
+                    appendMessage(msg);
+                });
+                doctorChatMessages.scrollTop = doctorChatMessages.scrollHeight;
+            })
+            .catch(e => console.error('Failed to load messages:', e));
+    }
+
+    function appendMessage(msg) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `flex ${msg.sender === 'doctor' ? 'justify-end' : 'justify-start'} items-end gap-2`;
+        msgDiv.innerHTML = `
+            <div class="max-w-xs px-3 py-2 rounded-lg text-sm ${
+                msg.sender === 'doctor' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-slate-200 text-slate-900'
+            }">
+                ${escapeHtml(msg.content)}
+                <div class="text-xs opacity-70 mt-1">${new Date(msg.created_at).toLocaleTimeString()}</div>
+            </div>
+        `;
+        doctorChatMessages.appendChild(msgDiv);
+        doctorChatMessages.scrollTop = doctorChatMessages.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function sendMessage() {
+        const content = doctorChatInput.value.trim();
+        const patientId = activeChatPatientId.value;
+        
+        if (!content || !patientId) return;
+
+        fetch(`/api/doctor/chat/${patientId}/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                doctorChatInput.value = '';
+            }
+        })
+        .catch(e => console.error('Failed to send message:', e));
+    }
+
+    // Socket events
+    socket.on('new_message', function(msg) {
+        if (msg.sender === 'patient') {
+            appendMessage(msg);
+            loadConversations();
+        }
+    });
+
+    doctorSendBtn.addEventListener('click', sendMessage);
+    doctorChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Initial load
+    loadConversations();
+    setInterval(loadConversations, 5000); // Refresh every 5 seconds
+});
+
+function toggleChatPanel() {
+    const panel = document.getElementById('doctorChatWidget');
+    if (panel) {
+        panel.classList.toggle('hidden');
+    }
+}
+</script>

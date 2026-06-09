@@ -1,0 +1,381 @@
+{% extends 'layout.html' %}
+
+{% block title %}Telemedicine - MediConnect Premium{% endblock %}
+
+{% block head %}
+<!-- Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* Premium Base Styles */
+    :root { --primary: #0e36e9; --dark: #020617; }
+    
+    body { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        background-color: #f8fafc;
+    }
+
+    /* Gradient Text */
+    .text-gradient {
+        background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Glass Effect */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    /* Hero Pattern */
+    .hero-bg {
+        background-color: #0f172a;
+        background-image: radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
+                          radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%);
+    }
+
+    /* Hover Lift Animation */
+    .hover-lift { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .hover-lift:hover { transform: translateY(-8px); }
+
+    /* Pulse for 'Live' status */
+    .blob {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 1);
+        transform: scale(1);
+        animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    
+    /* Hide scrollbar when modal is open */
+    body.modal-open { overflow: hidden; }
+</style>
+<!-- Jitsi Meet External API -->
+<script src="https://meet.jit.si/external_api.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- 1. PREMIUM HERO SECTION -->
+<div class="relative hero-bg overflow-hidden min-h-[600px] flex items-center">
+    <!-- Abstract Shapes -->
+    <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-sky-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+    
+    <div class="max-w-7xl mx-auto px-6 w-full relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center py-20">
+        
+        <!-- Left Content -->
+        <div class="space-y-8">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700 backdrop-blur-sm">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Live Wait Time: &lt; 5 mins</span>
+            </div>
+            
+            <h1 class="text-5xl lg:text-7xl font-extrabold text-slate-600 leading-[1.1]">
+                Healthcare <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Reimagined.</span>
+            </h1>
+            
+            <p class="text-lg text-slate-400 max-w-lg leading-relaxed">
+                Connect with board-certified specialists in minutes via HD video. No waiting rooms, no travel, just quality care from home.
+            </p>
+
+            <!-- Search Bar Input -->
+            <div class="relative max-w-md group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-slate-400 group-focus-within:text-sky-400 transition-colors"></i>
+                </div>
+                <input type="text" class="w-full bg-white/10 border border-black/20 text-slate-900 placeholder-slate-400 rounded-xl py-4 pl-12 pr-36 focus:outline-none focus:ring-2 focus:ring-sky-500 backdrop-blur-md transition-all" placeholder="Search symptoms, doctors...">
+                <button id="start-call-btn" class="absolute right-2 top-2 bottom-2 bg-sky-500 hover:bg-sky-400 text-white font-semibold px-6 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-sky-500/30">
+                    <i class="fas fa-video"></i> Instant Call
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="flex gap-8 pt-4 border-t border-black/10">
+                <div>
+                    <div class="text-3xl font-bold text-black">2M+</div>
+                    <div class="text-sm text-slate-900">Consultations</div>
+                </div>
+                <div>
+                    <div class="text-3xl font-bold text-black">4.9/5</div>
+                    <div class="text-sm text-slate-900">Patient Rating</div>
+                </div>
+                <div>
+                    <div class="text-3xl font-bold text-red-600">24/7</div>
+                    <div class="text-sm text-slate-900">Availability</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Visual (Floating Cards) -->
+        <div class="relative hidden lg:block h-[500px]">
+            <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=1964&auto=format&fit=crop" 
+                 class="absolute right-0 top-0 w-[400px] h-[500px] object-cover rounded-[32px] shadow-2xl z-10 opacity-90 mask-image-gradient" alt="Doctor on Tablet">
+            
+            <!-- Floating Notification Card -->
+            <div class="absolute top-20 right-[350px] bg-white p-4 rounded-2xl shadow-xl z-20 animate-[bounce_3s_infinite] max-w-[200px]">
+                <div class="flex items-center gap-3">
+                    <img src="https://randomuser.me/api/portraits/women/44.jpg" class="w-10 h-10 rounded-full border-2 border-green-500 p-0.5">
+                    <div>
+                        <div class="text-xs font-bold text-slate-800">Dr. Sarah Jen</div>
+                        <div class="text-[10px] text-green-600 font-bold">Incoming Call...</div>
+                    </div>
+                </div>
+                <div class="mt-2 flex gap-2">
+                    <button class="flex-1 bg-green-500 text-white text-xs py-1.5 rounded-lg">Accept</button>
+                    <button class="flex-1 bg-slate-100 text-slate-500 text-xs py-1.5 rounded-lg">Decline</button>
+                </div>
+            </div>
+
+            <!-- Secure Badge -->
+            <div class="absolute bottom-10 right-[350px] bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-xl z-20">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-shield-alt text-sky-400 text-2xl"></i>
+                    <div>
+                        <div class="text-xs text-slate-200">Connection is</div>
+                        <div class="text-sm font-bold text-white">End-to-End Encrypted</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. SPECIALTIES GRID -->
+<div class="py-20 px-6 max-w-7xl mx-auto">
+    <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold text-slate-900">Browse by <span class="text-gradient">Specialty</span></h2>
+        <p class="text-slate-500 mt-2">Select a category to find available specialists instantly.</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <!-- Item 1 -->
+        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
+            <div class="w-12 h-12 bg-sky-50 rounded-xl flex items-center justify-center text-sky-600 text-xl mx-auto mb-3 group-hover:bg-sky-500 group-hover:text-white transition-colors">
+                <i class="fas fa-stethoscope"></i>
+            </div>
+            <h3 class="font-bold text-slate-700 text-sm">Primary Care</h3>
+        </a>
+        <!-- Item 2 -->
+        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
+            <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 text-xl mx-auto mb-3 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                <i class="fas fa-brain"></i>
+            </div>
+            <h3 class="font-bold text-slate-700 text-sm">Psychiatry</h3>
+        </a>
+        <!-- Item 3 -->
+        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
+            <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600 text-xl mx-auto mb-3 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                <i class="fas fa-heartbeat"></i>
+            </div>
+            <h3 class="font-bold text-slate-700 text-sm">Cardiology</h3>
+        </a>
+        <!-- Item 4 -->
+        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
+            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 text-xl mx-auto mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                <i class="fas fa-allergies"></i>
+            </div>
+            <h3 class="font-bold text-slate-700 text-sm">Dermatology</h3>
+        </a>
+        <!-- Item 5 -->
+        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
+            <div class="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600 text-xl mx-auto mb-3 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                <i class="fas fa-baby"></i>
+            </div>
+            <h3 class="font-bold text-slate-700 text-sm">Pediatrics</h3>
+        </a>
+        <!-- Item 6 -->
+        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
+            <div class="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 text-xl mx-auto mb-3 group-hover:bg-slate-800 group-hover:text-white transition-colors">
+                <i class="fas fa-ellipsis-h"></i>
+            </div>
+            <h3 class="font-bold text-slate-700 text-sm">View All</h3>
+        </a>
+    </div>
+</div>
+
+<!-- 3. AVAILABLE DOCTORS (Realism) -->
+<div class="bg-slate-50 py-20 px-6 border-y border-slate-200">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-end mb-10">
+            <div>
+                <h2 class="text-3xl font-bold text-slate-900">Available <span class="text-sky-600">Right Now</span></h2>
+                <p class="text-slate-500 mt-2">Top rated specialists ready to take your call.</p>
+            </div>
+            <a href="#" class="hidden md:flex items-center gap-2 text-sky-600 font-bold hover:text-sky-700 transition-colors">
+                View all doctors <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            
+        </div>
+    </div>
+</div>
+
+<!-- 4. HOW IT WORKS (Modernized) -->
+<div class="py-24 px-6 relative overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute left-[-10%] top-[20%] w-96 h-96 bg-purple-200 rounded-full blur-[100px] opacity-30"></div>
+        <div class="absolute right-[-10%] bottom-[20%] w-96 h-96 bg-sky-200 rounded-full blur-[100px] opacity-30"></div>
+    </div>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl font-bold text-slate-900">Seamless <span class="text-gradient">Process</span></h2>
+            <p class="text-slate-500 mt-2">From symptom to prescription in 3 simple steps.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Step 1 -->
+            <div class="relative p-8 bg-white/60 backdrop-blur-lg border border-white/50 rounded-3xl shadow-xl">
+                <div class="absolute -top-6 left-8 w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-lg">1</div>
+                <h3 class="text-xl font-bold text-slate-800 mt-4 mb-2">Book Instantly</h3>
+                <p class="text-slate-600 text-sm leading-relaxed">Filter doctors by specialty, price, or language. Pick a time slot or choose "Instant Connect" for urgent care.</p>
+            </div>
+            
+            <!-- Step 2 -->
+            <div class="relative p-8 bg-white/60 backdrop-blur-lg border border-white/50 rounded-3xl shadow-xl">
+                <div class="absolute -top-6 left-8 w-12 h-12 bg-sky-500 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-lg">2</div>
+                <h3 class="text-xl font-bold text-slate-800 mt-4 mb-2">Secure Video Call</h3>
+                <p class="text-slate-600 text-sm leading-relaxed">Join the encrypted video room via app or browser. Share photos of symptoms and chat in real-time.</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="relative p-8 bg-white/60 backdrop-blur-lg border border-white/50 rounded-3xl shadow-xl">
+                <div class="absolute -top-6 left-8 w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-lg">3</div>
+                <h3 class="text-xl font-bold text-slate-800 mt-4 mb-2">Digital Rx</h3>
+                <p class="text-slate-600 text-sm leading-relaxed">Get your diagnosis, sick notes, and prescriptions sent directly to your phone or local pharmacy.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 5. CTA Footer Strip -->
+<div class="bg-slate-900 py-16 px-6">
+    <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-3xl font-bold text-white mb-6">Ready to see a doctor?</h2>
+        <p class="text-slate-400 mb-8 max-w-lg mx-auto">Download our app for better experience or continue on the web.</p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <button class="bg-white text-slate-900 font-bold py-4 px-8 rounded-full shadow-lg hover:bg-sky-50 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                <i class="fab fa-apple text-xl"></i> App Store
+            </button>
+            <button class="bg-transparent border border-white/30 text-white font-bold py-4 px-8 rounded-full hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                <i class="fab fa-google-play text-xl"></i> Google Play
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- VIDEO CALL MODAL -->
+<div id="video-call-modal" class="fixed inset-0 z-[9999] hidden flex flex-col bg-slate-900/95 backdrop-blur-md transition-opacity opacity-0">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-700">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div>
+                <h3 class="text-white font-bold">Secure Telemedicine Room</h3>
+                <p class="text-xs text-green-400 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> End-to-End Encrypted
+                </p>
+            </div>
+        </div>
+        <button id="end-call-btn" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors shadow-lg shadow-red-600/20">
+            End Call
+        </button>
+    </div>
+    <!-- Video Container -->
+    <div id="jitsi-container" class="flex-grow w-full bg-black"></div>
+</div>
+
+<script>
+    let api = null;
+
+    function startJitsiCall(roomToJoin) {
+        const modal = document.getElementById('video-call-modal');
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        
+        // Small delay to allow CSS transitions to trigger
+        setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
+
+        const domain = 'meet.jit.si';
+        const options = {
+            roomName: roomToJoin,
+            width: '100%',
+            height: '100%',
+            parentNode: document.getElementById('jitsi-container'),
+            configOverwrite: {
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+                prejoinPageEnabled: false, // Skip the preview screen, jump right in
+                disableDeepLinking: true
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: [
+                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                    'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                    'livestreaming', 'etherpad', 'settings', 'raisehand',
+                    'videoquality', 'filmstrip', 'shortcuts', 'tileview', 'videobackgroundblur'
+                ],
+            },
+            userInfo: {
+                displayName: '{% if current_user.is_authenticated %}{% if current_user.is_doctor %}Dr. {{ current_user.last_name }}{% else %}{{ current_user.name }}{% endif %}{% else %}DEV Ai+ Guest{% endif %}'
+            }
+        };
+        
+        // Start the Jitsi Call
+        api = new JitsiMeetExternalAPI(domain, options);
+        
+        // Listen for user hanging up from inside the Jitsi UI
+        api.addListener('videoConferenceLeft', () => {
+            closeCallModal();
+        });
+    }
+
+    const dbRoomName = "{{ room_name or '' }}";
+
+    document.getElementById('start-call-btn').addEventListener('click', () => {
+        const roomToJoin = dbRoomName ? dbRoomName : 'DevAiHealthRoom' + Math.floor(Math.random() * 1000000);
+        startJitsiCall(roomToJoin);
+    });
+
+    // Auto-start the call if arriving from a specific appointment link
+    if (dbRoomName) {
+        startJitsiCall(dbRoomName);
+    }
+
+    document.getElementById('end-call-btn').addEventListener('click', () => {
+        closeCallModal();
+    });
+
+    function closeCallModal() {
+        const modal = document.getElementById('video-call-modal');
+        modal.classList.add('opacity-0');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+            if(api) {
+                api.dispose(); // Destroy the iframe to turn off the camera/mic
+                api = null;
+            }
+        }, 300); // match transition duration
+    }
+</script>
+
+{% endblock %}

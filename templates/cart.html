@@ -1,0 +1,147 @@
+{% extends 'layout.html' %}
+
+{% block title %}Shopping Cart - MediConnect{% endblock %}
+
+{% block content %}
+<div class="bg-gray-100 min-h-screen py-8">
+    <div class="container mx-auto px-4">
+        <h1 class="text-4xl font-bold text-center text-teal-700 mb-8">Your Shopping Cart</h1>
+
+        {% if not cart %}
+            <div class="text-center py-20">
+                <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
+                <p class="text-2xl text-gray-500">Your cart is empty.</p>
+                <a href="{{ url_for('medical_shop') }}" class="mt-6 inline-block bg-teal-500 text-white font-semibold py-3 px-8 rounded-full hover:bg-teal-600 transition-all duration-300 shadow-lg">
+                    Continue Shopping
+                </a>
+            </div>
+        {% else %}
+            <div class="flex flex-col md:flex-row gap-8">
+                <!-- Cart Items -->
+                <div class="md:w-3/4">
+                    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+                        <table class="w-full" id="cart-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-left font-semibold">Product</th>
+                                    <th class="text-left font-semibold">Price</th>
+                                    <th class="text-left font-semibold">Quantity</th>
+                                    <th class="text-left font-semibold">Total</th>
+                                    <th class="text-left font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart %}
+                                <tr class="border-b">
+                                    <td class="py-4">
+                                        <div class="flex items-center">
+                                            <span class="font-semibold">{{ item.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4">₹{{ "%.2f"|format(item.price) }}</td>
+                                    <td class="py-4">
+                                        <div class="flex items-center">
+                                            <button class="cart-action-btn border rounded-md py-1 px-3 mr-2" data-name="{{ item.name }}" data-action="decrease" {% if item.quantity <= 1 %}disabled class="text-gray-400 cursor-not-allowed"{% endif %}>-</button>
+                                            <span class="item-quantity text-center w-8">{{ item.quantity }}</span>
+                                            <button class="cart-action-btn border rounded-md py-1 px-3 ml-2" data-name="{{ item.name }}" data-action="increase">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 font-semibold">₹{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                    <td class="py-4">
+                                        <button class="cart-action-btn text-red-500 hover:text-red-700" data-name="{{ item.name }}" data-action="remove">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="md:w-1/4">
+                    <div class="bg-white rounded-lg shadow-md p-6 sticky top-24">
+                        <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+                        <div class="flex justify-between mb-2">
+                            <span >Subtotal</span>
+                            <span id="cart-subtotal">₹{{ "%.2f"|format(cart_total_price) }}</span>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <span>Taxes</span>
+                            <span>₹0.00</span>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <span>Shipping</span>
+                            <span>₹0.00</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="flex justify-between font-bold text-lg">
+                            <span >Total</span>
+                            <span id="cart-total">₹{{ "%.2f"|format(cart_total_price) }}</span>
+                        </div>
+                        <a href="{{ url_for('checkout') }}" class="block text-center bg-teal-500 text-white py-3 px-6 rounded-lg mt-6 w-full hover:bg-teal-600 transition-all">
+                            Proceed to Checkout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cartTable = document.getElementById('cart-table');
+    if (cartTable) {
+        cartTable.addEventListener('click', function(e) {
+            const target = e.target.closest('.cart-action-btn');
+            if (!target) return;
+
+            const productName = target.dataset.name;
+            const action = target.dataset.action;
+
+            fetch('/update-cart-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: productName, action: action })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update order summary totals first
+                    document.getElementById('cart-subtotal').textContent = '₹' + data.cart_total_price.toFixed(2);
+                    document.getElementById('cart-total').textContent = '₹' + data.cart_total_price.toFixed(2);
+
+                    if (data.item_removed) {
+                        // If item was removed completely, remove the row from the table
+                        target.closest('tr').remove();
+                        // If the cart is now empty, show the "empty cart" message.
+                        if (document.getElementById('cart-table').querySelector('tbody').children.length === 0) {
+                            location.reload(); // Easiest way to show the empty cart view
+                        }
+                    } else if (data.item) {
+                        // Update quantity and total for the specific item row
+                        const row = target.closest('tr');
+                        row.querySelector('.item-quantity').textContent = data.item.quantity;
+                        // The 4th td cell holds the item total
+                        const item_total_price = data.item.quantity * data.item.price;
+                        row.children[3].textContent = '₹' + item_total_price.toFixed(2);
+
+                        // Disable the '-' button if quantity is 1
+                        const decreaseBtn = row.querySelector('button[data-action="decrease"]');
+                        if (data.item.quantity <= 1) {
+                            decreaseBtn.disabled = true;
+                            decreaseBtn.classList.add('text-gray-400', 'cursor-not-allowed', 'opacity-50');
+                        } else {
+                            decreaseBtn.disabled = false;
+                            decreaseBtn.classList.remove('text-gray-400', 'cursor-not-allowed', 'opacity-50');
+                        }
+                    }
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

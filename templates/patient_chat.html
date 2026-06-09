@@ -1,0 +1,132 @@
+{% extends 'layout.html' %}
+
+{% block title %}Chat with Dr. {{ doctor.first_name }} {{ doctor.last_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="bg-white rounded-2xl shadow-2xl flex flex-col h-[75vh] overflow-hidden border border-gray-200">
+        
+        <!-- Chat Header -->
+        <div class="bg-gray-50 border-b border-gray-200 p-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Chat with Dr. {{ doctor.first_name }} {{ doctor.last_name }}</h1>
+                <p class="text-sm text-gray-500">{{ doctor.specialization }}</p>
+            </div>
+            <a href="{{ url_for('patient_dashboard') }}" class="text-gray-500 hover:text-gray-800 transition">
+                <i class="fas fa-times text-2xl"></i>
+            </a>
+        </div>
+
+        <!-- Message Area -->
+        <div id="message-area" class="flex-1 p-6 space-y-4 overflow-y-auto bg-gray-100">
+            <!-- Messages will be dynamically inserted here -->
+            <div class="text-center text-gray-400">Loading messages...</div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="bg-white p-4 border-t border-gray-200">
+            <div class="relative">
+                <input type="text" id="chat-input" placeholder="Type your message..."
+                       class="w-full pl-4 pr-16 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
+                <button id="send-btn" class="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-sky-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-sky-700 transition-all duration-300 transform hover:scale-105">
+                    <i class="fas fa-paper-plane text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messageArea = document.getElementById('message-area');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const doctorId = "{{ doctor.id }}";
+    const patientId = "{{ patient.id }}";
+    const roomName = `chat_${patientId}_${doctorId}`;
+
+    const socket = io();
+    socket.emit('join', { room: roomName });
+
+    socket.on('new_message', function(msg) {
+        messageArea.appendChild(renderMessage(msg));
+        scrollToBottom();
+    });
+
+    function scrollToBottom() {
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
+
+    function renderMessage(msg) {
+        const msgDiv = document.createElement('div');
+        msgDiv.classList.add('flex', 'items-end', 'gap-3');
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('px-4', 'py-2', 'rounded-xl', 'max-w-lg');
+        contentDiv.textContent = msg.content;
+
+        // Patient messages are on the right, doctor messages on the left
+        if (msg.sender === 'patient') {
+            msgDiv.classList.add('justify-end');
+            contentDiv.classList.add('bg-sky-600', 'text-white');
+        } else {
+            msgDiv.classList.add('justify-start');
+            contentDiv.classList.add('bg-gray-200', 'text-gray-800');
+        }
+        
+        msgDiv.appendChild(contentDiv);
+        return msgDiv;
+    }
+
+    async function fetchMessages() {
+        try {
+            const response = await fetch(`/api/patient/chat/${doctorId}/messages`);
+            if (!response.ok) throw new Error('Failed to fetch messages');
+            const messages = await response.json();
+
+            messageArea.innerHTML = ''; // Clear previous messages
+            if (messages.length === 0) {
+                messageArea.innerHTML = '<div class="text-center text-gray-400">No messages yet. Start the conversation!</div>';
+            } else {
+                messages.forEach(msg => {
+                    messageArea.appendChild(renderMessage(msg));
+                });
+            }
+            scrollToBottom();
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+            messageArea.innerHTML = '<div class="text-center text-red-500">Could not load messages.</div>';
+        }
+    }
+
+    async function sendMessage() {
+        const content = chatInput.value.trim();
+        if (!content) return;
+
+        try {
+            const response = await fetch(`/api/patient/chat/${doctorId}/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: content })
+            });
+            const result = await response.json();
+            if (result.success) {
+                chatInput.value = '';
+            } else {
+                alert('Failed to send message: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('An error occurred while sending the message.');
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
+
+    // Initial fetch
+    fetchMessages();
+});
+</script>
+{% endblock %}

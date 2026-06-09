@@ -1,0 +1,196 @@
+{% extends 'layout.html' %}
+
+{% block title %}Registry Network | DEV AI+{% endblock %}
+
+{% block head %}
+<!-- High-End Typography -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-serif { font-family: 'Playfair Display', serif; }
+    
+    /* Smooth mesh background for cards */
+    .premium-mesh {
+        background-color: #ffffff;
+        background-image: radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.03) 0px, transparent 50%),
+                          radial-gradient(at 100% 100%, rgba(79, 70, 229, 0.03) 0px, transparent 50%);
+    }
+
+    /* Animation for the status pulse */
+    @keyframes slow-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.1); }
+    }
+    .status-pulse { animation: slow-pulse 3s infinite ease-in-out; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#fcfdfe] pb-24">
+    
+    <!-- EXECUTIVE HERO SECTION -->
+    <div class="relative bg-slate-950 pt-24 pb-40 px-6 overflow-hidden">
+        <!-- Modern Grid Overlay -->
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none"></div>
+        <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,#1e293b,transparent)]"></div>
+
+        <div class="relative z-10 max-w-7xl mx-auto">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                        <span class="flex h-2 w-2 rounded-full bg-sky-500 status-pulse"></span>
+                        Live Global Registry Network
+                    </div>
+                    <h1 class="text-5xl md:text-7xl font-serif text-white mb-6 leading-[1.1]">
+                        The Archive of <br>
+                        <span class="italic text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-indigo-200 to-sky-400">Human Legacy.</span>
+                    </h1>
+                    <p class="text-slate-400 font-light text-lg md:text-xl max-w-xl border-l-2 border-sky-500/30 pl-6">
+                        An elite directory connecting altruistic donors with precision medical matching. 
+                    </p>
+                </div>
+                
+                <div class="flex flex-wrap gap-4">
+                    <a href="{{ url_for('organ_donor_register') }}" class="group relative px-8 py-4 bg-white text-slate-900 rounded-sm font-bold text-xs uppercase tracking-widest overflow-hidden transition-all hover:bg-sky-50">
+                        <span class="relative z-10 flex items-center gap-3">
+                            Join Registry <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="max-w-7xl mx-auto px-6 -mt-20 relative z-20">
+        
+        <!-- SEARCH & FILTER BAR (Sophisticated Control) -->
+        <div class="bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-2xl p-2 mb-12">
+            <form method="GET" action="{{ url_for('organ_donors_list') }}" class="flex flex-col lg:flex-row items-center gap-2">
+                <div class="relative flex-1 w-full group">
+                    <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-600 transition-colors">
+                        <i class="fas fa-search-location"></i>
+                    </div>
+                    <input type="text" name="city" value="{{ city }}" placeholder="Search City / Region..." 
+                           class="w-full pl-14 pr-6 py-4 rounded-xl bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-800 placeholder:text-slate-400">
+                </div>
+                
+                <div class="w-px h-8 bg-slate-200 hidden lg:block"></div>
+
+                <div class="relative flex-1 w-full group">
+                    <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-600 transition-colors">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <select name="organ" class="w-full pl-14 pr-6 py-4 rounded-xl bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-800 cursor-pointer appearance-none">
+                        <option value="">All Pledged Organs</option>
+                        <option value="heart" {% if organ == 'heart' %}selected{% endif %}>Heart</option>
+                        <option value="lungs" {% if organ == 'lungs' %}selected{% endif %}>Lungs</option>
+                        <option value="liver" {% if organ == 'liver' %}selected{% endif %}>Liver</option>
+                        <option value="kidneys" {% if organ == 'kidneys' %}selected{% endif %}>Kidneys</option>
+                        <option value="pancreas" {% if organ == 'pancreas' %}selected{% endif %}>Pancreas</option>
+                        <option value="corneas" {% if organ == 'corneas' %}selected{% endif %}>Corneas</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full lg:w-auto px-10 py-4 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-sky-600 transition-all duration-300">
+                    Apply Filter
+                </button>
+            </form>
+        </div>
+
+        <!-- DONORS GRID -->
+        {% if donors %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for donor in donors %}
+                <div class="premium-mesh group rounded-3xl border border-slate-100 p-8 hover:border-sky-200 hover:shadow-[0_30px_60px_-15px_rgba(14,165,233,0.15)] transition-all duration-500 relative overflow-hidden">
+                    
+                    <!-- Top Section: Identity & Blood Group -->
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="relative">
+                            {% if donor.profile_picture_url %}
+                                <img src="{{ url_for('static', filename='uploads/' ~ donor.profile_picture_url) }}" alt="{{ donor.name }}" class="w-16 h-16 rounded-2xl object-cover shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                            {% else %}
+                                <div class="w-16 h-16 rounded-2xl bg-slate-950 flex items-center justify-center text-white text-2xl font-serif shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                                    {{ donor.name[0] | upper }}
+                                </div>
+                            {% endif %}
+                            <span class="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-white rounded-full" title="Verified Active Donor"></span>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Blood Profile</span>
+                            <span class="px-4 py-1.5 bg-sky-50 text-sky-700 rounded-lg text-sm font-black border border-sky-100">
+                                {{ donor.blood_group }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Middle Section: Info -->
+                    <div class="mb-8">
+                        <h3 class="text-2xl font-bold text-slate-900 mb-1 tracking-tight">{{ donor.name }}</h3>
+                        <div class="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                            <i class="fas fa-location-arrow text-sky-500"></i>
+                            {{ donor.city }} • <span class="text-slate-400 italic">Registered Ally</span>
+                        </div>
+                    </div>
+
+                    <!-- Organ Inventory -->
+                    <div class="mb-10">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Pledged For Donation</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for org in donor.organs %}
+                                <span class="px-3 py-1.5 bg-white border border-slate-100 text-slate-600 rounded-full text-[11px] font-bold shadow-sm group-hover:border-sky-200 group-hover:text-sky-700 transition-colors">
+                                    {{ org }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Footer: Action -->
+                    <div class="pt-6 border-t border-slate-100">
+                        <button onclick="alert('Access Restricted: Healthcare Provider Authentication Required.')" 
+                                class="w-full py-4 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all duration-300 flex items-center justify-center gap-3">
+                            <i class="fas fa-shield-halved"></i> Request Secure Access
+                        </button>
+                    </div>
+
+                    <!-- Subtle Decorative Background -->
+                    <div class="absolute -bottom-10 -right-10 text-slate-100 opacity-0 group-hover:opacity-100 group-hover:scale-150 transition-all duration-700 pointer-events-none">
+                        <i class="fas fa-heartbeat text-8xl"></i>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- Enhanced Empty State -->
+            <div class="text-center py-32 bg-white rounded-3xl border border-dashed border-slate-200">
+                <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-200 text-3xl">
+                    <i class="fas fa-database"></i>
+                </div>
+                <h3 class="text-2xl font-serif text-slate-900 mb-2">No Matches in Current Archive</h3>
+                <p class="text-slate-400 font-light max-w-sm mx-auto mb-8">Adjust your search parameters or location filters to find registered donors in other regions.</p>
+                <a href="{{ url_for('organ_donors_list') }}" class="text-xs font-black uppercase tracking-widest text-sky-600 hover:text-sky-700 underline underline-offset-8">Reset Intelligence Feed</a>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- Premium Shine Effect Style -->
+<style>
+    .premium-mesh:hover::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+        transform: rotate(30deg);
+        pointer-events: none;
+        opacity: 0.1;
+        transition: 0.5s;
+    }
+</style>
+{% endblock %}

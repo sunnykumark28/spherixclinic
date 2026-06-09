@@ -1,0 +1,429 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ hospital.name }} - Details{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 font-sans pb-24 relative">
+    
+    <!-- Top Pattern -->
+    <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-emerald-900 to-slate-50 z-0"></div>
+    <div class="absolute top-0 left-0 w-full h-96 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] z-0 pointer-events-none"></div>
+
+    <!-- Main Container -->
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32">
+        
+        <!-- Hospital Header Card -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 md:p-12 mb-12 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-bl-full -mr-16 -mt-16 z-0"></div>
+            
+            <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8 text-center md:text-left">
+                <!-- Logo -->
+                <div class="w-32 h-32 rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center p-4 flex-shrink-0">
+                    {% if hospital.logo_url %}
+                        <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) }}" alt="{{ hospital.name }}" class="w-full h-full object-contain">
+                    {% else %}
+                        <i class="fas fa-hospital text-5xl text-emerald-600"></i>
+                    {% endif %}
+                </div>
+
+                <!-- Info -->
+                <div class="flex-grow">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+                        <h1 class="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight">{{ hospital.name }}</h1>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide">
+                            <i class="fas fa-check-circle mr-1.5"></i> Verified
+                        </span>
+                    </div>
+                    
+                    <div class="flex flex-wrap justify-center md:justify-start gap-6 text-slate-500 mb-8">
+                        <span class="flex items-center gap-2"><i class="fas fa-envelope text-emerald-500"></i> {{ hospital.email }}</span>
+                        <span class="flex items-center gap-2"><i class="fas fa-map-marker-alt text-emerald-500"></i> {{ hospital.address or 'Main Campus' }}</span>
+                        <span class="flex items-center gap-2"><i class="fas fa-user-md text-emerald-500"></i> {{ doctors|length }} Specialists</span>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto md:mx-0">
+                        <!-- Bed Stat -->
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Gen Beds</p>
+                            <p class="text-xl font-black text-slate-800">{{ hospital.total_beds }} <span class="text-sm font-normal text-slate-500">(₹{{ "%.2f"|format(hospital.general_bed_fee|default(1000.0)) }})</span></p>
+                        </div>
+                        <!-- Availability -->
+                        <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                            <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Gen Avail</p>
+                            <p class="text-xl font-black text-emerald-700">{{ hospital.available_beds }}</p>
+                        </div>
+                        <!-- ICU Bed Stat -->
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 col-span-2 sm:col-span-1">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">ICU Beds</p>
+                            <p class="text-xl font-black text-slate-800">{{ hospital.icu_beds|default(0) }} <span class="text-sm font-normal text-slate-500">(₹{{ "%.2f"|format(hospital.icu_bed_fee|default(10000.0)) }})</span></p>
+                        </div>
+                        <!-- ICU Availability -->
+                        <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                            <p class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">ICU Avail</p>
+                            <p class="text-xl font-black text-blue-700">{{ hospital.available_icu_beds|default(0) }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Book Bed Action -->
+                    {% if current_user.is_authenticated and not current_user.is_doctor %}
+                    <div class="mt-6 flex justify-center md:justify-start">
+                        <button onclick="document.getElementById('bookBedModal').classList.remove('hidden')" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-all flex items-center gap-2">
+                            <i class="fas fa-bed"></i> Request Emergency Bed
+                        </button>
+                    </div>
+                    {% elif not current_user.is_authenticated %}
+                    <div class="mt-6 flex justify-center md:justify-start">
+                        <a href="{{ url_for('patient_login') }}" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-all flex items-center gap-2">
+                            <i class="fas fa-sign-in-alt"></i> Login to Request Bed
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            
+            <!-- Sidebar (Filters) -->
+            <div class="w-full lg:w-1/4 space-y-6">
+                <!-- Map Card -->
+                {% if hospital.address %}
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">Location</h3>
+                    <div class="w-full h-48 bg-slate-100 rounded-xl overflow-hidden relative">
+                        <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://maps.google.com/maps?q={{ hospital.address }}&t=&z=15&ie=UTF8&iwloc=&output=embed"></iframe>
+                    </div>
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ hospital.address }}" target="_blank" class="mt-4 flex items-center justify-center w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 hover:text-emerald-600 transition-all">
+                        <i class="fas fa-location-arrow mr-2"></i> Get Directions
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Contact Form -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="font-bold text-slate-800 mb-4">Send Inquiry</h3>
+                    <form action="{{ url_for('hospital_inquiry', hospital_id=hospital.id) }}" method="POST" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Your Name</label>
+                            <input type="text" name="name" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Email Address</label>
+                            <input type="email" name="email" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Message</label>
+                            <textarea name="message" rows="3" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2">
+                            <i class="fas fa-paper-plane"></i> Send Message
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sticky top-24">
+                    <h3 class="font-bold text-slate-800 mb-4">Find a Doctor</h3>
+                    <div class="relative mb-6">
+                        <input type="text" id="doctorSearch" placeholder="Search name..." 
+                               class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-emerald-500 focus:ring-0 transition-all text-sm font-medium">
+                        <i class="fas fa-search absolute left-3.5 top-3.5 text-slate-400"></i>
+                    </div>
+                    
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Departments</h4>
+                    <div class="space-y-2">
+                        <button class="dept-filter w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-emerald-600 transition-colors active-dept bg-emerald-50 text-emerald-700" data-dept="all">
+                            All Departments
+                        </button>
+                        {% for dept in doctors|map(attribute='department')|unique|sort %}
+                        <button class="dept-filter w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-emerald-600 transition-colors" data-dept="{{ dept }}">
+                            {{ dept }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Doctors Grid -->
+            <div class="w-full lg:w-3/4">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">Medical Specialists</h2>
+                    <span class="text-sm text-slate-500">{{ doctors|length }} Doctors Found</span>
+                </div>
+
+                {% if doctors %}
+                <div id="doctorsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for doctor in doctors %}
+                    <div class="doctor-card group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 flex flex-col"
+                         data-name="{{ doctor.first_name }} {{ doctor.last_name }}"
+                         data-department="{{ doctor.department }}">
+                        
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="relative">
+                                <img src="{{ url_for('static', filename='uploads/' ~ doctor.profile_picture_url) if doctor.profile_picture_url else 'https://api.dicebear.com/7.x/initials/svg?seed=' ~ doctor.first_name ~ ' ' ~ doctor.last_name ~ '&backgroundColor=ecfdf5&textColor=047857' }}" 
+                                     onerror="this.onerror=null; this.src='https://api.dicebear.com/7.x/initials/svg?seed={{ doctor.first_name }} {{ doctor.last_name }}&backgroundColor=ecfdf5&textColor=047857';"
+                                     alt="Dr. {{ doctor.last_name }}" 
+                                     class="w-16 h-16 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform">
+                                <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</h3>
+                                <p class="text-sm text-emerald-600 font-medium">{{ doctor.specialization or 'Specialist' }}</p>
+                                <p class="text-xs text-slate-400 mt-1">{{ doctor.department }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
+                            <div class="flex text-yellow-400 text-xs">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <span class="text-slate-400 ml-1">(5.0)</span>
+                            </div>
+                            <a href="{{ url_for('doctor_detail', doc_id=doctor.id) }}" class="text-sm font-bold text-slate-900 hover:text-emerald-600 flex items-center gap-1 transition-colors">
+                                Profile <i class="fas fa-arrow-right text-xs"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div id="noResults" class="hidden text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4 text-slate-400">
+                        <i class="fas fa-user-md text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-700">No specialists found</h3>
+                    <p class="text-slate-500 mt-1">Try adjusting your filters.</p>
+                </div>
+
+                {% else %}
+                <div class="text-center py-20 bg-white rounded-2xl border border-slate-100">
+                    <p class="text-slate-500">No doctors listed for this hospital yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Book Emergency Bed Modal (Tailwind) -->
+<div id="bookBedModal" class="fixed inset-0 z-[1001] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] w-full max-w-lg mx-4 shadow-2xl overflow-hidden transform transition-all">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800 text-xl flex items-center gap-2"><i class="fas fa-procedures text-red-500"></i> Request Emergency Bed</h3>
+            <button type="button" onclick="document.getElementById('bookBedModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 focus:outline-none">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <form action="{{ url_for('book_hospital_bed', hospital_id=hospital.id) }}" method="POST">
+            <div class="p-6 space-y-5">
+                <div class="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100">
+                    <i class="fas fa-exclamation-triangle mr-2"></i> This is for urgent medical attention. If this is a life-threatening emergency, please call your local emergency hotline immediately.
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Patient Name</label>
+                    <input type="text" name="patient_name" value="{{ current_user.name if current_user.is_authenticated else '' }}" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-semibold text-slate-800">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Contact Phone</label>
+                    <input type="tel" name="patient_phone" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-semibold text-slate-800" placeholder="+1 (555) 000-0000">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Bed Type Required</label>
+                    <select name="bed_type" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all cursor-pointer text-sm font-semibold text-slate-800">
+                        <option value="General">General Ward Bed</option>
+                        <option value="ICU">Intensive Care Unit (ICU)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Reason / Symptoms</label>
+                    <textarea name="reason" rows="3" required placeholder="Describe the medical emergency briefly..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all resize-none text-sm font-medium text-slate-800"></textarea>
+                </div>
+            </div>
+            <div class="border-t border-slate-100 p-6 flex justify-end gap-3 bg-slate-50">
+                <button type="button" onclick="document.getElementById('bookBedModal').classList.add('hidden')" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all text-sm">Cancel</button>
+                <button type="submit" class="px-6 py-2.5 bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center gap-2 text-sm">
+                    <i class="fas fa-paper-plane"></i> Send Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Book Appointment Modal -->
+<div id="bookApptModal" class="fixed inset-0 z-[1001] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] w-full max-w-lg mx-4 shadow-2xl overflow-hidden transform transition-all max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10">
+            <h3 class="font-bold text-slate-800 text-xl flex items-center gap-2"><i class="fas fa-calendar-check text-emerald-500"></i> Book Appointment</h3>
+            <button type="button" onclick="document.getElementById('bookApptModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 focus:outline-none">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <form action="{{ url_for('book_hospital_appointment', hospital_id=hospital.id) }}" method="POST">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Department</label>
+                    <select id="apptDepartment" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all cursor-pointer text-sm font-semibold text-slate-800">
+                        <option value="">Select Department</option>
+                        {% for dept in doctors|map(attribute='department')|unique|sort %}
+                        <option value="{{ dept }}">{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Doctor</label>
+                    <select name="doctor_id" id="apptDoctor" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all cursor-pointer text-sm font-semibold text-slate-800" disabled>
+                        <option value="">Select Doctor</option>
+                        {% for doctor in doctors %}
+                        <option value="{{ doctor.id }}" data-dept="{{ doctor.department }}" class="hidden">Dr. {{ doctor.first_name }} {{ doctor.last_name }} ({{ doctor.specialization or 'General' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Patient Name</label>
+                    <input type="text" name="patient_name" value="{{ current_user.name if current_user.is_authenticated else '' }}" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Age</label>
+                        <input type="number" name="patient_age" value="{{ current_user.age if current_user.is_authenticated else '' }}" required min="0" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Phone</label>
+                        <input type="tel" name="patient_phone" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">ID Number (SSN/Gov ID)</label>
+                    <input type="text" name="patient_id_number" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+                        <input type="date" name="date" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Time</label>
+                        <input type="time" name="time" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Reason for Visit</label>
+                    <textarea name="reason" rows="2" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none text-sm font-medium text-slate-800"></textarea>
+                </div>
+            </div>
+            <div class="border-t border-slate-100 p-6 flex justify-end gap-3 bg-slate-50 sticky bottom-0">
+                <button type="button" onclick="document.getElementById('bookApptModal').classList.add('hidden')" class="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all text-sm">Cancel</button>
+                <button type="submit" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all flex items-center gap-2 text-sm">
+                    <i class="fas fa-check"></i> Book Now
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('doctorSearch');
+        const doctorCards = document.querySelectorAll('.doctor-card');
+        const noResults = document.getElementById('noResults');
+        const deptFilters = document.querySelectorAll('.dept-filter');
+        
+        let currentDept = 'all';
+        let currentSearch = '';
+
+        function filterDoctors() {
+            let visibleCount = 0;
+            
+            doctorCards.forEach(card => {
+                const name = card.dataset.name.toLowerCase();
+                const dept = card.dataset.department;
+                
+                const matchesSearch = name.includes(currentSearch);
+                const matchesDept = currentDept === 'all' || dept === currentDept;
+                
+                if (matchesSearch && matchesDept) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            if (noResults) {
+                noResults.classList.toggle('hidden', visibleCount > 0);
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                currentSearch = e.target.value.toLowerCase();
+                filterDoctors();
+            });
+        }
+
+        deptFilters.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active state
+                deptFilters.forEach(b => {
+                    b.classList.remove('bg-emerald-50', 'text-emerald-700');
+                    b.classList.add('text-slate-600', 'hover:bg-slate-50');
+                });
+                this.classList.remove('text-slate-600', 'hover:bg-slate-50');
+                this.classList.add('bg-emerald-50', 'text-emerald-700');
+                
+                currentDept = this.dataset.dept;
+                filterDoctors();
+            });
+        });
+
+        // Dynamic Doctor Selection Logic
+        const apptDepartment = document.getElementById('apptDepartment');
+        const apptDoctor = document.getElementById('apptDoctor');
+
+        if (apptDepartment && apptDoctor) {
+            const allDoctorOptions = Array.from(apptDoctor.querySelectorAll('option[data-dept]'));
+            
+            apptDepartment.addEventListener('change', function() {
+                const selectedDept = this.value;
+                
+                while (apptDoctor.options.length > 1) {
+                    apptDoctor.remove(1);
+                }
+
+                let hasDoctors = false;
+                
+                if (selectedDept) {
+                    allDoctorOptions.forEach(option => {
+                        if (option.dataset.dept === selectedDept) {
+                            const clone = option.cloneNode(true);
+                            clone.classList.remove('hidden');
+                            apptDoctor.appendChild(clone);
+                            hasDoctors = true;
+                        }
+                    });
+                }
+
+                apptDoctor.disabled = !hasDoctors;
+            });
+            
+            while (apptDoctor.options.length > 1) {
+                apptDoctor.remove(1);
+            }
+        }
+    });
+</script>
+{% endblock %}

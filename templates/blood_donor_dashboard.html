@@ -1,0 +1,438 @@
+{% extends 'dashboard_layout.html' %}
+
+{% block title %}Donor Portal | Dashboard{% endblock %}
+
+{% block content %}
+<!-- Import Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Cropper.js CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    .glass-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(255, 254, 254, 0.05), 0 2px 4px -1px rgba(255, 255, 255, 0.03);
+    }
+</style>
+
+<div class="min-h-screen pb-12">
+    
+    <!-- Hero / Welcome Section -->
+    <div class="bg-red-900 pb-24 pt-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="text-center md:text-left">
+                    <div class="flex items-center justify-center md:justify-start gap-2 mb-2">
+                        <span class="px-3 py-1 rounded-full bg-red-800 text-red-200 text-xs font-medium border border-red-700">Donor Portal</span>
+                        <span class="text-red-300 text-xs"><i class="fas fa-heartbeat mr-1"></i> Life Saver</span>
+                    </div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Welcome, {{ donor.name }}</h1>
+                    <p class="text-red-200 mt-1 text-sm md:text-base">Thank you for your contribution to saving lives.</p>
+                </div>
+                
+                <div class="flex flex-wrap justify-center gap-3">
+                    <a href="{{ url_for('blood_bank') }}" class="px-5 py-2.5 bg-white text-red-900 font-semibold rounded-lg shadow-lg hover:bg-red-50 transition-all flex items-center gap-2">
+                        <i class="fas fa-layer-group text-red-600"></i> View Blood Bank
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="px-5 py-2.5 bg-red-800/50 text-white border border-red-700 font-semibold rounded-lg hover:bg-red-700 transition-all flex items-center gap-2">
+                        <i class="fas fa-sign-out-alt"></i> Log Out
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16">
+        
+        <!-- Stats Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <!-- Blood Group -->
+            <div class="bg-white rounded-xl p-4 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col justify-between h-28">
+                <div class="flex justify-between items-start">
+                    <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <span class="text-xs font-medium text-slate-400">Type</span>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wide">Blood Group</p>
+                    <p class="text-2xl font-bold text-slate-800">{{ donor.blood_group }}</p>
+                </div>
+            </div>
+            <!-- Last Donation -->
+            <div class="bg-white rounded-xl p-4 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col justify-between h-28">
+                <div class="flex justify-between items-start">
+                    <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                        <i class="far fa-calendar-alt"></i>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wide">Last Donation</p>
+                    <p class="text-lg font-bold text-slate-800 truncate">{{ donor.last_donation or 'N/A' }}</p>
+                </div>
+            </div>
+            <!-- Status -->
+            <div class="bg-white rounded-xl p-4 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col justify-between h-28">
+                <div class="flex justify-between items-start">
+                    <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wide">Status</p>
+                    <p class="text-lg font-bold text-emerald-600">Active</p>
+                </div>
+            </div>
+            <!-- Location -->
+            <div class="bg-white rounded-xl p-4 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col justify-between h-28">
+                <div class="flex justify-between items-start">
+                    <div class="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wide">City</p>
+                    <p class="text-lg font-bold text-slate-800 truncate">{{ donor.city }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Main Content Area -->
+            <div class="lg:col-span-2 space-y-8" x-data="{ isEditing: false }">
+
+                <!-- Profile Details (View Mode) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" x-show="!isEditing">
+                    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-user text-red-500"></i> Personal Information
+                        </h2>
+                        <button @click="isEditing = true" class="text-sm font-bold text-red-600 hover:text-red-700 flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center gap-6 mb-6 pb-6 border-b border-slate-100">
+                            <div class="w-20 h-20 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shadow-sm flex-shrink-0">
+                                {% if donor.profile_picture_url %}
+                                    <img src="{{ url_for('static', filename='uploads/' ~ donor.profile_picture_url) }}" alt="Profile" class="w-full h-full object-cover">
+                                {% else %}
+                                    <div class="w-full h-full flex items-center justify-center text-slate-400 text-2xl">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-slate-800">{{ donor.name }}</h3>
+                                <p class="text-sm font-medium text-slate-500">{{ donor.email }}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</p>
+                                <p class="text-slate-800 font-semibold text-lg">{{ donor.name }}</p>
+                            </div>
+                            <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address</p>
+                            <p class="text-slate-800 font-semibold">{{ donor.email }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</p>
+                            <p class="text-slate-800 font-semibold">{{ donor.phone }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">City</p>
+                            <p class="text-slate-800 font-semibold">{{ donor.city }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Age</p>
+                            <p class="text-slate-800 font-semibold">{{ donor.age }} Years</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Blood Group</p>
+                            <span class="inline-flex items-center justify-center px-3 py-1 rounded-full bg-red-50 text-red-600 font-bold text-sm border border-red-100">{{ donor.blood_group }}</span>
+                        </div>
+                        <div class="md:col-span-2">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Last Donation Date</p>
+                            <div class="flex items-center gap-3">
+                                <p class="text-slate-800 font-semibold">{{ donor.last_donation or 'No record available' }}</p>
+                                {% if donor.last_donation %}
+                                <a href="{{ url_for('download_donation_certificate', action='email') }}" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-sky-50 text-sky-600 text-xs font-bold border border-sky-100 hover:bg-sky-100 transition-colors">
+                                    <i class="fas fa-envelope"></i> Email
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Edit Profile Form (Edit Mode) -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" x-show="isEditing" style="display: none;">
+    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-user-edit text-red-500"></i> Edit Profile
+        </h2>
+        <span class="text-xs font-mono text-slate-400">ID: {{ donor.id }}</span>
+    </div>
+
+    <div class="p-6">
+        <form id="delete-pic-form" method="POST" class="hidden">
+            <input type="hidden" name="delete_picture" value="true">
+        </form>
+        <form action="{{ url_for('blood_donor_dashboard') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
+            <input type="hidden" name="update_profile" value="true">
+            
+            <!-- Profile Picture section -->
+            <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-100">
+                <div id="profilePreviewContainer" class="w-20 h-20 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shadow-sm flex-shrink-0">
+                    {% if donor.profile_picture_url %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ donor.profile_picture_url) }}" alt="Profile" class="w-full h-full object-cover">
+                    {% else %}
+                        <div class="w-full h-full flex items-center justify-center text-slate-400 text-2xl">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="space-y-2 flex-grow">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Profile Picture</label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="profileImageInput" name="profilePicture" accept="image/*" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 transition-all cursor-pointer">
+                        {% if donor.profile_picture_url %}
+                            <button type="submit" form="delete-pic-form" class="px-3 py-2 text-xs text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 font-bold rounded-lg transition-colors">
+                                Remove
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Full Name -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700">Full Name</label>
+                    <input type="text" name="name" value="{{ donor.name }}" 
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-medium bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm" required>
+                </div>
+
+                <!-- Email Address -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700">Email Address</label>
+                    <input type="email" name="email" value="{{ donor.email }}" 
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-medium bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm" required>
+                </div>
+
+                <!-- Phone Number -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700">Phone Number</label>
+                    <input type="tel" name="phone" value="{{ donor.phone }}" 
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-medium bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm" required>
+                </div>
+
+                <!-- City -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700">City</label>
+                    <input type="text" name="city" value="{{ donor.city }}" 
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-medium bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm" required>
+                </div>
+
+                <!-- Age -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700">Age</label>
+                    <input type="number" name="age" value="{{ donor.age }}" 
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-medium bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm" required>
+                </div>
+
+                <!-- Blood Group -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-700">Blood Group</label>
+                    <select name="blood_group" 
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-medium bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm">
+                        {% for bg in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+                            <option value="{{ bg }}" {% if donor.blood_group == bg %}selected{% endif %}>{{ bg }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Last Donation -->
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-sm font-bold text-slate-700">Last Donation Date</label>
+                    <input type="date" name="last_donation" value="{{ donor.last_donation }}" 
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-medium bg-white focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all shadow-sm">
+                    <p class="text-xs text-slate-500 font-medium">Leave blank if you haven't donated yet.</p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" @click="isEditing = false" class="px-6 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all">
+                    Cancel
+                </button>
+                <button type="submit" class="px-8 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 focus:ring-4 focus:ring-red-500/20 transition-all shadow-lg shadow-red-500/30 flex items-center gap-2">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+            </div>
+
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Quick Actions Card -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Quick Actions</h3>
+                    <div class="space-y-3">
+                        <a href="{{ url_for('logout') }}" class="group flex items-center p-3 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all bg-slate-50">
+                            <div class="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-slate-800 group-hover:text-red-700">Home</h4>
+                                <p class="text-xs text-slate-500">Return to main page</p>
+                            </div>
+                        </a>
+                        
+                        <a href="{{ url_for('blood_donors_list') }}" class="group flex items-center p-3 rounded-xl border border-slate-100 hover:border-red-100 hover:bg-red-50/50 transition-all bg-slate-50">
+                            <div class="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-slate-800 group-hover:text-red-700">Find Donors</h4>
+                                <p class="text-xs text-slate-500">Search community</p>
+                            </div>
+                        </a>
+
+                        {% if donor.last_donation %}
+                        <a href="{{ url_for('download_donation_certificate') }}" class="group flex items-center p-3 rounded-xl border border-slate-100 hover:border-emerald-100 hover:bg-emerald-50/50 transition-all bg-slate-50">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-award"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-slate-800 group-hover:text-emerald-700">Certificate</h4>
+                                <p class="text-xs text-slate-500">Download copy</p>
+                            </div>
+                        </a>
+                        
+                        <a href="{{ url_for('download_donation_certificate', action='email') }}" class="group flex items-center p-3 rounded-xl border border-slate-100 hover:border-sky-100 hover:bg-sky-50/50 transition-all bg-slate-50">
+                            <div class="w-10 h-10 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-paper-plane"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-slate-800 group-hover:text-sky-700">Email Certificate</h4>
+                                <p class="text-xs text-slate-500">Send to inbox</p>
+                            </div>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Impact Card -->
+                <div class="bg-gradient-to-br from-red-600 to-rose-700 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                    <svg class="absolute top-0 right-0 opacity-10 w-32 h-32 transform translate-x-8 -translate-y-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                    <h3 class="text-lg font-bold mb-2 relative z-10">Did You Know?</h3>
+                    <p class="text-sm text-red-100 relative z-10 mb-4">
+                        One donation can save up to 3 lives. Your contribution makes a real difference in the world.
+                    </p>
+                    <div class="flex items-center gap-2 text-xs font-bold bg-white/20 p-2 rounded-lg backdrop-blur-sm w-fit">
+                        <i class="fas fa-heart"></i> Hero Status
+                    </div>
+                </div>
+                
+                <!-- Danger Zone -->
+                <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
+                    <h3 class="text-sm font-bold text-red-800 uppercase tracking-wider mb-2">Danger Zone</h3>
+                    <p class="text-xs text-slate-500 mb-4">Permanently delete your account and remove your data.</p>
+                    <form action="{{ url_for('blood_donor_dashboard') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+                        <input type="hidden" name="delete_account" value="true">
+                        <button type="submit" class="w-full py-2 text-center border border-red-200 text-red-600 font-semibold rounded-lg hover:bg-red-50 transition-colors text-xs">
+                            Delete Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cropper Modal -->
+<div id="cropperModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/80 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+        <h3 class="text-xl font-bold text-slate-800 mb-4">Crop Profile Picture</h3>
+        <div class="w-full h-64 bg-slate-100 rounded-xl overflow-hidden mb-6 relative">
+            <img id="cropperImage" class="max-w-full block" src="">
+        </div>
+        <div class="flex justify-end gap-3">
+            <button type="button" id="cancelCrop" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">Cancel</button>
+            <button type="button" id="applyCrop" class="px-5 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors">Apply Crop</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cropper.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+    let cropper;
+    const imageInput = document.getElementById('profileImageInput');
+    const cropperModal = document.getElementById('cropperModal');
+    const cropperImage = document.getElementById('cropperImage');
+    const profilePreviewContainer = document.getElementById('profilePreviewContainer');
+
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    cropperImage.src = e.target.result;
+                    cropperModal.classList.remove('hidden');
+                    cropperModal.classList.add('flex');
+                    
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+                    cropper = new Cropper(cropperImage, {
+                        aspectRatio: 1, // Enforces a square crop
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        background: false
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    if (document.getElementById('cancelCrop')) {
+        document.getElementById('cancelCrop').addEventListener('click', function() {
+            cropperModal.classList.add('hidden');
+            cropperModal.classList.remove('flex');
+            imageInput.value = ''; // Reset input selection
+            if (cropper) { cropper.destroy(); cropper = null; }
+        });
+    }
+
+    if (document.getElementById('applyCrop')) {
+        document.getElementById('applyCrop').addEventListener('click', function() {
+            if (!cropper) return;
+            cropper.getCroppedCanvas({ width: 400, height: 400 }).toBlob(function(blob) {
+                const newFile = new File([blob], 'profile.jpg', { type: 'image/jpeg', lastModified: new Date().getTime() });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(newFile);
+                imageInput.files = dataTransfer.files; // Replace the input file with the cropped version
+                
+                profilePreviewContainer.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="Profile" class="w-full h-full object-cover">`;
+                
+                cropperModal.classList.add('hidden');
+                cropperModal.classList.remove('flex');
+                cropper.destroy(); cropper = null;
+            }, 'image/jpeg', 0.9);
+        });
+    }
+</script>
+{% endblock %}

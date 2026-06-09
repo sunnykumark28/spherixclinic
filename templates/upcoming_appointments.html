@@ -1,0 +1,320 @@
+{% extends 'layout.html' %}
+
+{% block title %}Upcoming Appointments{% endblock %}
+
+{% block content %}
+<section class="py-12 bg-gray-50 min-h-screen">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-10 text-center">
+      <h1 class="text-4xl font-extrabold text-sky-700">Upcoming Appointments</h1>
+      <p class="mt-2 text-gray-600">
+        Stay updated with your scheduled appointments and manage your patients efficiently.
+      </p>
+    </div>
+
+    <!-- Appointments List -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="appointments-list">
+      {% if upcoming_appointments %}
+        {% for appointment in upcoming_appointments %}
+        <div class="appointment-card bg-white/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-200 hover:shadow-2xl transition duration-300 cursor-pointer"
+             data-appointment-id="{{ appointment.id }}"
+             data-patient-name="{{ appointment.patient.name }}"
+             data-appointment-date="{{ appointment.appointment_date.strftime('%A, %B %d, %Y') }}"
+             data-appointment-time="{{ appointment.appointment_time.strftime('%I:%M %p') }}"
+             data-reason="{{ appointment.reason or 'N/A' }}"
+             data-status="{{ appointment.status.capitalize() }}"
+             data-patient-email="{{ appointment.patient.email or 'N/A' }}"
+             data-patient-phone="{{ appointment.patient.phone or 'N/A' }}"
+             data-patient-dob="{{ appointment.patient.dob.strftime('%Y-%m-%d') if appointment.patient.dob else 'N/A' }}"
+             data-patient-address="{{ appointment.patient.address or 'N/A' }}"
+             data-patient-gender="{{ appointment.patient.gender or 'N/A' }}"
+             data-chief-complaint-location="{{ appointment.chief_complaint_location or 'N/A' }}"
+             data-chief-complaint-quality="{{ appointment.chief_complaint_quality or 'N/A' }}"
+             data-chief-complaint-severity="{{ appointment.chief_complaint_severity or 'N/A' }}"
+             data-chief-complaint-onset="{{ appointment.chief_complaint_onset or 'N/A' }}"
+             data-chief-complaint-context="{{ appointment.chief_complaint_context or 'N/A' }}"
+             data-chief-complaint-duration="{{ appointment.chief_complaint_duration or 'N/A' }}"
+             data-chief-complaint-aggravating="{{ appointment.chief_complaint_aggravating or 'N/A' }}"
+             data-chief-complaint-alleviating="{{ appointment.chief_complaint_alleviating or 'N/A' }}"
+             data-chief-complaint-associated="{{ appointment.chief_complaint_associated or 'N/A' }}"
+             data-chronic-conditions="{{ appointment.chronic_conditions or 'N/A' }}"
+             data-past-surgeries="{{ appointment.past_surgeries or 'N/A' }}"
+             data-hospitalizations="{{ appointment.hospitalizations or 'N/A' }}"
+             data-vaccinations="{{ appointment.vaccinations or 'N/A' }}"
+             data-prescription-meds="{{ appointment.prescription_meds or 'N/A' }}"
+             data-otc-supplements="{{ appointment.otc_supplements or 'N/A' }}"
+             data-drug-allergies="{{ appointment.drug_allergies or 'N/A' }}"
+             data-other-allergies="{{ appointment.other_allergies or 'N/A' }}"
+             data-family-conditions="{{ appointment.family_conditions or 'N/A' }}"
+             data-smoking="{{ appointment.smoking or 'N/A' }}"
+             data-alcohol="{{ appointment.alcohol or 'N/A' }}"
+             data-recreational-drugs="{{ appointment.recreational_drugs or 'N/A' }}"
+             data-occupation="{{ appointment.occupation or 'N/A' }}"
+             data-living-situation="{{ appointment.living_situation or 'N/A' }}"
+             data-pets="{{ appointment.pets or 'N/A' }}"
+             data-lmp="{{ appointment.lmp.strftime('%Y-%m-%d') if appointment.lmp else 'N/A' }}"
+             data-pregnancies="{{ appointment.pregnancies or 'N/A' }}"
+             data-ros-general="{{ appointment.ros_general or 'N/A' }}"
+             data-ros-skin="{{ appointment.ros_skin or 'N/A' }}"
+             data-ros-heent="{{ appointment.ros_heent or 'N/A' }}"
+             data-ros-cardiovascular="{{ appointment.ros_cardiovascular or 'N/A' }}"
+             data-ros-gastrointestinal="{{ appointment.ros_gastrointestinal or 'N/A' }}"
+             data-ros-musculoskeletal="{{ appointment.ros_musculoskeletal or 'N/A' }}">
+          
+            <!-- Patient Info - Summary -->
+            <div class="flex flex-col space-y-2">
+              <p class="text-lg font-semibold text-sky-700">Patient: {{ appointment.patient.name }}</p>
+              <p class="text-gray-700">Date: {{ appointment.appointment_date.strftime('%A, %B %d, %Y') }}</p>
+              <p class="text-gray-700">Time: {{ appointment.appointment_time.strftime('%I:%M %p') }}</p>
+              <p class="text-gray-600">Reason: {{ appointment.reason or 'N/A' }}</p>
+            </div>
+
+            <!-- Status -->
+            <div class="mt-4 flex items-center justify-between">
+              <span class="inline-block px-3 py-1 text-sm font-medium rounded-full
+                {% if appointment.status == 'confirmed' %}
+                  bg-green-100 text-green-800
+                {% elif appointment.status == 'pending' %}
+                  bg-yellow-100 text-yellow-800
+                {% else %}
+                  bg-gray-100 text-gray-700
+                {% endif %}">
+                {{ appointment.status.capitalize() }}
+              </span>
+              <!-- "View Details" link removed, as clicking the card will show details -->
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="col-span-full text-center py-12 text-gray-600 space-y-2">
+          <p>No appointments scheduled for today or in the future.</p>
+          <p>
+            Check back later or
+            <a href="{{ url_for('doctor.book_appointment') }}" class="text-sky-600 hover:underline">schedule a new appointment</a>.
+          </p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Appointment Details Modal -->
+    <div id="appointment-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
+        <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+        <h2 class="text-3xl font-bold text-sky-700 mb-6 border-b pb-3">Appointment Details</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-8">
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Patient Information</h3>
+                <p><span class="font-medium">Name:</span> <span id="modal-patient-name"></span></p>
+                <p><span class="font-medium">Email:</span> <span id="modal-patient-email"></span></p>
+                <p><span class="font-medium">Phone:</span> <span id="modal-patient-phone"></span></p>
+                <p><span class="font-medium">Date of Birth:</span> <span id="modal-patient-dob"></span></p>
+                <p><span class="font-medium">Gender:</span> <span id="modal-patient-gender"></span></p>
+                <p><span class="font-medium">Address:</span> <span id="modal-patient-address"></span></p>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Appointment Information</h3>
+                <p><span class="font-medium">Date:</span> <span id="modal-appointment-date"></span></p>
+                <p><span class="font-medium">Time:</span> <span id="modal-appointment-time"></span></p>
+                <p><span class="font-medium">Status:</span> <span id="modal-appointment-status" class="inline-block px-3 py-1 text-sm font-medium rounded-full"></span></p>
+                <p><span class="font-medium">Reason:</span> <span id="modal-reason"></span></p>
+            </div>
+        </div>
+
+        <!-- Medical Profile -->
+        <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 class="text-2xl font-bold text-sky-700 mb-4 border-b pb-2">Medical Profile</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-1">Chief Complaint:</h4>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                        <li><span class="font-medium">Location:</span> <span id="modal-complaint-location"></span></li>
+                        <li><span class="font-medium">Quality:</span> <span id="modal-complaint-quality"></span></li>
+                        <li><span class="font-medium">Severity (0-10):</span> <span id="modal-complaint-severity"></span></li>
+                        <li><span class="font-medium">Onset:</span> <span id="modal-complaint-onset"></span></li>
+                        <li><span class="font-medium">Context:</span> <span id="modal-complaint-context"></span></li>
+                        <li><span class="font-medium">Duration:</span> <span id="modal-complaint-duration"></span></li>
+                        <li><span class="font-medium">Aggravating Factors:</span> <span id="modal-complaint-aggravating"></span></li>
+                        <li><span class="font-medium">Alleviating Factors:</span> <span id="modal-complaint-alleviating"></span></li>
+                        <li><span class="font-medium">Associated Symptoms:</span> <span id="modal-complaint-associated"></span></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-1">Past Medical History:</h4>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                        <li><span class="font-medium">Chronic Conditions:</span> <span id="modal-chronic-conditions"></span></li>
+                        <li><span class="font-medium">Past Surgeries:</span> <span id="modal-past-surgeries"></span></li>
+                        <li><span class="font-medium">Hospitalizations:</span> <span id="modal-hospitalizations"></span></li>
+                        <li><span class="font-medium">Vaccinations:</span> <span id="modal-vaccinations"></span></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-1">Medications and Allergies:</h4>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                        <li><span class="font-medium">Prescription Meds:</span> <span id="modal-prescription-meds"></span></li>
+                        <li><span class="font-medium">OTC/Supplements:</span> <span id="modal-otc-supplements"></span></li>
+                        <li><span class="font-medium">Drug Allergies:</span> <span id="modal-drug-allergies"></span></li>
+                        <li><span class="font-medium">Other Allergies:</span> <span id="modal-other-allergies"></span></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-1">Family History:</h4>
+                    <p class="text-gray-700 ml-4"><span id="modal-family-conditions"></span></p>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-1">Social History & Lifestyle:</h4>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                        <li><span class="font-medium">Smoking/Tobacco:</span> <span id="modal-smoking"></span></li>
+                        <li><span class="font-medium">Alcohol Consumption:</span> <span id="modal-alcohol"></span></li>
+                        <li><span class="font-medium">Recreational Drugs:</span> <span id="modal-recreational-drugs"></span></li>
+                        <li><span class="font-medium">Occupation:</span> <span id="modal-occupation"></span></li>
+                        <li><span class="font-medium">Living Situation:</span> <span id="modal-living-situation"></span></li>
+                        <li><span class="font-medium">Pets:</span> <span id="modal-pets"></span></li>
+                        <li id="modal-lmp-item"><span class="font-medium">Last Menstrual Period:</span> <span id="modal-lmp"></span></li>
+                        <li id="modal-pregnancies-item"><span class="font-medium">History of Pregnancies:</span> <span id="modal-pregnancies"></span></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-1">Review of Systems (ROS):</h4>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                        <li><span class="font-medium">General:</span> <span id="modal-ros-general"></span></li>
+                        <li><span class="font-medium">Skin:</span> <span id="modal-ros-skin"></span></li>
+                        <li><span class="font-medium">HEENT:</span> <span id="modal-ros-heent"></span></li>
+                        <li><span class="font-medium">Cardiovascular:</span> <span id="modal-ros-cardiovascular"></span></li>
+                        <li><span class="font-medium">Gastrointestinal:</span> <span id="modal-ros-gastrointestinal"></span></li>
+                        <li><span class="font-medium">Musculoskeletal:</span> <span id="modal-ros-musculoskeletal"></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 text-right">
+            <button class="bg-sky-600 text-white px-5 py-2 rounded-md hover:bg-sky-700 transition" id="close-modal-bottom">Close</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const appointmentCards = document.querySelectorAll('.appointment-card');
+        const modal = document.getElementById('appointment-details-modal');
+        const closeModalButtons = document.querySelectorAll('#close-modal, #close-modal-bottom');
+
+        appointmentCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // Populate Patient Information
+                document.getElementById('modal-patient-name').textContent = this.dataset.patientName;
+                document.getElementById('modal-patient-email').textContent = this.dataset.patientEmail;
+                document.getElementById('modal-patient-phone').textContent = this.dataset.patientPhone;
+                document.getElementById('modal-patient-dob').textContent = this.dataset.patientDob;
+                document.getElementById('modal-patient-gender').textContent = this.dataset.patientGender;
+                document.getElementById('modal-patient-address').textContent = this.dataset.patientAddress;
+
+                // Populate Appointment Information
+                document.getElementById('modal-appointment-date').textContent = this.dataset.appointmentDate;
+                document.getElementById('modal-appointment-time').textContent = this.dataset.appointmentTime;
+                const statusElement = document.getElementById('modal-appointment-status');
+                statusElement.textContent = this.dataset.status;
+                statusElement.className = 'inline-block px-3 py-1 text-sm font-medium rounded-full'; // Reset classes
+                if (this.dataset.status.toLowerCase() === 'confirmed') {
+                    statusElement.classList.add('bg-green-100', 'text-green-800');
+                } else if (this.dataset.status.toLowerCase() === 'pending') {
+                    statusElement.classList.add('bg-yellow-100', 'text-yellow-800');
+                } else {
+                    statusElement.classList.add('bg-gray-100', 'text-gray-700');
+                }
+                document.getElementById('modal-reason').textContent = this.dataset.reason;
+
+                // Populate Chief Complaint
+                document.getElementById('modal-complaint-location').textContent = this.dataset.chiefComplaintLocation;
+                document.getElementById('modal-complaint-quality').textContent = this.dataset.chiefComplaintQuality;
+                document.getElementById('modal-complaint-severity').textContent = this.dataset.chiefComplaintSeverity;
+                document.getElementById('modal-complaint-onset').textContent = this.dataset.chiefComplaintOnset;
+                document.getElementById('modal-complaint-context').textContent = this.dataset.chiefComplaintContext;
+                document.getElementById('modal-complaint-duration').textContent = this.dataset.chiefComplaintDuration;
+                document.getElementById('modal-complaint-aggravating').textContent = this.dataset.chiefComplaintAggravating;
+                document.getElementById('modal-complaint-alleviating').textContent = this.dataset.chiefComplaintAlleviating;
+                document.getElementById('modal-complaint-associated').textContent = this.dataset.chiefComplaintAssociated;
+
+                // Populate Past Medical History
+                document.getElementById('modal-chronic-conditions').textContent = this.dataset.chronicConditions;
+                document.getElementById('modal-past-surgeries').textContent = this.dataset.pastSurgeries;
+                document.getElementById('modal-hospitalizations').textContent = this.dataset.hospitalizations;
+                document.getElementById('modal-vaccinations').textContent = this.dataset.vaccinations;
+
+                // Populate Medications and Allergies
+                document.getElementById('modal-prescription-meds').textContent = this.dataset.prescriptionMeds;
+                document.getElementById('modal-otc-supplements').textContent = this.dataset.otcSupplements;
+                document.getElementById('modal-drug-allergies').textContent = this.dataset.drugAllergies;
+                document.getElementById('modal-other-allergies').textContent = this.dataset.otherAllergies;
+
+                // Populate Family History
+                document.getElementById('modal-family-conditions').textContent = this.dataset.familyConditions;
+
+                // Populate Social History & Lifestyle
+                document.getElementById('modal-smoking').textContent = this.dataset.smoking;
+                document.getElementById('modal-alcohol').textContent = this.dataset.alcohol;
+                document.getElementById('modal-recreational-drugs').textContent = this.dataset.recreationalDrugs;
+                document.getElementById('modal-occupation').textContent = this.dataset.occupation;
+                document.getElementById('modal-living-situation').textContent = this.dataset.livingSituation;
+                document.getElementById('modal-pets').textContent = this.dataset.pets;
+
+                // Gender-specific fields
+                const patientGender = this.dataset.patientGender;
+                const lmpItem = document.getElementById('modal-lmp-item');
+                const pregnanciesItem = document.getElementById('modal-pregnancies-item');
+
+                if (patientGender && patientGender.toLowerCase() === 'female') {
+                    lmpItem.style.display = 'list-item';
+                    pregnanciesItem.style.display = 'list-item';
+                    document.getElementById('modal-lmp').textContent = this.dataset.lmp;
+                    document.getElementById('modal-pregnancies').textContent = this.dataset.pregnancies;
+                } else {
+                    lmpItem.style.display = 'none';
+                    pregnanciesItem.style.display = 'none';
+                    document.getElementById('modal-lmp').textContent = ''; // Clear content
+                    document.getElementById('modal-pregnancies').textContent = ''; // Clear content
+                }
+
+
+                // Populate Review of Systems (ROS)
+                document.getElementById('modal-ros-general').textContent = this.dataset.rosGeneral;
+                document.getElementById('modal-ros-skin').textContent = this.dataset.rosSkin;
+                document.getElementById('modal-ros-heent').textContent = this.dataset.rosHeent;
+                document.getElementById('modal-ros-cardiovascular').textContent = this.dataset.rosCardiovascular;
+                document.getElementById('modal-ros-gastrointestinal').textContent = this.dataset.rosGastrointestinal;
+                document.getElementById('modal-ros-musculoskeletal').textContent = this.dataset.rosMusculoskeletal;
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            });
+        });
+
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            });
+        });
+
+        // Close modal when clicking outside of it
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        });
+    });
+</script>
+{% endblock %}
