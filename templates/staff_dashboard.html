@@ -1,15 +1,68 @@
 {% extends 'dashboard_layout.html' %}
 
-{% block title %}Staff Portal | Dashboard{% endblock %}
+{% block title %}Staff Portal | Premium Dashboard{% endblock %}
 
 {% block content %}
 <!-- Import Google Fonts: Inter -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-    
-    /* Status Badge Styles */
+    :root {
+        --primary: #4f46e5;
+        --primary-soft: #eef2ff;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --slate-50: #f8fafc;
+    }
+
+    body { 
+        font-family: 'Inter', sans-serif; 
+        background-color: #f1f5f9; 
+        color: #1e293b;
+    }
+
+    /* Glassmorphism Components */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 1.25rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Table Styling */
+    .premium-table thead th {
+        background-color: var(--slate-50);
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        color: #64748b;
+        padding: 1rem 1.5rem;
+    }
+
+    .premium-table tbody td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+    }
+
+    /* Modern Badges */
+    .badge-premium {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
     .badge-confirmed { background-color: #dcfce7; color: #166534; }
     .badge-pending { background-color: #fef3c7; color: #92400e; }
     .badge-checked-in { background-color: #dbeafe; color: #1e40af; }
@@ -17,332 +70,755 @@
 
     /* Custom Scrollbar */
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+    /* Animation */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
 </style>
 
 <div class="min-h-screen flex flex-col">
 
-    <!-- Top Navigation / Header -->
-    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
-            <!-- Brand / Context -->
+    <!-- Top Navigation -->
+    <header class="bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex justify-between items-center py-4">
             <div class="flex items-center gap-4">
-                <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xl shadow-lg shadow-indigo-200">
+                <div class="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg shadow-indigo-200">
                     <i class="fas fa-hospital-user"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-800 tracking-tight">Staff Portal</h1>
-                    <p class="text-xs text-slate-500 font-medium">Front Desk & Administration</p>
+                    <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Staff Portal</h1>
+                    <p class="text-xs text-indigo-600 font-bold uppercase tracking-wider">Front Desk & Admin</p>
                 </div>
             </div>
 
-            <!-- Global Search & User -->
             <div class="flex items-center gap-6">
-                <!-- Global Search Bar -->
                 <div class="hidden md:block relative">
-                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-slate-400"></i>
-                    </span>
-                    <input type="text" class="pl-10 pr-4 py-2 w-64 rounded-full bg-slate-100 border-none text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all placeholder-slate-400" placeholder="Search patient ID, name...">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" class="pl-11 pr-4 py-2.5 w-72 rounded-2xl bg-slate-100 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm" placeholder="Search records...">
                 </div>
 
                 <div class="flex items-center gap-3 pl-6 border-l border-slate-200">
                     <div class="text-right hidden sm:block">
-                        <p class="text-sm font-bold text-slate-700">{{ current_user.name }}</p>
-                        <p class="text-xs text-green-600 font-medium"><i class="fas fa-circle text-[8px] mr-1"></i>Online</p>
+                        <p class="text-sm font-bold text-slate-800">{{ current_user.name }}</p>
+                        <p class="text-[10px] text-emerald-500 font-black flex items-center justify-end"><i class="fas fa-circle text-[6px] mr-1 animate-pulse"></i>ONLINE</p>
                     </div>
-                    <img src="{{ current_user.profile_image or 'https://ui-avatars.com/api/?background=e0e7ff&color=4f46e5&name=' + current_user.name }}" class="w-10 h-10 rounded-full border-2 border-white shadow-sm">
+                    <img src="https://ui-avatars.com/api/?background=6366f1&color=fff&name={{ current_user.name }}" class="w-11 h-11 rounded-2xl border-2 border-white shadow-md">
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         <!-- Stats Row -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Total Appointments -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
+            {% set stats = [
+                {'label': 'Total Appts', 'value': appointments|length, 'icon': 'fa-calendar-day', 'bg': 'bg-indigo-50', 'text': 'text-indigo-600'},
+                {'label': 'Pending', 'value': appointments|selectattr("status", "equalto", "pending")|list|length, 'icon': 'fa-clock', 'bg': 'bg-amber-50', 'text': 'text-amber-600'},
+                {'label': 'Total Doctors', 'value': doctors|length, 'icon': 'fa-user-md', 'bg': 'bg-emerald-50', 'text': 'text-emerald-600'},
+                {'label': 'Total Patients', 'value': patients|length, 'icon': 'fa-user-plus', 'bg': 'bg-blue-50', 'text': 'text-blue-600'}
+            ] %}
+            {% for stat in stats %}
+            <div class="glass-card p-6 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Today's Appts</p>
-                    <h3 class="text-2xl font-bold text-slate-800 mt-1">{{ today_appointments_count|default('42') }}</h3>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ stat.label }}</p>
+                    <h3 class="text-3xl font-black text-slate-900 mt-1">{{ stat.value }}</h3>
                 </div>
-                <div class="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 text-lg">
-                    <i class="fas fa-calendar-day"></i>
+                <div class="w-14 h-14 {{ stat.bg }} rounded-2xl flex items-center justify-center {{ stat.text }} text-xl">
+                    <i class="fas {{ stat.icon }}"></i>
                 </div>
             </div>
-
-            <!-- In Waiting Room -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">In Waiting Room</p>
-                    <h3 class="text-2xl font-bold text-slate-800 mt-1">
-                        {{ appointments|selectattr("status", "equalto", "checked_in")|list|length }}
-                    </h3>
-                </div>
-                <div class="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-600 text-lg">
-                    <i class="fas fa-chair"></i>
-                </div>
-            </div>
-
-            <!-- Doctors Active -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Doctors on Duty</p>
-                    <h3 class="text-2xl font-bold text-slate-800 mt-1">{{ staff_on_duty|default('8') }}</h3>
-                </div>
-                <div class="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 text-lg">
-                    <i class="fas fa-user-md"></i>
-                </div>
-            </div>
-
-            <!-- New Registrations -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">New Patients</p>
-                    <h3 class="text-2xl font-bold text-slate-800 mt-1">{{ new_patients_count|default('12') }}</h3>
-                </div>
-                <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 text-lg">
-                    <i class="fas fa-user-plus"></i>
-                </div>
-            </div>
+            {% endfor %}
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <!-- LEFT COLUMN: Appointment Management (Wider) -->
-            <div class="lg:col-span-2 space-y-6">
+            <!-- LEFT COLUMN: Main Workspace -->
+            <div class="lg:col-span-8 space-y-8">
                 
-                <!-- Floor Status / Table -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                {% if current_user.role in ['Appointment Management', 'Nurse', 'Receptionist'] %}
+                <!-- Floor Status Table -->
+                <div class="glass-card overflow-hidden">
+                    <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
                         <div class="flex items-center gap-3">
-                            <h2 class="font-bold text-slate-800">Floor Status</h2>
-                            <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-200 text-slate-600" id="current-date"></span>
+                            <h2 class="text-lg font-bold text-slate-800">Clinic Floor Status</h2>
+                            <span class="px-3 py-1 rounded-lg text-[10px] font-bold bg-slate-200 text-slate-600" id="current-date"></span>
                         </div>
                         <div class="flex gap-2">
-                            <button class="px-3 py-1.5 text-xs font-medium bg-white border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 shadow-sm">
-                                <i class="fas fa-filter mr-1"></i> Filter
-                            </button>
-                            <button class="px-3 py-1.5 text-xs font-medium bg-indigo-600 border border-indigo-600 rounded-lg text-white hover:bg-indigo-700 shadow-sm">
-                                <i class="fas fa-sync-alt mr-1"></i> Refresh
-                            </button>
+                            <button class="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><i class="fas fa-sync-alt"></i></button>
                         </div>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
+                        <table class="w-full text-left premium-table">
                             <thead>
-                                <tr class="text-xs font-semibold tracking-wide text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
-                                    <th class="px-6 py-4">Time</th>
-                                    <th class="px-6 py-4">Patient Info</th>
-                                    <th class="px-6 py-4">Doctor</th>
-                                    <th class="px-6 py-4">Status</th>
-                                    <th class="px-6 py-4 text-center">Action</th>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Patient</th>
+                                    <th>Doctor</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 {% for appt in appointments %}
-                                <tr class="hover:bg-slate-50/80 transition group">
-                                    <!-- Time -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="font-mono text-sm font-bold text-slate-700">{{ appt.time }}</span>
+                                <tr class="group hover:bg-slate-50/50 transition-all">
+                                    <td>
+                                        <span class="font-mono text-sm font-black text-slate-700">{{ appt.appointment_time.strftime('%I:%M %p') }}</span>
+                                        <div class="text-[10px] text-slate-400 font-bold mt-0.5">{{ appt.appointment_date.strftime('%b %d, %Y') }}</div>
                                     </td>
-                                    
-                                    <!-- Patient -->
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center">
-                                            <div class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 mr-3">
-                                                {{ appt.patient_name[:2] | upper }}
+                                    <td>
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-black">
+                                                {{ appt.patient_name[:1] | upper }}
                                             </div>
                                             <div>
-                                                <div class="text-sm font-medium text-slate-900">{{ appt.patient_name }}</div>
-                                                <div class="text-xs text-slate-500">ID: #{{ appt.patient_id }}</div>
+                                                <div class="text-sm font-bold text-slate-900">{{ appt.patient_name }}</div>
+                                                <div class="text-[10px] text-slate-400 font-medium">#{{ appt.patient_id or 'GUEST' }}</div>
                                             </div>
                                         </div>
                                     </td>
-
-                                    <!-- Doctor -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td>
                                         <div class="flex items-center gap-2">
-                                            <img src="{{ url_for('static', filename='uploads/' ~ appt.doctor.profile_picture_url) if appt.doctor.profile_picture_url else 'https://ui-avatars.com/api/?name=' ~ appt.doctor.first_name ~ '+' ~ appt.doctor.last_name ~ '&background=random' }}" 
-                                                 class="w-8 h-8 rounded-full object-cover border border-slate-200">
-                                            <div class="text-sm text-slate-700 font-medium">
-                                                Dr. {{ appt.doctor.first_name }} {{ appt.doctor.last_name }}
-                                            </div>
+                                            <div class="text-sm text-slate-700 font-bold">Dr. {{ appt.doctor.last_name if appt.doctor else 'TBD' }}</div>
                                         </div>
-                                        <div class="text-xs text-slate-400">{{ appt.department }}</div>
+                                        <div class="text-[10px] text-indigo-500 font-bold uppercase">{{ appt.doctor.department if appt.doctor else 'General' }}</div>
                                     </td>
-
-                                    <!-- Status -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                                            {% if appt.status == 'Confirmed' %} badge-confirmed
-                                            {% elif appt.status == 'Checked In' %} badge-checked-in
-                                            {% elif appt.status == 'Cancelled' %} badge-cancelled
-                                            {% else %} badge-pending {% endif %}">
+                                    <td>
+                                        <span class="badge-premium badge-{{ appt.status.lower() }}">
                                             {{ appt.status }}
                                         </span>
                                     </td>
-
-                                    <!-- Actions -->
-                                    <td class="px-6 py-4 whitespace-nowrap text-center">
-                                        <div class="opacity-0 group-hover:opacity-100 transition-opacity flex justify-center gap-2">
-                                            <button class="text-slate-400 hover:text-indigo-600 transition" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="text-slate-400 hover:text-emerald-600 transition" title="Check In">
-                                                <i class="fas fa-check-square"></i>
-                                            </button>
+                                    <td>
+                                        <div class="flex justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <a href="{{ url_for('book_appointment') }}" class="text-slate-400 hover:text-indigo-600"><i class="fas fa-calendar-plus"></i></a>
+                                            {% if appt.status.lower() not in ['cancelled', 'completed'] %}
+                                            <form action="{{ url_for('hospital_cancel_appointment', appointment_id=appt.id) }}" method="POST" onsubmit="return confirm('Cancel this appointment?');">
+                                                <button type="submit" class="text-slate-400 hover:text-rose-600"><i class="fas fa-times-circle"></i></button>
+                                            </form>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="5" class="px-6 py-10 text-center text-slate-500">
-                                        <i class="far fa-calendar-times text-3xl mb-3 text-slate-300"></i>
-                                        <p>No appointments scheduled for the remaining day.</p>
-                                    </td>
+                                    <td colspan="5" class="py-20 text-center text-slate-400 font-medium italic">No appointments found for the scheduled day.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    <!-- Pagination (Mock) -->
-                    <div class="px-6 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50">
-                        <span class="text-xs text-slate-500">Showing 1 to 10 of 42 entries</span>
-                        <div class="flex gap-1">
-                            <button class="px-2 py-1 border border-slate-300 rounded bg-white text-xs text-slate-600 hover:bg-slate-100">Prev</button>
-                            <button class="px-2 py-1 border border-slate-300 rounded bg-white text-xs text-slate-600 hover:bg-slate-100">Next</button>
-                        </div>
-                    </div>
                 </div>
-            </div>
+                {% endif %}
 
-            <!-- RIGHT COLUMN: Sidebar (Narrow) -->
-            <div class="lg:col-span-1 space-y-6">
-                
-                <!-- Quick Actions -->
-                <div class="bg-white p-6 rounded-xl shadow-lg border border-indigo-100 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-50 rounded-full z-0"></div>
-                    <h3 class="font-bold text-slate-800 mb-4 relative z-10">Quick Actions</h3>
-                    <div class="space-y-3 relative z-10">
-                        <button class="w-full text-left px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md shadow-indigo-200 transition-all flex items-center group">
-                            <div class="w-8 h-8 rounded bg-white/20 flex items-center justify-center mr-3">
-                                <i class="fas fa-user-plus text-sm"></i>
-                            </div>
-                            <span class="font-medium text-sm">Register New Patient</span>
-                            <i class="fas fa-chevron-right ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-xs"></i>
-                        </button>
-
-                        <button class="w-full text-left px-4 py-3 bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 rounded-lg transition-all flex items-center">
-                            <div class="w-8 h-8 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">
-                                <i class="fas fa-calendar-plus text-sm"></i>
-                            </div>
-                            <span class="font-medium text-sm">Book Appointment</span>
-                        </button>
-
-                        <button class="w-full text-left px-4 py-3 bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 rounded-lg transition-all flex items-center">
-                            <div class="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center mr-3">
-                                <i class="fas fa-file-invoice-dollar text-sm"></i>
-                            </div>
-                            <span class="font-medium text-sm">Create Invoice</span>
-                        </button>
+                {% if current_user.role == 'Bed Management' %}
+                <!-- Bed Inventory Overview -->
+                <div class="glass-card overflow-hidden mb-8">
+                    <div class="px-8 py-6 border-b border-slate-100 bg-white/50">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-3">
+                            <i class="fas fa-bed text-indigo-600"></i> Bed Inventory Management
+                        </h2>
                     </div>
-                </div>
+                    <div class="p-8">
+                        {% if hospital %}
+                        
+                        <!-- Low Availability Alerts -->
+                        {% set gen_bed_pct = (hospital.available_beds / hospital.total_beds * 100) if hospital.total_beds > 0 else 0 %}
+                        {% set icu_bed_pct = (hospital.available_icu_beds / hospital.icu_beds * 100) if hospital.icu_beds > 0 else 0 %}
+                        
+                        {% if hospital.total_beds > 0 and gen_bed_pct <= 20 %}
+                        <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 animate-pulse shadow-sm">
+                            <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-rose-800">Critical Alert: Low General Bed Availability</p>
+                                <p class="text-xs text-rose-600">Only {{ hospital.available_beds }} general beds remaining ({{ "%.1f"|format(gen_bed_pct) }}% capacity). Please take necessary actions.</p>
+                            </div>
+                        </div>
+                        {% endif %}
 
-                <!-- Doctor Availability (Mini List) -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wide text-slate-400">Doctors Available Now</h3>
-                    <div class="space-y-4">
-                        <!-- Dr 1 -->
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="relative">
-                                    <img src="https://ui-avatars.com/api/?name=John+Doe&background=random" class="w-8 h-8 rounded-full">
-                                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-slate-700">Dr. John Doe</p>
-                                    <p class="text-xs text-slate-500">Cardiology</p>
-                                </div>
+                        {% if hospital.icu_beds > 0 and icu_bed_pct <= 20 %}
+                        <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3 animate-pulse shadow-sm">
+                            <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                                <i class="fas fa-heartbeat"></i>
                             </div>
-                            <span class="text-xs font-medium text-slate-400">Room 204</span>
-                        </div>
-                        <!-- Dr 2 -->
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="relative">
-                                    <img src="https://ui-avatars.com/api/?name=Sarah+Smith&background=random" class="w-8 h-8 rounded-full">
-                                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-slate-700">Dr. Sarah Smith</p>
-                                    <p class="text-xs text-slate-500">Pediatrics</p>
-                                </div>
+                            <div>
+                                <p class="text-sm font-bold text-rose-800">Critical Alert: Low ICU Bed Availability</p>
+                                <p class="text-xs text-rose-600">Only {{ hospital.available_icu_beds }} ICU beds remaining ({{ "%.1f"|format(icu_bed_pct) }}% capacity). Emergency protocols advised.</p>
                             </div>
-                            <span class="text-xs font-medium text-slate-400">Room 101</span>
                         </div>
-                         <!-- Dr 3 (Busy) -->
-                         <div class="flex items-center justify-between opacity-60">
-                            <div class="flex items-center gap-3">
-                                <div class="relative">
-                                    <img src="https://ui-avatars.com/api/?name=Mike+Ross&background=random" class="w-8 h-8 rounded-full grayscale">
-                                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-slate-700">Dr. Mike Ross</p>
-                                    <p class="text-xs text-slate-500">Neurology</p>
-                                </div>
-                            </div>
-                            <span class="text-xs font-medium text-red-400">Busy</span>
-                        </div>
-                    </div>
-                    <button class="w-full mt-4 py-2 text-xs text-indigo-600 font-medium bg-indigo-50 rounded hover:bg-indigo-100 transition">View Full Roster</button>
-                </div>
+                        {% endif %}
 
-                <!-- Recent Activity Feed -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wide text-slate-400">System Activity</h3>
-                    <ul class="space-y-4 border-l-2 border-slate-100 ml-1.5 pl-4">
-                        {% for activity in recent_activities|default([])|slice(3) %}
-                        <li class="relative">
-                            <div class="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white"></div>
-                            <p class="text-sm text-slate-700">{{ activity.description }}</p>
-                            <span class="text-xs text-slate-400">{{ activity.timestamp }}</span>
-                        </li>
+                        <h3 class="text-md font-bold text-slate-700 mb-4">Update Bed Counts</h3>
+                        <form action="{{ url_for('staff_dashboard') }}" method="POST" class="space-y-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Total General Beds</label>
+                                    <input type="number" name="total_beds" value="{{ hospital.total_beds }}" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-bold text-slate-700">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Available Gen Beds</label>
+                                    <input type="number" name="available_beds" value="{{ hospital.available_beds }}" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-bold text-emerald-600">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Total ICU Beds</label>
+                                    <input type="number" name="icu_beds" value="{{ hospital.icu_beds }}" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-bold text-slate-700">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Available ICU Beds</label>
+                                    <input type="number" name="available_icu_beds" value="{{ hospital.available_icu_beds }}" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-bold text-rose-600">
+                                </div>
+                            </div>
+                            <div class="pt-4 flex justify-end">
+                                <button type="submit" name="update_beds" class="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                                    <i class="fas fa-save"></i> Update Bed Inventory
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-8 border-slate-100">
+                        <h3 class="text-md font-bold text-slate-700 mb-4">Bed Pricing</h3>
+                        <form action="{{ url_for('staff_dashboard') }}" method="POST" class="space-y-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">General Bed Fee (₹)</label>
+                                    <input type="number" name="general_bed_fee" value="{{ hospital.general_bed_fee }}" step="0.01" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-bold text-slate-700">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">ICU Bed Fee (₹)</label>
+                                    <input type="number" name="icu_bed_fee" value="{{ hospital.icu_bed_fee }}" step="0.01" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-bold text-slate-700">
+                                </div>
+                            </div>
+                            <div class="pt-4 flex justify-end">
+                                <button type="submit" name="update_bed_charges" class="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                                    <i class="fas fa-money-bill-wave"></i> Update Bed Pricing
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr class="my-8 border-slate-100">
+                        <h3 class="text-md font-bold text-slate-700 mb-4">Recent Inventory Activity</h3>
+                        <div class="space-y-4 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                            {% for log in activity_logs %}
+                            <div class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                                    <i class="fas {% if 'Pricing' in log.action %}fa-tag{% else %}fa-bed{% endif %} text-xs"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start">
+                                        <p class="text-sm font-bold text-slate-800">{{ log.action }}</p>
+                                        <span class="text-[10px] font-bold text-slate-400">{{ log.created_at.strftime('%b %d, %H:%M') }}</span>
+                                    </div>
+                                    <p class="text-xs text-slate-600 mt-1">{{ log.details }}</p>
+                                    <p class="text-[10px] text-slate-400 mt-1 font-medium">By {{ log.user_name }}</p>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-sm text-slate-500 italic text-center py-4">No recent activity logged.</p>
+                            {% endfor %}
+                        </div>
+
                         {% else %}
-                        <li class="relative">
-                            <div class="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-blue-400 border-2 border-white"></div>
-                            <p class="text-sm text-slate-700">New patient <span class="font-semibold">Alex M.</span> registered.</p>
-                            <span class="text-xs text-slate-400">10 mins ago</span>
-                        </li>
-                        <li class="relative">
-                            <div class="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white"></div>
-                            <p class="text-sm text-slate-700">Invoice #9021 settled.</p>
-                            <span class="text-xs text-slate-400">45 mins ago</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                        <p class="text-sm text-slate-500 italic">Hospital connection not found.</p>
+                        {% endif %}
+                    </div>
                 </div>
-                
-                <a href="{{ url_for('logout') }}" class="flex items-center justify-center w-full py-3 rounded-xl border border-red-200 text-red-600 font-semibold hover:bg-red-50 transition text-sm">
-                    <i class="fas fa-sign-out-alt mr-2"></i> Sign Out
-                </a>
+
+                <!-- Bed Management View -->
+                <div class="glass-card overflow-hidden">
+                    <div class="px-8 py-6 border-b border-slate-100 bg-white/50">
+                        <h2 class="text-lg font-bold text-slate-800">Bed Allocation Registry</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left premium-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient Name</th>
+                                    <th>Bed Type</th>
+                                    <th>Status</th>
+                                    <th>Date Requested</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% for booking in bed_bookings %}
+                                <tr>
+                                    <td class="text-sm font-bold text-slate-800">{{ booking.patient_name }}</td>
+                                    <td class="text-sm text-slate-600">
+                                        {{ booking.bed_type }}
+                                        {% if booking.room_number %}
+                                        <br><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bed: {{ booking.room_number }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge-premium {% if booking.status == 'approved' %}bg-emerald-100 text-emerald-700{% elif booking.status == 'rejected' %}bg-rose-100 text-rose-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                                            {{ booking.status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-xs text-slate-500 font-medium">{{ booking.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td class="text-right">
+                                        {% if booking.status == 'pending' %}
+                                        <div class="flex justify-end gap-2">
+                                            <form action="{{ url_for('handle_bed_booking', booking_id=booking.id, action='approve') }}" method="POST" class="flex gap-1 items-center">
+                                                <input type="text" name="room_number" placeholder="Bed #" required class="w-16 px-2 py-1 text-xs font-bold border border-slate-200 rounded bg-slate-50 focus:bg-white focus:border-indigo-500 outline-none">
+                                                <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-lg text-xs" title="Approve"><i class="fas fa-check"></i></button>
+                                            </form>
+                                            <form action="{{ url_for('handle_bed_booking', booking_id=booking.id, action='reject') }}" method="POST">
+                                                <button type="submit" class="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg text-xs" title="Reject"><i class="fas fa-times"></i></button>
+                                            </form>
+                                        </div>
+                                        {% elif booking.status == 'rejected' %}
+                                        <div class="flex justify-end items-center gap-3">
+                                            <span class="text-[10px] text-slate-400 uppercase font-bold">Processed</span>
+                                            <form action="{{ url_for('handle_bed_booking', booking_id=booking.id, action='undo_reject') }}" method="POST">
+                                                <button type="submit" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold transition-colors" title="Undo Rejection"><i class="fas fa-undo"></i> Undo</button>
+                                            </form>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-[10px] text-slate-400 uppercase font-bold">Processed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="p-8 text-center text-slate-500">No bed booking requests found.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Role Specific: Blood Management Section -->
+                {% if current_user.role == 'Blood Donor Management' %}
+                <div id="blood_management" class="space-y-8">
+                    <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                        <h2 class="text-2xl font-black text-slate-800">Blood Bank System</h2>
+                        <a href="{{ url_for('blood_bank_dashboard') }}" class="bg-rose-600 text-white hover:bg-rose-700 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-rose-200 flex items-center gap-2">
+                            <i class="fas fa-external-link-alt"></i> <span class="hidden sm:inline">Open Manager Dashboard</span><span class="sm:hidden">Manager</span>
+                        </a>
+                    </div>
+
+                    <!-- Blood Stock -->
+                    <div class="glass-card p-8">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <i class="fas fa-tint text-rose-500"></i> Inventory Overview
+                        </h3>
+                        <div class="grid grid-cols-4 sm:grid-cols-8 gap-4">
+                            {% for group, qty in blood_stock.items() %}
+                            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-center hover:bg-rose-50 transition-colors group relative overflow-hidden">
+                                <div class="text-rose-600 font-black text-2xl group-hover:scale-110 transition-transform">{{ group }}</div>
+                                <div class="text-[10px] text-slate-400 font-bold mt-1 uppercase">{{ qty }} Units</div>
+                                
+                                <div class="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <form action="{{ url_for('update_blood_stock') }}" method="POST" class="m-0">
+                                        <input type="hidden" name="group" value="{{ group }}">
+                                        <input type="hidden" name="operation" value="sub">
+                                        <button type="submit" class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 flex items-center justify-center font-bold text-lg shadow-sm cursor-pointer border-0">-</button>
+                                    </form>
+                                    <form action="{{ url_for('update_blood_stock') }}" method="POST" class="m-0">
+                                        <input type="hidden" name="group" value="{{ group }}">
+                                        <input type="hidden" name="operation" value="add">
+                                        <button type="submit" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 flex items-center justify-center font-bold text-lg shadow-sm cursor-pointer border-0">+</button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Blood Camps -->
+                    <div class="glass-card overflow-hidden">
+                        <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                            <h3 class="font-bold text-slate-800">Organized Blood Camps</h3>
+                            <button onclick="document.getElementById('addCampModal').classList.remove('hidden')" class="px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">+ ADD CAMP</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left premium-table">
+                                <thead>
+                                    <tr>
+                                        <th>Camp Name</th>
+                                        <th>Date & Venue</th>
+                                        <th>Contact</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    {% for camp in camps %}
+                                    <tr class="hover:bg-slate-50/50">
+                                        <td class="text-sm font-bold text-slate-800">{{ camp.name }}</td>
+                                        <td class="text-sm">
+                                            <div class="font-medium text-slate-700">{{ camp.date }} | {{ camp.time }}</div>
+                                            <div class="text-[10px] text-slate-400 uppercase font-bold">{{ camp.location }}</div>
+                                        </td>
+                                        <td class="text-xs text-slate-500 font-medium">{{ camp.contact }}</td>
+                                        <td class="text-right">
+                                            <form action="{{ url_for('staff_dashboard') }}" method="POST" onsubmit="return confirm('Delete this camp?');">
+                                                <input type="hidden" name="camp_id" value="{{ camp.id }}">
+                                                <button type="submit" name="delete_camp" class="text-rose-500 hover:text-rose-700"><i class="fas fa-trash-alt"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Camp Registrations -->
+                    <div class="glass-card overflow-hidden">
+                        <div class="px-8 py-6 border-b border-slate-100 bg-emerald-50/50">
+                            <h3 class="font-bold text-emerald-800">Camp Attendee Registrations</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left premium-table">
+                                <thead>
+                                    <tr>
+                                        <th>Event</th>
+                                        <th>Donor Details</th>
+                                        <th>Contact Info</th>
+                                        <th class="text-right">Manage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for reg in camp_registrations %}
+                                    <tr class="text-sm">
+                                        <td class="font-bold text-slate-700">{{ reg.camp_name }}</td>
+                                        <td class="font-medium">{{ reg.name }}</td>
+                                        <td class="text-xs text-slate-500">{{ reg.email }}<br>{{ reg.phone }}</td>
+                                        <td class="text-right">
+                                            <form action="{{ url_for('staff_dashboard') }}" method="POST">
+                                                <input type="hidden" name="reg_id" value="{{ reg.id }}">
+                                                <button type="submit" name="delete_camp_registration" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fas fa-user-minus"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Donor Directory -->
+                    <div class="glass-card p-8">
+                        <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Master Donor Directory</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left premium-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Group</th>
+                                        <th>City</th>
+                                        <th>Verification</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for donor in blood_donors %}
+                                    <tr class="text-sm">
+                                        <td class="font-bold text-slate-800">{{ donor.name }}</td>
+                                        <td><span class="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[10px] font-black">{{ donor.blood_group }}</span></td>
+                                        <td class="font-medium text-slate-500">{{ donor.city }}</td>
+                                        <td>
+                                            {% set b_status = donor.status|default('pending') %}
+                                            <span class="badge-premium {% if b_status == 'approved' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                                {{ b_status }}
+                                            </span>
+                                        </td>
+                                        <td class="text-right space-x-3">
+                                            {% if b_status == 'pending' %}
+                                            <form action="{{ url_for('staff_dashboard') }}" method="POST" class="inline">
+                                                <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                                <button type="submit" name="approve_blood_donor" class="text-emerald-500"><i class="fas fa-check-circle"></i></button>
+                                            </form>
+                                            {% endif %}
+                                            <button onclick="document.getElementById('editDonorModal_{{ donor.id }}').classList.remove('hidden')" class="text-indigo-500"><i class="fas fa-edit"></i></button>
+                                            <form action="{{ url_for('staff_dashboard') }}" method="POST" class="inline">
+                                                <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                                <button type="submit" name="delete_blood_donor" class="text-rose-500"><i class="fas fa-trash-alt"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Edit Modal -->
+                                    <div id="editDonorModal_{{ donor.id }}" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                                        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8">
+                                            <h3 class="text-xl font-black mb-6">Modify Donor Profile</h3>
+                                            <form action="{{ url_for('staff_dashboard') }}" method="POST" class="space-y-4">
+                                                <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                                <div><label class="text-[10px] font-black text-slate-400 uppercase">Full Name</label><input type="text" name="name" value="{{ donor.name }}" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm" required></div>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div><label class="text-[10px] font-black text-slate-400 uppercase">Group</label><select name="blood_group" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm">
+                                                        {% for bg in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}<option value="{{ bg }}" {% if donor.blood_group == bg %}selected{% endif %}>{{ bg }}</option>{% endfor %}
+                                                    </select></div>
+                                                    <div><label class="text-[10px] font-black text-slate-400 uppercase">City</label><input type="text" name="city" value="{{ donor.city }}" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"></div>
+                                                </div>
+                                                <div class="flex justify-end gap-3 pt-6">
+                                                    <button type="button" onclick="document.getElementById('editDonorModal_{{ donor.id }}').classList.add('hidden')" class="px-6 py-2 text-sm font-bold text-slate-400">Cancel</button>
+                                                    <button type="submit" name="edit_blood_donor" class="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Save Profile</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Role Specific: Organ Donor Management Section -->
+                {% if current_user.role == 'Organ Donor Management' %}
+                <div id="organ_management" class="space-y-8">
+                    <h2 class="text-2xl font-black text-slate-800 border-b border-slate-200 pb-4">Organ Transplant Registry</h2>
+                    
+                    <div class="glass-card overflow-hidden">
+                        <div class="px-8 py-6 border-b border-slate-100 bg-sky-50/50">
+                            <h3 class="font-bold text-sky-800">Pledged Organ Donors</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left premium-table">
+                                <thead>
+                                    <tr>
+                                        <th>Donor Profile</th>
+                                        <th>Organs Pledged</th>
+                                        <th>Status</th>
+                                        <th>Contact</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for donor in organ_donors %}
+                                    <tr class="group hover:bg-slate-50/50 transition-all">
+                                        <td class="text-sm">
+                                            <div class="font-bold text-slate-800">{{ donor.name }}</div>
+                                            <div class="text-[10px] font-black text-rose-500 uppercase">{{ donor.blood_group }} Group</div>
+                                        </td>
+                                        <td>
+                                            <div class="flex flex-wrap gap-1">
+                                                {% for org in donor.organs %}
+                                                <span class="px-2 py-0.5 bg-sky-50 text-sky-700 rounded-md text-[9px] font-black border border-sky-100 uppercase">{{ org }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% set o_status = donor.status|default('pending') %}
+                                            <span class="badge-premium {% if o_status == 'approved' %}bg-emerald-100 text-emerald-800{% elif o_status == 'rejected' %}bg-rose-100 text-rose-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                                {{ o_status }}
+                                            </span>
+                                        </td>
+                                        <td class="text-xs text-slate-500 font-medium">{{ donor.email }}<br>{{ donor.phone }}</td>
+                                        <td class="text-right space-y-2">
+                                            <div class="flex justify-end gap-3">
+                                                {% if o_status == 'pending' %}
+                                                <form action="{{ url_for('staff_dashboard') }}" method="POST" class="inline">
+                                                    <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                                    <button type="submit" name="approve_organ_donor" class="text-emerald-500 hover:scale-110 transition-transform"><i class="fas fa-check-circle"></i></button>
+                                                </form>
+                                                {% endif %}
+                                                <button onclick="document.getElementById('editOrganDonorModal_{{ donor.id }}').classList.remove('hidden')" class="text-indigo-500"><i class="fas fa-edit"></i></button>
+                                                <form action="{{ url_for('staff_dashboard') }}" method="POST" class="inline">
+                                                    <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                                    <button type="submit" name="delete_organ_donor" class="text-rose-500"><i class="fas fa-trash-alt"></i></button>
+                                                </form>
+                                            </div>
+                                            <form action="{{ url_for('hospital_contact_organ_donor', donor_id=donor.id) }}" method="POST" class="block">
+                                                <input type="hidden" name="subject" value="Message from {{ current_user.hospital_name }}">
+                                                <input type="hidden" name="message" value="Please contact the hospital coordinator regarding your pledge.">
+                                                <button type="submit" class="text-[9px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg uppercase tracking-tighter hover:bg-emerald-100 transition-all"><i class="fas fa-envelope mr-1"></i> Quick Ping</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Edit Organ Donor Modal -->
+                                    <div id="editOrganDonorModal_{{ donor.id }}" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                                        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-fade-in">
+                                            <h3 class="text-xl font-black mb-6">Edit Pledge Details</h3>
+                                            <form action="{{ url_for('staff_dashboard') }}" method="POST" class="space-y-4">
+                                                <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                                <div><label class="text-[10px] font-black text-slate-400 uppercase">Donor Name</label><input type="text" name="name" value="{{ donor.name }}" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"></div>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div><label class="text-[10px] font-black text-slate-400 uppercase">Blood Group</label><input type="text" name="blood_group" value="{{ donor.blood_group }}" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"></div>
+                                                    <div><label class="text-[10px] font-black text-slate-400 uppercase">City</label><input type="text" name="city" value="{{ donor.city }}" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"></div>
+                                                </div>
+                                                <div>
+                                                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Pledged Organs</label>
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        {% for org in ['Heart', 'Lungs', 'Liver', 'Kidneys', 'Pancreas', 'Corneas', 'Intestines', 'Tissue'] %}
+                                                        <label class="flex items-center gap-2 text-xs font-medium text-slate-700">
+                                                            <input type="checkbox" name="organs" value="{{ org }}" {% if org in donor.organs %}checked{% endif %} class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                                            {{ org }}
+                                                        </label>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                                <div class="flex justify-end gap-3 pt-6">
+                                                    <button type="button" onclick="document.getElementById('editOrganDonorModal_{{ donor.id }}').classList.add('hidden')" class="px-6 py-2 text-sm font-bold text-slate-400">Cancel</button>
+                                                    <button type="submit" name="edit_organ_donor" class="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Update Record</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+        <!-- Reports Tab (Example of a safely added new module) -->
+        {% if current_user.role in ['Nurse', 'Bed Management'] %}
+        <div id="section-reports" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800 mb-6">Daily Clinical Reports</h3>
+                <div class="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl">
+                    <p class="text-slate-500">Your new custom reports functionality can go here safely!</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+                <!-- Fallback Workspace View -->
+                {% if current_user.role not in ['Appointment Management', 'Nurse', 'Receptionist', 'Bed Management'] and current_user.role != 'Blood Donor Management' and current_user.role != 'Organ Donor Management' %}
+                <div class="glass-card p-16 text-center">
+                    <div class="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center text-indigo-400 text-3xl mx-auto mb-6 shadow-inner">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-slate-800 mb-3">{{ current_user.role }} Dashboard</h2>
+                    <p class="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">Welcome. Your specialized portal modules are currently being synchronized by the IT administration team. Please use the sidebar for general navigation.</p>
+                </div>
+                {% endif %}
             </div>
 
+            <!-- RIGHT COLUMN: Sidebar -->
+            <div class="lg:col-span-4 space-y-8">
+                
+                {% if current_user.role in ['Appointment Management', 'Receptionist'] %}
+                <!-- Quick Actions -->
+                <div class="bg-indigo-600 p-8 rounded-[2rem] shadow-2xl shadow-indigo-100 text-white relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-32 h-32 bg-indigo-500 rounded-full blur-3xl opacity-50 group-hover:scale-125 transition-transform duration-700"></div>
+                    <h3 class="text-sm font-black text-indigo-200 uppercase tracking-widest mb-6">Quick Controls</h3>
+                    <div class="space-y-4">
+                        <a href="{{ url_for('patient_signup') }}" class="flex items-center gap-4 w-full p-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all border border-white/10">
+                            <div class="w-10 h-10 bg-white rounded-xl text-indigo-600 flex items-center justify-center"><i class="fas fa-user-plus"></i></div>
+                            <div class="text-left font-bold text-sm">Register Patient</div>
+                        </a>
+                        <a href="{{ url_for('book_appointment') }}" class="flex items-center gap-4 w-full p-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all border border-white/10">
+                            <div class="w-10 h-10 bg-emerald-400 rounded-xl text-white flex items-center justify-center"><i class="fas fa-calendar-check"></i></div>
+                            <div class="text-left font-bold text-sm">Book Appointment</div>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if current_user.role in ['Appointment Management', 'Receptionist', 'Nurse', 'Bed Management'] %}
+                <!-- Doctor List -->
+                <div class="glass-card p-8">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Consultants on Duty</h3>
+                    <div class="space-y-6">
+                        {% for doc in doctors[:5] %}
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <img src="https://ui-avatars.com/api/?background=random&name={{ doc.first_name }}+{{ doc.last_name }}" class="w-10 h-10 rounded-xl object-cover">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800">Dr. {{ doc.last_name }}</p>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase">{{ doc.department }}</p>
+                                </div>
+                            </div>
+                            <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ url_for('doctors_list') }}" class="block text-center w-full mt-8 py-3 text-xs font-black text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all uppercase tracking-widest">Full Roster</a>
+                </div>
+                {% endif %}
+
+                {% if current_user.role in ['Bed Management', 'Nurse'] %}
+                <!-- Activity Feed -->
+                <div class="glass-card p-8">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Inpatient Logs</h3>
+                    <div class="space-y-6">
+                        {% for booking in bed_bookings[:4] %}
+                        <div class="flex items-start gap-4">
+                            <div class="w-2 h-2 mt-2 rounded-full {% if booking.bed_type == 'ICU' %}bg-rose-500{% else %}bg-indigo-500{% endif %}"></div>
+                            <div>
+                                <p class="text-xs text-slate-700 font-bold"><span class="text-slate-900">{{ booking.patient_name }}</span> - {{ booking.bed_type }}</p>
+                                <p class="text-[10px] text-slate-400 font-medium">{{ booking.created_at.strftime('%I:%M %p') }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </main>
 </div>
 
+<!-- Add Camp Modal -->
+{% if current_user.role == 'Blood Donor Management' %}
+<div id="addCampModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-fade-in">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-black text-slate-800">Schedule Blood Camp</h3>
+            <button onclick="document.getElementById('addCampModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <form action="{{ url_for('staff_dashboard') }}" method="POST" class="space-y-4">
+            <div><label class="text-[10px] font-black text-slate-400 uppercase">Camp Name</label><input type="text" name="name" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Global Health Drive" required></div>
+            <div><label class="text-[10px] font-black text-slate-400 uppercase">Location</label><input type="text" name="location" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Main Hospital Hall" required></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="text-[10px] font-black text-slate-400 uppercase">Date</label><input type="date" name="date" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm" required></div>
+                <div><label class="text-[10px] font-black text-slate-400 uppercase">Time</label><input type="time" name="time" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm" required></div>
+            </div>
+            <div><label class="text-[10px] font-black text-slate-400 uppercase">Contact Info</label><input type="text" name="contact" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm" required></div>
+            <button type="submit" name="add_camp" class="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all uppercase mt-4">Publish Campaign</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <script>
-    // Date Logic
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', options);
+    const dateEl = document.getElementById('current-date');
+    if (dateEl) { dateEl.innerText = new Date().toLocaleDateString('en-US', options); }
 </script>
 
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% if hospital %}
+<span id="socket-config" data-room="hospital_{{ hospital.id }}" class="d-none"></span>
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const configEl = document.getElementById('socket-config');
+        if (configEl) {
+            const socket = io();
+            socket.emit('join', { room: configEl.dataset.room });
+
+            socket.on('new_blood_inquiry', function(data) {
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 bg-white border-l-4 border-rose-500 rounded-xl shadow-2xl p-4 max-w-sm z-[1000] animate-fade-in flex items-start gap-3';
+                toast.innerHTML = `
+                    <div class="text-rose-500 mt-0.5 bg-rose-50 p-2 rounded-lg"><i class="fas fa-droplet text-xl"></i></div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-slate-800">New Blood Inquiry</h4>
+                        <p class="text-xs text-slate-500 mt-1"><span class="font-bold text-slate-700">${data.name}</span>: ${data.message}</p>
+                        <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">${data.time}</p>
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-rose-500 transition-colors"><i class="fas fa-times"></i></button>
+                `;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => { if(toast.parentElement) toast.remove(); }, 15000);
+            });
+        }
+    });
+</script>
 {% endblock %}

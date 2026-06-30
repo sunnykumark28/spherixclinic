@@ -1,125 +1,231 @@
 {% extends 'layout.html' %}
 {% block content %}
 
-<div class="absolute inset-0 bg-repeat opacity-5" style="background-image: url('https://www.transparenttextures.com/patterns/clean-gray-paper.png');"></div>
-<!-- Staff/Office themed background image (Abstract Tech/Clean) -->
-<div class="absolute inset-0 bg-cover bg-center opacity-10" style="background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2940'); background-blend-mode: overlay;"></div>
+<!-- Custom Premium CSS & Font Import -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    
+    .gallery-font {
+        font-family: 'Outfit', sans-serif;
+    }
+</style>
 
-<div class=" min-h-screen py-16 sm:py-20 lg:py-24">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+<div class="gallery-font relative min-h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden py-16 sm:py-20 lg:py-24 transition-colors duration-300">
+    
+    <!-- Background Glow Blobs -->
+    <div class="absolute top-1/4 left-[10%] w-96 h-96 bg-cyan-400/20 dark:bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
+    <div class="absolute bottom-1/4 right-[10%] w-[500px] h-[500px] bg-blue-400/20 dark:bg-blue-600/10 rounded-full blur-[130px] pointer-events-none" style="animation-delay: 2s;"></div>
+    
+    <!-- Grid Overlay Pattern -->
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#0f172a05_1px,transparent_1px),linear-gradient(to_bottom,#0f172a05_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none"></div>
+
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl relative z-10">
 
         <!-- Header Section -->
-        <div class="text-center mb-16 space-y-4">
-            <h1 class="text-5xl font-extrabold text-sky-800 drop-shadow-md">Our Creative Gallery</h1>
-            <p class="text-xl text-gray-700 max-w-2xl mx-auto">
-                Dive into a visual journey. Explore our collection of captivating images and insightful videos, designed to inspire and inform.
+        <div class="text-center mb-16 space-y-6">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/20 border border-cyan-500/20 mb-2">
+                <div class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+                <span class="text-[10px] font-black text-cyan-700 dark:text-cyan-400 uppercase tracking-[4px]">Visual Repository</span>
+            </div>
+            
+            <h1 class="text-5xl md:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tighter leading-none">
+                Spherix Clinic <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-500">Media Hub</span>
+            </h1>
+            
+            <p class="text-lg md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto font-light leading-relaxed">
+                Explore our catalog of medical visual diagnostics, patient symptom archives, and insightful clinical research recordings.
             </p>
         </div>
 
-        <!-- IMAGE GALLERY -->
-        <section class="mb-20">
-            <h3 class="text-4xl font-bold text-sky-700 text-center mb-10 pb-4 border-b-2 border-sky-300 relative group">
-                Images
-                <span class="absolute left-1/2 bottom-0 w-16 h-1 bg-sky-500 transform -translate-x-1/2 transition-all duration-300 group-hover:w-24"></span>
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
-                {% for img in images %}
-                <div class="group relative overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 ease-in-out cursor-pointer"
-                     onclick="openModal(&quot;{{ url_for('static', filename='images/' ~ img) }}&quot;)">
-                    <img src="{{ url_for('static', filename='images/' ~ img) }}" 
-                         alt="Gallery Image {{ loop.index }}" 
-                         class="w-full h-64 object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ease-in-out filter group-hover:brightness-90">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-4">
-                        <p class="text-white text-lg font-semibold translate-y-4 group-hover:translate-y-0 transition-transform duration-500">View Image</p>
-                    </div>
-                    <div class="absolute top-3 right-3 bg-white/80 text-sky-700 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        Image
-                    </div>
-                </div>
-                {% endfor %}
+        <!-- Filter Controls -->
+        <div class="flex justify-center mb-12">
+            <div class="inline-flex p-1.5 rounded-3xl bg-slate-200/50 dark:bg-slate-900/50 border border-slate-200/30 dark:border-slate-800/30 backdrop-blur-xl gap-2 shadow-inner">
+                <button id="filter-btn-all" onclick="filterGallery('all')" 
+                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-cyan-600 text-white shadow-lg shadow-cyan-500/20 active:scale-95">
+                    Show All
+                </button>
+                <button id="filter-btn-clinical" onclick="filterGallery('clinical')" 
+                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-white/50 text-slate-600 hover:bg-white dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
+                    Clinical Archive
+                </button>
+                <button id="filter-btn-uploads" onclick="filterGallery('uploads')" 
+                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-white/50 text-slate-600 hover:bg-white dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
+                    Patient Case Uploads
+                </button>
+                <button id="filter-btn-videos" onclick="filterGallery('videos')" 
+                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-white/50 text-slate-600 hover:bg-white dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
+                    Clinical Videos
+                </button>
             </div>
-        </section>
+        </div>
 
-        <!-- VIDEO GALLERY -->
-        <section>
-            <h3 class="text-4xl font-bold text-sky-700 text-center mb-10 pb-4 border-b-2 border-sky-300 relative group">
-                Videos
-                <span class="absolute left-1/2 bottom-0 w-16 h-1 bg-sky-500 transform -translate-x-1/2 transition-all duration-300 group-hover:w-24"></span>
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {% for video in videos %}
-                <div class="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 ease-in-out overflow-hidden transform hover:-translate-y-1">
-                    <div class="aspect-w-16 aspect-h-9">
-                        <iframe class="w-full h-full"
-                                src="{{ video.url | replace('watch?v=', 'embed/') }}"
-                                title="{{ video.title }}"
-                                frameborder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowfullscreen>
-                        </iframe>
-                    </div>
-                    <div class="p-4">
-                        <p class="text-lg font-semibold text-gray-800 leading-snug">{{ video.title }}</p>
+        <!-- Unified Media Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="gallery-grid">
+            
+            <!-- Dynamic Image Rendition -->
+            {% for img in images %}
+            {% set is_upload = 'uploads/' in img %}
+            <div class="gallery-item group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md hover:shadow-2xl transition-all duration-500 ease-in-out cursor-pointer item-type-{% if is_upload %}uploads{% else %}clinical{% endif %}"
+                 onclick="openModal('{{ url_for(\'static\', filename=img) }}', '{% if is_upload %}Patient Uploaded Symptom Case{% else %}Clinical Reference Specimen{% endif %}')">
+                
+                <!-- Image Tag -->
+                <div class="relative overflow-hidden aspect-square">
+                    <img src="{{ url_for('static', filename=img) }}" 
+                         alt="Gallery Specimen {{ loop.index }}" 
+                         class="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out filter group-hover:brightness-95">
+                    
+                    <!-- Premium Interactive Hover Overlay -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-between p-6">
+                        
+                        <!-- Top details -->
+                        <div class="flex justify-between items-start">
+                            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 backdrop-blur-md">
+                                {% if is_upload %}Symptom Upload{% else %}Clinical Specimen{% endif %}
+                            </span>
+                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-md border border-white/25">
+                                <i class="fas fa-search-plus text-xs"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Bottom details -->
+                        <div class="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                            <p class="text-white text-base font-bold leading-tight">
+                                {% if is_upload %}Case Specimen #{{ loop.index }}{% else %}Reference Asset #{{ loop.index }}{% endif %}
+                            </p>
+                            <p class="text-cyan-400 text-[10px] font-bold uppercase tracking-widest mt-1">Click to Inspect Node</p>
+                        </div>
+                        
                     </div>
                 </div>
-                {% endfor %}
             </div>
-        </section>
+            {% endfor %}
+
+            <!-- Dynamic Video Rendition -->
+            {% for video in videos %}
+            <div class="gallery-item item-type-videos bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2rem] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 ease-in-out">
+                <div class="relative aspect-video overflow-hidden">
+                    <iframe class="w-full h-full border-none"
+                            src="{{ video.url | replace('watch?v=', 'embed/') }}?modestbranding=1&rel=0"
+                            title="{{ video.title }}"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen>
+                    </iframe>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            Video Feed
+                        </span>
+                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Uplink Active</span>
+                    </div>
+                    <p class="text-base font-extrabold text-slate-800 dark:text-slate-100 leading-snug">{{ video.title }}</p>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
 
     </div>
 </div>
 
-<!-- Modal for images -->
-<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden p-4"
-     onclick="closeModal()">
-    <div class="relative max-w-4xl max-h-full">
-        <img id="modalImg" src="" alt="Full Image" class="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl animate-fade-in-up">
-        <button class="absolute top-4 right-4 bg-white/30 hover:bg-white/50 text-white rounded-full p-2 
-                       backdrop-blur-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white"
-                onclick="event.stopPropagation(); closeModal()">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+<!-- PREMIUM LIGHTBOX MODAL -->
+<div id="imageModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex flex-col items-center justify-center z-[10000] hidden p-4" onclick="closeModal()">
+    
+    <!-- Header info in Modal -->
+    <div class="absolute top-6 left-6 text-left hidden md:block">
+        <span class="text-[9px] font-black text-cyan-400 uppercase tracking-[4px]">Media Inspector</span>
+        <h4 id="modalCaption" class="text-white text-lg font-bold tracking-tight mt-1">Visual Specimen</h4>
+    </div>
+    
+    <!-- Floating Action Close Button -->
+    <button class="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/20 backdrop-blur-md transition-all duration-300 focus:outline-none"
+            onclick="event.stopPropagation(); closeModal()">
+        <i class="fas fa-times text-lg"></i>
+    </button>
+    
+    <!-- Image Box -->
+    <div class="relative max-w-4xl max-h-[75vh] flex items-center justify-center p-1 rounded-[2.5rem] bg-gradient-to-b from-white/10 to-transparent border border-white/10 overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+        <img id="modalImg" src="" alt="Full Image View" class="max-w-full max-h-[70vh] object-contain rounded-[2.3rem] transform scale-95 opacity-0 transition-all duration-300">
+    </div>
+
+    <!-- Bottom Actions in Modal -->
+    <div class="absolute bottom-6 flex gap-4">
+        <a id="modalDownloadBtn" href="" download class="px-6 py-3 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all active:scale-95" onclick="event.stopPropagation()">
+            <i class="fas fa-download"></i> Download Node
+        </a>
+        <button onclick="closeModal()" class="px-6 py-3 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95">
+            Dismiss
         </button>
     </div>
 </div>
 
 <script>
-// Tailwind CSS custom animation for modal content
-const style = document.createElement('style');
-style.innerHTML = `
-@keyframes fadeInFromBottom {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+function filterGallery(category) {
+    // Update active tab styles
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-500/20');
+        btn.classList.add('bg-white/50', 'text-slate-600', 'hover:bg-white', 'dark:bg-slate-800/50', 'dark:text-slate-300', 'dark:hover:bg-slate-800');
+    });
+    
+    // Add active styles to clicked button
+    const activeBtn = document.getElementById(`filter-btn-${category}`);
+    if (activeBtn) {
+        activeBtn.classList.remove('bg-white/50', 'text-slate-600', 'hover:bg-white', 'dark:bg-slate-800/50', 'dark:text-slate-300', 'dark:hover:bg-slate-800');
+        activeBtn.classList.add('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-500/20');
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    
+    // Show/hide items with transition
+    document.querySelectorAll('.gallery-item').forEach(item => {
+        if (category === 'all') {
+            item.classList.remove('hidden');
+        } else {
+            if (item.classList.contains(`item-type-${category}`)) {
+                item.classList.remove('hidden');
+            } else {
+                item.classList.add('hidden');
+            }
+        }
+    });
 }
-.animate-fade-in-up {
-    animation: fadeInFromBottom 0.3s ease-out forwards;
-}
-`;
-document.head.appendChild(style);
 
-
-function openModal(src) {
+function openModal(src, captionText) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImg');
+    const modalCaption = document.getElementById('modalCaption');
+    const downloadBtn = document.getElementById('modalDownloadBtn');
+    
     modalImg.src = src;
+    downloadBtn.href = "/gallery/download?filepath=" + encodeURIComponent(src);
+    if(captionText) {
+        modalCaption.innerText = captionText;
+    } else {
+        modalCaption.innerText = "Clinical Media Node";
+    }
+    
     modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
-    // Add animation class
-    modalImg.classList.add('animate-fade-in-up');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling
+    
+    // Smooth animate in
+    setTimeout(() => {
+        modalImg.classList.remove('scale-95', 'opacity-0');
+        modalImg.classList.add('scale-100', 'opacity-100');
+    }, 50);
 }
 
 function closeModal() {
     const modal = document.getElementById('imageModal');
-    modal.classList.add('hidden');
-    document.getElementById('modalImg').src = '';
-    document.body.style.overflow = ''; // Restore scrolling
-     // Remove animation class
-    document.getElementById('modalImg').classList.remove('animate-fade-in-up');
+    const modalImg = document.getElementById('modalImg');
+    
+    modalImg.classList.remove('scale-100', 'opacity-100');
+    modalImg.classList.add('scale-95', 'opacity-0');
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modalImg.src = '';
+        document.body.style.overflow = ''; // Restore scrolling
+    }, 250);
 }
 
 // Close modal on escape key
@@ -130,4 +236,5 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
+
 {% endblock %}

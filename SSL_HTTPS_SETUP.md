@@ -1,8 +1,8 @@
-# 🔒 SSL/HTTPS Security Setup - Dev AI+ Health Platform
+# 🔒 SSL/HTTPS Security Setup - Spherix Clinic Health Platform
 
 ## ✅ Current Status
 
-Your Dev AI+ application is now **secured with HTTPS/SSL** on **`https://127.0.0.1:5443`**
+Your Spherix Clinic application is now **secured with HTTPS/SSL** on **`https://127.0.0.1:5443`**
 
 ### Certificates Generated
 - **Certificate:** `ssl/cert.pem` (Valid for 365 days)
@@ -77,11 +77,11 @@ curl -k https://127.0.0.1:5443  # -k ignores certificate verification
 
 ```
 Admin:
-  Email: admin@devai.plus
+  Email: admin@spherixclinic.com
   Password: admin@123
 
 Hospital:
-  Email: hospital@devai.plus
+  Email: hospital@spherixclinic.com
   Password: hospital123
 ```
 

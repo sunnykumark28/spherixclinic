@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SSL/HTTPS Security Verification Script for Dev AI+ Platform
+# SSL/HTTPS Security Verification Script for Spherix Clinic Platform
 
 echo "🔒 SSL/HTTPS Security Verification"
 echo "===================================="

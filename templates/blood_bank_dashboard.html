@@ -17,12 +17,20 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <button type="button" onclick="history.back()"
-                        class="px-6 py-2 rounded-2xl bg-rose-800 text-white font-medium shadow-lg hover:bg-rose-700 hover:shadow-red-500/40 transition-all duration-300 hover:scale-105 tracking-wide">
-                        ←Back
-                        </button>
-                        <br>
-                        <bR>
+                    {% set back_link = url_for('home') %}
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.email == 'admin@spherixclinic.com' %}
+                            {% set back_link = url_for('admin_dashboard') ~ '#blood_donors' %}
+                        {% elif current_user.is_hospital %}
+                            {% set back_link = url_for('hospital_dashboard') ~ '#blood_management' %}
+                        {% elif current_user.is_staff %}
+                            {% set back_link = url_for('staff_dashboard') ~ '#blood_management' %}
+                        {% endif %}
+                    {% endif %}
+                    <a href="{{ back_link }}" class="inline-block px-6 py-2 rounded-2xl bg-rose-800 text-white font-medium shadow-lg hover:bg-rose-700 hover:shadow-red-500/40 transition-all duration-300 hover:scale-105 tracking-wide">
+                        ← Back
+                    </a>
+                    <br><br>
                     <div class="flex items-center gap-2 mb-2">
                         <span class="px-3 py-1 rounded-full bg-rose-800 text-rose-200 text-xs font-medium border border-rose-700">Manager Portal</span>
                         <span class="text-rose-300 text-xs"><i class="fas fa-hospital-alt mr-1"></i> Blood Bank Unit</span>
@@ -60,6 +68,7 @@
 
                 <div class="mt-6 flex items-center gap-2 relative z-10">
                     <form action="{{ url_for('update_blood_stock') }}" method="POST" class="flex-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="group" value="{{ group }}">
                         <input type="hidden" name="operation" value="sub">
                         <button type="submit" class="w-full py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-600 transition-colors text-sm font-bold">
@@ -67,6 +76,7 @@
                         </button>
                     </form>
                     <form action="{{ url_for('update_blood_stock') }}" method="POST" class="flex-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="group" value="{{ group }}">
                         <input type="hidden" name="operation" value="add">
                         <button type="submit" class="w-full py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-emerald-100 hover:text-emerald-600 transition-colors text-sm font-bold">
@@ -84,7 +94,13 @@
                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                     <i class="fas fa-users text-rose-500"></i> Registered Donors
                 </h2>
-                <span class="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full">{{ donors|length }} Total</span>
+                <div class="flex items-center gap-4">
+                    <div class="relative hidden sm:block">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="donorSearch" placeholder="Search donors..." class="pl-8 pr-4 py-1.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none w-48 transition-all">
+                    </div>
+                    <span class="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full">{{ donors|length }} Total</span>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -96,9 +112,10 @@
                             <th class="px-6 py-4">Contact</th>
                             <th class="px-6 py-4">Location</th>
                             <th class="px-6 py-4">Last Donation</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody id="donorTableBody" class="divide-y divide-slate-100">
                         {% for donor in donors %}
                         <tr class="hover:bg-slate-50/80 transition duration-150">
                             <td class="px-6 py-4 font-medium text-slate-900">{{ donor.name }}</td>
@@ -113,12 +130,169 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-slate-600">{{ donor.city }}</td>
                             <td class="px-6 py-4 text-sm text-slate-600">{{ donor.last_donation or 'Never' }}</td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <form action="{{ url_for('blood_bank_dashboard') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this donor?');" class="inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="delete_donor">
+                                        <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                        <button type="submit" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-700 flex items-center justify-center transition-colors" title="Delete Donor">
+                                            <i class="fas fa-trash-alt text-xs"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        
+        <!-- Camps & Registrations Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            
+            <!-- Camps List -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-tent text-rose-500"></i> Donation Camps
+                    </h2>
+                    <span class="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full">{{ camps|length }} Total</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
+                            <tr>
+                                <th class="px-6 py-4">Camp Details</th>
+                                <th class="px-6 py-4">Location & Time</th>
+                                <th class="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for camp in camps %}
+                            <tr class="hover:bg-slate-50/80 transition duration-150">
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-slate-900">{{ camp.name }}</div>
+                                    <div class="text-xs text-slate-400">Org: {{ camp.organizer }}</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-slate-700"><i class="fas fa-map-marker-alt text-rose-400 w-4"></i> {{ camp.location }}</div>
+                                    <div class="text-xs text-slate-500"><i class="far fa-calendar-alt text-slate-400 w-4"></i> {{ camp.date }} | {{ camp.time }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <form action="{{ url_for('blood_bank_dashboard') }}" method="POST" onsubmit="return confirm('Delete this camp?');" class="inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="delete_camp">
+                                        <input type="hidden" name="camp_id" value="{{ camp.id }}">
+                                        <button type="submit" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Delete Camp">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="px-6 py-8 text-center text-slate-400">No active camps.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Camp Registrations List -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-clipboard-list text-rose-500"></i> Camp Registrations
+                    </h2>
+                    <span class="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full">{{ camp_registrations|length }} Total</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
+                            <tr>
+                                <th class="px-6 py-4">Participant</th>
+                                <th class="px-6 py-4">Camp Name</th>
+                                <th class="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for reg in camp_registrations %}
+                            <tr class="hover:bg-slate-50/80 transition duration-150">
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-slate-900">{{ reg.name }}</div>
+                                    <div class="text-xs text-slate-500">{{ reg.email }} | {{ reg.phone }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-700">
+                                    {{ reg.camp_name }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <form action="{{ url_for('blood_bank_dashboard') }}" method="POST" onsubmit="return confirm('Delete this registration?');" class="inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="action" value="delete_registration">
+                                        <input type="hidden" name="reg_id" value="{{ reg.id }}">
+                                        <button type="submit" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Delete Registration">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="px-6 py-8 text-center text-slate-400">No registrations yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('donorSearch')?.addEventListener('keyup', function() {
+        let query = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#donorTableBody tr');
+        rows.forEach(row => {
+            let text = row.textContent.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
+        });
+    });
+</script>
+
+{% if hosp_id %}
+<span id="socket-config" data-room="hospital_{{ hosp_id }}" class="d-none"></span>
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const configEl = document.getElementById('socket-config');
+        if (configEl) {
+            const socket = io();
+            socket.emit('join', { room: configEl.dataset.room });
+
+            socket.on('new_blood_inquiry', function(data) {
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 bg-white border-l-4 border-rose-500 rounded-xl shadow-2xl p-4 max-w-sm z-[1000] animate-fade-in flex items-start gap-3';
+                toast.innerHTML = `
+                    <div class="text-rose-500 mt-0.5 bg-rose-50 p-2 rounded-lg"><i class="fas fa-droplet text-xl"></i></div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-bold text-slate-800">New Blood Inquiry</h4>
+                        <p class="text-xs text-slate-500 mt-1"><span class="font-bold text-slate-700">${data.name}</span>: ${data.message}</p>
+                        <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">${data.time}</p>
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-rose-500 transition-colors"><i class="fas fa-times"></i></button>
+                `;
+                document.body.appendChild(toast);
+            });
+        }
+    });
+</script>
 {% endblock %}

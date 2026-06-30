@@ -1,0 +1,130 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ medicine.drug_name }} - Medicine Details | Spherix Clinic{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div class="max-w-5xl mx-auto">
+        
+        <!-- Breadcrumb Navigation -->
+        <nav class="flex mb-8 text-sm font-medium text-slate-500">
+            <a href="{{ url_for('medical_shop') }}" class="hover:text-blue-600 transition-colors flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Pharmacy
+            </a>
+        </nav>
+        
+        <div class="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden flex flex-col md:flex-row relative">
+            
+            <!-- Left: Visual Placeholder -->
+            <div class="md:w-2/5 bg-slate-100 p-12 flex flex-col items-center justify-center border-r border-slate-200 relative overflow-hidden">
+                <div class="absolute -top-10 -left-10 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
+                <div class="w-32 h-32 rounded-full bg-white shadow-sm flex items-center justify-center mb-6 z-10">
+                    <i class="fas fa-pills text-5xl text-blue-500"></i>
+                </div>
+                <span class="inline-block px-4 py-1.5 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-full z-10 border border-emerald-200">
+                    <i class="fas fa-shield-check mr-1"></i> Authentic Medicine
+                </span>
+            </div>
+            
+            <!-- Right: Details & Actions -->
+            <div class="p-10 md:p-12 md:w-3/5 flex flex-col">
+                <h1 class="text-4xl font-black text-slate-900 mb-2">{{ medicine.drug_name }}</h1>
+                <p class="text-3xl font-bold text-blue-600 mb-8">₹{{ "%.2f"|format(price) }}</p>
+                
+                <div class="space-y-8 flex-grow">
+                    <!-- Primary Use -->
+                    <div>
+                        <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2"><i class="fas fa-stethoscope text-blue-500"></i> Primary Use</h3>
+                        <p class="text-slate-700 font-medium leading-relaxed">{{ medicine.primary_use }}</p>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div>
+                        <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Description</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">{{ medicine.description }}</p>
+                    </div>
+                    
+                    <!-- Side Effects -->
+                    {% if medicine.common_side_effects %}
+                    <div>
+                        <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Common Side Effects</h3>
+                        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600">
+                            {% for effect in medicine.common_side_effects %}
+                            <li class="flex items-start gap-2"><i class="fas fa-circle text-[6px] text-blue-400 mt-2"></i> {{ effect }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Caution Area -->
+                    {% if medicine.caution %}
+                    <div class="bg-amber-50 p-5 rounded-2xl border border-amber-200">
+                        <h3 class="text-xs font-black text-amber-800 uppercase tracking-widest mb-2"><i class="fas fa-exclamation-triangle mr-1"></i> Clinical Caution</h3>
+                        <p class="text-amber-700 text-sm font-medium leading-relaxed">{{ medicine.caution }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- E-Commerce Action Buttons -->
+                <div class="mt-10 pt-8 border-t border-slate-100 flex flex-col sm:flex-row gap-4">
+                    <button onclick="handlePurchaseAction(this, 'add')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+                        <i class="fas fa-cart-plus"></i> Add to Cart
+                    </button>
+                    <button onclick="handlePurchaseAction(this, 'buy')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider transform hover:-translate-y-0.5">
+                        <i class="fas fa-bolt"></i> Buy Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Carrier for IDE JS Lint Warnings -->
+<span id="medicine-detail-data" data-name="{{ medicine.drug_name|tojson|safe }}" data-price="{{ price|tojson|safe }}" class="hidden"></span>
+
+<script>
+    const detailEl = document.getElementById('medicine-detail-data');
+    const drugName = JSON.parse(detailEl.dataset.name || '""');
+    const drugPrice = JSON.parse(detailEl.dataset.price || '0');
+    
+    function handlePurchaseAction(btn, action) {
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> PROCESSING...';
+        
+        fetch('/add-to-cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: drugName, price: drugPrice }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (action === 'buy') {
+                    window.location.href = "{{ url_for('checkout') }}";
+                } else {
+                    btn.innerHTML = '<i class="fas fa-check"></i> ADDED TO CART';
+                    btn.classList.add('bg-emerald-500', 'text-white');
+                    btn.classList.remove('bg-slate-100', 'text-slate-800');
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                        btn.classList.remove('bg-emerald-500', 'text-white');
+                        btn.classList.add('bg-slate-100', 'text-slate-800');
+                    }, 2000);
+                }
+            } else {
+                alert(data.message || 'Error adding item to cart.');
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        });
+    }
+</script>
+{% endblock %}

@@ -16,6 +16,7 @@ This module is standalone and can be imported, tested, and extended independentl
 import json
 import os
 import hashlib
+import re
 from collections import Counter
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime
@@ -43,7 +44,16 @@ class SymptomAnalyzer:
             'high': 'Red - Seek medical attention soon',
             'critical': 'Dark Red - Emergency medical attention required'
         }
+        self.stop_words = {
+            'a', 'an', 'and', 'are', 'been', 'for', 'have', 'has', 'i', 'in',
+            'is', 'it', 'my', 'of', 'on', 'or', 'the', 'to', 'with'
+        }
         self.load_knowledge_base()
+
+    def _tokenize(self, text: str) -> List[str]:
+        """Normalize free-text symptoms into useful matching tokens."""
+        words = re.findall(r"[a-z0-9]+", (text or "").lower())
+        return [word for word in words if word not in self.stop_words and len(word) > 1]
 
     def load_knowledge_base(self) -> bool:
         """
@@ -65,8 +75,9 @@ class SymptomAnalyzer:
                 description = data.get('description', '').lower()
                 advice = data.get('detailed_advice', '').lower()
                 self_care = ' '.join(data.get('self_care', [])).lower()
-                combined = f"{condition.lower()} {description} {advice} {self_care}"
-                self.symptom_keywords[condition] = combined.split()
+                departments = ' '.join(data.get('recommended_departments', [])).lower()
+                combined = f"{condition.lower()} {description} {advice} {self_care} {departments}"
+                self.symptom_keywords[condition] = self._tokenize(combined)
 
             print(f"✅ Knowledge base loaded: {len(self.knowledge_base)} conditions indexed")
             return True
@@ -112,27 +123,41 @@ class SymptomAnalyzer:
         query_lower = symptoms_query.lower()
         if body_part:
             query_lower = f"{query_lower} {body_part.lower()}"
-        query_words = set(query_lower.split())
+        query_words = set(self._tokenize(query_lower))
 
         if not query_words or not self.knowledge_base:
-            return self._create_null_response("No symptoms provided or knowledge base unavailable.")
+            return self._create_null_response(
+                "No symptoms provided or knowledge base unavailable.",
+                symptoms_query,
+                age,
+                gender,
+                body_part
+            )
 
         # Score all conditions
         condition_scores = {}
         for condition, keywords in self.symptom_keywords.items():
             exact_matches, match_percentage = self._calculate_match_score(query_words, keywords)
             if exact_matches > 0:
-                # Weight score by match percentage
-                weighted_score = exact_matches * (1 + match_percentage / 100)
+                # Weight score by match percentage and favor direct condition-name matches.
+                name_matches = len(query_words & set(self._tokenize(condition)))
+                weighted_score = exact_matches * (1 + match_percentage / 100) + (name_matches * 0.5)
                 condition_scores[condition] = {
                     'matches': exact_matches,
+                    'name_matches': name_matches,
                     'percentage': match_percentage,
                     'score': weighted_score
                 }
 
         # No matches found
         if not condition_scores:
-            return self._create_null_response("No matching conditions found in knowledge base.")
+            return self._create_null_response(
+                "No matching conditions found in knowledge base.",
+                symptoms_query,
+                age,
+                gender,
+                body_part
+            )
 
         # Sort and get top conditions
         sorted_conditions = sorted(
@@ -172,6 +197,7 @@ class SymptomAnalyzer:
 
         return {
             'primary_condition': top_condition,
+            'medical_category': self._derive_medical_category(condition_data),
             'description': condition_data.get('description', 'N/A'),
             'detailed_advice': condition_data.get('detailed_advice', 'N/A'),
             'when_to_see_doctor': condition_data.get('when_to_see_doctor', 'N/A'),
@@ -179,6 +205,19 @@ class SymptomAnalyzer:
             'recommended_departments': condition_data.get('recommended_departments', []),
             'suggested_medicines': condition_data.get('suggested_medicines', [])
         }
+
+    def _derive_medical_category(self, condition_data: Dict[str, Any]) -> str:
+        """Add a broad category that makes results easier to consume and test."""
+        departments = ' '.join(condition_data.get('recommended_departments', [])).lower()
+        if 'gastroenterology' in departments:
+            return 'Digestive Health'
+        if 'respiratory' in departments or 'pulmonology' in departments:
+            return 'Respiratory Health'
+        if 'neurology' in departments:
+            return 'Neurological Health'
+        if 'orthopedics' in departments or 'rheumatology' in departments:
+            return 'Musculoskeletal Health'
+        return 'General Health'
 
     def _get_top_conditions(self, sorted_conditions: List[Tuple[str, Dict]], limit: int = 3) -> List[Dict]:
         """Get top matching conditions with details."""
@@ -323,21 +362,34 @@ class SymptomAnalyzer:
             'message': f"Analysis confidence is {level}"
         }
 
-    def _create_null_response(self, message: str) -> Dict[str, Any]:
+    def _create_null_response(self, message: str, symptoms_query: str = "",
+                              age: Optional[int] = None, gender: Optional[str] = None,
+                              body_part: Optional[str] = None) -> Dict[str, Any]:
         """Create a null/default response."""
         return {
             'timestamp': datetime.now().isoformat(),
             'error': message,
+            'input': {
+                'symptoms': symptoms_query,
+                'age': age,
+                'gender': gender,
+                'body_part': body_part
+            },
             'analysis': {},
             'top_conditions': [],
             'all_matches': [],
             'severity': {'level': 'unknown', 'description': 'Unable to assess'},
-            'recommendations': [],
+            'recommendations': {
+                'immediate': [],
+                'follow_up': ['Consult a licensed healthcare provider if symptoms continue.'],
+                'age_specific': [],
+                'lifestyle': []
+            },
             'warnings': [
                 "No proper analysis was possible. Please consult a healthcare provider.",
                 "Contact a licensed medical professional for accurate diagnosis."
             ],
-            'confidence_level': {'score': 0, 'level': 'very_low'}
+            'confidence_level': {'score': 0, 'level': 'very_low', 'message': 'No reliable match found'}
         }
 
     def get_condition_details(self, condition_name: str) -> Optional[Dict[str, Any]]:

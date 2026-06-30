@@ -1,233 +1,760 @@
 {% extends 'layout.html' %}
 
-{% block title %}Symptom Analysis Result{% endblock %}
+{% block title %}AI Diagnostic Results | Spherix Clinic{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-[#020617] relative overflow-hidden font-sans text-slate-200 pb-20">
-    <!-- Ambient Animated Background -->
-    <div class="absolute inset-0 z-0 pointer-events-none">
-        <div class="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-sky-600/10 rounded-full blur-[120px] mix-blend-screen"></div>
-        <div class="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen"></div>
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-50"></div>
-    </div>
+<!-- Chart.js for Advanced Data Visualization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10">
-
-        <!-- Header -->
-        <div class="text-center mb-16 animate-fade-in-up">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/10 text-blue-400 mb-6 border border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
-                <i class="fas fa-microchip text-2xl"></i>
+<div class="min-h-screen bg-[#F8FAFC] py-12 font-sans selection:bg-blue-200">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <!-- Back Button -->
+        <div>
+            <a href="{{ url_for('symptoms_step2') }}" onclick="if(document.referrer){history.back(); return false;}" class="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm font-semibold">
+                <i class="fas fa-chevron-left"></i> Back to Step 2
+            </a>
+        </div>
+        
+        <!-- 1. Header & Actions -->
+        <header class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-4 border border-blue-200">
+                    <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                    Analysis Complete
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Diagnostic Analysis Report</h1>
+                <p class="text-slate-500 mt-2 text-sm font-medium max-w-2xl">
+                    AI-Assisted Evaluation for: <span class="text-slate-800 font-bold">"{{ query }}"</span>
+                </p>
             </div>
-            <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4">
-                AI Diagnostic <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-600">Report</span>
-            </h1>
-            <p class="text-lg text-slate-400 max-w-2xl mx-auto">Neural network analysis complete. Review your clinical insights below.</p>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ url_for('download_symptoms_pdf') }}" class="px-6 py-2.5 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_8px_16px_-6px_rgba(37,99,235,0.4)] hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Diagnostic Report PDF
+                </a>
+                <a href="{{ url_for('symptom_receipt_details') }}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-black uppercase tracking-wider rounded-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                    <i class="fas fa-receipt"></i> Intake Receipt
+                </a>
+            </div>
+        </header>
+
+        <!-- 2. Risk Assessment Alert -->
+        {% set risk_color = 'emerald' if 'Low' in result.risk_level else 'amber' if 'Moderate' in result.risk_level else 'rose' %}
+        <div class="bg-{{ risk_color }}-50 border border-{{ risk_color }}-200 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm relative overflow-hidden">
+            <div class="absolute right-0 top-0 w-32 h-32 bg-{{ risk_color }}-500 rounded-full blur-[80px] opacity-10 pointer-events-none"></div>
+            <div class="flex items-center gap-5 relative z-10">
+                <div class="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-{{ risk_color }}-600 text-2xl border border-{{ risk_color }}-100 shrink-0">
+                    <i class="fas fa-shield-heart"></i>
+                </div>
+                <div>
+                    <h3 class="text-{{ risk_color }}-900 font-black text-lg tracking-tight">Assessed Risk Level: {{ result.risk_level }}</h3>
+                    <p class="text-{{ risk_color }}-700 text-xs sm:text-sm mt-1 font-medium leading-relaxed max-w-3xl">{{ result.medical_disclaimer }}</p>
+                </div>
+            </div>
         </div>
 
-        <!-- User Input Summary -->
-        <div class="bg-white/5 backdrop-blur-xl rounded-3xl p-8 mb-10 border border-white/10 shadow-2xl animate-fade-in-up" style="animation-delay: 0.1s;">
-            <div class="flex items-center gap-3 mb-6">
-                <i class="fas fa-clipboard-user text-sky-400"></i>
-                <h2 class="text-lg font-bold text-white uppercase tracking-widest">Patient Profile</h2>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Reported Symptoms</p>
-                    <p class="text-lg font-medium text-sky-300">"{{ query }}"</p>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Age</p>
-                    <p class="text-2xl font-bold text-white">{{ age }} <span class="text-sm font-normal text-slate-400">yrs</span></p>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Biological Sex</p>
-                    <p class="text-2xl font-bold text-white">{{ gender }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Analysis Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-up" style="animation-delay: 0.2s;">
-
-            <!-- Left Column: Conditions & Advice -->
-            <div class="lg:col-span-2 space-y-8">
+        <!-- 3. Main Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- LEFT COLUMN: Insights & Details (Spans 8) -->
+            <div class="lg:col-span-8 space-y-8">
                 
-                <!-- Symptom Details -->
-                <div class="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
-                    <h3 class="text-xl font-bold text-white mb-6 flex items-center">
-                        <i class="fas fa-search-heart text-sky-400 mr-3"></i>
-                        Symptom Details
-                    </h3>
-                    <div class="text-slate-300 text-base leading-relaxed mb-4">
-                        <span class="font-bold text-slate-100">Reported symptoms:</span>
-                        <span> {{ query }} </span>
-                    </div>
-                    <div class="text-slate-300 text-base leading-relaxed">
-                        <span class="font-bold text-slate-100">Detailed analysis:</span>
-                        <span>{{ result.description }}</span>
-                    </div>
-                </div>
-
-                <!-- Potential Conditions -->
-                <div class="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
-                    <h3 class="text-xl font-bold text-white mb-6 flex items-center">
-                        <i class="fas fa-chart-pie text-blue-400 mr-3"></i>
-                        Potential Conditions
-                    </h3>
-                    {% if result.conditions %}
-                        {% for i in range(result.conditions|length) %}
-                            <div class="mb-4">
-                                <div class="flex justify-between mb-2">
-                                    <span class="text-base font-bold text-slate-200">{{ result.conditions[i] }}</span>
-                                    <span class="text-sm font-bold text-sky-400">{{ result.confidence_scores[i] }}% Match</span>
-                                </div>
-                                <div class="w-full bg-slate-800/50 rounded-full h-3 border border-white/5 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-blue-600 to-sky-400 h-full rounded-full relative" style="width: {{ result.confidence_scores[i] }}%">
-                                        <div class="absolute top-0 right-0 bottom-0 w-10 bg-gradient-to-r from-transparent to-white/30"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-slate-400 italic">No specific conditions identified. Please consult a doctor.</p>
-                    {% endif %}
-                </div>
-
-                <!-- Detailed Description -->
-                <div class="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
-                    <h4 class="text-lg font-bold text-white mb-3 flex items-center gap-3">
-                        <i class="fas fa-align-left text-indigo-400"></i> Clinical Description
-                    </h4>
-                    <p class="text-slate-300 leading-relaxed text-lg font-light">{{ result.description }}</p>
+                <!-- 0. Physician Validation Card -->
+                {% if doctor_review %}
+                <section class="bg-gradient-to-r from-emerald-50 to-teal-50/30 border-2 border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-md relative overflow-hidden group">
+                    <!-- Background Seal -->
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-500 rounded-full blur-[80px] opacity-15 pointer-events-none"></div>
                     
-                    <div class="mt-8 bg-blue-500/10 border border-blue-500/20 p-6 rounded-2xl">
-                        <h4 class="text-sm font-bold text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                            <i class="fas fa-robot"></i> How to fix it
-                        </h4>
-                        <p class="text-blue-100 leading-relaxed">{{ result.advice }}</p>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Right Column: Self-Care & Urgency -->
-            <div class="space-y-8">
-                <!-- When to See a Doctor -->
-                <div class="bg-red-500/10 backdrop-blur-xl border border-red-500/30 p-8 rounded-3xl shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-                    <h3 class="text-lg font-bold text-red-400 mb-4 flex items-center">
-                        <i class="fas fa-triangle-exclamation mr-3 animate-pulse"></i>
-                        When to See a Doctor
-                    </h3>
-                    <p class="text-red-100 text-sm leading-relaxed">{{ result.when_to_see_doctor }}</p>
-                </div>
-
-                <!-- Self-Care -->
-                <div class="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
-                    <h3 class="text-lg font-bold text-emerald-400 mb-4 flex items-center">
-                        <i class="fas fa-leaf mr-3"></i>
-                        Self-Care Recommendations
-                    </h3>
-                    <ul class="space-y-3 text-slate-300 text-sm">
-                        {% for care_tip in result.self_care %}
-                            <li class="flex items-start gap-3">
-                                <i class="fas fa-check-circle text-emerald-500 mt-1"></i>
-                                <span>{{ care_tip }}</span>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-
-                <!-- Suggested Medicines -->
-                <div class="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
-                    <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center">
-                        <i class="fas fa-pills mr-3"></i>
-                        Suggested Medicines
-                    </h3>
-                    <p class="text-slate-400 mb-4 text-sm">These are over-the-counter suggestions based on symptom analysis. Confirm with a clinician before taking any medicine.</p>
-                    <ul class="space-y-3 text-slate-300 text-sm">
-                        {% if result.suggested_medicines %}
-                            {% for med in result.suggested_medicines %}
-                                <li class="flex items-start gap-3">
-                                    <i class="fas fa-capsules text-amber-500 mt-1"></i>
-                                    <span>{{ med }}</span>
-                                </li>
-                            {% endfor %}
-                        {% else %}
-                            <li class="text-slate-400">No medication suggestions available. Please consult a healthcare professional.</li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="mt-12 flex flex-col sm:flex-row justify-center items-center gap-4 animate-fade-in-up" style="animation-delay: 0.3s;">
-            <a href="{{ url_for('symptoms') }}" class="w-full sm:w-auto group relative inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-2xl font-bold shadow-lg hover:bg-white/20 transition-all duration-300 overflow-hidden">
-                <i class="fas fa-redo-alt group-hover:-rotate-180 transition-transform duration-500"></i>
-                <span class="relative z-10">Retest Symptoms</span>
-                <!-- Click Catcher -->
-                <span class="absolute inset-0 z-20" aria-hidden="true"></span>
-            </a>
-            <a href="{{ url_for('symptom_receipt_details') }}" class="w-full sm:w-auto text-center bg-blue-600 text-white font-bold py-4 px-8 rounded-2xl shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:bg-blue-500 transition-all duration-300 hover:-translate-y-1">
-                <i class="fas fa-file-pdf mr-2"></i> Download PDF Report
-            </a>
-        </div>
-
-        <!-- Disclaimer -->
-        <div class="mt-10 bg-slate-900/50 p-6 rounded-2xl text-center border border-white/5 animate-fade-in-up" style="animation-delay: 0.4s;">
-            <p class="text-xs text-slate-500 uppercase tracking-widest font-bold">
-                <i class="fas fa-shield-halved mr-2"></i> Disclaimer
-            </p>
-            <p class="text-sm text-slate-400 mt-2">{{ result.note }}</p>
-        </div>
-
-        <!-- Recommended Doctors -->
-        <div class="mt-20 border-t border-white/10 pt-16">
-            <h2 class="text-3xl font-extrabold text-white text-center mb-10">Recommended <span class="text-blue-400">Specialists</span></h2>
-            {% if doctors %}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {% for doctor in doctors[:3] %} {# Show top 3 recommendations #}
-                        <div class="bg-white/5 backdrop-blur-md rounded-3xl shadow-xl border border-white/10 overflow-hidden transform hover:scale-105 hover:bg-white/10 transition-all duration-300 group">
-                            <div class="p-6 text-center">
-                                <div class="relative w-24 h-24 mx-auto mb-4">
-                                    <div class="absolute inset-0 bg-blue-500 rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                                    <img class="relative w-24 h-24 rounded-full border-2 border-white/20 object-cover" 
-                                     src="{{ url_for('get_doctor_image', doc_id=doctor.id) if doctor.profile_picture_url == 'db:image' else (url_for('static', filename='uploads/' ~ doctor.profile_picture_url) if doctor.profile_picture_url else 'https://ui-avatars.com/api/?name=' ~ doctor.first_name ~ '+' ~ doctor.last_name ~ '&background=random') }}" 
-                                     alt="Dr. {{ doctor.first_name }} {{ doctor.last_name }}">
+                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-emerald-200/50 pb-6 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-lg shadow-emerald-600/20">
+                                <i class="fas fa-file-signature"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h2 class="text-lg font-bold text-slate-800 tracking-tight">Clinically Audited Verdict</h2>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-700 border border-emerald-500/30">
+                                        <i class="fas fa-check-double text-[8px]"></i> Signed & Verified
+                                    </span>
                                 </div>
-                                <h4 class="text-xl font-bold text-white">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</h4>
-                                <p class="text-sky-400 font-bold text-sm uppercase tracking-widest mt-1">{{ doctor.department }}</p>
-                                <p class="text-slate-400 text-sm mt-2">{{ doctor.specialization }}</p>
-                                <a href="{{ url_for('doctor_detail', doc_id=doctor.id) }}" class="mt-6 block w-full bg-white/10 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-600 transition-colors">
-                                    Book Consult
-                                </a>
+                                <p class="text-xs text-slate-500 mt-1 font-medium">
+                                    Reviewed by: <span class="text-slate-800 font-bold">Dr. {{ doctor_review.doctor_name }}</span> on {{ doctor_review.created_at[:10] }}
+                                </p>
                             </div>
                         </div>
-                    {% endfor %}
-                </div>
-                {% if doctors|length > 3 %}
-                    <div class="text-center mt-8">
-                        <a href="{{ url_for('doctors_list', q=result.recommended_departments[0] if result.recommended_departments else '') }}" class="text-sky-400 font-bold hover:text-white transition-colors">
-                            See all recommended doctors &rarr;
+                        
+                        <!-- Authorized Stamp -->
+                        <div class="flex flex-wrap items-center gap-3 bg-emerald-500/5 px-4 py-2.5 rounded-2xl border border-emerald-500/10 shrink-0">
+                            <div class="flex flex-col text-left md:text-right">
+                                <span class="text-[8px] font-black text-emerald-800 uppercase tracking-[2px] block leading-none">Spherix Clinic</span>
+                                <span class="text-[7px] font-bold text-slate-400 block mt-1 leading-none">ID: SPX-REV-{{ doctor_review.id }}</span>
+                            </div>
+                            <!-- Digital Signature Image -->
+                            <div class="h-9 px-2 flex items-center justify-center bg-white rounded-xl shadow-sm border border-emerald-500/10">
+                                <img src="{{ url_for('static', filename='images/signature.png') }}" class="h-6 max-w-[90px] object-contain" alt="Signature">
+                            </div>
+                            <!-- Stamp Image -->
+                            <div class="h-9 w-9 flex items-center justify-center rounded-xl bg-white shadow-sm border border-emerald-500/10">
+                                <img src="{{ url_for('static', filename='images/stamp.png') }}" class="h-7 w-7 object-contain" alt="Stamp">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Physician's Assessment Status</h4>
+                                <p class="text-sm font-bold text-slate-800 mt-1 flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> {{ doctor_review.status }}
+                                </p>
+                            </div>
+                            
+                            {% if doctor_review.clinical_remarks %}
+                            <div>
+                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Clinical Remarks & Notes</h4>
+                                <p class="text-sm text-slate-600 mt-1 leading-relaxed font-medium">{{ doctor_review.clinical_remarks }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="space-y-4 border-t md:border-t-0 md:border-l border-slate-200/50 md:pl-6 pt-4 md:pt-0">
+                            {% if doctor_review.prescribed_treatment %}
+                            <div>
+                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Prescribed Treatment Course</h4>
+                                <p class="text-sm text-slate-700 mt-1 leading-relaxed font-semibold bg-white/60 p-3 rounded-xl border border-slate-200/40">{{ doctor_review.prescribed_treatment }}</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if doctor_review.recommended_tests %}
+                            <div>
+                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Recommended Laboratory/Diagnostic Tests</h4>
+                                <p class="text-sm text-slate-600 mt-1 leading-relaxed font-medium"><i class="fas fa-vial text-emerald-500 mr-1"></i> {{ doctor_review.recommended_tests }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+                {% else %}
+                <section class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden group">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-amber-500 rounded-full blur-[80px] opacity-10 pointer-events-none"></div>
+                    
+                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-slate-100 pb-6 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-xl border border-amber-500/20">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h2 class="text-lg font-bold text-slate-800 tracking-tight">Physician Verdict & Sign-off</h2>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Pending Validation
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1 font-medium">
+                                    This report is currently an AI draft. Submit it to a doctor for verification.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if current_user.is_authenticated and current_user.is_doctor %}
+                    <!-- Review Sign-off Console -->
+                    <div class="bg-slate-50 border border-slate-200/50 rounded-2xl p-5 sm:p-6">
+                        <h3 class="font-extrabold text-sm text-slate-800 mb-4 flex items-center gap-2">
+                            <i class="fas fa-shield-halved text-blue-600"></i> Authorized Clinical Review Console
+                        </h3>
+                        
+                        <form action="{{ url_for('validate_symptom_result') }}" method="POST" class="space-y-4">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="symptom_query" value="{{ query }}">
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Review Status Verdict</label>
+                                    <select name="status" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                                        <option value="Approved AI Findings">Approve AI Findings</option>
+                                        <option value="Modified Diagnosis (Refer to Remarks)">Modify/Amend Diagnosis</option>
+                                        <option value="Inconclusive (Further Labs Required)">Inconclusive Findings</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommended Tests</label>
+                                    <input type="text" name="recommended_tests" placeholder="e.g. CBC, Lipid Profile, Chest X-Ray" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Clinical Remarks & Diagnostics Notes</label>
+                                <textarea name="clinical_remarks" rows="2" placeholder="Describe clinical symptoms, observations, or warnings..." class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" required></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Prescribed Treatment & Medications</label>
+                                <textarea name="prescribed_treatment" rows="2" placeholder="e.g. Calpol 650mg twice daily for 3 days, complete bed rest" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
+                            </div>
+                            
+                            <div class="flex justify-end">
+                                <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_8px_16px_-6px_rgba(37,99,235,0.4)] transition-all">
+                                    <i class="fas fa-file-signature mr-1.5"></i> Sign & Publish Official Verdict
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% else %}
+                    <!-- Regular Patient / Guest view: show booking shortcuts -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                        <p class="text-xs text-slate-600 font-medium leading-relaxed max-w-xl">
+                            <i class="fas fa-info-circle text-amber-500 mr-1.5"></i> Connect with one of our recommended clinical specialists to review your AI analysis, obtain an official prescription, and append formal medical sign-off to this record.
+                        </p>
+                        <a href="#specialist-section" class="px-5 py-2.5 bg-slate-900 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-blue-600 transition-colors shrink-0">
+                            Connect with Specialist
                         </a>
                     </div>
+                    {% endif %}
+                </section>
                 {% endif %}
-            {% else %}
-                <div class="text-center bg-white/5 backdrop-blur-md p-10 rounded-3xl border border-white/10 shadow-xl">
-                    <div class="text-slate-500 text-5xl mb-4"><i class="fas fa-user-md"></i></div>
-                    <p class="text-slate-300 text-lg">No specific doctors found in the automated network for the recommended departments.</p>
-                    <a href="{{ url_for('doctors_list') }}" class="mt-6 inline-block bg-white/10 text-white font-bold py-3 px-8 rounded-xl hover:bg-white/20 transition-colors">
-                        Browse All Doctors
-                    </a>
-                </div>
-            {% endif %}
-        </div>
 
+                <!-- Clinical Summary -->
+                <section class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100">
+                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Clinical Summary</h2>
+                    <p class="text-slate-700 text-base leading-loose font-medium">{{ result.clinical_summary }}</p>
+                </section>
+                
+                <!-- 2x2 Detail Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Recommendations -->
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:border-blue-200 transition-colors group">
+                        <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fas fa-clipboard-list"></i></div>
+                            Recommendations
+                        </h3>
+                        <ul class="space-y-3">
+                            {% for item in result.ai_recommendations %}
+                            <li class="flex items-start gap-3 text-sm font-medium text-slate-600 leading-relaxed"><i class="fas fa-check-circle text-emerald-500 mt-1 shrink-0"></i> <span>{{ item }}</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <!-- Self Care -->
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:border-emerald-200 transition-colors group">
+                        <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fas fa-leaf"></i></div>
+                            Self Care Guidance
+                        </h3>
+                        <ul class="space-y-3">
+                            {% for item in result.self_care_suggestions %}
+                            <li class="flex items-start gap-3 text-sm font-medium text-slate-600 leading-relaxed"><i class="fas fa-star text-amber-400 mt-1 shrink-0"></i> <span>{{ item }}</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <!-- Medicines -->
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:border-purple-200 transition-colors group">
+                        <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center"><i class="fas fa-pills"></i></div>
+                            Suggested OTC Relief
+                        </h3>
+                        <div class="space-y-3.5">
+                            {% for item in result.supportive_relief_options %}
+                                {% if item.is_disclaimer %}
+                                    <div class="text-[11px] text-slate-400 font-medium leading-relaxed mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
+                                        <i class="fas fa-info-circle text-blue-500 shrink-0"></i>
+                                        <span>{{ item.name }}</span>
+                                    </div>
+                                {% elif item.fda_verified %}
+                                    <!-- FDA Verified Interactive Medicine Pill Card -->
+                                    <div class="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/5 to-indigo-500/5 hover:from-purple-500/10 hover:to-indigo-500/10 border border-purple-500/10 hover:border-purple-500/20 transition-all cursor-pointer group/med"
+                                         data-drug="{{ item | tojson | forceescape }}"
+                                         onclick="openFdaFromElement(this)">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center text-xs group-hover/med:scale-105 transition-transform">
+                                                    <i class="fas fa-capsules"></i>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-sm font-extrabold text-slate-800 group-hover/med:text-purple-700 transition-colors">{{ item.brand_name }}</h4>
+                                                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">{{ item.generic_name }}</p>
+                                                </div>
+                                            </div>
+                                            <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-700 shrink-0">
+                                                FDA Verified
+                                            </span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-500 line-clamp-1 mt-2 pl-1 font-medium">{{ item.primary_use }}</p>
+                                        <div class="flex items-center gap-1 text-[9px] text-purple-600 font-black uppercase tracking-wider mt-2.5 pl-1 opacity-80 group-hover/med:opacity-100 transition-opacity">
+                                            <span>Inspect Drug Profile</span> <i class="fas fa-arrow-right text-[8px] transition-transform group-hover/med:translate-x-0.5"></i>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/40 hover:border-purple-200 transition-all cursor-pointer group/med"
+                                         onclick="inspectDrugByName('{{ item.generic_name or item.name }}')">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center text-xs group-hover/med:scale-105 transition-transform">
+                                                    <i class="fas fa-capsules"></i>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-sm font-extrabold text-slate-800 group-hover/med:text-purple-700 transition-colors">{{ item.generic_name or item.name }}</h4>
+                                                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">Standard Relief</p>
+                                                </div>
+                                            </div>
+                                            <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-200 text-slate-500 shrink-0">
+                                                Standard
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-[9px] text-purple-600 font-black uppercase tracking-wider mt-2.5 pl-1 opacity-80 group-hover/med:opacity-100 transition-opacity">
+                                            <span>Inspect Drug Profile</span> <i class="fas fa-arrow-right text-[8px] transition-transform group-hover/med:translate-x-0.5"></i>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Warnings -->
+                    <div class="bg-rose-50 rounded-3xl p-6 shadow-sm border border-rose-100 group">
+                        <h3 class="font-bold text-rose-900 mb-5 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center"><i class="fas fa-triangle-exclamation"></i></div>
+                            When to see a doctor
+                        </h3>
+                        <ul class="space-y-3">
+                            {% for item in result.warning_alerts %}
+                            <li class="flex items-start gap-3 text-sm font-bold text-rose-700 leading-relaxed"><i class="fas fa-circle-exclamation mt-0.5 shrink-0"></i> <span>{{ item }}</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Interactive Follow-up Chat -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[500px]">
+                    <div class="bg-slate-900 text-white p-5 px-6 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center border border-white/10"><i class="fas fa-robot text-sm"></i></div>
+                            <h3 class="font-bold tracking-tight">AI Specialist Chat</h3>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 bg-white/10 rounded-md">Ask Follow-ups</span>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50" id="chatHistory">
+                        {% if finalized %}
+                            <div class="p-5 bg-blue-50 text-blue-900 rounded-2xl text-sm font-medium border border-blue-100 shadow-sm">
+                                <div class="font-black text-xs uppercase text-blue-500 mb-2 tracking-widest">Finalized Summary Attached</div>
+                                {{ finalized_summary }}
+                            </div>
+                        {% endif %}
+                        {% for msg in chat_history %}
+                            {% if msg.role == 'user' %}
+                                <div class="flex justify-end">
+                                    <div class="bg-blue-600 text-white px-5 py-3.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-sm">{{ msg.message }}</div>
+                                </div>
+                            {% else %}
+                                <div class="flex justify-start">
+                                    <div class="bg-white border border-slate-200 text-slate-700 font-medium px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm">{{ msg.response }}</div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="flex flex-col items-center justify-center h-full text-center text-slate-400 space-y-3 opacity-60">
+                                <i class="fas fa-comments text-4xl"></i>
+                                <p class="text-sm font-medium max-w-xs">No follow-up questions yet. Have concerns about the result? Ask away!</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="p-4 bg-white border-t border-slate-100">
+                        <div class="flex gap-3">
+                            <input type="text" id="chatInput" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400" placeholder="Type your follow-up question here..." {% if finalized %}disabled{% endif %}>
+                            <button onclick="sendChatMessage()" class="bg-slate-900 text-white w-14 rounded-xl shadow-md hover:bg-blue-600 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center" {% if finalized %}disabled{% endif %}><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                        {% if not finalized %}
+                        <div class="mt-4 flex justify-between items-center px-1">
+                            <span class="text-xs text-slate-400 font-medium">Chat is added to your PDF</span>
+                            <form action="{{ url_for('symptoms_finalize') }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider">Finalize & Attach <i class="fas fa-arrow-right ml-1"></i></button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Graphs & Action Steps (Spans 4) -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Analytics / Graph Card -->
+                <div class="bg-[#0F172A] rounded-3xl p-6 shadow-xl text-white relative overflow-hidden group">
+                    <!-- Abstract Background -->
+                    <div class="absolute -top-10 -right-10 w-40 h-40 bg-blue-500 rounded-full blur-[80px] opacity-40 group-hover:opacity-60 transition-opacity duration-700"></div>
+                    <div class="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-900 to-transparent z-0 pointer-events-none"></div>
+                    
+                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 relative z-10">Probability Analytics</h2>
+                    
+                    <!-- Canvas Container -->
+                    <div class="relative z-10 w-full aspect-square flex items-center justify-center mb-6 px-4">
+                        <canvas id="confidenceChart"></canvas>
+                    </div>
+                    
+                    <!-- Probability List -->
+                    <div class="space-y-4 relative z-10 border-t border-white/10 pt-6">
+                        {% for i in range(result.conditions|length) %}
+                        <div class="flex items-center justify-between group/item">
+                            <div class="flex items-center gap-3">
+                                <span class="w-2.5 h-2.5 rounded-full {% if loop.index == 1 %}bg-[#3B82F6]{% elif loop.index == 2 %}bg-[#8B5CF6]{% else %}bg-[#10B981]{% endif %}"></span>
+                                <span class="text-sm font-medium text-slate-300 group-hover/item:text-white transition-colors truncate max-w-[150px]" title="{{ result.conditions[i] }}">{{ result.conditions[i] }}</span>
+                            </div>
+                            <span class="text-sm font-bold text-white bg-white/10 px-2 py-1 rounded-lg">{{ result.confidence_scores[i] }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Suggested Specialists -->
+                <div id="specialist-section" class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">Next Steps</h2>
+                        <span class="text-[10px] font-bold px-2 py-1 bg-blue-50 text-blue-600 rounded-md">Doctors</span>
+                    </div>
+                    <p class="text-xs font-semibold text-slate-500 mb-5 pb-4 border-b border-slate-100">Recommended Specialty: <span class="text-slate-800">{{ result.recommended_departments | join(', ') }}</span></p>
+                    
+                    <div class="space-y-3">
+                        {% for doctor in doctors[:4] %}
+                        <div class="flex items-center gap-4 p-3.5 rounded-2xl border-2 border-transparent hover:border-blue-100 hover:bg-blue-50/50 hover:shadow-md transition-all bg-slate-50 cursor-pointer group" data-href="{{ url_for('doctor_detail', doc_id=doctor.id) }}" onclick="window.location=this.dataset.href">
+                            <img src="{{ url_for('get_doctor_image', doc_id=doctor.id) }}" class="w-11 h-11 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform">
+                            <div class="flex-1 overflow-hidden">
+                                <h4 class="font-bold text-sm text-slate-900 truncate">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</h4>
+                                <p class="text-[10px] text-blue-600 font-bold uppercase tracking-wider truncate">{{ doctor.department }}</p>
+                            </div>
+                            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:shadow-sm border border-slate-200 group-hover:border-blue-200 transition-all">
+                                <i class="fas fa-arrow-right text-xs"></i>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-300 mx-auto mb-3 shadow-sm"><i class="fas fa-user-md text-xl"></i></div>
+                            <p class="text-sm text-slate-500 font-medium leading-relaxed">No exact specialists found for this department currently.</p>
+                            <a href="{{ url_for('doctors_list') }}" class="inline-block mt-4 px-4 py-2 bg-white border border-slate-200 text-blue-600 text-xs font-bold uppercase tracking-wider rounded-lg hover:border-blue-300 transition-all shadow-sm">Browse Directory</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
 </div>
 
-<style>
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; opacity: 0; }
-</style>
+<!-- Hidden Chart Data Carrier (To prevent IDE JS lint warnings) -->
+<span id="symptom-conditions-data" data-conditions="{{ result.conditions | tojson | safe }}" class="hidden"></span>
+<span id="symptom-scores-data" data-scores="{{ result.confidence_scores | tojson | safe }}" class="hidden"></span>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Enhanced Chart.js Setup
+        const ctx = document.getElementById('confidenceChart').getContext('2d');
+        
+        const labels = JSON.parse(document.getElementById('symptom-conditions-data').dataset.conditions || '[]');
+        const data = JSON.parse(document.getElementById('symptom-scores-data').dataset.scores || '[]');
+        
+        // Dynamic beautiful colors
+        const bgColors = [
+            'rgba(59, 130, 246, 0.8)', // Blue
+            'rgba(139, 92, 246, 0.8)', // Purple
+            'rgba(16, 185, 129, 0.8)'  // Emerald
+        ];
+        
+        const borderColors = [
+            'rgba(59, 130, 246, 1)',
+            'rgba(139, 92, 246, 1)',
+            'rgba(16, 185, 129, 1)'
+        ];
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Match Probability',
+                    data: data,
+                    backgroundColor: bgColors.slice(0, data.length),
+                    borderColor: borderColors.slice(0, data.length),
+                    borderWidth: 0,
+                    hoverOffset: 15,
+                    borderRadius: 8,
+                    spacing: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '75%', // Thinner ring for premium look
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#0F172A',
+                        bodyColor: '#334155',
+                        padding: 16,
+                        cornerRadius: 12,
+                        boxPadding: 8,
+                        usePointStyle: true,
+                        borderColor: 'rgba(226, 232, 240, 1)',
+                        borderWidth: 1,
+                        titleFont: { size: 13, family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' },
+                        bodyFont: { size: 14, family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' },
+                        callbacks: {
+                            label: function(context) { return ' Probability Match: ' + context.raw + '%'; }
+                        }
+                    }
+                },
+                layout: {
+                    padding: 20
+                }
+            }
+        });
+    });
+
+    // Chatbot Logic
+    async function sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        const chatBox = document.getElementById('chatHistory');
+        
+        chatBox.innerHTML += `
+            <div class="flex justify-end">
+                <div class="bg-blue-600 text-white px-5 py-3.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-sm animate-in slide-in-from-bottom-2">${text}</div>
+            </div>
+        `;
+        input.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const loadingId = 'loading-' + Date.now();
+        chatBox.innerHTML += `
+            <div id="${loadingId}" class="flex justify-start">
+                <div class="bg-white border border-slate-200 text-slate-500 font-medium px-5 py-3.5 rounded-2xl rounded-tl-sm text-sm shadow-sm flex items-center gap-3">
+                    <div class="flex gap-1">
+                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
+                    AI is analyzing...
+                </div>
+            </div>
+        `;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const response = await fetch("{{ url_for('symptoms_chat') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+            
+            document.getElementById(loadingId).remove();
+            
+            if (data.success) {
+                chatBox.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="bg-white border border-slate-200 text-slate-700 font-medium px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm animate-in slide-in-from-bottom-2">${data.assistant}</div>
+                    </div>
+                `;
+            } else {
+                chatBox.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="bg-rose-50 border border-rose-200 text-rose-700 px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Error: ${data.error || 'Failed to get response'}</div>
+                    </div>
+                `;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        } catch(e) {
+            document.getElementById(loadingId).remove();
+            chatBox.innerHTML += `
+                <div class="flex justify-start">
+                    <div class="bg-rose-50 border border-rose-200 text-rose-700 px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm font-medium"><i class="fas fa-wifi mr-2"></i> Connection error occurred.</div>
+                </div>
+            `;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+
+    document.getElementById('chatInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+</script>
+
+<!-- FDA DRUG PROFILE LIGHTBOX MODAL -->
+<div id="fdaDrugModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-[10000] hidden p-4" onclick="closeFdaModal()">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-fade-in-up" onclick="event.stopPropagation()">
+        
+        <!-- Modal Header -->
+        <div class="p-6 sm:p-8 bg-gradient-to-r from-purple-600 to-indigo-600 text-white relative">
+            <div class="absolute top-6 right-6">
+                <button onclick="closeFdaModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/25 backdrop-blur-md transition-all">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            
+            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 backdrop-blur-md">
+                Authoritative Drug Profile
+            </span>
+            
+            <h3 id="fdaBrandName" class="text-2xl sm:text-3xl font-black tracking-tight mt-4">Medicine Brand Name</h3>
+            <p id="fdaGenericName" class="text-xs text-white/80 font-bold uppercase tracking-widest mt-1">GENERIC INGREDIENT</p>
+        </div>
+        
+        <!-- Modal Body Content -->
+        <div class="p-6 sm:p-8 space-y-6 max-h-[60vh] overflow-y-auto lightbox-scroll">
+            <div>
+                <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Primary Use & Indications</h4>
+                <p id="fdaPrimaryUse" class="text-sm text-slate-700 dark:text-slate-200 mt-1.5 font-medium leading-relaxed font-semibold">Loading uses...</p>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Precautions & Warnings</h4>
+                    <p id="fdaCaution" class="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 p-3.5 rounded-2xl mt-1.5 font-semibold leading-relaxed">Loading precautions...</p>
+                </div>
+                
+                <div>
+                    <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Side Effects Profile</h4>
+                    <ul id="fdaSideEffects" class="space-y-1.5 mt-1.5 pl-1">
+                        <!-- Will be dynamically populated -->
+                    </ul>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">FDA Usage & Administration Instructions</h4>
+                <p id="fdaInstructions" class="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/40 mt-1.5 font-medium leading-relaxed">Loading instructions...</p>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="p-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+            <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <i class="fas fa-university"></i> Source: US Food and Drug Administration (FDA)
+            </span>
+            <button onclick="closeFdaModal()" class="px-5 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all">
+                Dismiss Profile
+            </button>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+function openFdaFromElement(el) {
+    try {
+        const data = JSON.parse(el.getAttribute('data-drug'));
+        openFdaModal(data);
+    } catch(e) {
+        console.error("Failed to parse drug data:", e);
+    }
+}
+
+function openFdaLoader(drugName) {
+    document.getElementById('fdaBrandName').innerText = drugName;
+    document.getElementById('fdaGenericName').innerText = "Retrieving official FDA records...";
+    document.getElementById('fdaPrimaryUse').innerHTML = `
+        <div class="flex items-center gap-3 text-purple-600 font-medium">
+            <i class="fas fa-circle-notch animate-spin text-lg"></i> 
+            <span>Querying OpenFDA databases for chemical matches...</span>
+        </div>
+    `;
+    document.getElementById('fdaCaution').innerHTML = `
+        <div class="h-8 bg-amber-500/10 rounded-lg animate-pulse"></div>
+    `;
+    document.getElementById('fdaSideEffects').innerHTML = `
+        <div class="space-y-2">
+            <div class="h-3 bg-slate-100 rounded-lg animate-pulse w-3/4"></div>
+            <div class="h-3 bg-slate-100 rounded-lg animate-pulse w-1/2"></div>
+        </div>
+    `;
+    document.getElementById('fdaInstructions').innerHTML = `
+        <div class="space-y-3">
+            <div class="h-4 bg-slate-50 rounded-lg animate-pulse"></div>
+            <div class="h-4 bg-slate-50 rounded-lg animate-pulse w-5/6"></div>
+        </div>
+    `;
+    
+    const modal = document.getElementById('fdaDrugModal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function showFdaModalError(drugName) {
+    document.getElementById('fdaBrandName').innerText = drugName;
+    document.getElementById('fdaGenericName').innerText = "FDA Record Offline";
+    document.getElementById('fdaPrimaryUse').innerHTML = `
+        <div class="flex items-center gap-2 text-rose-600 font-medium bg-rose-50 border border-rose-200/50 p-4 rounded-2xl">
+            <i class="fas fa-exclamation-circle text-lg"></i>
+            <span>We couldn't retrieve an official FDA profile for this chemical. Please consult a doctor or local pharmacist.</span>
+        </div>
+    `;
+    document.getElementById('fdaCaution').innerText = "Not available.";
+    document.getElementById('fdaSideEffects').innerHTML = `
+        <li class="text-xs text-slate-400 italic">No side effects logged.</li>
+    `;
+    document.getElementById('fdaInstructions').innerText = "Consult product labeling.";
+}
+
+async function inspectDrugByName(drugName) {
+    if (!drugName) return;
+    
+    // Clean the term to pass it to the URL (split by common indicators)
+    const parts = drugName.split(/\b(for|to|with|and)\b|\(|,/i);
+    const cleanName = parts[0].trim().replace(/[-\s]+/g, ' ');
+    
+    openFdaLoader(cleanName);
+    
+    try {
+        const response = await fetch(`/drug-info/${encodeURIComponent(cleanName)}`);
+        if (!response.ok) throw new Error("Not found");
+        const data = await response.json();
+        
+        // Populate the modal content
+        openFdaModal(data);
+    } catch(e) {
+        console.error("Failed to query drug info:", e);
+        showFdaModalError(cleanName);
+    }
+}
+
+function openFdaModal(data) {
+    document.getElementById('fdaBrandName').innerText = data.brand_name || data.name;
+    document.getElementById('fdaGenericName').innerText = data.generic_name || '';
+    document.getElementById('fdaPrimaryUse').innerText = data.primary_use || 'General therapeutic use.';
+    document.getElementById('fdaCaution').innerText = data.caution || 'Consult a doctor before use.';
+    document.getElementById('fdaInstructions').innerText = data.instructions || 'Consult clinical guidelines or product packaging.';
+    
+    const sideEffectsList = document.getElementById('fdaSideEffects');
+    sideEffectsList.innerHTML = '';
+    if (data.side_effects && data.side_effects.length > 0) {
+        data.side_effects.forEach(eff => {
+            sideEffectsList.innerHTML += `
+                <li class="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
+                    <span>${eff}</span>
+                </li>
+            `;
+        });
+    } else {
+        sideEffectsList.innerHTML = `
+            <li class="text-xs text-slate-400 dark:text-slate-500 italic">None reported or consult label.</li>
+        `;
+    }
+    
+    const modal = document.getElementById('fdaDrugModal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeFdaModal() {
+    const modal = document.getElementById('fdaDrugModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+</script>
 {% endblock %}

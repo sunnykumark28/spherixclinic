@@ -1,4 +1,4 @@
-# Dev AI+ Health Platform (Flask)
+# Spherix Clinic Health Platform (Flask)
 
 ## Overview
 A comprehensive Flask web application that serves as a multi-functional health platform. The project demonstrates a wide range of features from AI-powered diagnostics to a full e-commerce flow for a medical shop.
@@ -57,5 +57,5 @@ A comprehensive Flask web application that serves as a multi-functional health p
   - Integrates findings with Groq AI for comprehensive analysis
   - Requires a valid Google Vision API key (optional but recommended)
 - The application uses an in-memory data store (Python dictionaries) for demonstration purposes, so all data (users, orders, etc.) will be reset when the server restarts.
-- The UI is built with Tailwind CSS, included via a CDN in the main layout file.# dev-ai-plus
-# dev-ai-plus
+- The UI is built with Tailwind CSS, included via a CDN in the main layout file.# spherixclinic-plus
+# spherixclinic-plus

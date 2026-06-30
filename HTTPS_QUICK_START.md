@@ -2,7 +2,7 @@
 
 ## ✅ What's Been Set Up
 
-Your **Dev AI+ Health Platform** is now **fully secured with HTTPS/SSL**.
+Your **Spherix Clinic Health Platform** is now **fully secured with HTTPS/SSL**.
 
 ### Current Status:
 - 🔒 **Protocol:** HTTPS (TLS enabled)
@@ -27,7 +27,7 @@ python app.py
    📄 Certificate: ssl/cert.pem
    🔑 Private Key: ssl/key.pem
 
-🚀 Starting Dev AI+ Health Platform
+🚀 Starting Spherix Clinic Health Platform
 📍 HTTPS Server: https://127.0.0.1:5443
 ```
 
@@ -57,11 +57,11 @@ https://127.0.0.1:5443
 
 ```
 👨‍💼 Admin:
-   Email: admin@devai.plus
+   Email: admin@spherixclinic.com
    Password: admin@123
 
 🏥 Hospital:
-   Email: hospital@devai.plus
+   Email: hospital@spherixclinic.com
    Password: hospital123
 ```
 
@@ -191,7 +191,7 @@ lsof -i :5443 | grep -v COMMAND | awk '{print $2}' | xargs kill -9
 ### Certificate Not Found
 ```bash
 # Regenerate certificates
-openssl req -x509 -newkey rsa:2048 -nodes -out ssl/cert.pem -keyout ssl/key.pem -days 365 -subj "/C=US/ST=California/L=Local/O=Dev AI/CN=localhost"
+openssl req -x509 -newkey rsa:2048 -nodes -out ssl/cert.pem -keyout ssl/key.pem -days 365 -subj "/C=US/ST=California/L=Local/O=Spherix Clinic/CN=localhost"
 ```
 
 ### Connection Refused
@@ -254,7 +254,7 @@ Ctrl+C
 
 - **Generated:** April 9, 2026
 - **Expires:** April 9, 2027  
-- **Organization:** Dev AI Health
+- **Organization:** Spherix Clinic Health
 - **Country:** US
 - **Hosts:** localhost, 127.0.0.1
 

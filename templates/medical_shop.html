@@ -1,375 +1,787 @@
 {% extends 'layout.html' %}
-
-{% block title %}Pharmacy • MediConnect{% endblock %}
-
+{% block title %}Spherix • Clinical Pharmacy System{% endblock %}
 {% block content %}
 
-<!-- Premium Styles -->
+<!-- Professional Medical Font & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-    
     :root {
-        --primary: #0f172a;
-        --accent: #0d9488;
-        --soft-bg: #f8fafc;
+        --clinical-blue: #0ea5e9;
+        --clinical-bg: #f8fafc;
+        --sidebar-border: #e2e8f0;
+        --med-green: #10b981;
+        --clinical-dark: #0f172a;
     }
 
     body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        background-color: var(--soft-bg);
-        color: var(--primary);
+        font-family: 'Inter', sans-serif;
+        background-color: var(--clinical-bg);
+        color: var(--clinical-dark);
+        letter-spacing: -0.01em;
     }
 
-    /* Smooth Scroll Behavior */
-    html { scroll-behavior: smooth; }
+    /* Surgical Clean UI Elements */
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Clinical Search Bar */
+    .search-input-wrapper {
+        border: 2px solid transparent;
+        background: white;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.02);
+    }
+    .search-input-wrapper:focus-within {
+        border-color: var(--clinical-blue);
+        box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+    }
+
+    /* Product Card - Med-App Style */
+    .med-card {
+        background: white;
+        border: 1px solid var(--sidebar-border);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+    .med-card:hover {
+        border-color: var(--clinical-blue);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Clinical Grade Badge */
+    .grade-badge {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+
+    /* AI Loading Pulse */
+    @keyframes clinicalScan {
+        0% { transform: translateY(-100%); opacity: 0; }
+        50% { opacity: 0.5; }
+        100% { transform: translateY(100%); opacity: 0; }
+    }
+    .scan-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(to bottom, transparent, var(--clinical-blue), transparent);
+        height: 20%;
+        animation: clinicalScan 2s infinite linear;
+        pointer-events: none;
+        display: none;
+    }
 
     /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-    /* Glass Morphism Utility */
-    .glass {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-    }
-
-    /* Premium Card Hover */
-    .product-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .product-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 40px -5px rgba(15, 23, 42, 0.08); 
-    }
-
-    /* Search Input Animation */
-    .search-focus-ring {
-        transition: box-shadow 0.3s ease, border-color 0.3s ease;
-    }
-    .search-focus-ring:focus-within {
-        box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
-        border-color: var(--accent);
-    }
-    
-    /* Fade In Animation for Products */
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in {
-        animation: fadeInUp 0.5s ease-out forwards;
-    }
 </style>
 
 <div class="min-h-screen flex flex-col">
     
-    <!-- Sticky Glass Header / Search Bar -->
-    <div class="sticky top-0 z-50 glass w-full">
-        <div class="max-w-8xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-            
-            <!-- Logo Area / Breadcrumb -->
-            <div class="hidden md:block">
-                <h1 class="text-xl font-bold tracking-tight text-slate-800">DEV <span class="text-teal-600">Pharmacy</span></h1>
-                <p class="text-xs text-slate-500 font-medium">Verified Medication Catalog by S iCons</p>
+    <!-- Top Clinical Navigation -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-200">
+        <div class="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                        <i class="fas fa-microscope text-sm"></i>
+                    </div>
+                    <span class="font-extrabold text-xl tracking-tight text-slate-900">Spherix<span class="text-blue-600">Rx</span></span>
+                </div>
+                <nav class="hidden md:flex items-center gap-1 p-1 bg-slate-100 rounded-full border border-slate-200 text-sm font-semibold text-slate-600 shadow-inner">
+                    <a href="#productList" class="bg-white text-blue-600 shadow-sm rounded-full px-5 py-2 transition-all flex items-center gap-2"><i class="fas fa-layer-group text-xs text-blue-500"></i> Catalog</a>
+                    <a href="#prescription-upload" class="hover:text-slate-900 hover:bg-slate-200/60 rounded-full px-5 py-2 transition-all flex items-center gap-2"><i class="fas fa-file-prescription text-xs text-slate-400"></i> Prescriptions</a>
+                    <a href="{{ url_for('medical_lab') }}" class="hover:text-slate-900 hover:bg-slate-200/60 rounded-full px-5 py-2 transition-all flex items-center gap-2"><i class="fas fa-flask text-xs text-slate-400"></i> Lab Results</a>
+                </nav>
             </div>
 
-            <!-- Central Search -->
-            <div class="w-full md:max-w-lg relative">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-slate-400"></i>
-                </div>
-                <input type="text" 
-                       id="productSearch" 
-                       class="search-focus-ring block w-full pl-11 pr-4 py-3 bg-slate-100/50 border border-slate-200 rounded-full text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white transition-all"
-                       placeholder="Search generic or brand names (e.g. Atorvastatin)...">
-            </div>
-
-            <!-- Cart Action -->
-            <a href="{{ url_for('view_cart') }}" class="relative p-3 rounded-full hover:bg-slate-200 transition-colors group">
-                <i class="fas fa-shopping-bag text-xl text-slate-600 group-hover:text-teal-700 transition-colors"></i>
-                <span id="cart-count-badge" class="absolute top-1 right-1 h-5 w-5 bg-teal-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full ring-2 ring-white transform scale-{% if cart_item_count > 0 %}100{% else %}0{% endif %} transition-transform duration-300">
-                    {{ cart_item_count }}
-                </span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Hero Banner (Subtle & Clean) -->
-    <div class="relative bg-slate-900 overflow-hidden">
-        <div class="absolute inset-0">
-            <img src="{{ url_for('static', filename='images/drugbg.jpg') }}" alt="Pharmacy" class="w-full h-full object-cover opacity-20">
-            <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
-        </div>
-        
-        <div class="relative max-w-7xl mx-auto px-6 py-16 sm:py-24 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between">
-            <div class="max-w-2xl">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold uppercase tracking-wider mb-6">
-                    <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-                    Now Delivering Nationwide
-                </div>
-                <h2 class="text-4xl md:text-6xl font-bold text-white tracking-tight mb-6">
-                    Professional Care, <br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-400">Simplified.</span>
-                </h2>
-                <p class="text-lg text-slate-300 font-light leading-relaxed max-w-lg">
-                    Browse our extensive catalog of prescription and OTC medications. 
-                    Verified quality, discreet packaging, and express delivery.
-                </p>
-            </div>
-            
-            <!-- Trust Indicators -->
-            <div class="hidden lg:grid grid-cols-2 gap-4 mt-8 lg:mt-0">
-                <div class="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
-                    <i class="fas fa-shield-alt text-3xl text-teal-400 mb-3"></i>
-                    <h4 class="text-white font-semibold">100% Genuine</h4>
-                    <p class="text-slate-400 text-xs mt-1">Sourced directly from manufacturers</p>
-                </div>
-                <div class="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
-                    <i class="fas fa-shipping-fast text-3xl text-teal-400 mb-3"></i>
-                    <h4 class="text-white font-semibold">24h Dispatch</h4>
-                    <!-- Updated symbol here -->
-                    <p class="text-slate-400 text-xs mt-1">Free shipping on orders over ₹500</p>
+            <div class="flex items-center gap-4">
+                <a href="{{ url_for('view_cart') }}" class="flex items-center gap-2 px-4 py-2 bg-black hover:bg-slate-200 rounded-full transition-all group">
+                    <i class="fas fa-cart-shopping text-white group-hover:text-blue-600"></i>
+                    <span class="text-xs font-bold text-white group-hover:text-blue-600" id="cart-count-badge">{{ cart_item_count }} Items</span>
+                </a>
+                <div class="w-8 h-8 bg-slate-200 rounded-full border border-slate-300">
                 </div>
             </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Main Content -->
-    <div class="flex-grow max-w-8xl mx-auto px-6 py-12 w-full">
-        
-        <div class="flex items-center justify-between mb-8">
-            <h3 class="text-2xl font-bold text-slate-800">Medicines</h3>
-            
-            <!-- Filter Dropdown (Visual) -->
-            <div class="relative group">
-                <button class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
-                    <span>Sort by: Relevance</span>
-                    <i class="fas fa-chevron-down text-xs"></i>
+    <section class="bg-white border-b border-slate-200 py-6">
+        <div class="max-w-[1600px] mx-auto px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Search pharmacy medicines instantly</h2>
+                <p class="mt-2 text-sm text-slate-500">Type a medicine name, symptom or prescription query and jump straight to matching medicine options.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                <div class="search-input-wrapper flex items-center flex-1 px-4 py-3 rounded-3xl bg-white border border-slate-700 shadow-sm">
+                    <i class="fas fa-search text-slate-400 mr-3"></i>
+                    <input type="text" id="productSearch" class="w-full py-2 bg-transparent border-black focus:ring-0 text-sm font-medium" placeholder="Search medication or symptoms...">
+                </div>
+                <button id="topAiSearchBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-3xl text-sm font-bold shadow-lg shadow-blue-200 transition-all whitespace-nowrap"> 
+                    <i class="fas fa-wand-magic-sparkles"></i> Search
                 </button>
             </div>
         </div>
+    </section>
 
-        <!-- Product Grid -->
-        <div id="productList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {% set medicines = [
-                "Abacavir", "Abemaciclib", "Abiraterone", "Acalabrutinib", "Acamprosate", "Acarbose", "Acebutolol",
-                "Acetaminophen", "Acetazolamide", "Acetylcysteine", "Aciclovir", "Acitretin",
-                "Adalimumab", "Adapalene", "Adefovir", "Adenosine", "Albendazole", "Albuterol",
-                "Alendronic acid", "Alfuzosin", "Allopurinol", "Almotriptan", "Alogliptin", "Alprazolam",
-                "Alprostadil", "Amantadine", "Ambrisentan", "Amikacin", "Amiloride", "Aminophylline",
-                "Amiodarone", "Amitriptyline", "Amlodipine", "Amoxapine", "Amoxicillin", "Amphotericin B",
-                "Ampicillin", "Anagrelide", "Anastrozole", "Apixaban", "Aripiprazole", "Artemether", "Artesunate",
-                "Ascorbic Acid", "Aspirin", "Atazanavir", "Atenolol", "Atezolizumab", "Atomoxetine",
-                "Atorvastatin", "Atovaquone", "Azathioprine", "Azelastine", "Azithromycin", "Baclofen",
-                "Beclometasone", "Benazepril", "Bendamustine", "Bendroflumethiazide", "Benzonatate",
-                "Benzoyl peroxide", "Benztropine", "Betahistine", "Betamethasone", "Bicalutamide", "Bimatoprost",
-                "Bisacodyl", "Bisoprolol", "Bortezomib", "Bosutinib", "Brimonidine", "Brinzolamide",
-                "Bromocriptine", "Budesonide", "Bumetanide", "Bupivacaine", "Buprenorphine", "Bupropion",
-                "Buspirone", "Busulfan", "Cabergoline", "Cabozantinib", "Calcipotriol", "Calcitonin",
-                "Calcitriol", "Candesartan", "Capecitabine", "Capsaicin", "Captopril", "Carbamazepine",
-                "Carbimazole", "Carboplatin", "Carfilzomib", "Carisoprodol", "Carvedilol", "Cefaclor",
-                "Cefadroxil", "Cefazolin", "Cefdinir", "Cefepime", "Cefixime", "Cefpodoxime", "Cefprozil",
-                "Ceftazidime", "Ceftriaxone", "Cefuroxime", "Celecoxib", "Cephalexin", "Cetirizine",
-                "Chloramphenicol", "Chlordiazepoxide", "Chlorhexidine", "Chlorphenamine", "Chlorpromazine",
-                "Chlorthalidone", "Cholestyramine", "Ciclopirox", "Cilostazol", "Cimetidine", "Ciprofloxacin",
-                "Cisplatin", "Citalopram", "Clarithromycin", "Clindamycin", "Clobetasol", "Clomipramine",
-                "Clonazepam", "Clonidine", "Clopidogrel", "Clotrimazole", "Clozapine", "Co-amoxiclav", "Codeine",
-                "Colchicine", "Colesevelam", "Cyclizine", "Cyclobenzaprine", "Cyclophosphamide", "Cyclosporine",
-                "Cytarabine", "Dabigatran", "Dapagliflozin", "Dapsone", "Daptomycin", "Darunavir", "Dasatinib",
-                "Dexamethasone", "Dexlansoprazole", "Dexmethylphenidate", "Dextroamphetamine",
-                "Dextromethorphan", "Diazepam", "Diclofenac", "Dicyclomine", "Digoxin",
-                "Dihydrocodeine", "Diltiazem", "Diphenhydramine", "Dipyridamole", "Disulfiram",
-                "Divalproex", "Docetaxel", "Docusate", "Domperidone", "Donepezil", "Dorzolamide", "Doxazosin",
-                "Doxepin", "Doxorubicin", "Doxycycline", "Duloxetine", "Dutasteride", "Efavirenz", "Eletriptan",
-                "Enalapril", "Enoxaparin", "Entacapone", "Entecavir", "Enzalutamide", "Epirubicin", "Eplerenone",
-                "Epoetin alfa", "Eprosartan", "Erlotinib", "Ertapenem", "Erythromycin", "Escitalopram",
-                "Esomeprazole", "Estradiol", "Eszopiclone", "Etanercept", "Ethambutol", "Ethinyl estradiol",
-                "Ethosuximide", "Etoposide", "Etoricoxib", "Everolimus", "Exemestane", "Exenatide", "Ezetimibe",
-                "Famotidine", "Febuxostat", "Felodipine", "Fenofibrate", "Fentanyl", "Ferrous sulfate",
-                "Fexofenadine", "Finasteride", "Flecainide", "Flucloxacillin", "Fluconazole", "Fludrocortisone",
-                "Fluorouracil", "Fluoxetine", "Fluticasone", "Fluvastatin", "Fluvoxamine", "Folic acid",
-                "Fondaparinux", "Formoterol", "Fosfomycin", "Fosinopril", "Furosemide", "Fusidic acid",
-                "Gabapentin", "Galantamine", "Gemcitabine", "Gemfibrozil", "Gentamicin", "Gliclazide",
-                "Glimepiride", "Glipizide", "Glyburide", "Goserelin", "Granisetron", "Guaifenesin",
-                "Griseofulvin", "Haloperidol", "Heparin", "Hydralazine", "Hydrochlorothiazide", "Hydrocortisone",
-                "Hydromorphone", "Hydroxychloroquine", "Hydroxyurea", "Hydroxyzine", "Hyoscine", "Ibandronic acid",
-                "Ibrutinib", "Ibuprofen", "Idarubicin", "Ifosfamide"
-            ] %}
+    <!-- New Section for Prescription Upload -->
+    <section class="bg-white border-b border-slate-200 py-12" id="prescription-upload">
+        <div class="max-w-[1600px] mx-auto px-6">
+            <div class="grid lg:grid-cols-2 gap-10 items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-900">Upload Your Prescription</h2>
+                    <p class="mt-3 text-slate-500 leading-relaxed">
+                        Have a prescription? Upload a clear image and our AI will automatically identify the medicines and add them to your cart for a quick checkout.
+                    </p>
+                    <ul class="mt-6 space-y-3 text-sm">
+                        <li class="flex items-center gap-3"><i class="fas fa-check-circle text-emerald-500"></i> <span class="text-slate-600">Fast & Accurate AI-powered OCR</span></li>
+                        <li class="flex items-center gap-3"><i class="fas fa-check-circle text-emerald-500"></i> <span class="text-slate-600">Secure and Confidential</span></li>
+                        <li class="flex items-center gap-3"><i class="fas fa-check-circle text-emerald-500"></i> <span class="text-slate-600">Quickly add all items to your cart</span></li>
+                    </ul>
+                </div>
+                <div>
+                    <form id="prescriptionUploadForm" class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-blue-500 transition-all cursor-pointer">
+                        <div id="upload-prompt">
+                            <div class="w-16 h-16 bg-white shadow-md border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-file-upload text-2xl text-blue-500"></i>
+                            </div>
+                            <p class="text-slate-600 font-medium">Drag & Drop or <span class="text-blue-600 font-bold">Browse</span></p>
+                            <p class="text-xs text-slate-400 mt-1">Supports JPG, PNG files</p>
+                        </div>
+                        <div id="upload-preview" class="hidden flex-col items-center">
+                            <img id="preview-image" src="#" class="max-h-32 rounded-lg shadow-md mb-4">
+                            <p id="preview-filename" class="text-sm font-semibold text-slate-700"></p>
+                        </div>
+                        <input type="file" id="prescriptionFile" name="file" class="hidden" accept="image/*">
+                        <button type="submit" id="uploadBtn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-200 hidden">Analyze & Add to Cart</button>
+                        <div id="upload-loader" class="hidden mt-6">
+                            <div class="flex items-center justify-center gap-3 text-slate-600 font-semibold"><i class="fas fa-spinner fa-spin"></i> Analyzing Prescription...</div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
 
-            {% for med in medicines %}
-            <div class="product-item product-card bg-white rounded-2xl border border-slate-100 flex flex-col overflow-hidden relative group animate-fade-in" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+    <!-- Main Content Area -->
+        <main class="flex-grow p-6 lg:p-10">
+            
+            <!-- App Header Section -->
+            <section class="mb-10 grid gap-8 lg:grid-cols-[1.5fr_1fr] items-start">
+                <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-600 text-white rounded-[2rem] p-10 shadow-2xl overflow-hidden relative">
+                    <div class="absolute -right-20 -top-14 w-48 h-48 rounded-full bg-blue-400/20 blur-2xl"></div>
+                    <div class="absolute left-0 top-1/2 w-72 h-72 rounded-full bg-white/10 blur-3xl"></div>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.24em] font-semibold text-slate-200">Online Pharmacy • Home Delivery</span>
+                    <h1 class="mt-8 text-5xl font-extrabold leading-tight">Order medicines online and get them delivered to your door.</h1>
+                    <p class="mt-5 max-w-xl text-sm text-slate-200 leading-7">Find verified medicines, book same-day delivery, manage prescriptions and access offers from certified pharmacies across your city.</p>
+                    <div class="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <a href="#productList" class="inline-flex items-center justify-center rounded-full bg-emerald-500 px-7 py-4 text-sm font-bold text-white shadow-lg shadow-emerald-400/20 hover:bg-emerald-600 transition">Browse Medicines</a>
+                    <a href="{{ url_for('view_cart') }}" class="inline-flex items-center justify-center rounded-full bg-emerald-500 px-7 py-4 text-sm font-bold text-white shadow-lg shadow-emerald-400/20 hover:bg-emerald-600 transition">
+                    <i class="fas fa-cart-shopping text-white group-hover:text-blue-600"></i>
+                    <span class="text-xs font-bold text-white" id="cart-count-badge"> {{ cart_item_count }} Items</span>
+                </a>                   
+             </div>
+                    <div class="mt-10 grid gap-4 sm:grid-cols-2">
+                        <div class="rounded-3xl bg-white/10 p-5">
+                            <p class="text-xs uppercase tracking-[0.3em] text-slate-300">Fast Delivery</p>
+                            <p class="mt-3 font-bold text-xl">2-hour dispatch on all orders</p>
+                        </div>
+                        <div class="rounded-3xl bg-white/10 p-5">
+                            <p class="text-xs uppercase tracking-[0.3em] text-slate-300">Verified Pharma</p>
+                            <p class="mt-3 font-bold text-xl">Authentic medicines guaranteed</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-4">
+                    <article class="glass-panel rounded-[2rem] p-6 border border-slate-200/80">
+                        <h2 class="text-xl font-bold text-slate-900">Today’s Featured Offers</h2>
+                        <p class="mt-2 text-sm text-slate-500">Exclusive health deals, seasonal discounts, and prescription savings.</p>
+                        <div class="mt-6 space-y-4">
+                            <div class="flex items-start gap-4 rounded-3xl bg-blue-50 p-4">
+                                <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center"><i class="fas fa-tag"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Up to 25% off on daily care medicines</p>
+                                    <p class="text-xs text-slate-500">Applies to fever, pain relief, and cold care.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-4 rounded-3xl bg-slate-950/5 p-4">
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center"><i class="fas fa-shield-virus"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Free consultation coupon</p>
+                                    <p class="text-xs text-slate-500">Get a wellness chat with selected order values.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-4 rounded-3xl bg-slate-950/5 p-4">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-700 text-white flex items-center justify-center"><i class="fas fa-truck"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Contactless doorstep delivery</p>
+                                    <p class="text-xs text-slate-500">Track your order in real time from pharmacy to your home.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                    <article class="glass-panel rounded-[2rem] p-6 border border-slate-200/80 bg-white">
+                        <h2 class="text-xl font-bold text-slate-900">Sponsored Health Picks</h2>
+                        <div class="mt-6 grid gap-3">
+                            <div class="rounded-3xl border border-slate-200 p-4 flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-3xl bg-blue-600 text-white flex items-center justify-center"><i class="fas fa-capsules"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Immunity Boosters</p>
+                                    <p class="text-xs text-slate-500">Vitamins and supplements for wellness.</p>
+                                </div>
+                            </div>
+                            <div class="rounded-3xl border border-slate-200 p-4 flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-3xl bg-emerald-600 text-white flex items-center justify-center"><i class="fas fa-heartbeat"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Heart Care Essentials</p>
+                                    <p class="text-xs text-slate-500">Trusted brands for blood pressure support.</p>
+                                </div>
+                            </div>
+                            <div class="rounded-3xl border border-slate-200 p-4 flex items-center gap-4">
+                                <div class="w-14 h-14 rounded-3xl bg-slate-900 text-white flex items-center justify-center"><i class="fas fa-bolt"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Fast Relief Packs</p>
+                                    <p class="text-xs text-slate-500">Pain relief and cold treatment on discount.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="mb-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200">
+                    <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 text-2xl"><i class="fas fa-search"></i></div>
+                    <h3 class="mt-5 text-lg font-bold text-slate-900">Search medicines</h3>
+                    <p class="mt-2 text-sm text-slate-500">Find trusted brands, generic alternatives and prescription drugs fast.</p>
+                </div>
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200">
+                    <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600 text-2xl"><i class="fas fa-clock"></i></div>
+                    <h3 class="mt-5 text-lg font-bold text-slate-900">Book your order</h3>
+                    <p class="mt-2 text-sm text-slate-500">Add medicines to cart and schedule same-day or next-day delivery.</p>
+                </div>
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200">
+                    <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-900 text-white text-2xl"><i class="fas fa-shipping-fast"></i></div>
+                    <h3 class="mt-5 text-lg font-bold text-slate-900">Delivered safe</h3>
+                    <p class="mt-2 text-sm text-slate-500">Secure packaging, verified delivery partners, and contact-free handoff.</p>
+                </div>
+            </section>
+
+            <div class="mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900">Therapeutic Directory</h1>
+                    <p class="text-slate-500 mt-1">Authorized pharmaceutical inventory & neural diagnostic search.</p>
+                </div>
                 
-                <!-- Quick Add Overlay (Desktop) -->
-                <div class="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button class="bg-white text-slate-400 hover:text-rose-500 p-2 rounded-full shadow-md border border-slate-100">
-                        <i class="far fa-heart"></i>
+                <div class="flex items-center gap-3">
+                    <div class="search-input-wrapper flex items-center px-4 py-1 rounded-xl w-full lg:w-96">
+                        <i class="fas fa-search text-slate-400 mr-3"></i>
+                        <input type="text" id="secondaryProductSearch" class="w-full py-3 bg-transparent border-none focus:ring-0 text-sm font-medium" placeholder="Search medication or symptoms...">
+                    </div>
+                    <button id="aiSearchBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl text-sm font-bold shadow-lg shadow-blue-200 flex items-center gap-2 transition-all whitespace-nowrap">
+                        <i class="fas fa-wand-magic-sparkles"></i> AI Match
                     </button>
                 </div>
+            </div>
 
-                <!-- Minimalist Image Area -->
-                <div class="h-40 bg-slate-50 flex items-center justify-center p-6 relative">
-                    <!-- Dynamic Initials Avatar matching theme -->
-                    <img src="https://ui-avatars.com/api/?name={{ med }}&background=f1f5f9&color=0d9488&font-size=0.35&length=2&bold=true" 
-                         alt="{{ med }}" 
-                         class="w-20 h-20 rounded-full shadow-inner object-cover opacity-90 group-hover:scale-110 transition-transform duration-500">
+            <section class="mb-10 rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Shop by category</h2>
+                        <p class="mt-2 text-sm text-slate-500">Filter products by health use-case and delivery convenience.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <button class="category-filter-btn rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-600 hover:text-white" data-filter="all">All</button>
+                        <button class="category-filter-btn rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-600 hover:text-white" data-filter="pain">Pain Relief</button>
+                        <button class="category-filter-btn rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-600 hover:text-white" data-filter="vitamin">Vitamins</button>
+                        <button class="category-filter-btn rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-600 hover:text-white" data-filter="cold">Cold & Flu</button>
+                        <button class="category-filter-btn rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-600 hover:text-white" data-filter="digestive">Digestive</button>
+                    </div>
                 </div>
+                <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="rounded-3xl bg-white p-5 shadow-sm">
+                        <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Step 1</p>
+                        <h3 class="mt-3 text-lg font-bold text-slate-900">Choose your medicine</h3>
+                        <p class="mt-2 text-sm text-slate-500">Browse our pharmacy catalog and select trusted brands or generics.</p>
+                    </div>
+                    <div class="rounded-3xl bg-white p-5 shadow-sm">
+                        <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Step 2</p>
+                        <h3 class="mt-3 text-lg font-bold text-slate-900">Upload prescription</h3>
+                        <p class="mt-2 text-sm text-slate-500">Add prescription details for prescription-only orders and instant approval.</p>
+                    </div>
+                    <div class="rounded-3xl bg-white p-5 shadow-sm">
+                        <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Step 3</p>
+                        <h3 class="mt-3 text-lg font-bold text-slate-900">Fast home delivery</h3>
+                        <p class="mt-2 text-sm text-slate-500">Choose same-day shipping or schedule delivery at your convenience.</p>
+                    </div>
+                    <div class="rounded-3xl bg-white p-5 shadow-sm">
+                        <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Step 4</p>
+                        <h3 class="mt-3 text-lg font-bold text-slate-900">Track your order</h3>
+                        <p class="mt-2 text-sm text-slate-500">Receive delivery updates and confirm safe receipt of your medicines.</p>
+                    </div>
+                </div>
+            </section>
 
-                <!-- Content -->
-                <div class="p-5 flex flex-col flex-grow">
-                    <div class="flex-grow">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 uppercase tracking-wider">RX</span>
-                            {% if loop.index % 5 == 0 %}
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 uppercase tracking-wider">Best Seller</span>
-                            {% endif %}
-                        </div>
-                        <h4 class="text-base font-bold text-slate-800 leading-tight mb-1 truncate" title="{{ med }}">
-                            {{ med }}
-                        </h4>
-                        <p class="text-xs text-slate-400 font-medium">Tablet • 10mg</p>
+            <!-- AI Clinical Brief Container (Result) -->
+            <div id="aiResultContainer" class="hidden mb-12 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div class="bg-white border-2 border-blue-100 rounded-3xl overflow-hidden shadow-xl relative">
+                    <div id="scanLine" class="scan-overlay"></div>
+                    
+                    <div class="bg-blue-50/50 px-8 py-4 border-b border-blue-100 flex items-center justify-between">
+                        <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Neural Diagnostic Brief • Generated Report</span>
+                        <button id="closeAiResultBtn" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times"></i></button>
                     </div>
 
-                    <div class="mt-4 pt-4 border-t border-slate-50 flex items-end justify-between">
-                        <div>
-                            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Price</p>
-                            <div class="flex items-baseline gap-1">
-                                <!-- Updated symbol here -->
-                                <span class="text-lg font-bold text-slate-800">₹{{ (9.99 + loop.index0 * 0.5) | round(2) }}</span>
+                    <div class="p-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
+                        <!-- Brief Summary -->
+                        <div class="lg:col-span-1 space-y-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                    <i class="fas fa-prescription-bottle-medical"></i>
+                                </div>
+                                <div>
+                                    <a href="#" id="aiMedName" class="text-2xl font-bold text-slate-900 hover:text-blue-600 transition-colors block mb-1">---</a>
+                                    <p class="text-sm font-semibold text-blue-500" id="aiMedCompany">---</p>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase">Unit Price</span>
+                                    <span class="text-lg font-bold text-slate-900" id="aiMedPrice">₹0.00</span>
+                                </div>
+                                <button id="aiAddToCartBtn" class="w-full bg-slate-900 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-600 transition-all">
+                                    ADD TO CART
+                                </button>
                             </div>
                         </div>
 
-                        <button class="add-to-cart-btn h-9 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-teal-700 transition-colors shadow-lg shadow-slate-200 flex items-center gap-2"
-                                data-name="{{ med }}"
-                                data-price="{{ (9.99 + loop.index0 * 0.5) | round(2) }}">
-                            <span>Add</span>
-                            <i class="fas fa-plus"></i>
-                        </button>
+                        <!-- Clinical Details -->
+                        <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3">
+                                <h5 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fas fa-stethoscope text-blue-500"></i> Indications
+                                </h5>
+                                <ul class="text-sm text-slate-600 space-y-2 list-none font-medium" id="aiMedUses"></ul>
+                            </div>
+                            <div class="space-y-3">
+                                <h5 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fas fa-shield-virus text-emerald-500"></i> Administration
+                                </h5>
+                                <p class="text-sm text-slate-600 leading-relaxed" id="aiMedHowToUse"></p>
+                            </div>
+                            <div class="space-y-3">
+                                <h5 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fas fa-flask text-purple-500"></i> Composition
+                                </h5>
+                                <p class="text-sm text-slate-600 leading-relaxed font-medium" id="aiMedComposition">---</p>
+                            </div>
+                            <div class="space-y-3">
+                                <h5 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fas fa-pills text-blue-400"></i> Dosage
+                                </h5>
+                                <p class="text-sm text-slate-600 leading-relaxed font-medium" id="aiMedDoses">---</p>
+                            </div>
+                            <div class="space-y-3 md:col-span-2 pt-4 border-t border-slate-100">
+                                <h5 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fas fa-exclamation-triangle text-amber-500"></i> Potential Side Effects
+                                </h5>
+                                <ul class="text-sm text-slate-600 space-y-2 list-none font-medium grid grid-cols-1 sm:grid-cols-2 gap-x-4" id="aiMedSideEffects"></ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            {% endfor %}
-            
-            <!-- Empty State for Search (Hidden by default) -->
-            <div id="noResults" class="hidden col-span-full py-20 text-center">
-                <div class="inline-block p-4 rounded-full bg-slate-50 mb-4">
-                    <i class="fas fa-search text-3xl text-slate-300"></i>
+
+            <!-- Inventory Grid -->
+            <div class="mb-10 grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
+                <div class="glass-panel rounded-[2rem] p-8 border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-900">Hot Medicine Deals</h2>
+                    <p class="mt-3 text-sm text-slate-500">Save on essential prescriptions, wellness supplements and seasonal care essentials.</p>
+                    <ul class="mt-6 space-y-4 text-sm text-slate-600">
+                        <li class="flex items-start gap-3"><span class="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span> Free home delivery for orders above ₹499.</li>
+                        <li class="flex items-start gap-3"><span class="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span> Earn reward points on every pharmacy purchase.</li>
+                        <li class="flex items-start gap-3"><span class="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span> Verified pharmacists review every order before dispatch.</li>
+                    </ul>
                 </div>
-                <h3 class="text-lg font-semibold text-slate-700">No medicines found</h3>
-                <p class="text-slate-500">Try checking your spelling or search for a different keyword.</p>
+
+                <div class="glass-panel rounded-[2rem] p-8 border border-slate-200 bg-gradient-to-br from-slate-950 to-slate-900 text-white">
+                    <h2 class="text-xl font-bold">Prescription Ready</h2>
+                    <p class="mt-3 text-sm text-slate-300">Upload prescriptions once and order refills instantly from our safe pharmacy network.</p>
+                    <div class="mt-6 grid gap-4">
+                        <div class="rounded-3xl bg-white/10 p-4">
+                            <p class="text-sm font-semibold text-white">Quick Refill</p>
+                            <p class="mt-2 text-xs text-slate-300">Refill medicines in one click.</p>
+                        </div>
+                        <div class="rounded-3xl bg-white/10 p-4">
+                            <p class="text-sm font-semibold text-white">Price Match</p>
+                            <p class="mt-2 text-xs text-slate-300">Competitive pricing from verified suppliers.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-[2rem] p-8 border border-slate-200 bg-emerald-50">
+                    <h2 class="text-xl font-bold text-slate-900">Limited Time Ads</h2>
+                    <div class="mt-6 space-y-4">
+                        <div class="rounded-3xl bg-white p-4 shadow-sm">
+                            <p class="text-sm font-semibold text-slate-900">Immunity Boost Pack</p>
+                            <p class="mt-1 text-xs text-slate-500">Buy 1 Get 1 free on select vitamin C combos.</p>
+                        </div>
+                        <div class="rounded-3xl bg-white p-4 shadow-sm">
+                            <p class="text-sm font-semibold text-slate-900">Pain Relief Duo</p>
+                            <p class="mt-1 text-xs text-slate-500">Extra 15% off on paracetamol and ibuprofen bundles.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-[2rem] p-8 border border-slate-200 bg-blue-50">
+                    <h2 class="text-xl font-bold text-slate-900">Your Home Pharmacy</h2>
+                    <p class="mt-3 text-sm text-slate-500">Order medicines, supplements and wellness products with doorstep delivery and order tracking.</p>
+                </div>
+            </div>
+
+            <div id="productList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {% for med in medicines or ['Paracetamol 500mg', 'Vitamin C Tablets', 'Ibuprofen 200mg', 'Cough Syrup', 'Multivitamin Gummies', 'Cold Relief Capsules', 'Digestive Enzymes', 'Wound Care Gel'] %}
+                <div class="med-card product-item p-5 rounded-2xl flex flex-col group">
+                    <div class="flex items-start justify-between mb-4">
+                        <span class="grade-badge bg-emerald-50 text-emerald-600 border border-emerald-100">Verified</span>
+                        <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    </div>
+                    
+                    <div class="flex-grow">
+                        <a href="{{ url_for('medicine_detail', medicine_name=med) }}">
+                            <h4 class="text-lg font-bold text-slate-900 leading-snug mb-1 hover:text-blue-600 transition-colors" title="{{ med }}">{{ med }}</h4>
+                        </a>
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="flex-grow h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="bg-blue-400 h-full rounded-full" style="--fill-width: {{ [40, 60, 80, 100]|random }}%; width: var(--fill-width);"></div>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">Stock</span>
+                        </div>
+                        <p class="text-sm text-slate-500">Fast delivery within 24 hours on orders above ₹299.</p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-50 flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Price</p>
+                            <span class="text-xl font-bold text-slate-900">₹{{ (99 + loop.index0 * 25) | round(0) }}</span>
+                        </div>
+                        <button class="add-to-cart-btn w-10 h-10 bg-slate-50 text-slate-400 hover:bg-blue-600 hover:text-white rounded-xl flex items-center justify-center transition-all duration-300"
+                                data-name="{{ med }}" 
+                                data-price="{{ (99 + loop.index0 * 25) | round(0) }}">
+                            <i class="fas fa-cart-plus text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Footbar Info -->
+    <footer class="bg-white border-t border-slate-200 py-6 px-10">
+        <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-center text-slate-400 text-[11px] font-bold uppercase tracking-widest gap-4">
+            <div class="flex items-center gap-6">
+                <span>&copy; 2026 Spherix Clinic</span>
+                <span class="flex items-center gap-1"><i class="fas fa-check-circle text-blue-500"></i> HIPAA Compliant</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="#" class="hover:text-blue-600 transition-colors">Pharmacopeia Standards</a>
+                <a href="#" class="hover:text-blue-600 transition-colors">Privacy Policy</a>
             </div>
         </div>
-
-    </div>
-    
-    <!-- Footer (Minimal) -->
-    <footer class="bg-white/10 border-t border-slate-200 py-6 mt-auto">
-        <div class="max-w-7xl mx-auto px-6 text-center">
-            <p class="text-slate-400 text-sm">&copy; {{ 2024 }} MediConnect Pharmacy. Licensed & Certified.</p>
-            <p class="text-slate-400 text-sm mt-1">S iCons</p>
-        </div>
     </footer>
+</div>
 
+<!-- Toast Notification -->
+<div id="toast-notification" class="fixed top-20 right-5 bg-emerald-500 text-white px-6 py-4 rounded-xl shadow-lg transition-all transform translate-x-full opacity-0 z-[100]">
+    <div class="flex items-center gap-3">
+        <i class="fas fa-check-circle"></i>
+        <div id="toast-message"></div>
+    </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const searchInput = document.getElementById('productSearch');
-    const productItems = document.querySelectorAll('.product-item');
-    const noResults = document.getElementById('noResults');
+    const aiSearchBtn = document.getElementById('aiSearchBtn');
+    const topAiSearchBtn = document.getElementById('topAiSearchBtn');
+    const productSearch = document.getElementById('productSearch');
+    const secondaryProductSearch = document.getElementById('secondaryProductSearch');
+    const aiResultContainer = document.getElementById('aiResultContainer');
+    const scanLine = document.getElementById('scanLine');
 
-    // Debounce function for smoother search performance
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillSearch = urlParams.get('search');
+    if (prefillSearch) {
+        if (productSearch) {
+            productSearch.value = prefillSearch;
+        }
+        if (secondaryProductSearch) {
+            secondaryProductSearch.value = prefillSearch;
+        }
+        const event = new Event('input');
+        if (secondaryProductSearch) secondaryProductSearch.dispatchEvent(event);
     }
 
-    const performSearch = debounce(function() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
-        let visibleCount = 0;
-
-        productItems.forEach(item => {
-            const name = item.querySelector('h4').textContent.toLowerCase();
-            
-            if (name.includes(searchTerm)) {
-                item.classList.remove('hidden');
-                item.classList.add('flex'); // Restore flex display
-                visibleCount++;
-            } else {
-                item.classList.add('hidden');
-                item.classList.remove('flex');
-            }
-        });
-
-        // Toggle Empty State
-        if (visibleCount === 0) {
-            noResults.classList.remove('hidden');
-        } else {
-            noResults.classList.add('hidden');
+    const syncSearchInputs = (source) => {
+        if (productSearch && secondaryProductSearch) {
+            if (source === 'top') secondaryProductSearch.value = productSearch.value;
+            else if (source === 'bottom') productSearch.value = secondaryProductSearch.value;
         }
-    }, 150); // 150ms delay
+    };
 
-    searchInput.addEventListener('input', performSearch);
+    const getSearchQuery = () => {
+        return (productSearch && productSearch.value.trim()) || (secondaryProductSearch && secondaryProductSearch.value.trim()) || '';
+    };
 
-    // Add to Cart Logic
-    document.getElementById('productList').addEventListener('click', function(e) {
-        const btn = e.target.closest('.add-to-cart-btn');
-        if (!btn || btn.disabled) return;
+    const runAiSearch = () => {
+        const query = getSearchQuery();
+        if (!query) return;
 
-        const originalHtml = btn.innerHTML;
-        const productName = btn.dataset.name;
-        const productPrice = parseFloat(btn.dataset.price);
+        aiSearchBtn.disabled = true;
+        topAiSearchBtn.disabled = true;
+        aiSearchBtn.innerHTML = '<i class="fas fa-dna fa-spin"></i> Matching...';
+        topAiSearchBtn.innerHTML = '<i class="fas fa-dna fa-spin"></i> Searching...';
+        scanLine.style.display = 'block';
 
-        // Loading State
+        fetch('/api/medicine/ai-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const med = data.medicine;
+                const aiAddToCartBtn = document.getElementById('aiAddToCartBtn');
+                const priceValue = parseFloat(med.price) || 0;
+
+                const medName = med.name || 'Recommended Medicine';
+                const aiMedNameLink = document.getElementById('aiMedName');
+                aiMedNameLink.textContent = medName;
+                aiMedNameLink.href = '/medicine/' + encodeURIComponent(medName);
+                document.getElementById('aiMedCompany').textContent = med.company || 'Trusted Pharmacy';
+                document.getElementById('aiMedPrice').textContent = '₹' + priceValue.toFixed(2);
+
+                aiAddToCartBtn.dataset.name = med.name || 'Medicine';
+                aiAddToCartBtn.dataset.price = priceValue.toFixed(2);
+                
+                document.getElementById('aiMedUses').innerHTML = (med.uses || []).map(u => `<li class="flex items-start gap-2"><i class="fas fa-check-circle mt-1 text-blue-500"></i> ${u}</li>`).join('');
+                document.getElementById('aiMedHowToUse').textContent = med.how_to_use || 'Follow package guidelines and consult your physician if in doubt.';
+                document.getElementById('aiMedComposition').textContent = med.composition || 'Standard Formulation';
+                document.getElementById('aiMedDoses').textContent = med.doses || 'As directed by physician';
+                
+                let sideEffects = med.side_effects || [];
+                if (!Array.isArray(sideEffects)) sideEffects = [sideEffects];
+                document.getElementById('aiMedSideEffects').innerHTML = sideEffects.map(e => `<li class="flex items-start gap-2"><i class="fas fa-circle text-[6px] text-amber-400 mt-2"></i> ${e}</li>`).join('');
+
+                aiResultContainer.classList.remove('hidden');
+                aiResultContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        })
+        .finally(() => {
+            aiSearchBtn.disabled = false;
+            topAiSearchBtn.disabled = false;
+            aiSearchBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> AI Match';
+            topAiSearchBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Search';
+            scanLine.style.display = 'none';
+        });
+    };
+
+    // AI Neural Match Logic
+    aiSearchBtn.addEventListener('click', runAiSearch);
+    topAiSearchBtn.addEventListener('click', runAiSearch);
+
+    if (productSearch) {
+        productSearch.addEventListener('input', () => syncSearchInputs('top'));
+    }
+    if (secondaryProductSearch) {
+        secondaryProductSearch.addEventListener('input', () => syncSearchInputs('bottom'));
+    }
+
+    document.getElementById('closeAiResultBtn').addEventListener('click', () => {
+        aiResultContainer.classList.add('hidden');
+    });
+
+    // Category filter behavior
+    document.querySelectorAll('.category-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.category-filter-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
+            this.classList.add('bg-blue-600', 'text-white');
+            const filter = this.dataset.filter;
+
+            document.querySelectorAll('.product-item').forEach(item => {
+                const name = item.querySelector('h4').textContent.toLowerCase();
+                if (filter === 'all') {
+                    item.style.display = 'flex';
+                    return;
+                }
+                const matches = {
+                    pain: ['paracetamol', 'ibuprofen', 'naproxen', 'pain'],
+                    vitamin: ['vitamin', 'multivitamin', 'immune', 'c'],
+                    cold: ['cough', 'cold', 'flu', 'syrup', 'decongestant'],
+                    digestive: ['digest', 'enzyme', 'stomach', 'acid', 'probiotic']
+                };
+                const keywords = matches[filter] || [];
+                item.style.display = keywords.some(k => name.includes(k)) ? 'flex' : 'none';
+            });
+        });
+    });
+
+    // Standard Add to Cart functionality
+    function updateCart(btn, name, price) {
+        const originalContent = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
-        btn.classList.add('bg-slate-700');
 
         fetch('/add-to-cart', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: productName, price: productPrice }),
+            body: JSON.stringify({ name: name, price: price }),
         })
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // Success Feedback
-                btn.classList.remove('bg-slate-900', 'bg-slate-700', 'hover:bg-teal-600');
-                btn.classList.add('bg-teal-500', 'text-white');
-                btn.innerHTML = '<i class="fas fa-check"></i> <span>Added</span>';
+                btn.classList.add('bg-blue-600', 'text-white');
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                document.getElementById('cart-count-badge').textContent = data.cart_item_count + ' Items';
                 
-                // Update Cart Badge with Animation
-                const badge = document.getElementById('cart-count-badge');
-                badge.textContent = data.cart_item_count;
-                badge.classList.remove('scale-0');
-                badge.classList.add('scale-125'); // Pulse effect
-                setTimeout(() => badge.classList.remove('scale-125'), 200);
-
-                // Reset Button
                 setTimeout(() => {
-                    btn.classList.add('bg-slate-900', 'hover:bg-teal-600');
-                    btn.classList.remove('bg-teal-500');
-                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.innerHTML = originalContent;
                     btn.disabled = false;
-                }, 2000);
+                }, 1500);
             }
+        });
+    }
+
+    document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+        btn.addEventListener('click', () => updateCart(btn, btn.dataset.name, btn.dataset.price));
+    });
+
+    document.getElementById('aiAddToCartBtn').addEventListener('click', function() {
+        updateCart(this, this.dataset.name, this.dataset.price);
+    });
+
+    // Prescription Upload Logic
+    const uploadForm = document.getElementById('prescriptionUploadForm');
+    const fileInput = document.getElementById('prescriptionFile');
+    const uploadPrompt = document.getElementById('upload-prompt');
+    const uploadPreview = document.getElementById('upload-preview');
+    const previewImage = document.getElementById('preview-image');
+    const previewFilename = document.getElementById('preview-filename');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadLoader = document.getElementById('upload-loader');
+    const toast = document.getElementById('toast-notification');
+    const toastMessage = document.getElementById('toast-message');
+
+    function showToast(message, isError = false) {
+        toastMessage.innerHTML = message;
+        toast.classList.remove('bg-emerald-500', 'bg-red-500');
+        toast.classList.add(isError ? 'bg-red-500' : 'bg-emerald-500');
+        toast.classList.remove('translate-x-full', 'opacity-0');
+        setTimeout(() => {
+            toast.classList.add('translate-x-full', 'opacity-0');
+        }, 5000);
+    }
+
+    function handleFile(file) {
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewFilename.textContent = file.name;
+                uploadPrompt.classList.add('hidden');
+                uploadPreview.classList.remove('hidden');
+                uploadPreview.classList.add('flex');
+                uploadBtn.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+        } else {
+            showToast('Please upload a valid image file (JPG, PNG).', true);
+        }
+    }
+
+    uploadForm.addEventListener('click', () => fileInput.click());
+    uploadForm.addEventListener('dragover', (e) => { e.preventDefault(); uploadForm.classList.add('border-blue-500', 'bg-blue-50'); });
+    uploadForm.addEventListener('dragleave', (e) => { e.preventDefault(); uploadForm.classList.remove('border-blue-500', 'bg-blue-50'); });
+    uploadForm.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadForm.classList.remove('border-blue-500', 'bg-blue-50');
+        if (e.dataTransfer.files.length) { handleFile(e.dataTransfer.files[0]); }
+    });
+    fileInput.addEventListener('change', (e) => { if (e.target.files.length) { handleFile(e.target.files[0]); } });
+
+    uploadForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!fileInput.files.length) { showToast('Please select a prescription image to upload.', true); return; }
+
+        uploadBtn.classList.add('hidden');
+        uploadLoader.classList.remove('hidden');
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        fetch('/api/pharmacy/upload-prescription', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                let successMsg = `<strong>Success!</strong> ${data.message}<br><ul class="list-disc list-inside mt-2 text-xs">`;
+                (data.medicines || []).forEach(med => { successMsg += `<li>${med}</li>`; });
+                successMsg += '</ul>';
+                showToast(successMsg);
+                document.getElementById('cart-count-badge').textContent = data.cart_item_count + ' Items';
+            } else { showToast(data.error || 'An unknown error occurred.', true); }
         })
-        .catch(err => {
-            console.error(err);
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
+        .catch(err => { showToast('Network error. Please try again.', true); console.error(err); })
+        .finally(() => {
+            uploadLoader.classList.add('hidden');
+            uploadPrompt.classList.remove('hidden');
+            uploadPreview.classList.add('hidden');
+            fileInput.value = '';
         });
     });
+
+    // Simple Filter Logic
+    const filterProducts = (term) => {
+        const lowerTerm = term.toLowerCase();
+        document.querySelectorAll('.product-item').forEach(item => {
+            const name = item.querySelector('h4').textContent.toLowerCase();
+            item.style.display = name.includes(lowerTerm) ? 'flex' : 'none';
+        });
+    };
+
+    if (productSearch) {
+        productSearch.addEventListener('input', function(e) {
+            const term = e.target.value;
+            syncSearchInputs('top');
+            filterProducts(term);
+        });
+    }
+    if (secondaryProductSearch) {
+        secondaryProductSearch.addEventListener('input', function(e) {
+            const term = e.target.value;
+            syncSearchInputs('bottom');
+            filterProducts(term);
+        });
+    }
 });
 </script>
 

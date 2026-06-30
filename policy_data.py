@@ -7,7 +7,7 @@ POLICY_DATA = {
         "icon": "fa-shield-halved",
         "content": """
 ### 1. Introduction
-Welcome to DEV AI+ ("Company", "we", "our", "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our AI-driven services.
+Welcome to Spherix Clinic ("Company", "we", "our", "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our AI-driven services.
 
 ### 2. Information We Collect
 We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and services, when you participate in activities on the Services, or otherwise when you contact us.
@@ -47,7 +47,7 @@ Depending on your location (e.g., GDPR, CCPA), you may have the following rights
 We will only keep your personal information for as long as it is necessary for the purposes set out in this privacy policy, unless a longer retention period is required or permitted by law. When we have no ongoing legitimate business need to process your personal information, we will either delete or anonymize such information.
 
 ### 7. Contact Us
-If you have questions or comments about this policy, you may email us at privacy@devaipus.com.
+If you have questions or comments about this policy, you may email us at privacy@spherixclinic.com.
 """
     },
     "terms-of-service": {
@@ -60,7 +60,7 @@ By accessing or using our Services, you agree to be bound by these Terms. If you
 ### 2. Intellectual Property Rights
 Unless otherwise indicated, the Site and Services are our proprietary property and all source code, databases, functionality, software, website designs, audio, video, text, photographs, and graphics on the Site (collectively, the "Content") are owned or controlled by us or licensed to us, and are protected by copyright and trademark laws.
 
-**AI Generated Content:** You retain ownership of the input you provide to the AI. Regarding the output, DEV AI+ assigns to you all its right, title, and interest in and to the output, provided you have complied with these Terms.
+**AI Generated Content:** You retain ownership of the input you provide to the AI. Regarding the output, Spherix Clinic assigns to you all its right, title, and interest in and to the output, provided you have complied with these Terms.
 
 ### 3. User Representations
 By using the Site, you represent and warrant that:
@@ -79,10 +79,10 @@ If you choose to purchase a subscription:
 *   Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.
 
 ### 6. Limitation of Liability
-IN NO EVENT SHALL DEV AI+, NOR ITS DIRECTORS, EMPLOYEES, PARTNERS, AGENTS, SUPPLIERS, OR AFFILIATES, BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM YOUR ACCESS TO OR USE OF OR INABILITY TO ACCESS OR USE THE SERVICE.
+IN NO EVENT SHALL Spherix Clinic, NOR ITS DIRECTORS, EMPLOYEES, PARTNERS, AGENTS, SUPPLIERS, OR AFFILIATES, BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM YOUR ACCESS TO OR USE OF OR INABILITY TO ACCESS OR USE THE SERVICE.
 
 ### 7. Governing Law
-These Terms shall be governed and construed in accordance with the laws of the jurisdiction in which DEV AI+ is established, without regard to its conflict of law provisions.
+These Terms shall be governed and construed in accordance with the laws of the jurisdiction in which Spherix Clinic is established, without regard to its conflict of law provisions.
 
 ### 8. Changes to Terms
 We reserve the right, at our sole discretion, to modify or replace these Terms at any time. By continuing to access or use our Service after those revisions become effective, you agree to be bound by the revised terms.
@@ -95,7 +95,7 @@ We reserve the right, at our sole discretion, to modify or replace these Terms a
 ### 1. What Are Cookies
 Cookies are small pieces of text sent by your web browser by a website you visit. A cookie file is stored in your web browser and allows the Service or a third-party to recognize you and make your next visit easier and the Service more useful to you.
 
-### 2. How DEV AI+ Uses Cookies
+### 2. How Spherix Clinic Uses Cookies
 When you use and access the Service, we may place a number of cookies files in your web browser. We use cookies for the following purposes:
 
 *   **Essential Cookies:** These are necessary for the website to function and cannot be switched off in our systems. They are usually only set in response to actions made by you which amount to a request for services, such as setting your privacy preferences, logging in, or filling in forms.
@@ -112,7 +112,7 @@ If you'd like to delete cookies or instruct your web browser to delete or refuse
         "icon": "fa-check-double",
         "content": """
 ### 1. Scope
-This Acceptable Use Policy applies to all users of the DEV AI+ platform. By using our AI tools, you agree to use them responsibly and ethically.
+This Acceptable Use Policy applies to all users of the Spherix Clinic platform. By using our AI tools, you agree to use them responsibly and ethically.
 
 ### 2. Prohibited Content
 You may not use our services to generate, host, or share content that:
@@ -135,13 +135,13 @@ We reserve the right to investigate and prosecute violations of any of the above
         "icon": "fa-user-doctor",
         "content": """
 ### 1. Not Medical Advice
-The content, text, graphics, images, and other material contained on the DEV AI+ website ("Content") are for informational purposes only. The Content is **not** intended to be a substitute for professional medical advice, diagnosis, or treatment.
+The content, text, graphics, images, and other material contained on the Spherix Clinic website ("Content") are for informational purposes only. The Content is **not** intended to be a substitute for professional medical advice, diagnosis, or treatment.
 
 ### 2. AI Limitations
-DEV AI+ utilizes artificial intelligence to analyze data. While we strive for accuracy, AI models can hallucinate or produce incorrect information. **Do not ignore professional medical advice in seeking treatment because of something you have read on the DEV AI+ Site.**
+Spherix Clinic utilizes artificial intelligence to analyze data. While we strive for accuracy, AI models can hallucinate or produce incorrect information. **Do not ignore professional medical advice in seeking treatment because of something you have read on the Spherix Clinic Site.**
 
 ### 3. Emergency Situations
-If you think you may have a medical emergency, call your doctor, go to the emergency department, or call emergency services immediately. DEV AI+ does not recommend or endorse any specific tests, physicians, products, procedures, opinions, or other information that may be mentioned on the Site. Reliance on any information provided by DEV AI+ is solely at your own risk.
+If you think you may have a medical emergency, call your doctor, go to the emergency department, or call emergency services immediately. Spherix Clinic does not recommend or endorse any specific tests, physicians, products, procedures, opinions, or other information that may be mentioned on the Site. Reliance on any information provided by Spherix Clinic is solely at your own risk.
 """
     }
 }
