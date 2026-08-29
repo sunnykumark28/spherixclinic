@@ -1,831 +1,956 @@
-{% extends 'dashboard_layout.html' %}
-{% block title %}Patient Dashboard | HealthPortal{% endblock %}
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Patient Portal | Spherix Clinic{% endblock %}
+{% block page_title %}Patient Dashboard{% endblock %}
+{% block page_subtitle %}Live consultation queue, appointments, digital prescriptions, pharmacy orders &amp; medical records.{% endblock %}
+
+{% block header_actions %}
+<div class="d-flex align-items-center gap-2 flex-wrap">
+  <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-bold">
+    <i class="fas fa-circle me-1" style="font-size: 8px;"></i> Live Connected
+  </span>
+  <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-3 py-2 rounded-pill fw-bold">
+    <i class="fas fa-id-badge me-1"></i> {{ current_user.id }}
+  </span>
+  <a href="{{ url_for('patient_dashboard', tab='settings') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+    <i class="fas fa-user-cog me-1"></i> Profile &amp; Settings
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-[#f8fafc] pb-20">
-    <!-- Premium Header with Mesh Gradient -->
-    <div class="relative overflow-hidden bg-slate-900 pt-12 pb-28">
-        <!-- Abstract Background Shapes -->
-        <div class="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
-            <div class="absolute -top-24 -left-24 w-96 h-96 bg-red-900 rounded-full blur-[100px]"></div>
-            <div class="absolute top-1/2 -right-24 w-80 h-80 bg-white rounded-full blur-[100px]"></div>
-        </div>
+<div id="patientDashboardMeta" data-msg-count="{{ messages|length if messages else 0 }}" data-queue-status="{{ active_q_status or '' }}" class="d-none"></div>
 
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row justify-between items-end gap-6">
-                <div class="text-left">
-                    <span class="inline-block px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-widest mb-3">
-                        Patient Portal
-                    </span>
-                    <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-                        Hello, <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-indigo-100">{{ patient.name }}</span>
-                    </h1>
-                    <p class="text-slate-400 mt-2 flex items-center gap-2">
-                        <i class="far fa-clock"></i> Today is {{ now.strftime('%A, %B %d') if now else "a great day for health" }}
-                    </p>
+{# ── Floating System Notification Popup Center ── #}
+{% with messages_flash = get_flashed_messages(with_categories=true) %}
+  {% if messages_flash %}
+    <div id="patient-toast-container" class="position-fixed top-0 end-0 p-3 p-md-4" style="z-index: 999999; max-width: 440px; width: 100%; pointer-events: none;">
+      {% for category, message in messages_flash %}
+        {% set cat_norm = category|lower %}
+        {% set is_success = cat_norm in ['success', 'ok'] %}
+        {% set is_warning = cat_norm in ['warning', 'attention', 'warn'] %}
+        {% set is_danger = cat_norm in ['error', 'danger', 'critical'] %}
+        {% set border_color = '#a7f3d0' if is_success else ('#fde68a' if is_warning else ('#fecdd3' if is_danger else '#bae6fd')) %}
+        {% set bar_bg = 'linear-gradient(90deg, #10b981, #14b8a6)' if is_success else ('linear-gradient(90deg, #f59e0b, #ea580c)' if is_warning else ('linear-gradient(90deg, #f43f5e, #e11d48)' if is_danger else 'linear-gradient(90deg, #0284c7, #6366f1)')) %}
+        {% set icon_bg = 'linear-gradient(135deg, #10b981, #059669)' if is_success else ('linear-gradient(135deg, #f59e0b, #d97706)' if is_warning else ('linear-gradient(135deg, #f43f5e, #be123c)' if is_danger else 'linear-gradient(135deg, #0284c7, #2563eb)')) %}
+        {% set badge_bg = '#d1fae5' if is_success else ('#fef3c7' if is_warning else ('#ffe4e6' if is_danger else '#e0f2fe')) %}
+        {% set badge_color = '#065f46' if is_success else ('#92400e' if is_warning else ('#9f1239' if is_danger else '#075985')) %}
+        {% set btn_bg = '#059669' if is_success else ('#d97706' if is_warning else ('#e11d48' if is_danger else '#0f172a')) %}
+        
+        <div class="card border-0 shadow-2xl rounded-4 mb-3 overflow-hidden position-relative animate__animated animate__fadeInRight" 
+             id="pat-flash-toast-{{ loop.index }}"
+             style="pointer-events: auto; backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.96); --toast-border: {{ border_color }}; border: 1px solid var(--toast-border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;">
+          <div style="height: 5px; width: 100%; --bar-bg: {{ bar_bg }}; background: var(--bar-bg);"></div>
+          <div class="card-body p-3.5 p-md-4">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-sm"
+                   style="width: 42px; height: 42px; font-size: 18px; --icon-bg: {{ icon_bg }}; background: var(--icon-bg);">
+                <i class="fas fa-{% if is_success %}check-circle{% elif is_warning %}exclamation-triangle{% elif is_danger %}shield-alt{% else %}info-circle{% endif %}"></i>
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <span class="badge rounded-pill text-uppercase px-2.5 py-1 fw-bold" 
+                        style="font-size: 10px; letter-spacing: 0.5px; --badge-bg: {{ badge_bg }}; --badge-col: {{ badge_color }}; background: var(--badge-bg); color: var(--badge-col);">
+                    {% if is_success %}Success{% elif is_warning %}Attention{% elif is_danger %}System Alert{% else %}Notice{% endif %}
+                  </span>
+                  <small class="text-muted" style="font-size: 11px;">Just now</small>
                 </div>
-                
-                <div class="flex gap-4">
-                    <a href="{{ url_for('book_appointment') }}" class="group relative px-6 py-3 bg-white text-slate-900 font-bold rounded-xl shadow-[0_10px_20px_rgba(255,255,255,0.1)] hover:shadow-white/20 transition-all duration-300 hover:-translate-y-1 flex items-center gap-2 overflow-hidden">
-                        <span class="relative z-10 flex items-center gap-2">
-                            <i class="fas fa-plus text-blue-600 group-hover:rotate-90 transition-transform duration-300"></i> Book Appointment
-                        </span>
-                    </a>
-                    <a href="{{ url_for('logout') }}" class="px-6 py-3 bg-slate-800/50 backdrop-blur-md text-white border border-slate-700 font-semibold rounded-xl hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 transition-all duration-300 flex items-center gap-2">
-                        <i logout class="fas fa-sign-out-alt"></i>
-                    </a>
+                <h6 class="fw-bold text-dark mb-1" style="font-size: 13.5px;">
+                  {% if is_success %}Action Completed{% elif is_warning %}Attention{% elif is_danger %}Action Required{% else %}System Notice{% endif %}
+                </h6>
+                <p class="text-secondary small mb-2.5 leading-relaxed">{{ message }}</p>
+                <div class="d-flex align-items-center gap-2 pt-2 border-top">
+                  <button type="button" 
+                          onclick="document.getElementById('pat-flash-toast-{{ loop.index }}').remove()" 
+                          class="btn btn-sm rounded-pill fw-bold text-white px-3 py-1 shadow-sm"
+                          style="font-size: 11.5px; --btn-bg: {{ btn_bg }}; background: var(--btn-bg);">
+                    <i class="fas fa-check me-1"></i> Got it
+                  </button>
+                  <button type="button" 
+                          onclick="document.getElementById('pat-flash-toast-{{ loop.index }}').remove()" 
+                          class="btn btn-sm btn-light rounded-pill text-muted px-2.5 py-1"
+                          style="font-size: 11.5px;">
+                    Close
+                  </button>
                 </div>
+              </div>
+              <button type="button" 
+                      onclick="document.getElementById('pat-flash-toast-{{ loop.index }}').remove()" 
+                      class="btn-close ms-auto flex-shrink-0" 
+                      aria-label="Close"></button>
             </div>
+          </div>
         </div>
+      {% endfor %}
     </div>
+  {% endif %}
+{% endwith %}
 
-    <!-- Main Content Overlap -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- Left Column: Appointments & Activity (8 cols) -->
-            <div class="lg:col-span-8 space-y-8">
-                
-                <!-- Appointments Card -->
-                <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-slate-200/50 border border-white overflow-hidden">
-                    <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800">Your Appointments</h2>
-                            <p class="text-sm text-slate-500">Upcoming and past medical visits</p>
-                        </div>
-                        <span class="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                            <i class="fas fa-calendar-alt fa-lg"></i>
-                        </span>
-                    </div>
+{# ── Active Tab Detection ── #}
+{% set active_tab = request.args.get('tab', 'overview') %}
+{% set active_appt = appointments[0] if appointments else None %}
+{% set active_q_status = (active_appt.queue_status if active_appt and active_appt.queue_status else ('completed' if active_appt and active_appt.status == 'completed' else 'waiting')) if active_appt else 'none' %}
 
-                    <div class="p-8">
-                        {% if patient.appointments %}
-                            <div class="space-y-6">
-                                {% for appointment in patient.appointments|sort(attribute='appointment_date', reverse=True) %}
-                                <div class="group relative flex flex-col md:flex-row justify-between items-start md:items-center p-6 rounded-2xl bg-white border border-slate-100 hover:border-blue-400/50 hover:shadow-2xl hover:shadow-blue-100 transition-all duration-300">
-                                    <div class="flex items-center gap-5">
-                                        <div class="relative">
-                                            <img src="{{ url_for('static', filename='uploads/' ~ appointment.doctor.profile_picture_url) if appointment.doctor.profile_picture_url else 'https://api.dicebear.com/7.x/initials/svg?seed=' ~ appointment.doctor.first_name ~ ' ' ~ appointment.doctor.last_name ~ '&backgroundColor=e0f2fe&textColor=0c4a6e' }}" 
-                                                 alt="Dr. {{ appointment.doctor.last_name }}"
-                                                 class="w-14 h-14 rounded-2xl object-cover shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                                            <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
-                                        </div>
-                                        <div>
-                                            <h3 class="font-bold text-slate-900 text-lg">Dr. {{ appointment.doctor.first_name }} {{ appointment.doctor.last_name }}</h3>
-                                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wider">{{ appointment.doctor.specialization }}</span>
-                                            
-                                            <div class="flex items-center gap-4 mt-3">
-                                                <div class="flex items-center gap-1.5 text-sm text-slate-500">
-                                                    <i class="far fa-calendar-alt text-blue-500"></i>
-                                                    {{ appointment.appointment_date.strftime('%d %b %Y') }}
-                                                </div>
-                                                <div class="flex items-center gap-1.5 text-sm text-slate-500">
-                                                    <i class="far fa-clock text-blue-500"></i>
-                                                    {{ appointment.appointment_time.strftime('%I:%M %p') }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div class="mt-4 md:mt-0 flex flex-col items-end gap-3">
-                                        {% set status_class = {
-                                            'confirmed': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-                                            'completed': 'bg-blue-50 text-blue-600 border-blue-100',
-                                            'cancelled': 'bg-rose-50 text-rose-600 border-rose-100',
-                                            'pending': 'bg-amber-50 text-amber-600 border-amber-100'
-                                        } %}
-                                        <span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border {{ status_class.get(appointment.status, 'bg-slate-50 text-slate-600') }}">
-                                            {{ appointment.status.replace('_', ' ') }}
-                                        </span>
-                                        
-                                        <div class="flex gap-2">
-                                            {% if appointment.status in ['confirmed', 'completed'] %}
-                                                <a href="{{ url_for('appointment_payment_receipt', appointment_id=appointment.id) }}" class="p-2.5 bg-slate-50 text-slate-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 shadow-sm" title="Receipt">
-                                                    <i class="fas fa-file-invoice-dollar"></i>
-                                                </a>
-                                                <a href="{{ url_for('appointment_invoice', appointment_id=appointment.id) }}" target="_blank" class="p-2.5 bg-slate-50 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl transition-all duration-300 shadow-sm" title="Invoice">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                <a href="{{ url_for('telemedicine', appointment_id=appointment.id) }}" class="p-2.5 bg-sky-50 text-sky-600 hover:bg-sky-600 hover:text-white rounded-xl transition-all duration-300 shadow-sm" title="Join Video Call">
-                                                    <i class="fas fa-video"></i>
-                                                </a>
-                                            {% endif %}
-                                            
-                                            {% if appointment.status == 'pending' or appointment.status == 'confirmed' %}
-                                            <form action="{{ url_for('cancel_appointment', appointment_id=appointment.id) }}" method="POST" onsubmit="return confirm('Cancel this appointment?');">
-                                                <button type="submit" class="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all duration-300 shadow-sm">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </form>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-center py-16 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
-                                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                    <i class="fas fa-calendar-plus text-3xl text-slate-300"></i>
-                                </div>
-                                <h3 class="text-lg font-bold text-slate-700">No scheduled visits</h3>
-                                <p class="text-slate-400 max-w-xs mx-auto mb-6">Schedule a consultation with our expert doctors today.</p>
-                                <a href="{{ url_for('book_appointment') }}" class="inline-flex items-center gap-2 text-blue-600 font-bold hover:gap-3 transition-all">
-                                    Book Now <i class="fas fa-arrow-right"></i>
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+{# ========================================================================== #}
+{# ── TAB 1: OVERVIEW ── #}
+{# ========================================================================== #}
+{% if active_tab == 'overview' %}
 
-                <!-- Orders Section -->
-                <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-slate-200/50 border border-white overflow-hidden">
-                    <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-emerald-50/50 to-transparent">
-                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
-                            <span class="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                                <i class="fas fa-box-open"></i>
-                            </span>
-                            Pharmacy Orders
-                        </h2>
-                    </div>
-                    <div class="p-8">
-                        {% if orders %}
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {% for order in orders %}
-                                <div class="p-5 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-xl hover:shadow-emerald-100/50 transition-all duration-300 group">
-                                    <div class="flex justify-between items-start mb-4">
-                                        <div>
-                                            <p class="text-xs font-bold text-emerald-600 uppercase tracking-tighter">Order #{{ order.id }}</p>
-                                            <p class="text-sm text-slate-500">{{ order.order_date.strftime('%b %d, %Y') }}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-lg font-black text-slate-800">₹{{ "%.2f"|format(order.total_price) }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-medium text-slate-400">{{ order.items|length }} items ordered</span>
-                                        <a href="{{ url_for('order_details', order_id=order.id) }}" class="text-sm font-bold text-slate-700 group-hover:text-emerald-600 flex items-center gap-1">
-                                            Details <i class="fas fa-chevron-right text-[10px]"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-center py-10 rounded-2xl bg-emerald-50/30 border border-emerald-100">
-                                <p class="text-slate-500 font-medium italic">Your medicine cabinet is empty.</p>
-                                <a href="{{ url_for('medical_shop') }}" class="text-emerald-600 font-bold text-sm mt-2 inline-block hover:underline">Browse Pharmacy</a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Emergency Bed Bookings & History -->
-                <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-slate-200/50 border border-white overflow-hidden mt-8">
-                    <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-red-50/50 to-transparent">
-                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
-                            <span class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-100 text-red-600">
-                                <i class="fas fa-bed"></i>
-                            </span>
-                            Bed Bookings & History
-                        </h2>
-                    </div>
-                    <div class="p-8">
-                        {% set active_bookings = [] %}
-                        {% set history_bookings = [] %}
-                        {% for booking in bed_bookings %}
-                            {% if booking.status in ['pending', 'awaiting_payment'] %}
-                                {% set _ = active_bookings.append(booking) %}
-                            {% else %}
-                                {% set _ = history_bookings.append(booking) %}
-                            {% endif %}
-                        {% endfor %}
-
-                        {% if active_bookings %}
-                            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Active Requests</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 {% if history_bookings %}mb-8{% endif %}">
-                                {% for booking in active_bookings %}
-                                <div class="p-5 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-xl hover:shadow-red-100/50 transition-all duration-300 group">
-                                    <div class="flex justify-between items-start mb-4">
-                                        <div>
-                                            <p class="text-xs font-bold {% if booking.bed_type == 'ICU' %}text-red-600{% else %}text-blue-600{% endif %} uppercase tracking-tighter">{{ booking.bed_type }} Bed</p>
-                                            <p class="text-sm text-slate-500">{{ booking.created_at.strftime('%b %d, %Y - %I:%M %p') }}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            {% set status_class = {
-                                                'pending': 'bg-amber-50 text-amber-600 border-amber-100',
-                                                'awaiting_payment': 'bg-blue-50 text-blue-600 border-blue-100'
-                                            } %}
-                                            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border {{ status_class.get(booking.status, 'bg-slate-50 text-slate-600 border-slate-200') }}">
-                                                {{ booking.status.replace('_', ' ') }}
-                                            </span>
-                                            {% if booking.status == 'awaiting_payment' %}
-                                            <a href="{{ url_for('bed_booking_payment', booking_id=booking.id) }}" class="block mt-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 py-1.5 px-3 rounded shadow-sm text-center transition-colors">Pay Now</a>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col gap-1">
-                                        <span class="text-sm font-semibold text-slate-700">{{ hospitals[booking.hospital_id].name if booking.hospital_id in hospitals else 'Unknown Hospital' }}</span>
-                                        <span class="text-xs text-slate-500 line-clamp-2">{{ booking.reason }}</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if history_bookings %}
-                            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">History</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {% for booking in history_bookings %}
-                                <div class="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200 transition-all duration-300 group opacity-80 hover:opacity-100">
-                                    <div class="flex justify-between items-start mb-4">
-                                        <div>
-                                            <p class="text-xs font-bold {% if booking.bed_type == 'ICU' %}text-red-600{% else %}text-blue-600{% endif %} uppercase tracking-tighter">{{ booking.bed_type }} Bed</p>
-                                            <p class="text-sm text-slate-500">{{ booking.created_at.strftime('%b %d, %Y - %I:%M %p') }}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            {% set status_class = {
-                                                'approved': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-                                                'rejected': 'bg-rose-50 text-rose-600 border-rose-100'
-                                            } %}
-                                            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border {{ status_class.get(booking.status, 'bg-slate-50 text-slate-600 border-slate-200') }}">
-                                                {{ booking.status.replace('_', ' ') }}
-                                            </span>
-                                            {% if booking.status == 'approved' %}
-                                            <a href="{{ url_for('bed_booking_invoice', booking_id=booking.id) }}" class="block mt-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 py-1.5 px-3 rounded shadow-sm text-center transition-colors"><i class="fas fa-download mr-1"></i> Invoice</a>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col gap-1">
-                                        <span class="text-sm font-semibold text-slate-700">{{ hospitals[booking.hospital_id].name if booking.hospital_id in hospitals else 'Unknown Hospital' }}</span>
-                                        <span class="text-xs text-slate-500 line-clamp-2">{{ booking.reason }}</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if not active_bookings and not history_bookings %}
-                            <div class="text-center py-10 rounded-2xl bg-red-50/30 border border-red-100">
-                                <p class="text-slate-500 font-medium italic">No emergency bed requests.</p>
-                                <a href="{{ url_for('hospitals_list') }}" class="text-red-600 font-bold text-sm mt-2 inline-block hover:underline">Find a Hospital</a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-            <!-- Organ Donation Call-to-Action Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-                <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-sky-50 to-white flex justify-between items-center">
-                    <h3 class="text-xl font-bold text-slate-800 flex items-center">
-                        <i class="fas fa-hand-holding-heart text-sky-600 mr-3"></i> Organ Donation Pledge
-                    </h3>
-                </div>
-                <div class="p-6">
-                    <div class="flex flex-col md:flex-row items-center gap-6">
-                        <div class="flex-1">
-                            <h4 class="text-lg font-semibold text-slate-800 mb-2">Be a Hero, Save Lives</h4>
-                            <p class="text-slate-600 mb-4 leading-relaxed">
-                                Organ donation is a noble act that can save up to 8 lives and enhance the lives of many others. Join our community of life-savers and make a pledge today.
-                            </p>
-                            <div class="flex flex-wrap gap-4">
-                                <a href="{{ url_for('organ_donor_register') }}" class="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors flex items-center shadow-sm">
-                                    <i class="fas fa-clipboard-list mr-2"></i> Register to Donate
-                                </a>
-                                <a href="{{ url_for('organ_donors_list') }}" class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-lg transition-colors flex items-center shadow-sm">
-                                    <i class="fas fa-search mr-2"></i> View Registry
-                                </a>
-                            </div>
-                        </div>
-                        <div class="w-full md:w-1/3 flex justify-center mt-6 md:mt-0">
-                            <div class="w-28 h-28 bg-sky-100 rounded-full flex items-center justify-center text-sky-500 text-5xl shadow-inner relative">
-                                <i class="fas fa-heartbeat animate-pulse"></i>
-                                <div class="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-sm">
-                                    <i class="fas fa-ribbon text-amber-500 text-xl"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+{# 1. WELCOME BANNER #}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4" style="border-left: 5px solid #2563eb !important;">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-4 bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold fs-3 border border-primary-subtle" style="width: 56px; height: 56px;">
+            {{ current_user.name[0]|upper if current_user.name else 'P' }}
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5 fw-bold">
+                <i class="fas fa-check-circle me-1"></i> Patient Active Session
+              </span>
+              <span class="text-secondary small fw-semibold" id="portalClock"><i class="far fa-clock text-primary me-1"></i>--:--:--</span>
             </div>
-
-                <!-- Care Team & Direct Communication Section -->
-                <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-slate-200/50 border border-white overflow-hidden mt-8">
-                    <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-50/50 to-transparent">
-                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
-                            <span class="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-                                <i class="fas fa-comments"></i>
-                            </span>
-                            Your Care Team
-                        </h2>
-                    </div>
-                    <div class="p-8">
-                        {% set processed_docs = [] %}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {% for appointment in patient.appointments %}
-                            {% if appointment.doctor and appointment.doctor.id not in processed_docs %}
-                                {% set _ = processed_docs.append(appointment.doctor.id) %}
-                                <div class="p-5 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-xl hover:shadow-indigo-100/50 transition-all duration-300 group">
-                                    <div class="flex items-center gap-4 mb-4">
-                                        <img src="{{ url_for('static', filename='uploads/' ~ appointment.doctor.profile_picture_url) if appointment.doctor.profile_picture_url else 'https://api.dicebear.com/7.x/initials/svg?seed=' ~ appointment.doctor.first_name ~ ' ' ~ appointment.doctor.last_name ~ '&backgroundColor=e0f2fe&textColor=0c4a6e' }}" 
-                                             alt="Dr. {{ appointment.doctor.last_name }}"
-                                             class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm">
-                                        <div>
-                                            <h3 class="font-bold text-slate-900 text-sm">Dr. {{ appointment.doctor.first_name }} {{ appointment.doctor.last_name }}</h3>
-                                            <p class="text-xs text-slate-500">{{ appointment.doctor.department }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center justify-between gap-2 mt-4 pt-4 border-t border-slate-100">
-                                        <a href="{{ url_for('patient_chat', doctor_id=appointment.doctor.id) }}" class="flex-1 flex items-center justify-center gap-2 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-600 hover:text-white transition-colors">
-                                            <i class="fas fa-comment-dots"></i> Chat
-                                        </a>
-                                        <a href="tel:{{ appointment.doctor.phone }}" class="flex-1 flex items-center justify-center gap-2 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition-colors">
-                                            <i class="fas fa-phone-alt"></i> Call
-                                        </a>
-                                        <a href="mailto:{{ appointment.doctor.email }}" class="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-600 hover:text-white transition-colors">
-                                            <i class="fas fa-envelope"></i> Email
-                                        </a>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                        </div>
-                        
-                        {% if not processed_docs %}
-                            <div class="text-center py-10 rounded-2xl bg-indigo-50/30 border border-indigo-100">
-                                <p class="text-slate-500 font-medium italic">Connect with a doctor to start messaging.</p>
-                                <a href="{{ url_for('book_appointment') }}" class="text-indigo-600 font-bold text-sm mt-2 inline-block hover:underline">Find a Doctor</a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column: Sidebar (4 cols) -->
-            <div class="lg:col-span-4 space-y-8">
-                
-                <!-- Profile Card (Premium Glass) -->
-                <div x-data="{ editProfile: false }" class="bg-gradient-to-br from-white to-slate-50 rounded-3xl shadow-xl shadow-slate-200/50 border border-white p-8 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16"></div>
-                    
-                    <div x-show="!editProfile" x-transition class="relative flex flex-col items-center text-center">
-                        <div class="w-24 h-24 rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-700 p-1 mb-4 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 overflow-hidden">
-                            {% if patient.profile_picture_url %}
-                                <img src="{{ url_for('static', filename='uploads/' ~ patient.profile_picture_url) }}" alt="{{ patient.name }}" class="w-full h-full rounded-[22px] object-cover">
-                            {% else %}
-                                <div class="w-full h-full rounded-[22px] bg-slate-900 flex items-center justify-center text-white text-3xl font-black">
-                                    {{ patient.name[0] }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <h3 class="text-2xl font-black text-slate-800 tracking-tight">{{ patient.name }}</h3>
-                        <p class="text-blue-600 font-semibold text-sm">ID: PH-{{ patient.id }}</p>
-                        
-                        <div class="w-full mt-8 space-y-4">
-                            <div class="flex justify-between items-center p-3 rounded-2xl bg-white shadow-sm border border-slate-50">
-                                <span class="text-slate-400 text-xs font-bold uppercase">Email</span>
-                                <span class="text-slate-700 font-bold text-sm">{{ patient.email }}</span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="p-3 rounded-2xl bg-white shadow-sm border border-slate-50 text-center">
-                                    <span class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Age</span>
-                                    <span class="text-slate-800 font-black">{{ patient.age or '—' }}</span>
-                                </div>
-                                <div class="p-3 rounded-2xl bg-white shadow-sm border border-slate-50 text-center">
-                                    <span class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Gender</span>
-                                    <span class="text-slate-800 font-black">{{ patient.gender or '—' }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <button @click="editProfile = true" class="mt-6 w-full py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                            <i class="fas fa-edit mr-1"></i> Edit Profile
-                        </button>
-                    </div>
-
-                    <!-- Edit Form -->
-                    <div x-show="editProfile" x-transition style="display: none;" class="relative">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="font-bold text-slate-800 text-lg">Edit Profile</h3>
-                            <button @click="editProfile = false" class="text-slate-400 hover:text-rose-500 transition-colors"><i class="fas fa-times"></i></button>
-                        </div>
-                        <form action="{{ url_for('patient_dashboard') }}" method="POST" enctype="multipart/form-data" class="space-y-4 text-left">
-                            <input type="hidden" name="update_profile" value="true">
-                            <div>
-                                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Profile Picture</label>
-                                <input type="file" name="profilePicture" accept="image/*" class="w-full mt-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-colors text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Full Name</label>
-                                <input type="text" name="name" value="{{ patient.name }}" required class="w-full mt-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-colors">
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Email</label>
-                                <input type="email" name="email" value="{{ patient.email }}" required class="w-full mt-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-colors">
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-xs font-bold text-slate-500 uppercase ml-1">Age</label>
-                                    <input type="number" name="age" value="{{ patient.age or '' }}" class="w-full mt-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-colors">
-                                </div>
-                                <div>
-                                    <label class="text-xs font-bold text-slate-500 uppercase ml-1">Gender</label>
-                                    <select name="gender" class="w-full mt-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-colors">
-                                        <option value="Male" {% if patient.gender == 'Male' %}selected{% endif %}>Male</option>
-                                        <option value="Female" {% if patient.gender == 'Female' %}selected{% endif %}>Female</option>
-                                        <option value="Other" {% if patient.gender == 'Other' %}selected{% endif %}>Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button type="submit" class="w-full mt-2 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-                                Save Changes
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Quick Action Buttons -->
-                <div class="grid grid-cols-1 gap-4">
-                    <h4 class="text-sm font-black text-slate-400 uppercase tracking-widest ml-2">Health Toolkit</h4>
-                    
-                    <a href="{{ url_for('symptoms') }}" class="group p-5 rounded-2xl bg-slate-900 text-white hover:bg-blue-700 transition-all duration-300 shadow-xl shadow-slate-200">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-white group-hover:text-blue-700 transition-colors">
-                                    <i class="fas fa-robot text-xl"></i>
-                                </div>
-                                <div>
-                                    <p class="font-bold">AI Symptom Checker</p>
-                                    <p class="text-xs text-slate-400 group-hover:text-blue-100">Smart diagnostics</p>
-                                </div>
-                            </div>
-                            <i class="fas fa-chevron-right text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all"></i>
-                        </div>
-                    </a>
-
-                    <a href="{{ url_for('medical_shop') }}" class="group p-5 rounded-2xl bg-white border border-slate-100 hover:border-emerald-500 transition-all duration-300 shadow-lg shadow-slate-200/50">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                                    <i class="fas fa-pills text-xl"></i>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-800">Pharmacy</p>
-                                    <p class="text-xs text-slate-400">Refill prescriptions</p>
-                                </div>
-                            </div>
-                            <i class="fas fa-chevron-right text-slate-200 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all"></i>
-                        </div>
-                    </a>
-
-                    <a href="{{ url_for('health_tips') }}" class="group p-5 rounded-2xl bg-white border border-slate-100 hover:border-rose-500 transition-all duration-300 shadow-lg shadow-slate-200/50">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                                    <i class="fas fa-heartbeat text-xl"></i>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-800">Health Tips</p>
-                                    <p class="text-xs text-slate-400">Daily wellness guide</p>
-                                </div>
-                            </div>
-                            <i class="fas fa-chevron-right text-slate-200 group-hover:text-rose-500 group-hover:translate-x-1 transition-all"></i>
-                        </div>
-                    </a>
-
-                    <a href="{{ url_for('telemedicine') }}" class="group p-5 rounded-2xl bg-white border border-slate-100 hover:border-purple-500 transition-all duration-300 shadow-lg shadow-slate-200/50">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                                    <i class="fas fa-video text-xl"></i>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-800">Telemedicine</p>
-                                    <p class="text-xs text-slate-400">Virtual Consultations</p>
-                                </div>
-                            </div>
-                            <i class="fas fa-chevron-right text-slate-200 group-hover:text-purple-500 group-hover:translate-x-1 transition-all"></i>
-                        </div>
-                    </a>
-
-                    <a href="{{ url_for('medical_lab') }}" class="group p-5 rounded-2xl bg-white border border-slate-100 hover:border-amber-500 transition-all duration-300 shadow-lg shadow-slate-200/50">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                                    <i class="fas fa-flask text-xl"></i>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-800">Medical Lab</p>
-                                    <p class="text-xs text-slate-400">Tests & Diagnostics</p>
-                                </div>
-                            </div>
-                            <i class="fas fa-chevron-right text-slate-200 group-hover:text-amber-500 group-hover:translate-x-1 transition-all"></i>
-                        </div>
-                    </a>
-
-                    <a href="{{ url_for('blood_bank') }}" class="group p-5 rounded-2xl bg-white border border-slate-100 hover:border-red-500 transition-all duration-300 shadow-lg shadow-slate-200/50">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
-                                    <i class="fas fa-tint text-xl"></i>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-800">Blood Network</p>
-                                    <p class="text-xs text-slate-400">Find & Donate Blood</p>
-                                </div>
-                            </div>
-                            <i class="fas fa-chevron-right text-slate-200 group-hover:text-red-500 group-hover:translate-x-1 transition-all"></i>
-                        </div>
-                    </a>
-                </div>
-            </div>
+            <h3 class="fw-bold text-dark mb-0">Welcome, {{ current_user.name }}</h3>
+            <p class="text-secondary small mb-0">Your synchronized healthcare hub for OPD visits, doctor tele-chat, and prescriptions.</p>
+          </div>
         </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{{ url_for('download_patient_id_card') }}" class="btn btn-outline-dark rounded-pill px-3.5 fw-bold shadow-2xs">
+            <i class="fas fa-id-card text-primary me-1"></i> ID Card
+          </a>
+          <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="offcanvas" data-bs-target="#bookAppointmentModal">
+            <i class="fas fa-calendar-plus me-1"></i> Book Visit
+          </button>
+          <a href="{{ url_for('medical_shop') }}" class="btn btn-outline-danger rounded-pill px-3.5 fw-bold">
+            <i class="fas fa-pills me-1"></i> Pharmacy
+          </a>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Real-Time Messaging Section for Patients -->
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-white overflow-hidden">
-        <div class="px-8 py-6 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
-                    <i class="fas fa-comments text-lg"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-slate-900">Doctor Messages</h2>
-                    <p class="text-sm text-slate-500 mt-0.5">Real-time communication with your healthcare providers</p>
-                </div>
+{# 2. 4 METRIC STAT CARDS #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #2563eb !important;">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase">Consultations</span>
+          <h2 class="fw-bold text-dark mb-0 mt-1">{{ appointments|length }}</h2>
+          <span class="text-primary small fw-semibold"><i class="fas fa-user-md me-1"></i>Total Visits</span>
+        </div>
+        <div class="rounded-3 bg-primary-subtle text-primary p-3 fs-4">
+          <i class="fas fa-calendar-check"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #059669 !important;">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase">Prescriptions</span>
+          <h2 class="fw-bold text-dark mb-0 mt-1">{{ appointments|length }}</h2>
+          <span class="text-success small fw-semibold"><i class="fas fa-check-circle me-1"></i>Active Routine</span>
+        </div>
+        <div class="rounded-3 bg-success-subtle text-success p-3 fs-4">
+          <i class="fas fa-file-prescription"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #d97706 !important;">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase">Pharmacy Orders</span>
+          <h2 class="fw-bold text-dark mb-0 mt-1">{{ orders|length }}</h2>
+          <span class="text-warning small fw-semibold"><i class="fas fa-truck me-1"></i>Medicines</span>
+        </div>
+        <div class="rounded-3 bg-warning-subtle text-warning p-3 fs-4">
+          <i class="fas fa-shopping-bag"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100" style="border-left: 4px solid #dc2626 !important;">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <span class="text-secondary small fw-bold text-uppercase">Doctor Chat</span>
+          <h2 class="fw-bold text-dark mb-0 mt-1">{{ messages|length }}</h2>
+          <span class="text-danger small fw-semibold"><i class="fas fa-comments me-1"></i>Messages</span>
+        </div>
+        <div class="rounded-3 bg-danger-subtle text-danger p-3 fs-4">
+          <i class="fas fa-comments"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# 3. ACTIVE OPD BANNER #}
+{% if active_appt %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card border-success border-2 shadow-sm rounded-4 bg-white p-4">
+      <div class="row align-items-center g-3">
+        <div class="col-lg-7">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 font-monospace fw-bold">LIVE OPD CONSULTATION</span>
+            <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1 small fw-bold"><i class="far fa-calendar-alt text-success me-1"></i>{{ active_appt.appointment_date }}</span>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="badge bg-primary-subtle text-primary border border-primary-subtle fs-4 font-monospace px-3 py-2 rounded-3">
+              {{ active_appt.token_no if active_appt.token_no else ('TK-' ~ active_appt.id) }}
             </div>
-            <span id="patUnreadBadge" class="hidden px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold animate-pulse shadow-md">
-                <i class="fas fa-bell mr-2"></i><span id="patUnreadCount">0</span> New Messages
+            <div>
+              <h4 class="fw-bold text-dark mb-0">
+                {% if active_appt.doctor %}Dr. {{ active_appt.doctor.first_name }} {{ active_appt.doctor.last_name }}{% else %}Attending OPD Physician{% endif %}
+              </h4>
+              <div class="text-secondary small mt-1">
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill me-1 fw-bold">
+                  <i class="fas fa-door-open me-1"></i>{{ active_appt.doctor.opd_room or 'Room 101' if active_appt.doctor else 'OPD Room' }}
+                </span>
+                <span class="text-dark fw-semibold">{{ active_appt.doctor.specialty if active_appt.doctor else 'General Consultation' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-5 text-lg-end">
+          <div class="d-flex justify-content-lg-end gap-2 flex-wrap">
+            <a href="{{ url_for('prescription_print', appt_id=active_appt.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-3.5 fw-bold" target="_blank">
+              <i class="fas fa-print me-1"></i> Print Rx Slip
+            </a>
+            <a href="{{ url_for('walkin_receipt_pdf', appt_id=active_appt.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" target="_blank">
+              <i class="fas fa-file-pdf me-1"></i> PDF
+            </a>
+            <a href="{{ url_for('patient_dashboard', tab='messages') }}" class="btn btn-sm btn-outline-danger rounded-pill px-3.5 fw-bold shadow-sm">
+              <i class="fas fa-comments me-1"></i> Doctor Chat
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# 4. TWO-COLUMN OVERVIEW GRID #}
+<div class="row g-4">
+  <div class="col-lg-7">
+    {# Recent Consultations #}
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="fas fa-calendar-check text-primary me-2"></i>Recent Consultations</h5>
+        <a href="{{ url_for('patient_dashboard', tab='appointments') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">View All</a>
+      </div>
+
+      {% if appointments %}
+      <div class="d-flex flex-column gap-2">
+        {% for appt in appointments[:3] %}
+        {% set q_status = appt.queue_status if appt.queue_status else ('completed' if appt.status == 'completed' else 'waiting') %}
+        <div class="card border rounded-3 p-3 bg-white">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+              <span class="badge bg-primary-subtle text-primary font-monospace px-2 py-1 rounded-2 fw-bold">{{ appt.token_no if appt.token_no else ('TK-' ~ appt.id) }}</span>
+              <strong class="text-dark ms-2">{% if appt.doctor %}Dr. {{ appt.doctor.first_name }} {{ appt.doctor.last_name }}{% else %}Attending Physician{% endif %}</strong>
+              <div class="text-secondary small mt-1">{{ appt.appointment_date }} &bull; {{ appt.doctor.specialty if appt.doctor else 'General' }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge rounded-pill px-2.5 py-1 {% if q_status == 'completed' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}">
+                {{ q_status.replace('_', ' ')|title }}
+              </span>
+              <a href="{{ url_for('prescription_print', appt_id=appt.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-2.5" target="_blank"><i class="fas fa-print me-1"></i>Rx</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center text-secondary py-3 small">No appointments yet.</div>
+      {% endif %}
+    </div>
+
+    {# Prescriptions Preview #}
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="fas fa-file-prescription text-success me-2"></i>Active Prescriptions</h5>
+        <a href="{{ url_for('patient_dashboard', tab='prescriptions') }}" class="btn btn-sm btn-outline-success rounded-pill px-3">View Routine</a>
+      </div>
+
+      {% if appointments %}
+      <div class="card border rounded-3 p-3 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong class="text-dark">{% if active_appt and active_appt.doctor %}Dr. {{ active_appt.doctor.first_name }} {{ active_appt.doctor.last_name }}{% else %}Prescription Routine{% endif %}</strong>
+          <span class="badge bg-light text-secondary border rounded-pill">{{ active_appt.appointment_date if active_appt else '' }}</span>
+        </div>
+        <p class="small text-secondary mb-2">{{ active_appt.reason if active_appt and active_appt.reason else 'Routine medication and dosage instructions.' }}</p>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1"><i class="fas fa-sun me-1"></i>Morning: 1 Tab</span>
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1"><i class="fas fa-cloud-sun me-1"></i>Noon: 1 Tab</span>
+          <span class="badge bg-purple-subtle text-purple rounded-pill px-2.5 py-1 border" style="background:#f5f3ff; color:#7c3aed;"><i class="fas fa-moon me-1"></i>Night: 1 Tab</span>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center text-secondary py-3 small">No active prescriptions.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {# Digital Health Pass #}
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4 border border-primary-subtle">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 font-monospace fw-bold">DIGITAL HEALTH PASS</span>
+          <h4 class="fw-bold text-dark mb-0 mt-2">{{ current_user.name }}</h4>
+        </div>
+        <div class="badge bg-primary-subtle text-primary fs-4 p-2 rounded-circle border border-primary-subtle">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+      </div>
+
+      <div class="p-3 bg-light rounded-3 border mb-3 small">
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-secondary fw-semibold">Patient ID</span>
+          <span class="font-monospace fw-bold text-primary">{{ current_user.id }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-secondary fw-semibold">Blood Group</span>
+          <span class="fw-bold text-danger">{{ current_user.clinical_record.get('blood_group') if current_user.clinical_record else 'Not Set' }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-secondary fw-semibold">Known Allergies</span>
+          <span class="fw-bold text-warning">{{ current_user.clinical_record.get('allergies') if current_user.clinical_record and current_user.clinical_record.get('allergies') else 'None' }}</span>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="text-success fw-bold small"><i class="fas fa-check-circle me-1"></i>Verified Identity</span>
+        <a href="{{ url_for('patient_dashboard', tab='settings') }}" class="btn btn-outline-primary rounded-pill btn-sm px-3 fw-bold">
+          Edit Profile
+        </a>
+      </div>
+    </div>
+
+    {# Quick Clinical Shortcuts #}
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+      <h6 class="fw-bold text-dark mb-3"><i class="fas fa-bolt text-primary me-2"></i>Quick Clinical Services</h6>
+      <div class="d-flex flex-column gap-2">
+        <a href="javascript:void(0)" data-bs-toggle="offcanvas" data-bs-target="#bookAppointmentModal" class="card border rounded-3 p-2.5 bg-light text-decoration-none d-flex align-items-center justify-content-between flex-row">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary p-2"><i class="fas fa-calendar-plus"></i></span>
+            <span class="small fw-bold text-dark">Book Doctor Appointment</span>
+          </div>
+          <i class="fas fa-chevron-right text-secondary small"></i>
+        </a>
+        <a href="{{ url_for('medical_shop') }}" class="card border rounded-3 p-2.5 bg-light text-decoration-none d-flex align-items-center justify-content-between flex-row">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success-subtle text-success p-2"><i class="fas fa-pills"></i></span>
+            <span class="small fw-bold text-dark">Order Medicines Online</span>
+          </div>
+          <i class="fas fa-chevron-right text-secondary small"></i>
+        </a>
+        <a href="{{ url_for('symptoms') }}" class="card border rounded-3 p-2.5 bg-light text-decoration-none d-flex align-items-center justify-content-between flex-row">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-purple-subtle text-purple p-2" style="background:#f5f3ff; color:#7c3aed;"><i class="fas fa-robot"></i></span>
+            <span class="small fw-bold text-dark">AI Symptom Diagnosis</span>
+          </div>
+          <i class="fas fa-chevron-right text-secondary small"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ========================================================================== #}
+{# ── TAB 2: CONSULTATIONS & OPD VISITS ── #}
+{# ========================================================================== #}
+{% elif active_tab == 'appointments' %}
+
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h4 class="fw-bold text-dark mb-0"><i class="fas fa-calendar-check text-primary me-2"></i>My Consultations &amp; OPD Visits</h4>
+      <span class="text-secondary small">Comprehensive history of your doctor consultations, tokens, and prescription slips.</span>
+    </div>
+    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="offcanvas" data-bs-target="#bookAppointmentModal">
+      <i class="fas fa-plus me-1"></i> Book New Visit
+    </button>
+  </div>
+
+  {% if appointments %}
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr class="text-secondary small border-bottom" style="font-size:11px; text-transform:uppercase;">
+          <th>Token &amp; Doctor</th>
+          <th>Date &amp; Time</th>
+          <th>Specialty / Room</th>
+          <th>Queue Status</th>
+          <th>Fee</th>
+          <th class="text-end">Prescription &amp; Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for appt in appointments %}
+        {% set q_status = appt.queue_status if appt.queue_status else ('completed' if appt.status == 'completed' else 'waiting') %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-primary-subtle text-primary font-monospace px-2.5 py-1.5 rounded-2 fw-bold fs-6">
+                {{ appt.token_no if appt.token_no else ('TK-' ~ appt.id) }}
+              </span>
+              <div>
+                <div class="fw-bold text-dark">
+                  {% if appt.doctor %}Dr. {{ appt.doctor.first_name }} {{ appt.doctor.last_name }}{% else %}Attending Physician{% endif %}
+                </div>
+                <div class="text-secondary small">{{ appt.reason or 'OPD Consultation' }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="fw-bold text-dark small">{{ appt.appointment_date }}</div>
+            <div class="text-secondary small">{{ appt.appointment_time.strftime('%I:%M %p') if appt.appointment_time else '' }}</div>
+          </td>
+          <td>
+            <span class="badge bg-light text-dark border rounded-pill">{{ appt.doctor.opd_room or 'Room 101' if appt.doctor else 'OPD' }}</span>
+            <div class="small text-secondary mt-1">{{ appt.doctor.specialty if appt.doctor else 'General' }}</div>
+          </td>
+          <td>
+            <span class="badge rounded-pill px-3 py-1.5 fw-bold {% if q_status == 'completed' %}bg-success-subtle text-success border border-success-subtle{% elif q_status == 'in_consultation' %}bg-primary-subtle text-primary border border-primary-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+              {{ q_status.replace('_', ' ')|title }}
             </span>
-        </div>
-
-        <!-- Two-Column Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-x divide-slate-100">
-            <!-- Messages Display -->
-            <div class="lg:col-span-2">
-                <div id="patientChatContainer" class="h-96 overflow-y-auto bg-slate-50 p-8 space-y-4 custom-scrollbar">
-                    <div class="text-center text-slate-400 py-24">
-                        <i class="fas fa-inbox text-6xl mb-4 opacity-10"></i>
-                        <p class="font-semibold text-lg">Select a doctor to view messages</p>
-                        <p class="text-sm mt-2">Your doctors' replies will appear here</p>
-                    </div>
-                </div>
-
-                <!-- Message Input -->
-                <div id="patChatInputArea" class="hidden border-t border-slate-100 bg-white p-5">
-                    <div class="flex gap-3 items-end">
-                        <input type="text" id="patientMessageInput" placeholder="Reply to your doctor..."
-                               class="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm transition" autocomplete="off">
-                        <button id="patientMessageSendBtn" title="Send message" class="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-xl transition flex items-center justify-center font-semibold">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
+          </td>
+          <td>
+            <div class="fw-bold text-dark font-monospace">₹{{ appt.fee_amount|int if appt.fee_amount else 300 }}</div>
+            <span class="badge bg-light text-secondary border rounded-pill">{{ appt.payment_mode or 'Paid' }}</span>
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1.5 justify-content-end">
+              <a href="{{ url_for('prescription_print', appt_id=appt.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" target="_blank">
+                <i class="fas fa-print me-1"></i> Rx Slip
+              </a>
+              <a href="{{ url_for('walkin_receipt_pdf', appt_id=appt.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 fw-bold" target="_blank">
+                <i class="fas fa-file-pdf"></i>
+              </a>
+              {% if appt.status == 'completed' and appt.doctor %}
+              <button class="btn btn-sm btn-outline-warning rounded-pill px-2.5 fw-bold" onclick="openRatingModal('{{ appt.doctor.id }}', 'Dr. {{ appt.doctor.first_name }} {{ appt.doctor.last_name }}')" title="Review Doctor">
+                <i class="fas fa-star"></i>
+              </button>
+              {% endif %}
             </div>
-
-            <!-- Doctors List -->
-            <div class="lg:col-span-1 bg-slate-50 max-h-96 overflow-y-auto">
-                <div class="p-5 border-b border-slate-100 bg-white sticky top-0 z-10">
-                    <h4 class="font-semibold text-slate-900 flex items-center gap-2">
-                        <i class="fas fa-user-md text-blue-600"></i> Your Doctors
-                    </h4>
-                </div>
-                <div id="patDoctorsList" class="divide-y divide-slate-200">
-                    <div class="p-8 text-center text-slate-400">
-                        <i class="fas fa-spinner text-2xl animate-spin mb-2"></i>
-                        <p class="text-sm">Loading doctors...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center text-secondary py-5">
+    <i class="fas fa-calendar-plus fs-1 text-secondary mb-3 d-block"></i>
+    <h5>No consultations recorded yet</h5>
+    <p class="text-secondary small">Schedule your visit with an expert specialist today.</p>
+    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="offcanvas" data-bs-target="#bookAppointmentModal">Book Visit Now</button>
+  </div>
+  {% endif %}
 </div>
 
-<!-- Hidden state for messaging -->
-<input type="hidden" id="patActiveDoctorId" value="">
-<input type="hidden" id="patCurrentPatientId" value="{{ current_user.id }}">
+{# ========================================================================== #}
+{# ── TAB 3: PRESCRIPTIONS & MEDICATION ROUTINE ── #}
+{# ========================================================================== #}
+{% elif active_tab == 'prescriptions' %}
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const chatContainer = document.getElementById('patientChatContainer');
-    const doctorsList = document.getElementById('patDoctorsList');
-    const chatInputArea = document.getElementById('patChatInputArea');
-    const messageInput = document.getElementById('patientMessageInput');
-    const sendBtn = document.getElementById('patientMessageSendBtn');
-    const activeDoctorId = document.getElementById('patActiveDoctorId');
-    const unreadBadge = document.getElementById('patUnreadBadge');
-    const unreadCount = document.getElementById('patUnreadCount');
-    
-    let activeRoom = null;
-    const socket = io();
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h4 class="fw-bold text-dark mb-0"><i class="fas fa-file-prescription text-success me-2"></i>Active Prescriptions &amp; Routine</h4>
+      <span class="text-secondary small">Digital prescriptions issued by attending doctors with daily dosage timelines.</span>
+    </div>
+    <a href="{{ url_for('medical_shop') }}" class="btn btn-success rounded-pill px-4 fw-bold">
+      <i class="fas fa-cart-plus me-1"></i> Buy in Pharmacy
+    </a>
+  </div>
 
-    // Load doctors/conversations
-    async function loadDoctors() {
-        try {
-            const response = await fetch('/api/patient/doctor-conversations');
-            const data = await response.json();
-            
-            doctorsList.innerHTML = '';
-            
-            if (data.conversations && data.conversations.length > 0) {
-                // Update unread count
-                const totalUnread = data.conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
-                if (totalUnread > 0) {
-                    unreadBadge.classList.remove('hidden');
-                    unreadCount.textContent = totalUnread;
-                } else {
-                    unreadBadge.classList.add('hidden');
-                }
+  {% if appointments %}
+  <div class="d-flex flex-column gap-3">
+    {% for appt in appointments %}
+    <div class="card border rounded-3 p-4 bg-white shadow-sm">
+      <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+          <span class="badge bg-primary-subtle text-primary font-monospace rounded-pill px-3 py-1 fw-bold fs-6">
+            {{ appt.token_no if appt.token_no else ('TK-' ~ appt.id) }}
+          </span>
+          <strong class="text-dark ms-2 fs-5">
+            {% if appt.doctor %}Dr. {{ appt.doctor.first_name }} {{ appt.doctor.last_name }}{% else %}Attending Physician{% endif %}
+          </strong>
+          <span class="badge bg-light text-secondary border rounded-pill ms-2">{{ appt.appointment_date }}</span>
+        </div>
+        <a href="{{ url_for('prescription_print', appt_id=appt.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-3.5 fw-bold" target="_blank">
+          <i class="fas fa-print me-1"></i> Print Official Rx Slip
+        </a>
+      </div>
 
-                data.conversations.forEach(conv => {
-                    const docEl = document.createElement('div');
-                    const isActive = activeDoctorId.value == conv.doctor_id;
-                    docEl.className = `p-4 border-b border-slate-200 cursor-pointer hover:bg-blue-50 transition flex items-center gap-3 ${isActive ? 'bg-blue-100 border-l-4 border-blue-600' : ''}`;
-                    
-                    const hasUnread = conv.unread_count > 0;
-                    docEl.innerHTML = `
-                        <div class="relative flex-shrink-0">
-                            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(conv.doctor_name)}&background=random&size=40&bold=true" 
-                                 alt="Dr. ${conv.doctor_name}" class="w-10 h-10 rounded-full object-cover">
-                            ${hasUnread ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>' : ''}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-slate-900 text-sm">Dr. ${conv.doctor_name}</p>
-                            <p class="text-xs text-slate-600 truncate">${conv.last_message || 'No messages yet'}</p>
-                        </div>
-                        ${hasUnread ? `<span class="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full flex-shrink-0">${conv.unread_count}</span>` : ''}
-                    `;
-                    
-                    docEl.addEventListener('click', () => selectDoctor(conv.doctor_id, conv.doctor_name));
-                    doctorsList.appendChild(docEl);
-                });
-            } else {
-                doctorsList.innerHTML = `
-                    <div class="p-8 text-center text-slate-400">
-                        <i class="fas fa-inbox text-3xl mb-3 opacity-30"></i>
-                        <p class="text-sm font-medium">No doctors yet</p>
-                        <p class="text-xs mt-1">Book an appointment to chat with doctors</p>
-                    </div>
-                `;
-            }
-        } catch (error) {
-            console.error('Error loading doctors:', error);
-            doctorsList.innerHTML = '<div class="p-4 text-red-500 text-sm">Error loading doctors</div>';
-        }
-    }
+      <div class="p-3 bg-light rounded-3 border mb-3">
+        <strong class="text-dark"><i class="fas fa-stethoscope text-primary me-2"></i>Clinical Advice &amp; Diagnosis:</strong>
+        <p class="mb-0 text-dark small mt-1">{{ appt.reason or 'Routine clinical evaluation and medicine prescription schedule.' }}</p>
+      </div>
 
-    function selectDoctor(doctorId, doctorName) {
-        activeDoctorId.value = doctorId;
-        // Extract actual patient ID from current_user.id (format: "patient-{id}")
-        const currentUserId = document.getElementById('patCurrentPatientId').value;
-        const actualPatientId = currentUserId.split('-')[1] || currentUserId;
-        activeRoom = `chat_${actualPatientId}_${doctorId}`;
-        chatInputArea.classList.remove('hidden');
-        messageInput.placeholder = `Message Dr. ${doctorName.split(' ')[0]}...`;
-        messageInput.focus();
-        loadMessages(doctorId);
-        socket.emit('join', { room: activeRoom });
-        loadDoctors(); // Refresh to highlight active doctor
-    }
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="small fw-bold text-dark">Dosage Routine:</span>
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="fas fa-sun me-1"></i>Morning: 1 Tab (After Food)</span>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="fas fa-cloud-sun me-1"></i>Noon: 1 Tab</span>
+        <span class="badge bg-purple-subtle text-purple rounded-pill px-3 py-1.5 fw-bold border" style="background:#f5f3ff; color:#7c3aed;"><i class="fas fa-moon me-1"></i>Night: 1 Tab (Before Bed)</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center text-secondary py-5">
+    <i class="fas fa-file-prescription fs-1 text-secondary mb-3 d-block"></i>
+    <h5>No prescriptions on file</h5>
+    <p class="text-secondary small">Your digital prescriptions will appear here following your consultation.</p>
+  </div>
+  {% endif %}
+</div>
 
-    async function loadMessages(doctorId) {
-        try {
-            const response = await fetch(`/api/patient/chat/${doctorId}/messages`);
-            const messages = await response.json();
-            
-            chatContainer.innerHTML = '';
-            
-            if (messages.length === 0) {
-                chatContainer.innerHTML = '<div class="text-center text-slate-400 py-12"><i class="fas fa-comments text-3xl mb-3 opacity-20"></i><p class="text-sm font-medium">No messages yet</p><p class="text-xs mt-2">Start the conversation!</p></div>';
-            } else {
-                messages.forEach(msg => appendMessage(msg));
-            }
-            
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        } catch (error) {
-            console.error('Error loading messages:', error);
-        }
-    }
+{# ========================================================================== #}
+{# ── TAB 4: PHARMACY ORDERS ── #}
+{# ========================================================================== #}
+{% elif active_tab == 'orders' %}
 
-    function appendMessage(msg) {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `flex ${msg.sender === 'patient' ? 'justify-end' : 'justify-start'} gap-2 items-end`;
-        
-        const msgTime = new Date(msg.created_at);
-        const timeStr = msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        msgDiv.innerHTML = `
-            <div class="max-w-xs px-4 py-2.5 rounded-2xl text-sm ${
-                msg.sender === 'patient' 
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md' 
-                    : 'bg-white border border-slate-200 text-slate-900'
-            }">
-                <p class="break-words">${escapeHtml(msg.content)}</p>
-                <p class="text-xs mt-1.5 ${msg.sender === 'patient' ? 'text-blue-100' : 'text-slate-400'}">${timeStr}</p>
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h4 class="fw-bold text-dark mb-0"><i class="fas fa-shopping-bag text-warning me-2"></i>Pharmacy &amp; Medicine Orders</h4>
+      <span class="text-secondary small">Track status and delivery of your pharmacy prescriptions and online medicine purchases.</span>
+    </div>
+    <a href="{{ url_for('medical_shop') }}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
+      Browse Pharmacy <i class="fas fa-arrow-right ms-1"></i>
+    </a>
+  </div>
+
+  {% if orders %}
+  <div class="d-flex flex-column gap-3">
+    {% for order in orders %}
+    <div class="card border rounded-3 p-3.5 bg-white d-flex justify-content-between align-items-center flex-row flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-primary-subtle text-primary font-monospace px-2.5 py-1 rounded-pill border border-primary-subtle fw-bold">ORDER #{{ order.id }}</span>
+          <span class="text-secondary small fw-semibold"><i class="far fa-calendar-alt me-1 text-primary"></i>{{ order.order_date.strftime('%b %d, %Y') if order.order_date else '' }}</span>
+        </div>
+        <div class="small text-dark fw-bold mt-1.5">
+          {% if order.items %}
+            {{ order.items|length }} items package &bull; Total: <span class="text-success font-monospace fs-6">₹{{ order.total_price }}</span>
+          {% else %}
+            Medicine package &bull; Total: <span class="text-success font-monospace fs-6">₹{{ order.total_price }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <span class="badge rounded-pill px-3.5 py-2 fw-bold {% if order.status == 'Delivered' %}bg-success-subtle text-success border border-success-subtle{% elif order.status == 'Shipped' %}bg-primary-subtle text-primary border border-primary-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+        {{ order.status }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center text-secondary py-5">
+    <i class="fas fa-shopping-bag fs-1 text-secondary mb-3 d-block"></i>
+    <h5>No medicine orders placed yet</h5>
+    <p class="text-secondary small">Order prescribed medicines with doorstep delivery from our Smart Pharmacy.</p>
+    <a href="{{ url_for('medical_shop') }}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">Browse Medical Shop</a>
+  </div>
+  {% endif %}
+</div>
+
+{# ========================================================================== #}
+{# ── TAB 5: DOCTOR TELE-CHAT ── #}
+{# ========================================================================== #}
+{% elif active_tab == 'messages' %}
+
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4" id="doctorChatSection">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="fw-bold text-dark mb-0"><i class="fas fa-comments text-danger me-2"></i>Doctor Tele-Chat Studio</h4>
+      <span class="text-secondary small">Direct messaging channel with your attending physician for advice and follow-up guidance.</span>
+    </div>
+    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold">
+      <i class="fas fa-circle me-1" style="font-size: 7px;"></i> Physician Online
+    </span>
+  </div>
+
+  <div class="d-flex gap-1.5 mb-3 overflow-x-auto pb-1">
+    <button type="button" class="btn btn-sm btn-light rounded-pill border small fw-semibold" onclick="applyQuickReply('What is the dosage for this medicine?')">💊 Dosage</button>
+    <button type="button" class="btn btn-sm btn-light rounded-pill border small fw-semibold" onclick="applyQuickReply('Should I take it before or after meals?')">🍽️ Food timing</button>
+    <button type="button" class="btn btn-sm btn-light rounded-pill border small fw-semibold" onclick="applyQuickReply('When is my next follow-up?')">🗓️ Next visit</button>
+  </div>
+
+  <div class="card border rounded-3 overflow-hidden mb-2" style="height: 480px; display: flex; flex-direction: column;">
+    <div class="p-3 bg-light overflow-y-auto flex-grow-1 d-flex flex-column gap-2" id="chatStreamBody">
+      {% for msg in messages %}
+      {% if msg.sender == 'doctor' %}
+      <div class="align-self-start p-3 rounded-3 bg-white border border-success-subtle shadow-sm" style="max-width: 80%;">
+        <div class="d-flex justify-content-between align-items-center mb-1 gap-3">
+          <span class="small fw-bold text-success"><i class="fas fa-user-md me-1"></i> Doctor Advice</span>
+          <span class="text-secondary" style="font-size: 10px;">{{ msg.created_at.strftime('%b %d, %H:%M') if msg.created_at else '' }}</span>
+        </div>
+        <p class="mb-0 text-dark">{{ msg.content }}</p>
+      </div>
+      {% else %}
+      <div class="align-self-end p-3 rounded-3 bg-primary-subtle text-primary border border-primary-subtle shadow-sm" style="max-width: 80%;">
+        <div class="d-flex justify-content-between align-items-center mb-1 gap-3">
+          <span class="small fw-bold text-primary"><i class="fas fa-user me-1"></i> You</span>
+          <span class="text-secondary" style="font-size: 10px;">{{ msg.created_at.strftime('%b %d, %H:%M') if msg.created_at else '' }}</span>
+        </div>
+        <p class="mb-0 text-dark">{{ msg.content }}</p>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="text-center text-secondary py-5" id="noMessagesPlaceholder">
+        <i class="fas fa-comment-medical fs-1 text-secondary mb-3 d-block"></i>
+        <h6>No messages in tele-chat yet</h6>
+        <p class="text-secondary small">Select your doctor below and ask questions regarding your treatment or dosage.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <form id="ajaxChatForm" onsubmit="handleSendRealtimeMessage(event)" class="p-3 bg-white border-top d-flex gap-2 align-items-center flex-column flex-md-row">
+      <select name="doctor_id" id="chatDoctorSelect" class="form-select form-select-sm rounded-pill fw-bold text-dark w-auto" style="min-width: 240px;" required>
+        <option value="">Select Attending Doctor...</option>
+        {% for doc_id, doc in doctors.items() %}
+        <option value="{{ doc.id }}">Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.specialty or 'General' }})</option>
+        {% endfor %}
+      </select>
+
+      <div class="d-flex gap-2 w-100">
+        <input type="text" id="chatMessageInput" name="content" class="form-control form-control-sm rounded-pill px-3 text-dark fw-semibold" placeholder="Type your question for the doctor..." required>
+        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
+          <i class="fas fa-paper-plane me-1"></i> Send
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ========================================================================== #}
+{# ── TAB 6: PROFILE & SECURITY SETTINGS ── #}
+{# ========================================================================== #}
+{% elif active_tab == 'settings' %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+      <h4 class="fw-bold text-dark mb-3"><i class="fas fa-user-edit text-primary me-2"></i>Personal &amp; Contact Details</h4>
+      <form method="POST" action="{{ url_for('patient_dashboard') }}" class="row g-3" enctype="multipart/form-data" id="patientProfileForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="update_profile" value="1">
+        <input type="hidden" name="cropped_profile_image" id="patientCroppedProfileImage">
+
+        <!-- Avatar & Interactive Image Cropper Section -->
+        <div class="col-12">
+          <div class="p-3 rounded-4 bg-light border d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+            <div class="position-relative flex-shrink-0 text-center text-sm-start">
+              {% if current_user.profile_picture_url %}
+              <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" 
+                   id="patientPreviewAvatarImg"
+                   class="rounded-4 object-fit-cover border shadow-sm" style="width: 70px; height: 70px;" alt="{{ current_user.name }}">
+              {% else %}
+              <div id="patientPreviewAvatarImgPlaceholder" class="rounded-4 bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-4 shadow-sm mx-auto mx-sm-0" style="width: 70px; height: 70px;">
+                {{ current_user.name[0]|upper if current_user.name else 'P' }}
+              </div>
+              <img id="patientPreviewAvatarImg" class="rounded-4 object-fit-cover border shadow-sm d-none" style="width: 70px; height: 70px;" alt="{{ current_user.name }}">
+              {% endif %}
             </div>
-        `;
-        
-        chatContainer.appendChild(msgDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+            <div class="flex-grow-1">
+              <label class="form-label fw-bold text-dark small mb-1 d-block">Patient Profile Photo</label>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <input type="file" id="patientProfileImageInput" name="profilePicture" accept="image/*" class="crop-image-input d-none" data-crop-image="true" data-crop-target="patientCroppedProfileImage" data-preview-target="patientPreviewAvatarImg" data-auto-submit="true">
+                <button type="button" class="btn btn-sm btn-dark rounded-3 px-3 py-1.5 fw-bold small d-inline-flex align-items-center gap-1.5" onclick="document.getElementById('patientProfileImageInput').click();">
+                  <i class="fas fa-crop-alt text-info"></i>
+                  <span>Upload &amp; Crop Photo</span>
+                </button>
+              </div>
+              <span class="text-muted small d-block mt-1" style="font-size: 11px;">Formatted for your Hospital Patient Digital ID Card</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-bold text-dark small">Full Name</label>
+          <input type="text" name="name" class="form-control rounded-3 text-dark fw-semibold" value="{{ current_user.name }}" required>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-bold text-dark small">Email Address</label>
+          <input type="email" name="email" class="form-control rounded-3 text-dark fw-semibold" value="{{ current_user.email }}" required>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-bold text-dark small">Phone Number</label>
+          <input type="tel" name="phone" class="form-control rounded-3 text-dark fw-semibold" value="{{ current_user.phone or '' }}">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-bold text-dark small">Age</label>
+          <input type="number" name="age" class="form-control rounded-3 text-dark fw-semibold" value="{{ current_user.age or '' }}">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-bold text-dark small">Gender</label>
+          <select name="gender" class="form-select rounded-3 text-dark fw-semibold">
+            <option value="Male" {% if current_user.gender=='Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if current_user.gender=='Female' %}selected{% endif %}>Female</option>
+            <option value="Other" {% if current_user.gender=='Other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-bold text-dark small">Residential Address</label>
+          <input type="text" name="address" class="form-control rounded-3 text-dark fw-semibold" value="{{ current_user.address or '' }}">
+        </div>
+
+        <div class="col-12 mt-4">
+          <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+            <i class="fas fa-save me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+      <h5 class="fw-bold text-dark mb-3"><i class="fas fa-key text-primary me-2"></i>Change Account Password</h5>
+      <form method="POST" action="{{ url_for('patient_dashboard') }}" class="d-flex flex-column gap-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="change_password">
+
+        <div>
+          <label class="form-label fw-bold text-dark small">Current Password</label>
+          <input type="password" name="current_password" class="form-control rounded-3 text-dark" required>
+        </div>
+        <div>
+          <label class="form-label fw-bold text-dark small">New Password</label>
+          <input type="password" name="new_password" class="form-control rounded-3 text-dark" required>
+        </div>
+        <div>
+          <label class="form-label fw-bold text-dark small">Confirm New Password</label>
+          <input type="password" name="confirm_password" class="form-control rounded-3 text-dark" required>
+        </div>
+        <div class="mt-2">
+          <button type="submit" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
+            <i class="fas fa-lock me-1"></i> Update Password
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+<!-- Rating Modal -->
+<div id="ratingModal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+      <div class="modal-header bg-light border-bottom py-3 px-4">
+        <h5 class="modal-title fw-bold text-dark"><i class="fas fa-star me-2 text-warning"></i>Rate Doctor Experience</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeRatingModal()"></button>
+      </div>
+      <form id="ratingForm" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body p-4 text-center bg-white">
+          <h6 class="fw-bold mb-3 text-dark" id="ratingModalDoctorName">Dr. ...</h6>
+          <div class="d-flex justify-content-center gap-2 mb-3 fs-3 text-warning">
+            <input type="radio" id="star5" name="rating" value="5" class="btn-check" /><label for="star5" class="btn btn-outline-warning rounded-circle"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star4" name="rating" value="4" class="btn-check" /><label for="star4" class="btn btn-outline-warning rounded-circle"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star3" name="rating" value="3" class="btn-check" checked /><label for="star3" class="btn btn-outline-warning rounded-circle"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star2" name="rating" value="2" class="btn-check" /><label for="star2" class="btn btn-outline-warning rounded-circle"><i class="fas fa-star"></i></label>
+            <input type="radio" id="star1" name="rating" value="1" class="btn-check" /><label for="star1" class="btn btn-outline-warning rounded-circle"><i class="fas fa-star"></i></label>
+          </div>
+          <textarea name="comment" class="form-control rounded-3 text-dark fw-semibold" rows="3" placeholder="Write your consultation review..."></textarea>
+        </div>
+        <div class="modal-footer bg-light border-top px-4 py-3">
+          <button type="button" class="btn btn-light rounded-pill px-4 text-dark fw-bold" data-bs-dismiss="modal" onclick="closeRatingModal()">Cancel</button>
+          <button type="submit" class="btn btn-outline-primary rounded-pill px-4 fw-bold">Submit Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Live Clock
+  function updatePortalClock() {
+    const el = document.getElementById('portalClock');
+    if (el) el.innerHTML = '<i class="far fa-clock me-1 text-primary"></i>' + new Date().toLocaleTimeString();
+  }
+  setInterval(updatePortalClock, 1000);
+  updatePortalClock();
+
+  // Audio Chime
+  function playNotificationChime() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.4);
+    } catch (e) { }
+  }
+
+  function applyQuickReply(text) {
+    const input = document.getElementById('chatMessageInput');
+    if (input) {
+      input.value = text;
+      input.focus();
     }
+  }
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+  async function handleSendRealtimeMessage(e) {
+    e.preventDefault();
+    const docSelect = document.getElementById('chatDoctorSelect');
+    const input = document.getElementById('chatMessageInput');
+    const doctorId = docSelect.value;
+    const content = input.value.trim();
+
+    if (!doctorId || !content) return;
+
+    appendPatientMessage(content);
+    input.value = '';
+
+    try {
+      const formData = new FormData();
+      formData.append('csrf_token', '{{ csrf_token() }}');
+      formData.append('doctor_id', doctorId);
+      formData.append('content', content);
+
+      await fetch('/patient/send-message', {
+        method: 'POST',
+        body: formData
+      });
+    } catch (err) {
+      console.warn('Message send failed:', err);
     }
+  }
 
-    async function sendMessage() {
-        const content = messageInput.value.trim();
-        const doctorId = activeDoctorId.value;
-        
-        if (!content) {
-            alert('Please enter a message.');
-            return;
-        }
-        
-        if (!doctorId) {
-            alert('Please select a doctor to send the message to.');
-            return;
-        }
+  function appendPatientMessage(content) {
+    const stream = document.getElementById('chatStreamBody');
+    if (!stream) return;
+    const placeholder = document.getElementById('noMessagesPlaceholder');
+    if (placeholder) placeholder.remove();
 
-        try {
-            const response = await fetch(`/api/patient/chat/${doctorId}/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                messageInput.value = '';
-                appendMessage({
-                    sender: 'patient',
-                    content: content,
-                    created_at: new Date().toISOString()
-                });
-            } else {
-                alert('Failed to send message: ' + (result.message || 'Unknown error'));
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            alert('Error sending message');
+    const div = document.createElement('div');
+    div.className = 'align-self-end p-3 rounded-3 bg-primary-subtle text-primary border border-primary-subtle shadow-sm';
+    div.style.maxWidth = '80%';
+    div.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-1 gap-3">
+        <span class="small fw-bold text-primary"><i class="fas fa-user me-1"></i> You</span>
+        <span class="text-secondary" style="font-size:10px;">Just now</span>
+      </div>
+      <p class="mb-0 text-dark">${content}</p>
+    `;
+    stream.appendChild(div);
+    stream.scrollTop = stream.scrollHeight;
+  }
+
+  const metaEl = document.getElementById('patientDashboardMeta');
+  let knownMessageCount = metaEl ? parseInt(metaEl.dataset.msgCount || '0', 10) : 0;
+  let previousQueueStatus = metaEl ? (metaEl.dataset.queueStatus || '') : '';
+
+  async function pollPatientTelemetry() {
+    try {
+      const resp = await fetch('/api/patient/live-status');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (!data.success) return;
+
+      if (data.messages && data.messages.length > knownMessageCount) {
+        const stream = document.getElementById('chatStreamBody');
+        const placeholder = document.getElementById('noMessagesPlaceholder');
+        if (placeholder) placeholder.remove();
+
+        for (let i = knownMessageCount; i < data.messages.length; i++) {
+          const msg = data.messages[i];
+          if (msg.sender === 'doctor') {
+            playNotificationChime();
+            const div = document.createElement('div');
+            div.className = 'align-self-start p-3 rounded-3 bg-white border border-success-subtle shadow-sm';
+            div.style.maxWidth = '80%';
+            div.innerHTML = `
+              <div class="d-flex justify-content-between align-items-center mb-1 gap-3">
+                <span class="small fw-bold text-success"><i class="fas fa-user-md me-1"></i> Doctor Advice</span>
+                <span class="text-secondary" style="font-size:10px;">${msg.created_at || 'Just now'}</span>
+              </div>
+              <p class="mb-0 text-dark">${msg.content}</p>
+            `;
+            if (stream) stream.appendChild(div);
+          }
         }
+        knownMessageCount = data.messages.length;
+        if (stream) stream.scrollTop = stream.scrollHeight;
+      }
+
+      if (data.appointments && data.appointments.length > 0) {
+        const appt = data.appointments[0];
+        if (appt.queue_status && appt.queue_status !== previousQueueStatus) {
+          if (appt.queue_status === 'in_consultation' && previousQueueStatus === 'waiting') {
+            playNotificationChime();
+            alert(`🔔 Attention: Dr. ${appt.doctor_name} is now calling you to ${appt.doctor_room}!`);
+          }
+          previousQueueStatus = appt.queue_status;
+        }
+      }
+    } catch (err) { }
+  }
+
+  setInterval(pollPatientTelemetry, 4000);
+
+  const stream = document.getElementById('chatStreamBody');
+  if (stream) stream.scrollTop = stream.scrollHeight;
+
+  function openRatingModal(doctorId, doctorName) {
+    const ratingForm = document.getElementById('ratingForm');
+    const ratingDoctorName = document.getElementById('ratingModalDoctorName');
+    if (ratingForm) ratingForm.action = `/doctor/${doctorId}/review`;
+    if (ratingDoctorName) ratingDoctorName.textContent = `Review consultation with ${doctorName}`;
+
+    const modalEl = document.getElementById('ratingModal');
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    } else {
+      modalEl.classList.add('show');
+      modalEl.style.display = 'block';
     }
+  }
 
-    // Socket.IO listeners
-    socket.on('new_message', function(msg) {
-        if (msg.sender === 'doctor') {
-            appendMessage(msg);
-            loadDoctors();
-        }
-    });
-
-    sendBtn.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    // Initial load and auto-refresh
-    loadDoctors();
-    setInterval(loadDoctors, 3000);
-});
+  function closeRatingModal() {
+    const modalEl = document.getElementById('ratingModal');
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      const m = bootstrap.Modal.getInstance(modalEl);
+      if (m) m.hide();
+    }
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+  }
 </script>
-
-<style>
-    /* Premium Smooth Scroll & Customizations */
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    
-    body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-
-    .glass-effect {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-    }
-
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f5f9;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-</style>
 {% endblock %}

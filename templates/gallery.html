@@ -8,6 +8,17 @@
     .gallery-font {
         font-family: 'Outfit', sans-serif;
     }
+
+    /* Smooth transition for filtering */
+    .gallery-item {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .gallery-item.filtered-out {
+        opacity: 0;
+        transform: scale(0.9);
+        display: none;
+    }
 </style>
 
 <div class="gallery-font relative min-h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden py-16 sm:py-20 lg:py-24 transition-colors duration-300">
@@ -21,6 +32,22 @@
 
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl relative z-10">
 
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="max-w-2xl mx-auto mb-8 space-y-3">
+                    {% for category, message in messages %}
+                        <div class="p-4 rounded-2xl border text-sm font-semibold flex items-center gap-3 animate-fade-in
+                                    {% if category == 'success' %} bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50
+                                    {% else %} bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50 {% endif %}">
+                            <i class="fas {% if category == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} text-base"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         <!-- Header Section -->
         <div class="text-center mb-16 space-y-6">
             <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/20 border border-cyan-500/20 mb-2">
@@ -30,7 +57,7 @@
             
             <h1 class="text-5xl md:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tighter leading-none">
                 Spherix Clinic <br>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-500">Media Hub</span>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-50">Media Hub</span>
             </h1>
             
             <p class="text-lg md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto font-light leading-relaxed">
@@ -38,23 +65,89 @@
             </p>
         </div>
 
+        <!-- Direct Media Upload Form -->
+        <div x-data="{ showUploadForm: false }" class="mb-16 max-w-2xl mx-auto">
+            <div class="flex justify-center">
+                <button @click="showUploadForm = !showUploadForm" 
+                        class="px-8 py-3.5 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-black uppercase tracking-[2px] flex items-center gap-2 shadow-lg shadow-cyan-500/20 active:scale-95 transition-all duration-300">
+                    <i class="fas" :class="showUploadForm ? 'fa-minus' : 'fa-plus'"></i> 
+                    <span x-text="showUploadForm ? 'Close Form' : 'Contribute Media Specimen'"></span>
+                </button>
+            </div>
+
+            <div x-show="showUploadForm" 
+                 x-transition.opacity.scale.origin.top
+                 x-cloak
+                 class="mt-8 p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-xl space-y-6">
+                
+                <div class="text-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-white">Media Contribution Portal</h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Upload visual findings, clinical references, or symptoms to index them in the database.</p>
+                </div>
+
+                <form action="{{ url_for('gallery_upload') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Specimen Title</label>
+                            <input type="text" name="title" required placeholder="e.g. Chronic Dermatitis Patch" 
+                                   class="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-cyan-500 outline-none text-sm transition-all shadow-inner">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Uploader (Name / Role)</label>
+                            <input type="text" name="author" required placeholder="e.g. Dr. Jane Doe" 
+                                   class="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-cyan-500 outline-none text-sm transition-all shadow-inner">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Repository Category</label>
+                            <select name="category" 
+                                    class="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-cyan-500 outline-none text-sm transition-all cursor-pointer">
+                                <option value="clinical">Clinical Archive (Reference)</option>
+                                <option value="uploads">Patient Case Uploads (Symptoms)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Select Image File</label>
+                            <input type="file" name="file" required accept="image/*" 
+                                   class="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 focus:ring-2 focus:ring-cyan-500 outline-none text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-cyan-500/10 file:text-cyan-600 dark:file:text-cyan-400 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Clinical Notes / Case Description</label>
+                        <textarea name="description" rows="3" required placeholder="Describe the diagnostic details, symptoms, and clinical findings shown in the image..." 
+                                  class="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-cyan-500 outline-none text-sm transition-all shadow-inner"></textarea>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" 
+                                class="w-full py-4 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black uppercase tracking-[2px] transition-all shadow-lg shadow-cyan-500/15 active:scale-[0.99] flex items-center justify-center gap-2">
+                            <i class="fas fa-cloud-upload-alt text-sm"></i> Upload and Index Specimen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Filter Controls -->
         <div class="flex justify-center mb-12">
-            <div class="inline-flex p-1.5 rounded-3xl bg-slate-200/50 dark:bg-slate-900/50 border border-slate-200/30 dark:border-slate-800/30 backdrop-blur-xl gap-2 shadow-inner">
-                <button id="filter-btn-all" onclick="filterGallery('all')" 
+            <div class="flex flex-wrap justify-center p-1.5 rounded-3xl bg-slate-200/50 dark:bg-slate-900/50 border border-slate-200/30 dark:border-slate-800/30 backdrop-blur-xl gap-2 shadow-inner">
+                <button type="button" onclick="filterGallery('all')" data-filter="all" 
                     class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-cyan-600 text-white shadow-lg shadow-cyan-500/20 active:scale-95">
                     Show All
                 </button>
-                <button id="filter-btn-clinical" onclick="filterGallery('clinical')" 
-                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-white/50 text-slate-600 hover:bg-white dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
+                <button type="button" onclick="filterGallery('clinical')" data-filter="clinical" 
+                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
                     Clinical Archive
                 </button>
-                <button id="filter-btn-uploads" onclick="filterGallery('uploads')" 
-                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-white/50 text-slate-600 hover:bg-white dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
+                <button type="button" onclick="filterGallery('uploads')" data-filter="uploads" 
+                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
                     Patient Case Uploads
                 </button>
-                <button id="filter-btn-videos" onclick="filterGallery('videos')" 
-                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all bg-white/50 text-slate-600 hover:bg-white dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
+                <button type="button" onclick="filterGallery('videos')" data-filter="videos" 
+                    class="filter-btn px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[1.5px] transition-all text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95">
                     Clinical Videos
                 </button>
             </div>
@@ -65,37 +158,54 @@
             
             <!-- Dynamic Image Rendition -->
             {% for img in images %}
-            {% set is_upload = 'uploads/' in img %}
-            <div class="gallery-item group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md hover:shadow-2xl transition-all duration-500 ease-in-out cursor-pointer item-type-{% if is_upload %}uploads{% else %}clinical{% endif %}"
-                 onclick="openModal('{{ url_for(\'static\', filename=img) }}', '{% if is_upload %}Patient Uploaded Symptom Case{% else %}Clinical Reference Specimen{% endif %}')">
+            <div class="gallery-item group relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col"
+                 data-category="{{ metadata[img].category }}"
+                 data-src="{{ url_for('static', filename=img) }}"
+                 data-title="{{ metadata[img].title }}"
+                 data-description="{{ metadata[img].description }}"
+                 data-author="{{ metadata[img].author }}"
+                 data-category-name="{{ metadata[img].category }}">
                 
-                <!-- Image Tag -->
-                <div class="relative overflow-hidden aspect-square">
+                <!-- Image Container -->
+                <div class="relative overflow-hidden aspect-video cursor-pointer" onclick="openModalFromElement(this.closest('.gallery-item'))">
                     <img src="{{ url_for('static', filename=img) }}" 
-                         alt="Gallery Specimen {{ loop.index }}" 
+                         alt="{{ metadata[img].title }}" 
                          class="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out filter group-hover:brightness-95">
                     
-                    <!-- Premium Interactive Hover Overlay -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-between p-6">
-                        
-                        <!-- Top details -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent flex flex-col justify-between p-4">
                         <div class="flex justify-between items-start">
-                            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 backdrop-blur-md">
-                                {% if is_upload %}Symptom Upload{% else %}Clinical Specimen{% endif %}
+                            <span class="px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 backdrop-blur-md">
+                                {{ 'Patient Case' if metadata[img].category == 'uploads' else 'Clinical Archive' }}
                             </span>
-                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-md border border-white/25">
-                                <i class="fas fa-search-plus text-xs"></i>
+                            <div class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-md border border-white/20">
+                                <i class="fas fa-expand-alt text-[10px]"></i>
                             </div>
                         </div>
-                        
-                        <!-- Bottom details -->
-                        <div class="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                            <p class="text-white text-base font-bold leading-tight">
-                                {% if is_upload %}Case Specimen #{{ loop.index }}{% else %}Reference Asset #{{ loop.index }}{% endif %}
-                            </p>
-                            <p class="text-cyan-400 text-[10px] font-bold uppercase tracking-widest mt-1">Click to Inspect Node</p>
-                        </div>
-                        
+                    </div>
+                </div>
+
+                <!-- Content Area Below Image -->
+                <div class="p-6 flex flex-col flex-grow bg-white dark:bg-slate-900">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-white leading-tight group-hover:text-cyan-600 transition-colors duration-300 line-clamp-1">
+                        {{ metadata[img].title }}
+                    </h3>
+                    
+                    <div class="flex items-center gap-2 mt-2 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                        <span class="flex items-center gap-1"><i class="fas fa-user-md text-[9px]"></i> {{ metadata[img].author }}</span>
+                        <span>•</span>
+                        <span class="flex items-center gap-1"><i class="fas fa-tag text-[9px]"></i> {{ 'Clinical Archive' if metadata[img].category == 'clinical' else 'Patient Case' }}</span>
+                    </div>
+
+                    <p class="mt-3.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-normal flex-grow line-clamp-3">
+                        {{ metadata[img].description }}
+                    </p>
+
+                    <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                        <button type="button" 
+                                onclick="openModalFromElement(this.closest('.gallery-item'))"
+                                class="text-cyan-600 hover:text-cyan-500 dark:text-cyan-400 dark:hover:text-cyan-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all">
+                            Inspect Specimen <i class="fas fa-arrow-right text-[10px]"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -103,114 +213,162 @@
 
             <!-- Dynamic Video Rendition -->
             {% for video in videos %}
-            <div class="gallery-item item-type-videos bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2rem] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 ease-in-out">
-                <div class="relative aspect-video overflow-hidden">
-                    <iframe class="w-full h-full border-none"
-                            src="{{ video.url | replace('watch?v=', 'embed/') }}?modestbranding=1&rel=0"
-                            title="{{ video.title }}"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowfullscreen>
-                    </iframe>
-                </div>
-                <div class="p-6">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                            Video Feed
-                        </span>
-                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Uplink Active</span>
+            <div class="gallery-item" data-category="videos">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2rem] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 ease-in-out">
+                    <div class="relative aspect-video overflow-hidden">
+                        <iframe class="w-full h-full border-none"
+                                src="{{ video.url | replace('watch?v=', 'embed/') }}?modestbranding=1&rel=0"
+                                title="{{ video.title }}"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen>
+                        </iframe>
                     </div>
-                    <p class="text-base font-extrabold text-slate-800 dark:text-slate-100 leading-snug">{{ video.title }}</p>
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                Video Feed
+                            </span>
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Uplink Active</span>
+                        </div>
+                        <p class="text-base font-extrabold text-slate-800 dark:text-slate-100 leading-snug">{{ video.title }}</p>
+                    </div>
                 </div>
             </div>
             {% endfor %}
 
         </div>
-
     </div>
 </div>
 
-<!-- PREMIUM LIGHTBOX MODAL -->
-<div id="imageModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex flex-col items-center justify-center z-[10000] hidden p-4" onclick="closeModal()">
+<!-- PREMIUM LIGHTBOX MODAL (Split Screen) -->
+<div id="imageModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center z-[10000] hidden p-4 sm:p-6" onclick="closeModal()">
     
-    <!-- Header info in Modal -->
-    <div class="absolute top-6 left-6 text-left hidden md:block">
-        <span class="text-[9px] font-black text-cyan-400 uppercase tracking-[4px]">Media Inspector</span>
-        <h4 id="modalCaption" class="text-white text-lg font-bold tracking-tight mt-1">Visual Specimen</h4>
-    </div>
-    
-    <!-- Floating Action Close Button -->
-    <button class="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/20 backdrop-blur-md transition-all duration-300 focus:outline-none"
+    <button type="button" class="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/20 backdrop-blur-md transition-all duration-300 z-50"
             onclick="event.stopPropagation(); closeModal()">
         <i class="fas fa-times text-lg"></i>
     </button>
     
-    <!-- Image Box -->
-    <div class="relative max-w-4xl max-h-[75vh] flex items-center justify-center p-1 rounded-[2.5rem] bg-gradient-to-b from-white/10 to-transparent border border-white/10 overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
-        <img id="modalImg" src="" alt="Full Image View" class="max-w-full max-h-[70vh] object-contain rounded-[2.3rem] transform scale-95 opacity-0 transition-all duration-300">
-    </div>
+    <div class="relative max-w-5xl w-full bg-slate-900/80 backdrop-blur-md rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl p-4 md:p-6" onclick="event.stopPropagation()">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Image Side -->
+            <div class="lg:col-span-2 flex items-center justify-center bg-black/40 rounded-2xl overflow-hidden p-2 aspect-[4/3] lg:aspect-auto lg:h-[70vh]">
+                <img id="modalImg" src="" alt="Full View" class="max-w-full max-h-full object-contain rounded-xl transition-all duration-300 opacity-0 scale-95">
+            </div>
+            
+            <!-- Metadata Side -->
+            <div class="flex flex-col justify-between text-white p-2">
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-[9px] font-black text-cyan-400 uppercase tracking-[3px]">Diagnostic Node</span>
+                        <h3 id="modalTitle" class="text-2xl font-bold tracking-tight text-white mt-1">Specimen Title</h3>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2">
+                        <span id="modalCategory" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-400/30">
+                            Clinical Specimen
+                        </span>
+                        <span id="modalAuthor" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/10 text-slate-300 border border-white/10 flex items-center gap-1">
+                            By Dr. Sarah Jenkins
+                        </span>
+                    </div>
 
-    <!-- Bottom Actions in Modal -->
-    <div class="absolute bottom-6 flex gap-4">
-        <a id="modalDownloadBtn" href="" download class="px-6 py-3 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all active:scale-95" onclick="event.stopPropagation()">
-            <i class="fas fa-download"></i> Download Node
-        </a>
-        <button onclick="closeModal()" class="px-6 py-3 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95">
-            Dismiss
-        </button>
+                    <div class="h-px bg-white/10 my-2"></div>
+
+                    <div>
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-[2px]">Clinical Notes</span>
+                        <p id="modalDescription" class="text-xs text-slate-300 leading-relaxed mt-2 max-h-[30vh] overflow-y-auto pr-2">
+                            Description text...
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-3">
+                    <a id="modalDownloadBtn" href="#" download class="w-full py-3.5 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all active:scale-[0.98]">
+                        <i class="fas fa-download"></i> Download Specimen
+                    </a>
+                    <button type="button" onclick="closeModal()" class="w-full py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-black uppercase tracking-wider transition-all active:scale-[0.98]">
+                        Dismiss Inspector
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
 function filterGallery(category) {
-    // Update active tab styles
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-500/20');
-        btn.classList.add('bg-white/50', 'text-slate-600', 'hover:bg-white', 'dark:bg-slate-800/50', 'dark:text-slate-300', 'dark:hover:bg-slate-800');
-    });
-    
-    // Add active styles to clicked button
-    const activeBtn = document.getElementById(`filter-btn-${category}`);
-    if (activeBtn) {
-        activeBtn.classList.remove('bg-white/50', 'text-slate-600', 'hover:bg-white', 'dark:bg-slate-800/50', 'dark:text-slate-300', 'dark:hover:bg-slate-800');
-        activeBtn.classList.add('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-500/20');
-    }
-    
-    // Show/hide items with transition
-    document.querySelectorAll('.gallery-item').forEach(item => {
-        if (category === 'all') {
-            item.classList.remove('hidden');
+    const buttons = document.querySelectorAll('.filter-btn');
+    const items = document.querySelectorAll('.gallery-item');
+
+    // Update Button UI
+    buttons.forEach(btn => {
+        if(btn.getAttribute('data-filter') === category) {
+            btn.classList.add('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-500/20');
+            btn.classList.remove('text-slate-600', 'dark:text-slate-300');
         } else {
-            if (item.classList.contains(`item-type-${category}`)) {
-                item.classList.remove('hidden');
-            } else {
-                item.classList.add('hidden');
-            }
+            btn.classList.remove('bg-cyan-600', 'text-white', 'shadow-lg', 'shadow-cyan-500/20');
+            btn.classList.add('text-slate-600', 'dark:text-slate-300');
         }
+    });
+
+    // Filter Items
+    items.forEach(item => {
+        item.style.opacity = '0'; // Start fade out
+        setTimeout(() => {
+            if (category === 'all' || item.getAttribute('data-category') === category) {
+                item.classList.remove('filtered-out');
+                item.style.display = 'flex';
+                setTimeout(() => item.style.opacity = '1', 10);
+            } else {
+                item.classList.add('filtered-out');
+                item.style.display = 'none';
+            }
+        }, 300);
     });
 }
 
-function openModal(src, captionText) {
+function openModalFromElement(element) {
+    const src = element.getAttribute('data-src');
+    const title = element.getAttribute('data-title');
+    const description = element.getAttribute('data-description');
+    const author = element.getAttribute('data-author');
+    const category = element.getAttribute('data-category-name');
+    openModal(src, title, description, author, category);
+}
+
+function openModal(src, title, description, author, category) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImg');
-    const modalCaption = document.getElementById('modalCaption');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDescription = document.getElementById('modalDescription');
+    const modalAuthor = document.getElementById('modalAuthor');
+    const modalCategory = document.getElementById('modalCategory');
     const downloadBtn = document.getElementById('modalDownloadBtn');
     
     modalImg.src = src;
-    downloadBtn.href = "/gallery/download?filepath=" + encodeURIComponent(src);
-    if(captionText) {
-        modalCaption.innerText = captionText;
+    
+    const purePath = src.split('?')[0]; 
+    downloadBtn.href = "/gallery/download?filepath=" + encodeURIComponent(purePath);
+    
+    modalTitle.innerText = title || "Clinical Media Node";
+    modalDescription.innerText = description || "No diagnostic notes associated with this specimen node.";
+    modalAuthor.innerHTML = '<i class="fas fa-user-md text-[9px] mr-1"></i> ' + (author || "Anonymous Source");
+    
+    if (category === 'uploads') {
+        modalCategory.innerText = "Patient Case Upload";
+        modalCategory.className = "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-400/30";
     } else {
-        modalCaption.innerText = "Clinical Media Node";
+        modalCategory.innerText = "Clinical Specimen";
+        modalCategory.className = "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-400/30";
     }
     
     modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden'; // Prevent scrolling
+    document.body.style.overflow = 'hidden'; 
     
-    // Smooth animate in
     setTimeout(() => {
-        modalImg.classList.remove('scale-95', 'opacity-0');
-        modalImg.classList.add('scale-100', 'opacity-100');
+        modalImg.classList.remove('opacity-0', 'scale-95');
+        modalImg.classList.add('opacity-100', 'scale-100');
     }, 50);
 }
 
@@ -218,22 +376,17 @@ function closeModal() {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImg');
     
-    modalImg.classList.remove('scale-100', 'opacity-100');
-    modalImg.classList.add('scale-95', 'opacity-0');
+    modalImg.classList.add('opacity-0', 'scale-95');
     
     setTimeout(() => {
         modal.classList.add('hidden');
         modalImg.src = '';
-        document.body.style.overflow = ''; // Restore scrolling
-    }, 250);
+        document.body.style.overflow = '';
+    }, 300);
 }
 
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-    const modal = document.getElementById('imageModal');
-    if(e.key === 'Escape' && !modal.classList.contains('hidden')){
-        closeModal();
-    }
+document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') closeModal();
 });
 </script>
 

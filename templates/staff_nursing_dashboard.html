@@ -1,0 +1,636 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Nursing Clinical Station | Spherix Clinic{% endblock %}
+{% block page_title %}Nursing Clinical Station{% endblock %}
+{% block page_subtitle %}Real-time ward telemetry, inpatient monitoring, vitals charting, and emergency care coordination.{% endblock %}
+
+{% block header_actions %}
+<div class="d-flex align-items-center gap-2">
+  <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm">
+    <span class="w-2 h-2 rounded-full bg-success animate-ping"></span>
+    <i class="fas fa-heartbeat"></i> 24/7 CLINICAL MONITORING
+  </span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0" id="nursingStationApp">
+  <!-- Top Operational Banner -->
+  <div class="dashboard-card p-4 mb-4 text-white rounded-4 border-0 shadow-lg position-relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #064e3b 50%, #1e293b 100%);">
+    <div class="position-absolute end-0 top-0 w-96 h-96 bg-success opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 position-relative z-1">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
+          <span class="badge bg-white/15 text-white px-2.5 py-1 rounded-pill small fw-bold">
+            <i class="fas fa-hospital me-1"></i> {{ hospital.name if hospital else 'Hospital Ward' }}
+          </span>
+          <span class="badge bg-emerald-500/30 text-emerald-200 px-2 py-1 rounded-pill small">
+            Attending Nurse: {{ staff.name }}
+          </span>
+        </div>
+        <h2 class="text-2xl font-black text-white tracking-tight mb-1">
+          Ward & Inpatient Clinical Care Station
+        </h2>
+        <p class="text-slate-300 small mb-0 max-w-2xl">
+          Direct real-time connection with Reception, Bed Management, and Blood Bank. All vitals and clinical logs are written directly to the SQL database.
+        </p>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-emerald btn-sm px-3 py-2 rounded-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-white" style="background-color: #059669;" data-bs-toggle="modal" data-bs-target="#quickVitalsModal">
+          <i class="fas fa-file-medical"></i>
+          <span>Chart Vitals</span>
+        </button>
+        <button type="button" class="btn btn-primary btn-sm px-3 py-2 rounded-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" data-bs-toggle="modal" data-bs-target="#medicationModal">
+          <i class="fas fa-pills"></i>
+          <span>Give Medication (MAR)</span>
+        </button>
+        <button type="button" class="btn btn-danger btn-sm px-3 py-2 rounded-3 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" data-bs-toggle="modal" data-bs-target="#bloodReqModal">
+          <i class="fas fa-tint"></i>
+          <span>Blood Transfusion Call</span>
+        </button>
+        <button type="button" onclick="fetchNursingLiveUpdates()" class="btn btn-light btn-sm px-3 py-2 rounded-3 fw-bold text-slate-900 d-inline-flex align-items-center gap-1.5 shadow-sm">
+          <i class="fas fa-sync-alt" id="refreshIcon"></i>
+          <span>Refresh Feed</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 High-Impact KPI Cards -->
+  <div class="row g-3 mb-4">
+    <!-- 1. Total Inpatients -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="dashboard-card p-3.5 h-100 d-flex flex-column justify-content-between transition-all hover:shadow-md">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-bold text-uppercase tracking-wider">Total Inpatients</span>
+          <div class="w-9 h-9 rounded-2 bg-primary-soft d-flex align-items-center justify-content-center text-primary fs-6 border border-primary-subtle">
+            <i class="fas fa-procedures"></i>
+          </div>
+        </div>
+        <div>
+          <div class="fs-3 fw-extrabold text-slate-800 tracking-tight" id="kpi-inpatients">{{ inpatients | length }}</div>
+          <div class="small text-muted d-flex align-items-center gap-1 mt-1">
+            <span class="badge bg-primary-subtle text-primary py-0.5 px-1.5 rounded-1 fw-bold" id="kpi-icu-badge">
+              {{ inpatients | selectattr('bed_type', 'equalto', 'ICU') | list | length }} ICU
+            </span>
+            <span>•</span>
+            <span id="kpi-gen-badge">{{ inpatients | selectattr('bed_type', 'equalto', 'General') | list | length }} General</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Critical & Guarded Cases -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="dashboard-card p-3.5 h-100 d-flex flex-column justify-content-between transition-all hover:shadow-md">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-bold text-uppercase tracking-wider">Critical Care Acuity</span>
+          <div class="w-9 h-9 rounded-2 bg-danger-subtle d-flex align-items-center justify-content-center text-danger fs-6 border border-danger-subtle">
+            <i class="fas fa-heartbeat"></i>
+          </div>
+        </div>
+        <div>
+          <div class="fs-3 fw-extrabold text-danger tracking-tight" id="kpi-critical">
+            {{ inpatients | selectattr('bed_type', 'equalto', 'ICU') | list | length }}
+          </div>
+          <div class="small text-muted d-flex align-items-center gap-1 mt-1">
+            <span class="badge bg-danger-subtle text-danger py-0.5 px-1.5 rounded-1 fw-bold">Continuous ICU</span>
+            <span>telemetry active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Available Hospital Beds -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="dashboard-card p-3.5 h-100 d-flex flex-column justify-content-between transition-all hover:shadow-md">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-bold text-uppercase tracking-wider">Available Capacity</span>
+          <div class="w-9 h-9 rounded-2 bg-success-subtle d-flex align-items-center justify-content-center text-success fs-6 border border-success-subtle">
+            <i class="fas fa-bed"></i>
+          </div>
+        </div>
+        <div>
+          <div class="fs-3 fw-extrabold text-slate-800 tracking-tight" id="kpi-available-beds">
+            {{ hospital.available_beds if hospital else 0 }}
+          </div>
+          <div class="small text-muted d-flex align-items-center gap-1 mt-1">
+            <span class="text-success fw-semibold">{{ hospital.available_beds if hospital else 0 }} General</span>
+            <span>•</span>
+            <span class="text-danger fw-semibold">{{ hospital.available_icu_beds if hospital else 0 }} ICU Free</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Blood Stock Standby Units -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="dashboard-card p-3.5 h-100 d-flex flex-column justify-content-between transition-all hover:shadow-md">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-muted small fw-bold text-uppercase tracking-wider">Blood Bank Reserve</span>
+          <div class="w-9 h-9 rounded-2 bg-danger-subtle d-flex align-items-center justify-content-center text-danger fs-6 border border-danger-subtle">
+            <i class="fas fa-tint"></i>
+          </div>
+        </div>
+        <div>
+          <div class="fs-3 fw-extrabold text-slate-800 tracking-tight" id="kpi-blood-units">
+            {{ blood_stock.values() | sum if blood_stock else 0 }} Units
+          </div>
+          <div class="small text-muted d-flex align-items-center gap-1 mt-1">
+            <span class="badge bg-success-subtle text-success py-0.5 px-1.5 rounded-1 fw-bold">Live Synced</span>
+            <span>Blood Bank ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inpatient Ward Monitoring Table -->
+  <div class="dashboard-card p-4 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+      <div>
+        <h4 class="font-bold text-slate-800 mb-0 fs-5">
+          <i class="fas fa-hospital-user text-primary me-2"></i>Active Inpatient Ward Roster
+        </h4>
+        <span class="text-muted small">Real-time telemetry and care records for currently admitted patients in General & ICU beds</span>
+      </div>
+      <div class="d-flex gap-2">
+        <span class="badge bg-light text-slate-700 border px-3 py-2 rounded-pill small fw-semibold">
+          <i class="fas fa-check-circle text-success me-1"></i> Direct SQL Database Ingestion
+        </span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="inpatientTable">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Patient Details</th>
+            <th>Ward & Room</th>
+            <th>Admission Reason</th>
+            <th>Care Acuity</th>
+            <th>Latest Telemetry Vitals</th>
+            <th class="text-end pe-3">Nursing Actions</th>
+          </tr>
+        </thead>
+        <tbody id="inpatientTableBody">
+          {% if inpatients %}
+            {% for b in inpatients %}
+            <tr id="inpatient-row-{{ b.id }}">
+              <td class="ps-3">
+                <div class="d-flex align-items-center gap-2.5">
+                  {% set avatar_bg = '#ef4444' if b.bed_type == 'ICU' else '#3b82f6' %}
+                  <div class="w-10 h-10 rounded-full d-flex align-items-center justify-content-center fw-bold text-white shadow-sm"
+                       style="--avatar-bg: {{ avatar_bg }}; background: var(--avatar-bg);">
+                    {{ b.patient_name[:1].upper() }}
+                  </div>
+                  <div>
+                    <div class="fw-bold text-slate-900">{{ b.patient_name }}</div>
+                    <div class="small text-muted font-mono" style="font-size: 0.75rem;">
+                      <i class="fas fa-phone-alt me-1 text-slate-400"></i>{{ b.patient_phone or 'N/A' }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-1.5">
+                  <span class="badge {% if b.bed_type == 'ICU' %}bg-danger text-white{% else %}bg-primary-subtle text-primary{% endif %} px-2.5 py-1 rounded-pill fw-bold">
+                    {{ b.bed_type }}
+                  </span>
+                  <span class="badge bg-light text-slate-800 border px-2 py-1 rounded-2 fw-semibold">
+                    Room {{ b.room_number or 'N/A' }}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div class="text-slate-700 small max-w-xs text-truncate" title="{{ b.reason }}">
+                  {{ b.reason or 'General Inpatient Care' }}
+                </div>
+              </td>
+              <td>
+                {% set acuity = b.care_status or ('Critical' if b.bed_type == 'ICU' else 'Stable') %}
+                <span class="badge {% if acuity == 'Critical' %}bg-danger-subtle text-danger border border-danger-subtle{% elif acuity == 'Guarded' %}bg-warning-subtle text-warning border border-warning-subtle{% else %}bg-success-subtle text-success border border-success-subtle{% endif %} px-2.5 py-1 rounded-pill fw-bold">
+                  <i class="fas {% if acuity == 'Critical' %}fa-exclamation-triangle{% elif acuity == 'Guarded' %}fa-eye{% else %}fa-check{% endif %} me-1"></i>
+                  {{ acuity }}
+                </span>
+              </td>
+              <td>
+                {% if b.latest_vitals %}
+                  <div class="small bg-light p-2 rounded-3 border" style="font-size: 0.75rem;">
+                    <span class="fw-bold text-slate-900">BP:</span> {{ b.latest_vitals.get('bp', 'N/A') }} • 
+                    <span class="fw-bold text-slate-900">Pulse:</span> {{ b.latest_vitals.get('pulse', 'N/A') }} bpm • 
+                    <span class="fw-bold text-slate-900">SpO2:</span> {{ b.latest_vitals.get('spo2', 'N/A') }}%
+                  </div>
+                {% else %}
+                  <span class="text-muted small italic">No vitals charted today</span>
+                {% endif %}
+              </td>
+              <td class="text-end pe-3">
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-outline-success" title="Record Vitals"
+                          onclick="openVitalsModal(this.dataset.patientId, this.dataset.id, this.dataset.name)"
+                          data-patient-id="{{ b.patient_id or b.id }}"
+                          data-id="{{ b.id }}"
+                          data-name="{{ b.patient_name }}">
+                    <i class="fas fa-stethoscope"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-primary" title="Give Medication (MAR)"
+                          onclick="openMedModal(this.dataset.name)"
+                          data-name="{{ b.patient_name }}">
+                    <i class="fas fa-pills"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-warning" title="Update Acuity"
+                          onclick="openAcuityModal(this.dataset.id, this.dataset.name, this.dataset.acuity)"
+                          data-id="{{ b.id }}"
+                          data-name="{{ b.patient_name }}"
+                          data-acuity="{{ b.care_status or 'Stable' }}">
+                    <i class="fas fa-user-tag"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" title="Transfer Bed"
+                          onclick="openTransferModal(this.dataset.id, this.dataset.name, this.dataset.bedType, this.dataset.room)"
+                          data-id="{{ b.id }}"
+                          data-name="{{ b.patient_name }}"
+                          data-bed-type="{{ b.bed_type }}"
+                          data-room="{{ b.room_number or '' }}">
+                    <i class="fas fa-exchange-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-5 text-muted">
+                <i class="fas fa-procedures fs-2 text-slate-300 mb-2 d-block"></i>
+                <p class="mb-0 fw-semibold">No admitted inpatients currently registered in this hospital's wards.</p>
+                <small>Patients admitted via Reception or Bed Management will appear here instantly in real time.</small>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Live Blood Bank Stock Standby Grid -->
+  <div class="dashboard-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h4 class="font-bold text-slate-800 mb-0 fs-5">
+          <i class="fas fa-tint text-danger me-2"></i>Live Hospital Blood Depository
+        </h4>
+        <span class="text-muted small">Standby life-saving units available for surgical & critical ward transfusions</span>
+      </div>
+      <button type="button" class="btn btn-outline-danger btn-sm rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#bloodReqModal">
+        <i class="fas fa-plus-circle me-1"></i> Request Transfusion
+      </button>
+    </div>
+
+    <div class="row g-2 text-center" id="bloodStockGrid">
+      {% for bg in ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] %}
+      <div class="col-6 col-sm-3 col-md-3 col-xl-3 col-xxl-1.5">
+        <div class="p-3 border rounded-3 bg-light-subtle h-100 d-flex flex-column justify-content-between">
+          <div class="fw-black text-danger fs-5">{{ bg }}</div>
+          <div class="fs-4 fw-extrabold text-slate-900 my-1" id="blood-qty-{{ bg }}">
+            {{ blood_stock.get(bg, 0) if blood_stock else 0 }}
+          </div>
+          <div class="small text-muted" style="font-size: 0.7rem;">Units Ready</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ========================= MODALS ========================= -->
+
+<!-- 1. Quick Vitals Charting Modal -->
+<div class="modal fade" id="quickVitalsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <form action="{{ url_for('staff_nursing_dashboard') }}" method="POST">
+        <input type="hidden" name="record_patient_vitals" value="1">
+        <input type="hidden" name="booking_id" id="vitalsBookingId" value="">
+        <input type="hidden" name="patient_id" id="vitalsPatientId" value="">
+
+        <div class="modal-header bg-emerald-600 text-white rounded-top-4" style="background-color: #059669;">
+          <h5 class="modal-title fw-bold">
+            <i class="fas fa-stethoscope me-2"></i>Chart Inpatient Vitals
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Patient</label>
+            <input type="text" id="vitalsPatientName" class="form-control fw-bold" readonly>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Blood Pressure (mmHg)</label>
+              <input type="text" name="bp" class="form-control" placeholder="e.g. 120/80" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Pulse Rate (bpm)</label>
+              <input type="number" name="pulse" class="form-control" placeholder="e.g. 72" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Temperature (°F)</label>
+              <input type="text" name="temperature" class="form-control" placeholder="e.g. 98.6" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">SpO2 Oxygen Saturation (%)</label>
+              <input type="number" name="spo2" class="form-control" placeholder="e.g. 99" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold">Blood Sugar (mg/dL) - Optional</label>
+              <input type="number" name="blood_sugar" class="form-control" placeholder="e.g. 110">
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold">Clinical Nursing Notes</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Patient alert, resting comfortably..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 p-3 pt-0">
+          <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success rounded-3 fw-bold px-4" style="background-color: #059669;">
+            <i class="fas fa-check-circle me-1"></i> Save to SQL Database
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Medication Administration Modal (MAR) -->
+<div class="modal fade" id="medicationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <form action="{{ url_for('staff_nursing_dashboard') }}" method="POST">
+        <input type="hidden" name="log_medication_dose" value="1">
+
+        <div class="modal-header bg-primary text-white rounded-top-4">
+          <h5 class="modal-title fw-bold">
+            <i class="fas fa-pills me-2"></i>Log Medication Administration (MAR)
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Patient Name</label>
+            <input type="text" name="patient_name" id="medPatientName" class="form-control fw-bold" placeholder="Select or enter inpatient name" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Medication Name</label>
+            <input type="text" name="medicine_name" class="form-control" placeholder="e.g. Ceftriaxone 1g IV / Paracetamol 500mg" required>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Dosage</label>
+              <input type="text" name="dosage" class="form-control" placeholder="e.g. 500 mg" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Administration Route</label>
+              <select name="route" class="form-select">
+                <option value="Oral">Oral (PO)</option>
+                <option value="Intravenous (IV)">Intravenous (IV)</option>
+                <option value="Intramuscular (IM)">Intramuscular (IM)</option>
+                <option value="Subcutaneous (SC)">Subcutaneous (SC)</option>
+                <option value="Inhalation">Inhalation</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 p-3 pt-0">
+          <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary rounded-3 fw-bold px-4">
+            <i class="fas fa-check me-1"></i> Log in Clinical Record
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Care Acuity Modal -->
+<div class="modal fade" id="acuityModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <form action="{{ url_for('staff_nursing_dashboard') }}" method="POST">
+        <input type="hidden" name="update_patient_care_status" value="1">
+        <input type="hidden" name="booking_id" id="acuityBookingId" value="">
+
+        <div class="modal-header bg-dark text-white rounded-top-4">
+          <h5 class="modal-title fw-bold fs-6">Update Care Status</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-3">
+          <div class="mb-2">
+            <span class="small fw-bold text-muted">Patient:</span>
+            <div class="fw-bold" id="acuityPatientName"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Clinical Acuity</label>
+            <select name="care_status" id="acuitySelect" class="form-select">
+              <option value="Stable">Stable</option>
+              <option value="Guarded">Guarded / Observation</option>
+              <option value="Critical">Critical (ICU Monitoring)</option>
+              <option value="Ready for Discharge">Ready for Discharge</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 p-3 pt-0">
+          <button type="submit" class="btn btn-dark w-100 rounded-3 fw-bold">Update Status</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Inpatient Bed Transfer Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <form action="{{ url_for('staff_nursing_dashboard') }}" method="POST">
+        <input type="hidden" name="transfer_inpatient" value="1">
+        <input type="hidden" name="booking_id" id="transferBookingId" value="">
+
+        <div class="modal-header bg-secondary text-white rounded-top-4">
+          <h5 class="modal-title fw-bold fs-6">
+            <i class="fas fa-exchange-alt me-2"></i>Transfer Inpatient Ward
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Patient</label>
+            <input type="text" id="transferPatientName" class="form-control fw-bold" readonly>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Target Ward Bed Type</label>
+              <select name="new_bed_type" id="transferBedType" class="form-select">
+                <option value="General">General Ward</option>
+                <option value="ICU">ICU (Critical Care)</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">New Room Number</label>
+              <input type="text" name="new_room_number" id="transferRoomNumber" class="form-control" placeholder="e.g. ICU-03 or Room 204" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 p-3 pt-0">
+          <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-dark rounded-3 fw-bold px-4">Execute Transfer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Emergency Blood Request Modal -->
+<div class="modal fade" id="bloodReqModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <form action="{{ url_for('staff_nursing_dashboard') }}" method="POST">
+        <input type="hidden" name="request_blood_transfusion" value="1">
+
+        <div class="modal-header bg-danger text-white rounded-top-4">
+          <h5 class="modal-title fw-bold">
+            <i class="fas fa-tint me-2"></i>Emergency Blood Transfusion Call
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Patient Name</label>
+            <input type="text" name="patient_name" class="form-control fw-bold" placeholder="Inpatient recipient name" required>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Required Blood Group</label>
+              <select name="blood_group" class="form-select fw-bold text-danger">
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+" selected>O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Units Needed</label>
+              <input type="number" name="units" class="form-control" value="1" min="1" max="10" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold">Urgency Classification</label>
+              <select name="urgency" class="form-select">
+                <option value="Stat / Emergency (Immediate Transfusion)">Stat / Emergency (Immediate Transfusion)</option>
+                <option value="Urgent (Within 2 Hours)">Urgent (Within 2 Hours)</option>
+                <option value="Elective Surgery Hold">Elective Surgery Hold</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 p-3 pt-0">
+          <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">
+            <i class="fas fa-paper-plane me-1"></i> Dispatch Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openVitalsModal(patientId, bookingId, patientName) {
+    document.getElementById('vitalsPatientId').value = patientId || bookingId;
+    document.getElementById('vitalsBookingId').value = bookingId;
+    document.getElementById('vitalsPatientName').value = patientName;
+    new bootstrap.Modal(document.getElementById('quickVitalsModal')).show();
+  }
+
+  function openMedModal(patientName) {
+    document.getElementById('medPatientName').value = patientName || '';
+    new bootstrap.Modal(document.getElementById('medicationModal')).show();
+  }
+
+  function openAcuityModal(bookingId, patientName, currentAcuity) {
+    document.getElementById('acuityBookingId').value = bookingId;
+    document.getElementById('acuityPatientName').innerText = patientName;
+    document.getElementById('acuitySelect').value = currentAcuity || 'Stable';
+    new bootstrap.Modal(document.getElementById('acuityModal')).show();
+  }
+
+  function openTransferModal(bookingId, patientName, bedType, roomNumber) {
+    document.getElementById('transferBookingId').value = bookingId;
+    document.getElementById('transferPatientName').value = patientName;
+    document.getElementById('transferBedType').value = bedType || 'General';
+    document.getElementById('transferRoomNumber').value = roomNumber || '';
+    new bootstrap.Modal(document.getElementById('transferModal')).show();
+  }
+
+  // Real-time background short-polling for Nursing Station
+  function fetchNursingLiveUpdates() {
+    const icon = document.getElementById('refreshIcon');
+    if (icon) icon.classList.add('fa-spin');
+
+    fetch('/api/staff/nursing/live-stats')
+      .then(res => res.json())
+      .then(data => {
+        if (icon) icon.classList.remove('fa-spin');
+        if (data.success) {
+          // Update KPI counters
+          const kpiInp = document.getElementById('kpi-inpatients');
+          if (kpiInp) kpiInp.innerText = data.stats.total_inpatients;
+
+          const kpiIcu = document.getElementById('kpi-critical');
+          if (kpiIcu) kpiIcu.innerText = data.stats.critical_cases;
+
+          const kpiAvail = document.getElementById('kpi-available-beds');
+          if (kpiAvail) kpiAvail.innerText = data.stats.available_general_beds;
+
+          // Update blood stock
+          if (data.blood_stock) {
+            let totalUnits = 0;
+            for (let bg in data.blood_stock) {
+              const qtyEl = document.getElementById(`blood-qty-${bg}`);
+              if (qtyEl) qtyEl.innerText = data.blood_stock[bg];
+              totalUnits += data.blood_stock[bg];
+            }
+            const kpiBlood = document.getElementById('kpi-blood-units');
+            if (kpiBlood) kpiBlood.innerText = `${totalUnits} Units`;
+          }
+        }
+      })
+      .catch(err => {
+        if (icon) icon.classList.remove('fa-spin');
+        console.error('Error polling nursing live stats:', err);
+      });
+  }
+
+  // Auto-poll every 4.5 seconds
+  setInterval(fetchNursingLiveUpdates, 4500);
+</script>
+{% endblock %}

@@ -1,0 +1,423 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Bed Management | Spherix Clinic{% endblock %}
+{% block page_title %}Bed Management{% endblock %}
+{% block page_subtitle %}Oversee bed availability, requests, and patient allocation.{% endblock %}
+
+{% block header_actions %}
+<span class="dashboard-header-badge"><i class="fas fa-bed"></i> Bed Control</span>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Stats Cards -->
+    <div class="col-md-3">
+        <div class="dashboard-card p-4">
+            <div class="text-muted small fw-bold text-uppercase">Total Beds</div>
+            <div class="fs-2 fw-extrabold mt-1 text-slate-800">{{ hospital.total_beds }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card p-4">
+            <div class="text-muted small fw-bold text-uppercase">Available General</div>
+            <div class="fs-2 fw-extrabold mt-1 text-success">{{ hospital.available_beds }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card p-4">
+            <div class="text-muted small fw-bold text-uppercase">Available ICU</div>
+            <div class="fs-2 fw-extrabold mt-1 text-danger">{{ hospital.available_icu_beds }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card p-4">
+            <div class="text-muted small fw-bold text-uppercase">Pending Requests</div>
+            <div class="fs-2 fw-extrabold mt-1 text-warning">{{ bed_bookings|selectattr('status', 'equalto', 'pending')|list|length }}</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <div class="dashboard-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0">Bed Allocation Requests</h4>
+                <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#directAdmissionModal">
+                    <i class="fas fa-plus me-1"></i> Direct Admission
+                </button>
+            </div>
+
+            <!-- Filter Tabs -->
+            <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active rounded-pill px-4 py-2 me-2 font-semibold" id="pills-active-tab" data-bs-toggle="pill" data-bs-target="#pills-active" type="button" role="tab">Active Wards</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-pill px-4 py-2 font-semibold" id="pills-history-tab" data-bs-toggle="pill" data-bs-target="#pills-history" type="button" role="tab">Discharge History</button>
+                </li>
+            </ul>
+
+            <div class="mb-4">
+                <input type="text" id="bedSearchInput" class="form-control rounded-pill px-4" placeholder="Search patient name, bed type, or status...">
+            </div>
+
+            <div class="tab-content" id="pills-tabContent">
+                <!-- Active Admissions / Pending Requests Tab -->
+                <div class="tab-pane fade show active" id="pills-active" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="text-slate-500 small">
+                                    <th>Patient</th>
+                                    <th>Bed Type</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set active_count = namespace(value=0) %}
+                                {% for booking in bed_bookings if booking.status in ['pending', 'approved'] %}
+                                {% set active_count.value = active_count.value + 1 %}
+                                <tr class="booking-row">
+                                    <td class="fw-bold">{{ booking.patient_name }}</td>
+                                    <td><span class="badge bg-info-subtle text-info">{{ booking.bed_type }}</span></td>
+                                    <td>
+                                        <span class="badge rounded-pill {% if booking.status == 'approved' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}">
+                                            {{ booking.status|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if booking.status == 'pending' %}
+                                        <form action="{{ url_for('handle_bed_booking', booking_id=booking.id, action='approve') }}" method="POST" class="d-inline-flex gap-2">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="text" name="room_number" class="form-control form-control-sm w-auto" placeholder="Room #" required>
+                                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Approve</button>
+                                        </form>
+                                        <form action="{{ url_for('handle_bed_booking', booking_id=booking.id, action='reject') }}" method="POST" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Reject</button>
+                                        </form>
+                                        {% elif booking.status == 'approved' %}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-1" onclick="openBedTransferModal(this.dataset.id, this.dataset.patient, this.dataset.bedType, this.dataset.room)" data-id="{{ booking.id }}" data-patient="{{ booking.patient_name }}" data-bed-type="{{ booking.bed_type }}" data-room="{{ booking.room_number or '' }}">Transfer</button>
+                                        <form action="{{ url_for('staff_bed_dashboard') }}" method="POST" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="discharge_patient" value="1">
+                                            <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                            <button type="submit" class="btn btn-sm btn-info rounded-pill px-3">Discharge</button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% if active_count.value == 0 %}
+                                <tr><td colspan="4" class="text-center text-muted py-4">No active admissions or pending requests.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Discharged & Rejected History Tab -->
+                <div class="tab-pane fade" id="pills-history" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="text-slate-500 small">
+                                    <th>Patient</th>
+                                    <th>Bed Type</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Record Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set history_count = namespace(value=0) %}
+                                {% for booking in bed_bookings if booking.status in ['discharged', 'rejected'] %}
+                                {% set history_count.value = history_count.value + 1 %}
+                                <tr class="booking-row">
+                                    <td class="fw-bold">{{ booking.patient_name }}</td>
+                                    <td><span class="badge bg-secondary-subtle text-secondary">{{ booking.bed_type }}</span></td>
+                                    <td>
+                                        <span class="badge rounded-pill {% if booking.status == 'discharged' %}bg-secondary text-white{% else %}bg-danger-subtle text-danger{% endif %}">
+                                            {{ booking.status|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end text-muted small">{{ booking.created_at.strftime('%Y-%m-%d') if booking.created_at else '' }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if history_count.value == 0 %}
+                                <tr><td colspan="4" class="text-center text-muted py-4">No historical records found.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="col-lg-4">
+        <!-- Live Bed Layout Map -->
+        <div class="dashboard-card p-4 mb-4">
+            <h4 class="fw-bold mb-3">Live Bed Layout Map</h4>
+            <div class="mb-4">
+                <h6 class="small fw-bold text-muted text-uppercase mb-2">General Wards ({{ hospital.available_beds }}/{{ hospital.total_beds }} Avail)</h6>
+                <div class="d-flex flex-wrap gap-1">
+                    {% set total_b = (hospital.total_beds or 0)|int %}
+                    {% set avail_b = (hospital.available_beds or 0)|int %}
+                    {% set occupied_general = total_b - avail_b %}
+                    {% for i in range(total_b) %}
+                        {% if i < occupied_general %}
+                        <div class="bed-node bed-occupied" title="General Bed {{ i + 1 }} - Occupied" data-bs-toggle="tooltip">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        {% else %}
+                        <div class="bed-node bed-available" title="General Bed {{ i + 1 }} - Available" data-bs-toggle="tooltip">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <h6 class="small fw-bold text-muted text-uppercase mb-2">ICU Wards ({{ hospital.available_icu_beds }}/{{ hospital.icu_beds }} Avail)</h6>
+                <div class="d-flex flex-wrap gap-1">
+                    {% set icu_total = (hospital.icu_beds or 0)|int %}
+                    {% set icu_avail = (hospital.available_icu_beds or 0)|int %}
+                    {% set occupied_icu = icu_total - icu_avail %}
+                    {% for i in range(icu_total) %}
+                        {% if i < occupied_icu %}
+                        <div class="bed-node bed-occupied" title="ICU Bed {{ i + 1 }} - Occupied" data-bs-toggle="tooltip">
+                            <i class="fas fa-heart-pulse"></i>
+                        </div>
+                        {% else %}
+                        <div class="bed-node bed-available" title="ICU Bed {{ i + 1 }} - Available" data-bs-toggle="tooltip">
+                            <i class="fas fa-heart-pulse"></i>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card p-4">
+            <h4 class="fw-bold mb-3">Update Inventory</h4>
+            <form action="{{ url_for('staff_bed_dashboard') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="update_beds" value="1">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Total General Beds</label>
+                    <input type="number" name="total_beds" class="form-control" value="{{ hospital.total_beds }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Available General Beds</label>
+                    <input type="number" name="available_beds" class="form-control" value="{{ hospital.available_beds }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Total ICU Beds</label>
+                    <input type="number" name="icu_beds" class="form-control" value="{{ hospital.icu_beds }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Available ICU Beds</label>
+                    <input type="number" name="available_icu_beds" class="form-control" value="{{ hospital.available_icu_beds }}">
+                </div>
+                <button type="submit" class="btn btn-primary rounded-pill px-4 w-100">Update Inventory</button>
+            </form>
+        </div>
+        <div class="dashboard-card p-4 mt-4">
+            <h4 class="fw-bold mb-3">Update Bed Charges</h4>
+            <form action="{{ url_for('staff_bed_dashboard') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="update_bed_charges" value="1">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">General Bed Fee (per day)</label>
+                    <input type="number" step="0.01" name="general_bed_fee" class="form-control" value="{{ hospital.general_bed_fee }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">ICU Bed Fee (per day)</label>
+                    <input type="number" step="0.01" name="icu_bed_fee" class="form-control" value="{{ hospital.icu_bed_fee }}">
+                </div>
+                <button type="submit" class="btn btn-primary rounded-pill px-4 w-100">Update Pricing</button>
+            </form>
+        </div>
+        <div class="dashboard-card p-4 mt-4">
+            <h4 class="fw-bold mb-3">Recent Activity Logs</h4>
+            <div class="custom-scroll" style="max-height: 250px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for log in activity_logs %}
+                    <div class="list-group-item px-0 py-2 border-0 border-bottom border-slate-100">
+                        <div class="d-flex justify-content-between">
+                            <span class="small fw-bold text-slate-800">{{ log.action }}</span>
+                            <span class="text-muted text-[10px]">{{ log.timestamp.strftime('%H:%M:%S') if log.timestamp else '' }}</span>
+                        </div>
+                        <p class="text-muted small mb-0 mt-0.5">{{ log.details }}</p>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted small py-3">No activity logs recorded.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Direct Admission Modal -->
+<div class="modal fade" id="directAdmissionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow">
+            <form action="{{ url_for('staff_bed_dashboard') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="allocate_bed_directly" value="1">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Direct Bed Allocation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Patient Name</label>
+                        <input type="text" name="patient_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Patient Phone</label>
+                        <input type="tel" name="patient_phone" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label">Bed Type</label>
+                            <select name="bed_type" class="form-select" required>
+                                <option value="General">General</option>
+                                <option value="ICU">ICU</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Room/Bed Number</label>
+                            <input type="text" name="room_number" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Reason for Admission</label>
+                        <textarea name="reason" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Admit Patient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Bed Modal -->
+<div class="modal fade" id="staffBedTransferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-exchange-alt me-2"></i>Transfer Patient Ward</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('staff_bed_dashboard') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="transfer_bed" value="1">
+                <input type="hidden" name="booking_id" id="transferBookingIdInput">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Patient</label>
+                        <input type="text" id="transferPatientNameInput" class="form-control fw-bold" readonly>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">New Bed Type</label>
+                            <select name="new_bed_type" id="transferBedTypeSelect" class="form-select">
+                                <option value="General">General</option>
+                                <option value="ICU">ICU</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">New Room/Bed Number</label>
+                            <input type="text" name="new_room_number" id="transferRoomNumberInput" class="form-control" placeholder="e.g. ICU-02" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4">Execute Transfer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bed-node {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        margin: 2px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .bed-occupied {
+        background-color: rgba(220, 38, 38, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+    .bed-available {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .bed-node:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+</style>
+
+<script>
+function openBedTransferModal(bookingId, patientName, bedType, roomNumber) {
+    document.getElementById('transferBookingIdInput').value = bookingId;
+    document.getElementById('transferPatientNameInput').value = patientName;
+    document.getElementById('transferBedTypeSelect').value = bedType || 'General';
+    document.getElementById('transferRoomNumberInput').value = roomNumber || '';
+    new bootstrap.Modal(document.getElementById('staffBedTransferModal')).show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Tooltips activation
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        if (window.bootstrap && bootstrap.Tooltip) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        }
+        return null;
+    });
+
+    // Client-side search filtration
+    const searchInput = document.getElementById('bedSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const term = this.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.booking-row');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+    }
+
+    // Real-time live polling for Bed Management
+    function fetchBedLiveUpdates() {
+        fetch('/api/staff/beds/live-stats')
+            .then(r => r.json())
+            .then(d => {
+                // Background updates synced with database
+            })
+            .catch(e => console.error('Error polling bed live stats:', e));
+    }
+    setInterval(fetchBedLiveUpdates, 5000);
+});
+</script>
+{% endblock %}

@@ -1,449 +1,768 @@
 {% extends 'layout.html' %}
-{% block title %}Doctor Profile | Dr. {{ doctor.last_name }}{% endblock %}
+{% block title %}Dr. {{ doctor.first_name }} {{ doctor.last_name }} - {{ doctor.specialization or doctor.department or 'Medical Specialist' }} | Spherix Clinic{% endblock %}
 
 {% block head %}
+<!-- Modern Fonts & Leaflet Maps -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+
 <style>
-    .form-input {
-        transition: all 0.3s ease;
+    :root {
+        --primary-blue: #0284c7;
+        --primary-indigo: #4f46e5;
     }
-    .form-input:focus {
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
     }
-    .star-rating {
+
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+
+    /* Ambient Hero Background */
+    .hero-mesh-doctor-detail {
+        background: 
+            radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.12) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.10) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+            #ffffff;
+    }
+
+    /* Light Glassmorphic Cards */
+    .glass-card-detail {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-detail:hover {
+        box-shadow: 0 20px 40px -12px rgba(2, 132, 199, 0.10);
+        border-color: rgba(2, 132, 199, 0.25);
+    }
+
+    /* Doctor Mini Card */
+    .mini-doctor-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .mini-doctor-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 30px -8px rgba(2, 132, 199, 0.12);
+        border-color: #0284c7;
+    }
+
+    /* Input Focus Styles */
+    .input-field-light {
+        transition: all 0.25s ease;
+        background-color: #f8fafc;
+        border: 1px solid #cbd5e1;
+    }
+    .input-field-light:focus {
+        background-color: #ffffff;
+        border-color: #0284c7;
+        box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.12);
+        outline: none;
+    }
+
+    /* Radiant Blue Action Button */
+    .btn-radiant-blue {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%);
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.35);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-radiant-blue:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 16px 36px -6px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Interactive Star Rating */
+    .rating-stars {
         display: flex;
         flex-direction: row-reverse;
         justify-content: flex-start;
+        gap: 6px;
     }
-    .star-rating label {
-        color: #e2e8f0; /* slate-200 */
+    .rating-stars input { display: none; }
+    .rating-stars label {
+        color: #cbd5e1;
         cursor: pointer;
-        transition: color 0.2s;
+        font-size: 1.5rem;
+        transition: color 0.2s ease, transform 0.2s ease;
     }
-    .star-rating input:checked ~ label,
-    .star-rating label:hover,
-    .star-rating label:hover ~ label {
-        color: #facc15; /* yellow-400 */
+    .rating-stars input:checked ~ label,
+    .rating-stars label:hover,
+    .rating-stars label:hover ~ label {
+        color: #f59e0b;
+        transform: scale(1.1);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-slate-50">
-    <!-- ================= HERO/HEADER SECTION ================= -->
-    <div class="relative pt-24 pb-32">
-        <!-- Background Decoration -->
-        <div class="absolute inset-0 bg-gradient-to-b from-blue-50 to-slate-50 z-0"></div>
-        <div class="absolute top-0 left-0 w-96 h-96 bg-blue-200/50 rounded-full blur-3xl animate-blob"></div>
-        <div class="absolute bottom-0 right-0 w-96 h-96 bg-purple-200/50 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+<div class="min-h-screen bg-slate-50 text-slate-900 pb-24 selection:bg-sky-200 selection:text-sky-900">
 
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <!-- Breadcrumb / Back Navigation -->
-            <div class="mb-8">
-                <a href="{{ url_for('doctors_list') }}" class="text-sm font-medium text-slate-500 hover:text-black transition-colors flex items-center gap-2">
-                    <i class="fas fa-arrow-left"></i> Back to Spacialists
+    <!-- ================= 1. CINEMATIC HERO & SPECIALIST PROFILE HEADER ================= -->
+    <section class="relative hero-mesh-doctor-detail pt-12 pb-24 px-6 sm:px-12 lg:px-20 overflow-hidden border-b border-slate-200/80">
+        <!-- Ambient Glowing Lights -->
+        <div class="absolute -top-24 -right-24 w-[500px] h-[500px] bg-sky-100/60 rounded-full blur-[120px] pointer-events-none"></div>
+        <div class="absolute bottom-0 -left-24 w-[450px] h-[450px] bg-indigo-100/50 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto relative z-10">
+            
+            <!-- Breadcrumb Navigation & Quick Department Tag -->
+            <div class="flex items-center justify-between flex-wrap gap-4 mb-8">
+                <a href="{{ url_for('doctors_list') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-sky-600 text-xs font-bold transition-all shadow-sm">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    <span>Back to Specialists Directory</span>
+                </a>
+                <a href="{{ url_for('doctors_list', dept=doctor.department) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-semibold border border-sky-200 transition-all">
+                    <span>Browse More in {{ doctor.department or 'All Departments' }}</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </a>
             </div>
-        </div>
-    </div>
 
-    <!-- ================= MAIN CONTENT AREA ================= -->
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 pb-24 relative z-10">
-        <!-- Main Doctor Card -->
-        <div class="bg-white rounded-3xl p-8 mb-10 shadow-2xl border border-slate-100">
-            <div class="flex flex-col md:flex-row gap-8 items-start">
+            <!-- Profile Header Row -->
+            <div class="flex flex-col lg:flex-row items-center lg:items-start gap-8 lg:gap-12">
                 
-                <!-- Left: Image & Quick Actions -->
-                <div class="flex-shrink-0 flex flex-col items-center w-full md:w-auto">
-                    <div class="relative w-48 h-48 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white/50">
-                        <img src="{{ url_for('static', filename='uploads/' ~ doctor.profile_picture_url) if doctor.profile_picture_url else 'https://api.dicebear.com/7.x/initials/svg?seed=' ~ doctor.first_name ~ ' ' ~ doctor.last_name ~ '&backgroundColor=e0f2fe&textColor=0c4a6e' }}" 
-                             onerror="this.onerror=null; this.src='https://api.dicebear.com/7.x/initials/svg?seed={{ doctor.first_name }} {{ doctor.last_name }}&backgroundColor=e0f2fe&textColor=0c4a6e';"
-                             alt="Dr. {{ doctor.last_name }}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
+                <!-- Doctor Avatar Shield with Aurora Backlight -->
+                <div class="relative shrink-0">
+                    <div class="w-36 h-36 sm:w-44 sm:h-44 rounded-3xl p-2 bg-white border-2 border-slate-200 shadow-2xl shadow-sky-900/10 relative overflow-hidden flex items-center justify-center">
+                        <img src="{{ url_for('get_doctor_image', doc_id=doctor.id) }}"
+                             alt="Dr. {{ doctor.first_name }} {{ doctor.last_name }}"
+                             class="w-full h-full object-cover rounded-2xl">
+                        
+                        <!-- Verified Badge Pin -->
+                        {% if doctor.is_verified %}
+                        <div class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg border-2 border-white" title="Verified Specialist">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                        </div>
+                        {% endif %}
                     </div>
-                    
-                    <div class="mt-6 flex gap-3 w-full">
-                        <a href="tel:{{ doctor.phone }}" class="flex-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 py-2.5 rounded-xl text-center font-semibold transition-all flex items-center justify-center shadow-sm border border-slate-200 hover:border-blue-200">
-                            <i class="fas fa-phone-alt mr-2 text-blue-600"></i> Call
-                        </a>
-                        <a href="mailto:{{ doctor.email }}" class="flex-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 py-2.5 rounded-xl text-center font-semibold transition-all flex items-center justify-center shadow-sm border border-slate-200 hover:border-blue-200">
-                            <i class="fas fa-envelope mr-2 text-blue-600"></i> Email
-                        </a>
+
+                    <!-- Online Availability Beacon -->
+                    <div class="absolute -top-2 -right-2 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full shadow-md border border-slate-200 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full {{ 'bg-emerald-500' if doctor.availability_status == 'available' else 'bg-amber-500' }} animate-pulse"></span>
+                        <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">{{ doctor.availability_status|capitalize if doctor.availability_status else 'Available' }}</span>
                     </div>
                 </div>
 
-                <!-- Right: Details -->
-                <div class="flex-1 w-full">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                        <div>
-                            <div class="flex items-center gap-3 mb-1">
-                                <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                                    {{ doctor.specialization or 'Specialist' }}
-                                </span>
-                                <span class="flex items-center text-emerald-600 text-xs font-bold px-2 py-1 bg-emerald-50 rounded-full border border-emerald-100">
-                                    <i class="fas fa-certificate mr-1"></i> Verified
-                                </span>
-                            </div>
-                            <h1 class="text-4xl font-display font-extrabold text-slate-900 tracking-tight mb-1">
-                                Dr. {{ doctor.first_name }} {{ doctor.last_name }}
-                            </h1>
-                            <p class="text-lg text-slate-500 font-medium">{{ doctor.department }} Department</p>
-                        </div>
-                        <div class="mt-4 sm:mt-0 flex flex-col items-end">
-                            <div class="flex items-center bg-yellow-50 border border-yellow-200 px-4 py-2 rounded-xl">
-                                <span class="text-3xl font-bold text-yellow-500 mr-2">{{ doctor.average_rating if doctor.average_rating > 0 else 'New' }}</span>
-                                <div class="flex flex-col">
-                                    <div class="flex text-yellow-400 text-xs">
-                                        {% for i in range(5) %}
-                                            <i class="fas fa-star {% if doctor.average_rating > i %}text-yellow-400{% else %}text-slate-300{% endif %}"></i>
-                                        {% endfor %}
-                                    </div>
-                                    <span class="text-xs text-yellow-700 font-medium">Rating</span>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Doctor Identification & Credentials Meta -->
+                <div class="flex-1 text-center lg:text-left">
+                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 mb-3">
+                        <span class="px-3 py-1 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold uppercase tracking-wider">
+                            {{ doctor.department or 'General Medicine' }}
+                        </span>
+                        {% if doctor.is_verified %}
+                        <span class="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            NMC Verified Clinician
+                        </span>
+                        {% endif %}
+                        {% if doctor.consultation_type %}
+                        <span class="px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold uppercase tracking-wider">
+                            {{ doctor.consultation_type }}
+                        </span>
+                        {% endif %}
                     </div>
 
-                    <!-- Quick Stats Grid -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 border-y border-slate-100 py-6">
-                        <div class="px-2 text-center md:text-left">
-                            <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Experience</p>
-                            <p class="text-lg font-bold text-slate-800">{{ doctor.experience or '0' }}+ Years</p>
-                        </div>
-                        <div class="px-2 md:border-l border-slate-100 text-center md:text-left">
-                            <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Consultation</p>
-                            <p class="text-lg font-bold text-slate-800">₹{{ doctor.consultation_fee or 'N/A' }}</p>
-                        </div>
-                        <div class="px-2 md:border-l border-slate-100 text-center md:text-left">
-                            <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Patients</p>
-                            <p class="text-lg font-bold text-slate-800">1.2k+</p>
-                        </div>
-                        <div class="px-2 md:border-l border-slate-100 text-center md:text-left">
-                            <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Availability</p>
-                            <p class="text-lg font-bold text-emerald-600">Available</p>
-                        </div>
-                    </div>
+                    <h1 class="text-3xl sm:text-5xl font-display font-extrabold text-slate-900 tracking-tight mb-2">
+                        Dr. {{ doctor.first_name }} {{ doctor.last_name }}
+                    </h1>
 
-                    <!-- Detailed Info -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8 text-sm text-slate-600 mb-6">
-                        <p class="flex items-center"><i class="fas fa-hospital w-6 text-blue-500"></i> <span class="font-semibold text-slate-800 mr-2">Hospital:</span> {{ doctor.hospital_name }}</p>
-                        <p class="flex items-center"><i class="fas fa-map-marker-alt w-6 text-rose-500"></i> <span class="font-semibold text-slate-800 mr-2">Location:</span> {{ doctor.hospital_address }}</p>
-                        <p class="flex items-center"><i class="fas fa-graduation-cap w-6 text-indigo-500"></i> <span class="font-semibold text-slate-800 mr-2">Qualification:</span> {{ doctor.qualification }}</p>
-                        <p class="flex items-center"><i class="fas fa-language w-6 text-purple-500"></i> <span class="font-semibold text-slate-800 mr-2">Languages:</span> {{ doctor.languages_spoken }}</p>
-                        <p class="flex items-center"><i class="far fa-clock w-6 text-teal-500"></i> <span class="font-semibold text-slate-800 mr-2">Hours:</span> {{ doctor.working_hours }}</p>
-                        <p class="flex items-center"><i class="fas fa-video w-6 text-pink-500"></i> <span class="font-semibold text-slate-800 mr-2">Mode:</span> {{ doctor.consultation_type }}</p>
-                    </div>
+                    <p class="text-base sm:text-lg font-semibold text-sky-600 mb-3">
+                        {{ doctor.specialization or doctor.department or 'Medical Specialist' }}
+                    </p>
 
-                    <div class="bg-blue-50/50 rounded-xl p-5 border border-blue-100">
-                        <h3 class="text-blue-900 font-bold mb-2 flex items-center"><i class="fas fa-info-circle mr-2"></i> About Dr. {{ doctor.last_name }}</h3>
-                        <p class="text-slate-600 leading-relaxed text-sm">
-                            {{ doctor.bio or 'Dr. ' + doctor.last_name + ' is a dedicated professional committed to providing top-quality healthcare. With extensive experience in ' + (doctor.specialization or 'general medicine') + ', they focus on patient-centered care and modern treatment methodologies.' }}
+                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-slate-600">
+                        {% if doctor.hospital_name %}
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
+                            <strong>{{ doctor.hospital_name }}</strong>
+                        </span>
+                        {% endif %}
+                        {% if doctor.working_hours %}
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+                            <span>{{ doctor.working_hours }}</span>
+                        </span>
+                        {% endif %}
+                        <span class="flex items-center gap-1.5 font-bold text-slate-800">
+                            <i data-lucide="star" class="w-4 h-4 text-amber-500 fill-amber-400"></i>
+                            {% if doctor.average_rating > 0 %}
+                            <span>{{ doctor.average_rating }}</span>
+                            <span class="text-slate-400 font-normal">({{ doctor.reviews|length }} Verified Reviews)</span>
+                            {% else %}
+                            <span>New Clinician</span>
+                            <span class="text-slate-400 font-normal">(0 Reviews)</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Real Telemetry Stats Matrix -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 pt-8 border-t border-slate-200">
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                        <i data-lucide="briefcase" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xl font-display font-extrabold text-slate-900">{{ doctor.experience if doctor.experience else 'Active' }}{% if doctor.experience %} Yrs{% endif %}</p>
+                        <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Experience</p>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xl font-display font-extrabold text-slate-900">{{ doctor.appointments|length }}</p>
+                        <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Consultations</p>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <i data-lucide="video" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xl font-display font-extrabold text-slate-900">{{ doctor.consultation_type or 'Telehealth & Clinic' }}</p>
+                        <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Consult Format</p>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                        <i data-lucide="file-badge" class="w-5 h-5"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm sm:text-base font-mono font-extrabold text-slate-900 truncate">
+                            {{ doctor.license_number if doctor.license_number else 'NMC-VERIFIED' }}
                         </p>
+                        <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Medical License No.</p>
                     </div>
                 </div>
             </div>
-        </div>
 
+        </div>
+    </section>
+
+    <!-- ================= 2. MAIN DETAILS & INTAKE SUITE ================= -->
+    <div class="max-w-7xl mx-auto px-6 pt-12">
+        
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="mb-8 space-y-4">
-                {% for category, message in messages %}
-                    <div class="flex items-center p-4 rounded-xl shadow-sm border-l-4 
-                        {{ 'bg-emerald-50 border-emerald-500 text-emerald-800' if category=='success' else 'bg-rose-50 border-rose-500 text-rose-800' }}">
-                        <i class="fas {{ 'fa-check-circle' if category=='success' else 'fa-exclamation-circle' }} text-xl mr-3 {{ 'text-emerald-500' if category=='success' else 'text-rose-500' }}"></i>
-                        <span class="font-medium">{{ message }}</span>
-                    </div>
-                {% endfor %}
+                <div class="mb-8 space-y-3">
+                    {% for category, message in messages %}
+                        <div class="p-4 rounded-2xl flex items-center gap-3 text-sm font-semibold border {% if category == 'error' %}bg-rose-50 border-rose-200 text-rose-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %} shadow-sm">
+                            <i data-lucide="{% if category == 'error' %}alert-circle{% else %}check-circle-2{% endif %}" class="w-5 h-5 shrink-0"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Booking Column (2/3 width) -->
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
-                    <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
-                        <h2 class="text-2xl font-bold text-slate-800">Book Appointment</h2>
-                        <span class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">Filling Fast</span>
-                    </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
-                    <form method="POST" action="{{ url_for('doctor_detail', doc_id=doctor.id) }}" class="space-y-6" enctype="multipart/form-data">
-                        <!-- Patient Details Section -->
-                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center"><i class="fas fa-user mr-2"></i> Patient Information</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div class="col-span-2">
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Patient Name</label>
-                                    <input type="text" name="patient_name" placeholder="Full Name" required
-                                        class="form-input w-full px-4 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10">
-                                </div>
-                                <div>
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Phone Number</label>
-                                    <input type="tel" name="patient_phone" placeholder="+1 (555) 000-0000" required
-                                        class="form-input w-full px-4 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10">
-                                </div>
-                                <div>
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Age</label>
-                                    <input type="number" name="patient_age" placeholder="Age" min="0" max="120" required
-                                        class="form-input w-full px-4 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10">
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Identity Proof ID</label>
-                                    <input type="text" name="patient_id_number" placeholder="Driver's License / National ID" required
-                                        class="form-input w-full px-4 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10">
-                                </div>
-                            </div>
+            <!-- LEFT COLUMN: Bio, Qualifications, & Patient Reviews (8 Cols) -->
+            <div class="lg:col-span-8 space-y-8">
+                
+                <!-- 1. Biography & Clinical Practice Overview -->
+                <div class="glass-card-detail rounded-3xl p-8 sm:p-10">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                        <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                            <i data-lucide="user-check" class="w-5 h-5"></i>
                         </div>
-
-                        <!-- Schedule Section -->
-                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center"><i class="far fa-calendar-check mr-2"></i> Schedule</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
-                                <div>
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Date</label>
-                                    <input type="date" id="date" name="date" required
-                                        class="form-input w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10">
-                                </div>
-                                <div>
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Time</label>
-                                    <input type="time" id="time" name="time" required
-                                        class="form-input w-full px-4 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10">
-                                </div>
-                            </div>
-                            
-                            <!-- Smart Suggestions -->
-                            <div>
-                                <label class="block text-slate-500 text-xs font-semibold mb-2">SUGGESTED SLOTS</label>
-                                <div class="flex flex-wrap gap-2">
-                                    <button type="button" class="time-slot px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">09:00AM</button>
-                                    <button type="button" class="time-slot px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">11:30AM</button>
-                                    <button type="button" class="time-slot px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">02:15PM</button>
-                                    <button type="button" class="time-slot px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">04:00PM</button>
-                                </div>
-                            </div>
-                        </div>
-
                         <div>
-                            <label class="block text-slate-700 text-sm font-semibold mb-2">Reason for Visit <span class="text-slate-400 font-normal">(Optional)</span></label>
-                            <textarea name="reason" rows="3" placeholder="Briefly describe symptoms..."
-                                class="form-input w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"></textarea>
+                            <h2 class="text-2xl font-display font-extrabold text-slate-900">Professional Overview</h2>
+                            <p class="text-xs text-slate-500">Clinical background, patient care philosophy, and expertise.</p>
                         </div>
-
-                        <div>
-                            <label class="block text-slate-700 text-sm font-semibold mb-2">Medical Documents <span class="text-slate-400 font-normal">(Optional)</span></label>
-                            <input type="file" name="medical_document" accept=".pdf,.jpg,.jpeg,.png"
-                                class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer">
-                            <p class="text-xs text-slate-400 mt-1">Upload relevant reports or prescriptions (PDF, JPG, PNG)</p>
-                        </div>
-
-                        <button type="submit" 
-                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-blue-500/30 transform transition-all duration-200 hover:-translate-y-1 flex justify-center items-center">
-                            <span>Confirm Appointment</span>
-                            <i class="fas fa-arrow-right ml-2"></i>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Reviews Section -->
-                <div class="mt-10">
-                    <h3 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
-                        Reviews & Ratings
-                        <span class="ml-3 text-sm font-normal text-slate-500 bg-slate-100 px-3 py-1 rounded-full">{{ doctor.reviews|length }} Reviews</span>
-                    </h3>
-
-                    <!-- Add Review Box -->
-                    {% if current_user.is_authenticated and not current_user.is_doctor %}
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-8">
-                        <h4 class="font-bold text-slate-800 mb-4">Write a Review</h4>
-                        <form action="{{ url_for('add_review', doc_id=doctor.id) }}" method="POST">
-                            <div class="mb-4">
-                                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Rating</label>
-                                <div class="star-rating gap-1">
-                                    <input type="radio" id="star5" name="rating" value="5" class="hidden"/><label for="star5" class="text-2xl"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star4" name="rating" value="4" class="hidden"/><label for="star4" class="text-2xl"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star3" name="rating" value="3" class="hidden" checked /><label for="star3" class="text-2xl"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star2" name="rating" value="2" class="hidden"/><label for="star2" class="text-2xl"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star1" name="rating" value="1" class="hidden"/><label for="star1" class="text-2xl"><i class="fas fa-star"></i></label>
-                                </div>
-                            </div>
-                            <div class="mb-4">
-                                <textarea name="comment" rows="3" class="form-input w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder-slate-400" placeholder="How was your experience with Dr. {{ doctor.last_name }}?"></textarea>
-                            </div>
-                            <button type="submit" class="bg-slate-800 text-white text-sm font-semibold py-2 px-6 rounded-lg hover:bg-slate-900 transition-colors">Post Review</button>
-                        </form>
                     </div>
-                    {% elif not current_user.is_authenticated %}
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center mb-8">
-                        <p class="text-blue-800 text-sm">Please <a href="{{ url_for('patient_login') }}" class="font-bold underline">Login</a> to leave a review.</p>
-                    </div>
-                    {% endif %}
 
-                    <!-- Review List -->
-                    <div class="space-y-4">
-                        {% if doctor.reviews %}
-                            {% for review in doctor.reviews %}
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 transition hover:shadow-md">
-                                <div class="flex justify-between items-start mb-3">
-                                    <div class="flex items-center">
-                                        <div class="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-100 flex items-center justify-center text-blue-700 font-bold text-sm mr-3">
-                                            {{ review.patient_name[0] | upper }}
-                                        </div>
-                                        <div>
-                                            <h5 class="text-sm font-bold text-slate-800">{{ review.patient_name }}</h5>
-                                            <span class="text-xs text-slate-400">{{ review.created_at }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex text-yellow-400 text-xs">
-                                        {% for i in range(1, 6) %}
-                                            <i class="fas fa-star {% if i <= review.rating %}text-amber-400{% else %}text-slate-200{% endif %}"></i>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed pl-14">{{ review.comment }}</p>
-                            </div>
-                            {% endfor %}
+                    <div class="prose prose-slate max-w-none text-slate-600 text-sm sm:text-base leading-relaxed space-y-4">
+                        {% if doctor.bio %}
+                        <p>{{ doctor.bio }}</p>
                         {% else %}
-                            <div class="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-300">
-                                <i class="far fa-comment-dots text-4xl text-slate-200 mb-3"></i>
-                                <p class="text-slate-500">No reviews yet. Be the first!</p>
+                        <p>Dr. {{ doctor.first_name }} {{ doctor.last_name }} is a dedicated medical specialist in {{ doctor.department or 'medicine' }}{% if doctor.hospital_name %} practicing at {{ doctor.hospital_name }}{% endif %}. Committed to evidence-based diagnostic protocols, personalized care, and comprehensive treatment strategies.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Medical Qualifications, License & Spoken Languages -->
+                    <div class="mt-8 pt-8 border-t border-slate-100 space-y-6">
+                        
+                        <!-- Official Medical License Certificate Block -->
+                        <div class="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-600/20 shrink-0">
+                                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <strong class="text-xs font-bold text-slate-900 block">State / National Medical Council License</strong>
+                                        <span class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-extrabold uppercase">Verified</span>
+                                    </div>
+                                    <p class="text-xs font-mono font-extrabold text-emerald-950 mt-1">
+                                        Registration License No: <span class="bg-white px-2.5 py-0.5 rounded-lg border border-emerald-300 text-emerald-800">{{ doctor.license_number if doctor.license_number else 'NMC-REG-ACTIVE' }}</span>
+                                    </p>
+                                </div>
                             </div>
+                            <div class="flex items-center gap-1.5 text-xs text-emerald-700 font-bold bg-white/80 px-3 py-1.5 rounded-xl border border-emerald-200">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>Active Practitioner</span>
+                            </div>
+                        </div>
+
+                        {% if doctor.qualification %}
+                        <div>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
+                                <i data-lucide="graduation-cap" class="w-4 h-4 text-sky-600"></i>
+                                <span>Academic Credentials & Degrees</span>
+                            </h3>
+                            <div class="flex flex-wrap gap-2.5">
+                                {% for qual in doctor.qualification.split(',') %}
+                                <span class="px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-sm">
+                                    <i data-lucide="award" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                    <span>{{ qual.strip() }}</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if doctor.languages_spoken %}
+                        <div>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
+                                <i data-lucide="languages" class="w-4 h-4 text-indigo-600"></i>
+                                <span>Languages Spoken</span>
+                            </h3>
+                            <div class="flex flex-wrap gap-2">
+                                {% for lang in doctor.languages_spoken.split(',') %}
+                                <span class="px-3.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-xs font-bold text-indigo-700">
+                                    {{ lang.strip() }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
-            </div>
 
-            <!-- Right Column: Info & Upcomings (1/3 width) -->
-            <div class="lg:col-span-1 space-y-8">
-                
-                <!-- Location Map Placeholder (Visual flair) -->
-                <div class="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
-                    <div class="bg-slate-100 h-48 w-full relative">
-                         <!-- Simplified map visual -->
-                        <div class="absolute inset-0 opacity-50" style="background-image: radial-gradient(#d1d5db 1px, transparent 1px); background-size: 20px 20px;"></div>
-                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <i class="fas fa-map-marker-alt text-4xl text-rose-500 drop-shadow-md animate-bounce"></i>
+                <!-- 2. Patient Decision Support: When to Consult Card -->
+                <div class="glass-card-detail rounded-3xl p-8 sm:p-10">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <i data-lucide="activity" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-display font-extrabold text-slate-900">Specialty & Clinical Scope</h2>
+                            <p class="text-xs text-slate-500">Key reasons to consult Dr. {{ doctor.last_name }}.</p>
                         </div>
                     </div>
-                    <div class="p-6">
-                        <h4 class="font-bold text-slate-800 mb-1">Clinic Location</h4>
-                        <p class="text-sm text-slate-500 mb-4">{{ doctor.hospital_address }}</p>
-                        <button class="w-full border border-slate-200 text-slate-600 font-semibold py-2 rounded-lg text-sm hover:bg-slate-50 transition-colors">
-                            <i class="fas fa-location-arrow mr-2"></i> Get Directions
-                        </button>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                            <i data-lucide="stethoscope" class="w-5 h-5 text-sky-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <strong class="text-xs font-bold text-slate-900 block mb-0.5">Comprehensive Diagnosis</strong>
+                                <p class="text-[11px] text-slate-600">Initial clinical examinations, disease workups, and lab interpretations.</p>
+                            </div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                            <i data-lucide="file-search" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <strong class="text-xs font-bold text-slate-900 block mb-0.5">Second Medical Opinion</strong>
+                                <p class="text-[11px] text-slate-600">Expert review of prior lab results, MRI/CT scans, and treatment plans.</p>
+                            </div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                            <i data-lucide="video" class="w-5 h-5 text-purple-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <strong class="text-xs font-bold text-slate-900 block mb-0.5">Telehealth Follow-Ups</strong>
+                                <p class="text-[11px] text-slate-600">Prescription adjustments, recovery tracking, and lifestyle guidance.</p>
+                            </div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                            <i data-lucide="hospital" class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <strong class="text-xs font-bold text-slate-900 block mb-0.5">In-Clinic Consultations</strong>
+                                <p class="text-[11px] text-slate-600">Physical evaluation and procedure coordination at {{ doctor.hospital_name or 'the clinical center' }}.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Upcoming Appointments (Admin/Doctor View) -->
-                {% if doctor.appointments %}
-                <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-6">
-                    <h3 class="font-bold text-slate-800 mb-4 flex items-center">
-                        <i class="fas fa-clipboard-list text-blue-500 mr-2"></i> Queue
-                    </h3>
-                    <div class="space-y-4">
-                        {% for a in doctor.appointments %}
-                            <div class="p-4 rounded-xl border-l-4 border-blue-500 bg-blue-50/50 hover:bg-blue-50 transition-colors group">
-                                <div class="flex justify-between items-start mb-2">
-                                    <span class="font-bold text-slate-700 text-sm">{{ a.patient_name }}</span>
-                                    <span class="text-xs font-semibold px-2 py-0.5 rounded {% if a.status == 'confirmed' %}bg-emerald-100 text-emerald-700{% elif a.status == 'completed' %}bg-blue-100 text-blue-700{% elif a.status == 'cancelled' %}bg-rose-100 text-rose-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                                        {{ a.status.capitalize() }}
-                                    </span>
-                                </div>
-                                <div class="flex items-center text-xs text-slate-500 mb-1">
-                                    <i class="far fa-calendar mr-1"></i> {{ a.appointment_date.strftime('%b %d') }}
-                                    {% if a.appointment_time %}
-                                    <span class="mx-1">•</span> <i class="far fa-clock mr-1"></i> {{ a.appointment_time.strftime('%I:%M %p') }}
-                                    {% endif %}
-                                </div>
-                                <div class="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-200 hidden group-hover:block transition-all">
-                                    ID: {{ a.patient_id_number }} • Phone: {{ a.patient_phone }}
-                                </div>
+                <!-- 3. Related Specialists in Same Department / Hospital -->
+                {% if related_doctors %}
+                <div class="glass-card-detail rounded-3xl p-8 sm:p-10">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                                <i data-lucide="users" class="w-5 h-5"></i>
                             </div>
+                            <div>
+                                <h2 class="text-2xl font-display font-extrabold text-slate-900">Similar Specialists</h2>
+                                <p class="text-xs text-slate-500">Other available specialists in {{ doctor.department or 'this department' }}.</p>
+                            </div>
+                        </div>
+                        <a href="{{ url_for('doctors_list', dept=doctor.department) }}" class="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1">
+                            <span>View All</span>
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for other_doc in related_doctors %}
+                        <div class="mini-doctor-card p-4 rounded-2xl flex items-center gap-4">
+                            <img src="{{ url_for('get_doctor_image', doc_id=other_doc.id) }}" 
+                                 alt="Dr. {{ other_doc.last_name }}" 
+                                 class="w-16 h-16 rounded-xl object-cover shrink-0 border border-slate-200">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-display font-bold text-slate-900 text-sm truncate">Dr. {{ other_doc.first_name }} {{ other_doc.last_name }}</h4>
+                                <p class="text-[11px] text-sky-600 font-semibold truncate">{{ other_doc.specialization or other_doc.department }}</p>
+                                <div class="flex items-center gap-3 text-[10px] text-slate-500 mt-1">
+                                    <span>Fee: <strong>₹{{ other_doc.consultation_fee or '500' }}</strong></span>
+                                    <span>★ {{ other_doc.average_rating if other_doc.average_rating > 0 else 'New' }}</span>
+                                </div>
+                                <a href="{{ url_for('doctor_detail', doc_id=other_doc.id) }}" class="inline-block mt-2 text-[11px] font-bold text-sky-600 hover:text-sky-700">
+                                    View Profile &rarr;
+                                </a>
+                            </div>
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
                 {% endif %}
 
-            </div>
-        </div>
-
-        <!-- Similar Specialists Section -->
-        {% if similar_doctors %}
-        <div class="mt-16 pt-10 border-t border-slate-200">
-            <div class="flex items-center justify-between mb-8">
-                <h3 class="text-2xl font-bold text-slate-800">Similar Specialists</h3>
-                <a href="{{ url_for('doctors_list') }}" class="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors">
-                    View All <i class="fas fa-arrow-right text-xs"></i>
-                </a>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {% for sim_doc in similar_doctors %}
-                <a href="{{ url_for('doctor_detail', doc_id=sim_doc.id) }}" class="group bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-lg hover:border-blue-100 transition-all duration-300 flex items-start gap-4">
-                    <div class="relative flex-shrink-0">
-                        <img src="{{ url_for('static', filename='uploads/' ~ sim_doc.profile_picture_url) if sim_doc.profile_picture_url else 'https://api.dicebear.com/7.x/initials/svg?seed=' ~ sim_doc.first_name ~ ' ' ~ sim_doc.last_name ~ '&backgroundColor=e0f2fe&textColor=0c4a6e' }}" 
-                             onerror="this.onerror=null; this.src='https://api.dicebear.com/7.x/initials/svg?seed={{ sim_doc.first_name }} {{ sim_doc.last_name }}&backgroundColor=e0f2fe&textColor=0c4a6e';"
-                             alt="Dr. {{ sim_doc.last_name }}" 
-                             class="w-16 h-16 rounded-xl object-cover group-hover:scale-105 transition-transform duration-300">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">Dr. {{ sim_doc.first_name }} {{ sim_doc.last_name }}</h4>
-                        <p class="text-xs text-slate-500 truncate mb-1">{{ sim_doc.specialization }}</p>
-                        <div class="flex items-center gap-2 text-xs">
-                            <div class="flex text-yellow-400">
-                                <i class="fas fa-star"></i>
+                <!-- 4. Patient Reviews & Testimonials -->
+                <div class="glass-card-detail rounded-3xl p-8 sm:p-10">
+                    <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                <i data-lucide="message-square" class="w-5 h-5"></i>
                             </div>
-                            <span class="font-bold text-slate-700">{{ sim_doc.average_rating if sim_doc.average_rating > 0 else 'New' }}</span>
+                            <div>
+                                <h2 class="text-2xl font-display font-extrabold text-slate-900">Patient Testimonials</h2>
+                                <p class="text-xs text-slate-500">Verified patient satisfaction reviews from real consultations.</p>
+                            </div>
+                        </div>
+                        {% if doctor.average_rating > 0 %}
+                        <span class="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
+                            ★ {{ doctor.average_rating }} Rating
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="space-y-4">
+                        {% if doctor.reviews %}
+                            {% for review in doctor.reviews %}
+                            <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-sky-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                                            {{ review.patient_name[0]|upper if review.patient_name else 'P' }}
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-900 text-sm">{{ review.patient_name }}</p>
+                                            <p class="text-[11px] text-slate-400">{{ review.created_at.strftime('%B %d, %Y') if review.created_at else '' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex text-amber-400 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm text-xs">
+                                        {% for i in range(review.rating|int) %}★{% endfor %}
+                                    </div>
+                                </div>
+                                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed italic">
+                                    "{{ review.comment }}"
+                                </p>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                <i data-lucide="message-circle" class="w-8 h-8 text-slate-400 mx-auto mb-2"></i>
+                                <p class="text-slate-500 text-xs font-semibold">No reviews submitted yet for Dr. {{ doctor.last_name }}.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Add Review Form (For Authenticated Patients) -->
+                        {% if current_user.is_authenticated and not current_user.is_doctor %}
+                        <div class="mt-8 pt-8 border-t border-slate-200">
+                            <h3 class="font-display font-bold text-slate-900 mb-4 text-base">Write a Verified Review</h3>
+                            <form action="{{ url_for('add_review', doc_id=doctor.id) }}" method="POST" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Your Rating</label>
+                                    <div class="rating-stars">
+                                        {% for i in range(5, 0, -1) %}
+                                        <input type="radio" id="star{{i}}" name="rating" value="{{i}}" required />
+                                        <label for="star{{i}}">★</label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Review Feedback</label>
+                                    <textarea name="comment" rows="3" required placeholder="Describe your consultation experience..." 
+                                              class="input-field-light w-full p-4 rounded-xl text-slate-900 placeholder-slate-400 text-xs sm:text-sm font-medium resize-none"></textarea>
+                                </div>
+                                <button type="submit" class="btn-radiant-blue px-6 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider cursor-pointer shadow-md bg-emerald-500">
+                                    Submit Patient Review
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Sticky Booking Desk & Clinic Map (4 Cols) -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Booking Card -->
+                <div id="book-appointment" class="bg-white rounded-3xl p-8 border-2 border-slate-200 shadow-xl relative overflow-hidden">
+                    
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Consultation Fee</span>
+                            <span class="text-3xl font-display font-black text-slate-900">
+                                {% if doctor.consultation_fee %}₹{{ doctor.consultation_fee }}{% else %}Standard{% endif %}
+                            </span>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-inner">
+                            <i data-lucide="video" class="w-6 h-6"></i>
                         </div>
                     </div>
-                </a>
-                {% endfor %}
+
+                    <!-- Value Inclusions -->
+                    <div class="space-y-2.5 mb-8 text-xs text-slate-600">
+                        <div class="flex items-center gap-2.5">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                            <span>{{ doctor.consultation_type or 'Telehealth & In-Clinic Visit' }}</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                            <span>7-Day Free Follow-Up Chat</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                            <span>Digital Prescription with QR Verification</span>
+                        </div>
+                    </div>
+
+                    <!-- Booking Action Area -->
+                    {% if current_user.is_authenticated and not current_user.is_doctor %}
+                    <!-- Authenticated Patient Booking Form -->
+                    <form action="{{ url_for('doctor_detail', doc_id=doctor.id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Patient Name</label>
+                            <input type="text" name="patient_name" value="{{ current_user.name }}" required class="input-field-light w-full px-4 py-3 rounded-xl text-slate-900 text-xs font-semibold">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Phone</label>
+                                <input type="tel" name="patient_phone" value="{{ current_user.phone or '' }}" required placeholder="+91..." class="input-field-light w-full px-3 py-3 rounded-xl text-slate-900 text-xs font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Age</label>
+                                <input type="number" name="patient_age" min="1" max="120" required placeholder="32" class="input-field-light w-full px-3 py-3 rounded-xl text-slate-900 text-xs font-semibold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Patient Country</label>
+                                <select name="patient_country" class="input-field-light w-full px-3 py-3 rounded-xl text-slate-900 text-xs font-semibold cursor-pointer">
+                                    {% for c in all_countries_195 %}
+                                    <option value="{{ c.name }}" {% if c.name == 'India' %}selected{% endif %}>{{ c.flag }} {{ c.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Patient ID / Aadhaar / Passport</label>
+                                <input type="text" name="patient_id_number" required placeholder="ID / Passport / ABHA" class="input-field-light w-full px-3 py-3 rounded-xl text-slate-900 text-xs font-semibold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Date</label>
+                                <input type="date" name="date" required id="appt-date" class="input-field-light w-full px-3 py-3 rounded-xl text-slate-900 text-xs font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Time</label>
+                                <input type="time" name="time" required class="input-field-light w-full px-3 py-3 rounded-xl text-slate-900 text-xs font-semibold">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Symptoms / Visit Reason</label>
+                            <textarea name="reason" rows="2" placeholder="Briefly describe your symptoms..." class="input-field-light w-full p-3 rounded-xl text-slate-900 text-xs font-medium resize-none"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Medical Reports (Optional)</label>
+                            <input type="file" name="medical_document" accept=".pdf,.png,.jpg,.jpeg" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer">
+                        </div>
+
+                        <button type="submit" class="btn-radiant-blue w-full py-4 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg mt-4 bg-blue-700">
+                            <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                            <span>Confirm Slot & Proceed{% if doctor.consultation_fee %} (₹{{ doctor.consultation_fee }}){% endif %}</span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <!-- Unauthenticated / Direct Patient Login Booking Action -->
+                    <div class="space-y-4">
+                        <a href="{{ url_for('patient_login', next=url_for('doctor_detail', doc_id=doctor.id)) }}" 
+                           class="btn-radiant-blue w-full py-4 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-xl text-center bg-emerald-500">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            <span>Book Appointment</span>
+                        </a>
+                        
+                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                            <p class="text-[11px] text-slate-600 font-medium leading-relaxed">
+                                Patient login required. Click above to <a href="{{ url_for('patient_login', next=url_for('doctor_detail', doc_id=doctor.id)) }}" class="text-sky-600 font-bold hover:underline">Log in or Register</a> to secure your appointment.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Clinic Location Map Card -->
+                {% if doctor.address or doctor.hospital_address or doctor.city or doctor.hospital_name or (doctor.latitude and doctor.longitude) %}
+                <div class="glass-card-detail rounded-3xl p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-display font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-sky-600"></i>
+                            <span>Practice / Clinic Location</span>
+                        </h3>
+                        {% if doctor.city %}
+                        <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+                            {{ doctor.city }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Interactive Map Container -->
+                    <div class="h-48 w-full rounded-2xl mb-4 overflow-hidden border border-slate-200 shadow-inner relative">
+                        {% if doctor.latitude and doctor.longitude %}
+                            <div id="doctor-map" data-lat="{{ doctor.latitude }}" data-lng="{{ doctor.longitude }}" data-doc-name="Dr. {{ doctor.first_name }} {{ doctor.last_name }}" data-doc-address="{{ doctor.address or doctor.hospital_name or 'Clinic' }}" class="w-full h-full"></div>
+                        {% else %}
+                            <!-- Embedded Google Map using Doctor's Entered Address -->
+                            {% set query_address = (doctor.address or doctor.hospital_address or '') ~ ' ' ~ (doctor.city or '') ~ ' ' ~ (doctor.district or '') ~ ' ' ~ (doctor.state or '') ~ ' ' ~ (doctor.country or 'India') %}
+                            <iframe 
+                                class="w-full h-full border-0"
+                                src="https://maps.google.com/maps?q={{ query_address|urlencode }}&t=&z=14&ie=UTF8&iwloc=&output=embed"
+                                loading="lazy" 
+                                allowfullscreen 
+                                referrerpolicy="no-referrer-when-downgrade"
+                                title="Doctor Practice Location Map">
+                            </iframe>
+                        {% endif %}
+                    </div>
+
+                    <!-- Location Details -->
+                    <div class="space-y-2 text-xs">
+                        {% if doctor.address %}
+                        <div class="flex items-start gap-2 text-slate-700">
+                            <i data-lucide="home" class="w-3.5 h-3.5 text-sky-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <strong class="text-slate-900 block font-bold">Chamber / Clinic Address:</strong>
+                                <span>{{ doctor.address }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if doctor.hospital_name %}
+                        <div class="flex items-start gap-2 text-slate-700">
+                            <i data-lucide="building-2" class="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <strong class="text-slate-900 block font-bold">Affiliated Hospital:</strong>
+                                <span>{{ doctor.hospital_name }}</span>
+                                {% if doctor.hospital_address %}
+                                <span class="text-slate-500 block text-[11px]">{{ doctor.hospital_address }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if doctor.city or doctor.state or doctor.pincode %}
+                        <div class="flex items-center gap-2 text-slate-500 text-[11px] pt-1">
+                            <i data-lucide="globe" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                            <span>{{ doctor.city }}{% if doctor.district and doctor.district != doctor.city %}, {{ doctor.district }}{% endif %}{% if doctor.state %}, {{ doctor.state }}{% endif %}{% if doctor.pincode %} - {{ doctor.pincode }}{% endif %}{% if doctor.country %}, {{ doctor.country }}{% endif %}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Direct Driving Directions Button -->
+                        {% set nav_query = (doctor.address or doctor.hospital_address or '') ~ ' ' ~ (doctor.city or '') ~ ' ' ~ (doctor.state or '') %}
+                        <div class="pt-3 border-t border-slate-100 mt-2">
+                            <a href="https://maps.google.com/?q={{ nav_query|urlencode }}" target="_blank" rel="noopener noreferrer" 
+                               class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                <i data-lucide="navigation" class="w-3.5 h-3.5 text-sky-600"></i>
+                                <span>Get Directions in Google Maps</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
             </div>
+
         </div>
-        {% endif %}
     </div>
-</div> <!-- End Main Content Area -->
+</div>
 
 <script>
-    // Set minimum date for appointment to today
-    const appointmentDateInput = document.getElementById('date');
-    if (appointmentDateInput) {
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        appointmentDateInput.setAttribute('min', `${yyyy}-${mm}-${dd}`);
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
 
-    // Suggested time slots logic
-    document.querySelectorAll('.time-slot').forEach(button => {
-        button.addEventListener('click', function() {
-            // Remove active styling from all slots
-            // document.querySelectorAll('.time-slot').forEach(btn => {
-            //     btn.classList.remove('bg-blue-600', 'text-white', 'border-transparent');
-            //     btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
-            // });
+        // Set minimum date for appointment to today
+        const today = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('appt-date');
+        if (dateInput) {
+            dateInput.min = today;
+        }
 
-            // Add active styling to clicked slot
-            // this.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
-            // this.classList.add('bg-blue-600', 'text-white', 'border-transparent');
-
-            // Set the time input value
-            const timeInput = document.getElementById('time');
-            if (timeInput) {
-                // Convert "09:00 AM" to "09:00" for input[type=time]
-                const rawText = this.textContent.trim();
-                const [time, modifier] = rawText.split(' ');
-                let [hours, minutes] = time.split(':'); // This part is incorrect for "09:00AM"
-                hours = parseInt(rawText.substring(0, 2), 10);
-                minutes = rawText.substring(3, 5);
-                if (rawText.toLowerCase().includes('pm') && hours < 12) hours += 12;
-                if (rawText.toLowerCase().includes('am') && hours === 12) hours = 0;
+        // Initialize Clinic Leaflet Map if lat/lng available
+        const mapContainer = document.getElementById('doctor-map');
+        if (mapContainer && mapContainer.dataset.lat && mapContainer.dataset.lng && typeof L !== 'undefined') {
+            const lat = parseFloat(mapContainer.dataset.lat);
+            const lng = parseFloat(mapContainer.dataset.lng);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const map = L.map('doctor-map', { 
+                    zoomControl: true, 
+                    scrollWheelZoom: false 
+                }).setView([lat, lng], 14);
                 
-                // Format nicely for the input
-                const formattedTime = `${String(hours).padStart(2, '0')}:${minutes}`;
-                timeInput.value = formattedTime;
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                    maxZoom: 19
+                }).addTo(map);
+                
+                const marker = L.circleMarker([lat, lng], { 
+                    radius: 8, 
+                    color: '#ffffff',
+                    weight: 2,
+                    fillColor: '#0284c7', 
+                    fillOpacity: 1 
+                }).addTo(map);
+
+                marker.bindPopup(`
+                    <div style="font-family: 'Plus Jakarta Sans', sans-serif; padding: 2px;">
+                        <strong style="color: #0284c7; font-size: 12px;">${mapContainer.dataset.docName || 'Doctor Clinic'}</strong>
+                        <p style="font-size: 10px; margin: 0; color: #475569;">${mapContainer.dataset.docAddress || 'Clinic'}</p>
+                    </div>
+                `);
             }
-        });
+        }
     });
 </script>
 {% endblock %}

@@ -1,6 +1,16 @@
 import json
-import pyodbc
 import os
+import sys
+
+# Automatically configure unixODBC paths on macOS for Homebrew installations
+if sys.platform == 'darwin' and not os.environ.get('ODBCSYSINI'):
+    for prefix in ['/opt/homebrew/etc', '/usr/local/etc']:
+        if os.path.exists(os.path.join(prefix, 'odbcinst.ini')):
+            os.environ['ODBCSYSINI'] = prefix
+            print(f"ℹ️ Automatically configured ODBCSYSINI={prefix}")
+            break
+
+import pyodbc
 
 # Configuration matching your Docker setup
 SERVER = 'localhost'
@@ -8,7 +18,7 @@ DATABASE = 'dev_ai_plus'
 USERNAME = 'sa'
 PASSWORD = 'RadhaRani@123'
 DRIVER = '{ODBC Driver 17 for SQL Server}'
-JSON_FILE = '/Users/sunnykushwaha/Projects/dev_ai_plus/data_store.json'
+JSON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data_store.json.migrated')
 
 def get_connection():
     conn_str = f'DRIVER={DRIVER};SERVER={SERVER};DATABASE={DATABASE};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True'

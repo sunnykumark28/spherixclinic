@@ -1,302 +1,1188 @@
 {% extends 'layout.html' %}
+{% set hide_main_nav = True %}
+{% set hide_footer = True %}
 
-{% block title %}S iCons | Engineering the Pulse of the Future{% endblock %}
+{% block title %}S iCons | Heavy Engineering, Space Propulsion & Sentient AI Systems{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Cyber matrix grid backgrounds */
+    .cyber-grid-bg {
+        background-image: 
+            linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
+
+    .cyber-dots-bg {
+        background-image: radial-gradient(rgba(255, 42, 95, 0.15) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+
+    /* Gradient glow animations */
+    @keyframes gradientFlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .animate-gradient-flow {
+        background-size: 200% 200%;
+        animation: gradientFlow 5s ease infinite;
+    }
+
+    /* Laser scanning animation */
+    @keyframes hudScan {
+        0% { top: 0%; opacity: 0; }
+        15% { opacity: 0.8; }
+        85% { opacity: 0.8; }
+        100% { top: 100%; opacity: 0; }
+    }
+
+    .animate-hud-scan {
+        animation: hudScan 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    /* Gold Shimmer */
+    .gold-shimmer {
+        background: linear-gradient(90deg, #D4AF37 0%, #FFF2A8 50%, #D4AF37 100%);
+        background-size: 200% auto;
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: gradientFlow 4s linear infinite;
+    }
+
+    /* Glass card glow */
+    .cyber-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(16px);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .cyber-card:hover {
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 20px 40px -15px rgba(220, 38, 38, 0.25), 0 0 25px rgba(220, 38, 38, 0.15);
+        transform: translateY(-4px);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #030712; }
+    ::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 9999px; }
+</style>
+{% endblock %}
 
 {% block content %}
-<!-- Main Container with Obsidian Theme -->
-<div class="min-h-screen bg-[#030305] text-slate-300 font-sans selection:bg-red-600/30">
+<!-- MAIN CYBER MATRIX VIEWPORT -->
+<div class="min-h-screen bg-[#030712] text-white font-sans selection:bg-red-600 selection:text-white relative overflow-hidden">
 
-    <!-- 1. HERO SECTION: THE AUTHORITY -->
-    <section class="relative min-h-screen flex items-center pt-20 overflow-hidden">
-        <!-- Background Tech Layer -->
-        <div class="absolute inset-0 z-0">
-            <div class="absolute top-1/4 -left-20 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px] animate-pulse"></div>
-            <div class="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse delay-1000"></div>
-            <div class="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-        </div>
-        
-        <div class="relative z-10 max-w-7xl mx-auto px-6 w-full">
-            <div class="max-w-4xl">
-                <div class="inline-flex items-center space-x-3 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-md">
-                    <span class="flex h-2 w-2 rounded-full bg-red-600 animate-ping"></span>
-                    <span class="text-[10px] font-bold tracking-[0.3em] text-white uppercase">Next-Gen Industrial Powerhouse</span>
+    <!-- Scroll Progress Indicator Bar -->
+    <div class="fixed top-0 left-0 h-1 bg-gradient-to-r from-red-600 via-amber-400 to-red-600 z-[110] transition-all duration-100 shadow-[0_0_15px_rgba(239,68,68,0.8)]" id="scrollBar"></div>
+
+    <!-- Background Cosmic Glows & Ambient Mesh -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <div class="absolute top-10 left-1/4 w-[700px] h-[700px] bg-red-600/10 rounded-full blur-[160px] animate-pulse"></div>
+        <div class="absolute top-1/2 right-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[180px]"></div>
+        <div class="absolute -bottom-40 left-10 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-[180px]"></div>
+        <div class="absolute inset-0 cyber-grid-bg opacity-30"></div>
+    </div>
+
+    <!-- ================= 1. HIGH-TECH CYBER HUD HEADER ================= -->
+    <header class="fixed top-0 w-full z-[100] transition-all duration-300" id="mainHeader">
+        <div class="absolute inset-0 bg-black/85 backdrop-blur-2xl border-b border-white/10 shadow-2xl"></div>
+        <div class="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 h-20 relative flex items-center justify-between">
+            
+            <!-- Left: Brand Logo Emblem -->
+            <a href="{{ url_for('sicons') }}" class="flex items-center gap-3.5 group text-decoration-none">
+                <div class="relative flex-shrink-0">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-red-600 to-amber-500 rounded-full blur-xs opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative w-10 h-10 rounded-full bg-black p-1 border border-white/20 flex items-center justify-center">
+                        <img src="{{ url_for('static', filename='images/sicons.png') }}" alt="S iCons Logo" class="w-full h-full object-contain filter invert group-hover:rotate-12 transition-transform duration-500">
+                    </div>
                 </div>
-                <h1 class="text-6xl md:text-9xl font-black text-white leading-[0.9] mb-8 tracking-tighter uppercase">
-                    Engineering <br/>The <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-white to-slate-500">Pulse.</span>
-                </h1>
-                <p class="text-xl md:text-2xl text-slate-400 max-w-2xl leading-relaxed mb-12 font-light">
-                    S iCons is a premier global architect of advanced manufacturing, specializing in sentient technology and the engines of tomorrow.
-                </p>
-                <div class="flex flex-wrap gap-6">
-                    <a href="#divisions" class="px-10 py-5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(220,38,38,0.4)] uppercase text-sm tracking-widest">
-                        Explore Divisions
-                    </a>
-                    <a href="#overview" class="px-10 py-5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-full border border-white/10 transition-all backdrop-blur-md uppercase text-sm tracking-widest">
-                        Company Overview
-                    </a>
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2">
+                        <span class="font-display font-black text-xl tracking-tight text-white group-hover:text-red-500 transition-colors">
+                            S iCons
+                        </span>
+                        <span class="font-mono text-[9px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/30 uppercase tracking-widest">
+                            HEAVY ENG.
+                        </span>
+                    </div>
+                    <span class="font-mono text-[8px] uppercase tracking-[0.25em] text-slate-400">
+                        Autonomous Systems & Propulsion
+                    </span>
+                </div>
+            </a>
+
+            <!-- Center: Desktop Navigation Hub -->
+            <nav class="hidden lg:flex items-center gap-8 text-xs font-mono font-bold tracking-[0.2em] uppercase text-slate-300">
+                <a href="#overview" class="hover:text-red-400 transition-colors flex items-center gap-1.5 text-decoration-none">
+                    <span class="text-red-500 opacity-60">01.</span> Directive
+                </a>
+                <a href="#divisions" class="hover:text-red-400 transition-colors flex items-center gap-1.5 text-decoration-none">
+                    <span class="text-red-500 opacity-60">02.</span> Sectors
+                </a>
+                <a href="#architecture" class="hover:text-red-400 transition-colors flex items-center gap-1.5 text-decoration-none">
+                    <span class="text-red-500 opacity-60">03.</span> Blueprint
+                </a>
+                <a href="#leadership" class="hover:text-red-400 transition-colors flex items-center gap-1.5 text-decoration-none">
+                    <span class="text-red-500 opacity-60">04.</span> Architect
+                </a>
+                <a href="#heritage" class="hover:text-red-400 transition-colors flex items-center gap-1.5 text-decoration-none">
+                    <span class="text-red-500 opacity-60">05.</span> Milestones
+                </a>
+                <a href="#spherix-link" class="hover:text-blue-400 transition-colors flex items-center gap-1.5 text-decoration-none">
+                    <span class="text-blue-500 opacity-60">06.</span> Spherix Sync
+                </a>
+            </nav>
+
+            <!-- Right: Action Portal & Spherix Quick Switch -->
+            <div class="flex items-center gap-3">
+                <a href="{{ url_for('home') }}" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:text-blue-300 font-mono text-[11px] font-bold transition-all text-decoration-none">
+                    <i class="fas fa-arrow-left text-[9px]"></i>
+                    <span>Spherix Clinic</span>
+                </a>
+                <button type="button" onclick="openSiconsSidebar();" class="px-5 py-2 rounded-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-mono text-xs font-extrabold uppercase tracking-widest shadow-lg shadow-red-600/30 hover:shadow-red-600/50 transition-all hover:scale-105 cursor-pointer flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                    <span>Apply SSO</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- ================= 2. HERO: QUANTUM PROPULSION & INDUSTRIAL AI ================= -->
+    <section class="relative min-h-screen flex items-center justify-center pt-32 pb-20 px-4 sm:px-6 lg:px-8 text-center z-10">
+        <div class="max-w-6xl mx-auto space-y-8">
+            
+            <!-- Floating System Holographic Badge -->
+            <div class="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 border border-red-500/30 backdrop-blur-xl shadow-lg">
+                <span class="flex h-2 w-2 rounded-full bg-red-500 animate-ping"></span>
+                <span class="text-[10px] sm:text-xs font-mono font-bold tracking-[0.3em] text-red-400 uppercase">
+                    Quantum Propulsion & Autonomous Heavy Industry
+                </span>
+                <span class="hidden sm:inline-block w-1 h-3 bg-red-500/40"></span>
+                <span class="hidden sm:inline-block text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                    CLUSTER_OS_2026
+                </span>
+            </div>
+
+            <!-- Massive Dynamic Heading -->
+            <h1 class="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-display font-black leading-[0.9] tracking-tight uppercase">
+                ENGINEERING <br />
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-300 to-red-600 animate-gradient-flow">
+                    THE PULSE.
+                </span>
+            </h1>
+
+            <!-- Subtitle Description -->
+            <p class="text-sm sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-light">
+                <strong class="text-white font-semibold">S iCons</strong> is the definitive architect of next-generation industrial power, uniting <span class="text-red-400 font-medium">aerospace propulsion</span>, <span class="text-amber-300 font-medium">superconducting alloys</span>, and <span class="text-blue-400 font-medium">neural-AI automation</span> to drive planetary infrastructure.
+            </p>
+
+            <!-- Live HUD Telemetry Matrix -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-4">
+                <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+                    <span class="block text-2xl sm:text-3xl font-mono font-black text-white">12.4 <span class="text-red-500 text-sm">GW</span></span>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-slate-400">Impulse Energy</span>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+                    <span class="block text-2xl sm:text-3xl font-mono font-black text-white">&lt; 0.04 <span class="text-red-500 text-sm">ms</span></span>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-slate-400">Neural Sync Latency</span>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+                    <span class="block text-2xl sm:text-3xl font-mono font-black text-white">99.999 <span class="text-red-500 text-sm">%</span></span>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-slate-400">Tolerance Precision</span>
+                </div>
+                <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+                    <span class="block text-2xl sm:text-3xl font-mono font-black text-white">7 <span class="text-amber-400 text-sm">DIV</span></span>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-slate-400">Global R&D Nodes</span>
                 </div>
             </div>
+
+            <!-- Hero Action Buttons -->
+            <div class="flex flex-wrap justify-center gap-4 sm:gap-6 pt-4">
+                <button type="button" onclick="openSiconsSidebar();" class="px-8 sm:px-10 py-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-mono text-xs sm:text-sm font-black rounded-full hover:scale-105 transition-all shadow-xl shadow-red-600/30 uppercase tracking-[0.25em] cursor-pointer flex items-center gap-3">
+                    <i class="fas fa-id-badge text-sm"></i>
+                    <span>Apply For Deployment</span>
+                </button>
+                <a href="#divisions" class="px-8 sm:px-10 py-4 bg-white/5 hover:bg-white/10 text-white font-mono text-xs sm:text-sm font-black rounded-full border border-white/20 hover:border-red-500/50 transition-all uppercase tracking-[0.25em] text-decoration-none flex items-center gap-3">
+                    <i class="fas fa-compass text-sm text-red-500"></i>
+                    <span>Inspect Strategic Sectors</span>
+                </a>
+            </div>
+
         </div>
     </section>
 
-    <!-- 2. COMPANY OVERVIEW SECTION -->
-    <section id="overview" class="py-32 bg-[#050507] border-y border-white/5">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="grid lg:grid-cols-2 gap-20 items-center">
+    <!-- ================= 3. STRATEGIC SECTORS (6 HOLOGRAPHIC CARDS) ================= -->
+    <section id="divisions" class="py-28 relative z-10 border-t border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Section Header -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
                 <div>
-                    <h3 class="text-xs font-bold text-red-600 uppercase tracking-[0.5em] mb-6">01. Perspective</h3>
-                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-8 leading-tight">Intelligence in Motion.</h2>
-                    <p class="text-slate-400 text-lg leading-loose mb-10">
-                        S iCons stands at the critical intersection of sentient technology and industrial power. We don't merely manufacture; we architect the foundations of global transit and autonomous ecosystems. By synthesizing <span class="text-white font-semibold">Aerospace-grade materials</span> with <span class="text-white font-semibold">Neural-AI control systems</span>, we produce propulsion units that self-optimize in real-time.
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] uppercase tracking-widest mb-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Sector Matrix
+                    </div>
+                    <h2 class="text-4xl sm:text-5xl lg:text-6xl font-display font-black text-white uppercase tracking-tight">
+                        Six Core <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-amber-300">Pillars</span>
+                    </h2>
+                </div>
+                <div class="border-l-2 border-red-600 pl-4 font-mono">
+                    <p class="text-white text-xs font-bold uppercase tracking-wider">Total Vertical Integration</p>
+                    <p class="text-slate-400 text-[11px] uppercase tracking-widest mt-0.5">Scale: Terrestrial to Deep Orbital</p>
+                </div>
+            </div>
+
+            <!-- Sectors 6-Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                
+                <!-- 01: Space Tech -->
+                <div class="cyber-card rounded-3xl p-8 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-6 text-white/5 font-mono font-black text-6xl group-hover:text-red-500/15 transition-colors">01</div>
+                    <div class="w-14 h-14 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500 mb-6 group-hover:scale-110 group-hover:bg-red-600 group-hover:text-white transition-all duration-300">
+                        <i class="fas fa-rocket text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Space Tech</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-6 font-normal">
+                        Cryogenic methane and liquid-hydrogen propulsion engines engineered for orbital freight, satellite constellation deployment, and interplanetary trajectories.
                     </p>
-                    <div class="grid grid-cols-2 gap-10">
-                        <div class="border-l-2 border-red-600 pl-6">
-                            <h4 class="text-white font-bold mb-2 uppercase text-xs tracking-widest">Our Vision</h4>
-                            <p class="text-sm text-slate-500 leading-relaxed">To become the definitive global leader in intelligent propulsion, powering humanity across terrestrial and extra-planetary frontiers.</p>
-                        </div>
-                        <div class="border-l-2 border-blue-600 pl-6">
-                            <h4 class="text-white font-bold mb-2 uppercase text-xs tracking-widest">Our Mission</h4>
-                            <p class="text-sm text-slate-500 leading-relaxed">To harmonize raw industrial power with sophisticated AI, ensuring a future where motion is safe, sustainable, and limitless.</p>
-                        </div>
+                    <div class="space-y-2 pt-4 border-t border-white/10 font-mono text-[11px] text-slate-300">
+                        <div class="flex justify-between"><span>Impulse Specific:</span><span class="text-red-400 font-bold">450s Isp</span></div>
+                        <div class="flex justify-between"><span>Payload Cap:</span><span class="text-white font-bold">85 Metric Tons</span></div>
                     </div>
                 </div>
-                <div class="relative">
-                    <div class="aspect-square rounded-[3rem] bg-gradient-to-tr from-white/10 to-transparent p-1">
-                        <div class="w-full h-full bg-[#030305] rounded-[2.9rem] flex items-center justify-center relative overflow-hidden">
-                            <i class="fas fa-microchip text-[12rem] text-white/15 absolute rotate-12"></i>
-                            <div class="text-center relative z-10">
-                                <div class="text-8xl font-black text-white tracking-tighter mb-2 ">S <span class="text-red-600">iCons</span></div>
-                                <div class="text-red-600 font-mono tracking-[0.5em] uppercase text-sm">Industrial Intelligence</div>
+
+                <!-- 02: Aviation & Turbofans -->
+                <div class="cyber-card rounded-3xl p-8 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-6 text-white/5 font-mono font-black text-6xl group-hover:text-red-500/15 transition-colors">02</div>
+                    <div class="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                        <i class="fas fa-plane-up text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Supersonic Aviation</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-6 font-normal">
+                        High-bypass adaptive cycle turbofans built with ceramic-matrix composites (CMC) for sustained supersonic cruise and zero-carbon regional aviation.
+                    </p>
+                    <div class="space-y-2 pt-4 border-t border-white/10 font-mono text-[11px] text-slate-300">
+                        <div class="flex justify-between"><span>Max Velocity:</span><span class="text-blue-400 font-bold">Mach 4.2+</span></div>
+                        <div class="flex justify-between"><span>Thermal Tolerance:</span><span class="text-white font-bold">2,100°C Peak</span></div>
+                    </div>
+                </div>
+
+                <!-- 03: Autonomous Maritime -->
+                <div class="cyber-card rounded-3xl p-8 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-6 text-white/5 font-mono font-black text-6xl group-hover:text-red-500/15 transition-colors">03</div>
+                    <div class="w-14 h-14 rounded-2xl bg-teal-600/20 border border-teal-500/40 flex items-center justify-center text-teal-400 mb-6 group-hover:scale-110 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300">
+                        <i class="fas fa-ship text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Maritime Fleets</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-6 font-normal">
+                        Autonomous green-methanol and hydrogen fuel cell internal combustion drivetrains governing trans-oceanic container vessels with neural autopilot routing.
+                    </p>
+                    <div class="space-y-2 pt-4 border-t border-white/10 font-mono text-[11px] text-slate-300">
+                        <div class="flex justify-between"><span>Endurance:</span><span class="text-teal-400 font-bold">14,000 NM</span></div>
+                        <div class="flex justify-between"><span>Emissions:</span><span class="text-white font-bold">Net-Zero GHG</span></div>
+                    </div>
+                </div>
+
+                <!-- 04: Magnetic Locomotives -->
+                <div class="cyber-card rounded-3xl p-8 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-6 text-white/5 font-mono font-black text-6xl group-hover:text-red-500/15 transition-colors">04</div>
+                    <div class="w-14 h-14 rounded-2xl bg-amber-600/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300">
+                        <i class="fas fa-train text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Maglev Locomotives</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-6 font-normal">
+                        Superconducting linear-induction magnetic levitation engines providing rapid high-tonnage continental freight logistics without rail-wear friction.
+                    </p>
+                    <div class="space-y-2 pt-4 border-t border-white/10 font-mono text-[11px] text-slate-300">
+                        <div class="flex justify-between"><span>Operating Speed:</span><span class="text-amber-400 font-bold">620 km/h</span></div>
+                        <div class="flex justify-between"><span>Power Source:</span><span class="text-white font-bold">Direct Hydrogen Grid</span></div>
+                    </div>
+                </div>
+
+                <!-- 05: Hyper-Car Powertrains -->
+                <div class="cyber-card rounded-3xl p-8 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-6 text-white/5 font-mono font-black text-6xl group-hover:text-red-500/15 transition-colors">05</div>
+                    <div class="w-14 h-14 rounded-2xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-6 group-hover:scale-110 group-hover:bg-rose-600 group-hover:text-white transition-all duration-300">
+                        <i class="fas fa-gauge-high text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Hyper-Cars</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-6 font-normal">
+                        Quad axial-flux magnetic drive units paired with hybrid twin-turbo combustion generators delivering instant torque vectoring and neural suspension damping.
+                    </p>
+                    <div class="space-y-2 pt-4 border-t border-white/10 font-mono text-[11px] text-slate-300">
+                        <div class="flex justify-between"><span>Peak Output:</span><span class="text-rose-400 font-bold">1,850 BHP</span></div>
+                        <div class="flex justify-between"><span>0-100 km/h:</span><span class="text-white font-bold">1.72 Seconds</span></div>
+                    </div>
+                </div>
+
+                <!-- 06: Neural Robotics & Cyber-Fab -->
+                <div class="cyber-card rounded-3xl p-8 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-6 text-white/5 font-mono font-black text-6xl group-hover:text-red-500/15 transition-colors">06</div>
+                    <div class="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300">
+                        <i class="fas fa-microchip text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-display font-bold text-white mb-2 uppercase tracking-tight">Neural Robotics</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-6 font-normal">
+                        Self-assembling multi-axis robotic arms operating under neural vision algorithms for sub-micron manufacturing and high-throughput automated assembly lines.
+                    </p>
+                    <div class="space-y-2 pt-4 border-t border-white/10 font-mono text-[11px] text-slate-300">
+                        <div class="flex justify-between"><span>Precision:</span><span class="text-purple-400 font-bold">±0.002 mm</span></div>
+                        <div class="flex justify-between"><span>Decision Loop:</span><span class="text-white font-bold">50,000 ops/sec</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ================= 4. TECHNICAL ARCHITECTURE & BLUEPRINTS ================= -->
+    <section id="architecture" class="py-28 relative z-10 bg-black/60 border-t border-white/10" x-data="{ activeTab: 'neural' }">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] uppercase tracking-widest mb-3">
+                    <i class="fas fa-layer-group"></i> Architecture Engine
+                </div>
+                <h2 class="text-4xl sm:text-5xl font-display font-black text-white uppercase tracking-tight">
+                    Technological <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-white">Blueprints</span>
+                </h2>
+                <p class="text-slate-400 text-xs sm:text-sm font-light mt-3">
+                    Explore the modular subsystems that define S iCons proprietary industrial technology.
+                </p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex flex-wrap justify-center gap-2 mb-10">
+                <button @click="activeTab = 'neural'" :class="activeTab === 'neural' ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'" class="px-5 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer">
+                    <i class="fas fa-brain mr-1.5"></i> Neural-OS Kernel
+                </button>
+                <button @click="activeTab = 'cryo'" :class="activeTab === 'cryo' ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'" class="px-5 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer">
+                    <i class="fas fa-fire-burner mr-1.5"></i> Cryogenic Dynamics
+                </button>
+                <button @click="activeTab = 'alloys'" :class="activeTab === 'alloys' ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'" class="px-5 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer">
+                    <i class="fas fa-cube mr-1.5"></i> Superalloy Synthesis
+                </button>
+            </div>
+
+            <!-- Tab 1: Neural OS -->
+            <div x-show="activeTab === 'neural'" x-transition.opacity class="cyber-card p-8 sm:p-12 rounded-3xl border border-red-500/30">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-4">
+                        <span class="text-xs font-mono text-red-400 font-bold uppercase tracking-widest">Core Specification // Kernel 9.4</span>
+                        <h3 class="text-3xl font-display font-black text-white">Sentient Machine Orchestration</h3>
+                        <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                            Neural-OS operates directly on machine control units with real-time feedback loops. Sensors continuously capture vibration harmonics, thermal gradients, and aerodynamic drag, recalculating fuel injection and stator angles 50,000 times every second.
+                        </p>
+                        <div class="grid grid-cols-2 gap-4 pt-4 font-mono text-xs">
+                            <div class="p-3 rounded-xl bg-black/40 border border-white/10">
+                                <span class="text-slate-400 block text-[10px]">INFERENCE ENGINE</span>
+                                <span class="text-white font-bold">FPGA Low-Power ASIC</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-black/40 border border-white/10">
+                                <span class="text-slate-400 block text-[10px]">SECURITY ENCLAVE</span>
+                                <span class="text-emerald-400 font-bold">Quantum-Resistant Hash</span>
                             </div>
                         </div>
                     </div>
+                    <div class="lg:col-span-5 p-6 rounded-2xl bg-black/80 border border-white/10 font-mono text-xs text-slate-300 space-y-3">
+                        <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                            <span class="text-red-400 font-bold">LIVE TELEMETRY FEED</span>
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        </div>
+                        <div class="space-y-1.5 text-[11px]">
+                            <p class="m-0 text-slate-400">&gt; NODE_01: SYNC_ESTABLISHED</p>
+                            <p class="m-0 text-slate-400">&gt; TURBINE_RPM: 114,800 [OPTIMAL]</p>
+                            <p class="m-0 text-slate-400">&gt; FLOW_PRESSURE: 320.4 BAR</p>
+                            <p class="m-0 text-emerald-400">&gt; AUTONOMOUS_CORRECTION: ACTIVE [0.00% DRIFT]</p>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Tab 2: Cryo -->
+            <div x-show="activeTab === 'cryo'" x-transition.opacity class="cyber-card p-8 sm:p-12 rounded-3xl border border-red-500/30">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-4">
+                        <span class="text-xs font-mono text-red-400 font-bold uppercase tracking-widest">Thermodynamic Combustion // Gen 5</span>
+                        <h3 class="text-3xl font-display font-black text-white">Cryogenic Liquid-Methane Thrusters</h3>
+                        <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                            Engineered for continuous multi-burn restarts in zero-gravity vacuums. Uses regenerative copper-inconel cooling channels to maintain chamber integrity under 3,400 K thermal stress.
+                        </p>
+                        <div class="grid grid-cols-2 gap-4 pt-4 font-mono text-xs">
+                            <div class="p-3 rounded-xl bg-black/40 border border-white/10">
+                                <span class="text-slate-400 block text-[10px]">SEA-LEVEL THRUST</span>
+                                <span class="text-white font-bold">2,400 kN per Chamber</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-black/40 border border-white/10">
+                                <span class="text-slate-400 block text-[10px]">CHAMBER PRESSURE</span>
+                                <span class="text-amber-400 font-bold">300 Atmospheres</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5 p-6 rounded-2xl bg-black/80 border border-white/10 font-mono text-xs text-slate-300 space-y-3">
+                        <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                            <span class="text-amber-400 font-bold">PROPULSION TELEMETRY</span>
+                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                        </div>
+                        <div class="space-y-1.5 text-[11px]">
+                            <p class="m-0 text-slate-400">&gt; LOX_VALVE: 100% NOMINAL</p>
+                            <p class="m-0 text-slate-400">&gt; PRE_BURNER_TEMP: 820 K</p>
+                            <p class="m-0 text-slate-400">&gt; REIGNITION_READY: 0.2 SEC</p>
+                            <p class="m-0 text-emerald-400">&gt; STATUS: ORBITAL TRANSIENT READY</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Superalloys -->
+            <div x-show="activeTab === 'alloys'" x-transition.opacity class="cyber-card p-8 sm:p-12 rounded-3xl border border-red-500/30">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-4">
+                        <span class="text-xs font-mono text-red-400 font-bold uppercase tracking-widest">Materials Science // Nano-Crystal</span>
+                        <h3 class="text-3xl font-display font-black text-white">Single-Crystal Superalloys</h3>
+                        <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                            Synthesized through directional solidification in ultra-high vacuum furnaces. Eliminates grain boundaries to stop creep deformation at operating temperatures exceeding 90% of melting points.
+                        </p>
+                        <div class="grid grid-cols-2 gap-4 pt-4 font-mono text-xs">
+                            <div class="p-3 rounded-xl bg-black/40 border border-white/10">
+                                <span class="text-slate-400 block text-[10px]">TENSILE STRENGTH</span>
+                                <span class="text-white font-bold">1,450 MPa at 1,000°C</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-black/40 border border-white/10">
+                                <span class="text-slate-400 block text-[10px]">DENSITY RATIO</span>
+                                <span class="text-rose-400 font-bold">35% Lighter Than Steel</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5 p-6 rounded-2xl bg-black/80 border border-white/10 font-mono text-xs text-slate-300 space-y-3">
+                        <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                            <span class="text-purple-400 font-bold">MATERIAL SCANNER</span>
+                            <span class="w-2 h-2 rounded-full bg-purple-400 animate-ping"></span>
+                        </div>
+                        <div class="space-y-1.5 text-[11px]">
+                            <p class="m-0 text-slate-400">&gt; LATTICE_CRYSTAL: 100% MONO</p>
+                            <p class="m-0 text-slate-400">&gt; OXIDATION_SHIELD: ALUMINA TGO</p>
+                            <p class="m-0 text-slate-400">&gt; FATIGUE_CYCLE: 500,000 HRS</p>
+                            <p class="m-0 text-emerald-400">&gt; VERDICT: ZERO MICRO-FRACTURE</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </section>
 
-    <!-- 3. STRATEGIC ENGINEERING DIVISIONS -->
-    <section id="divisions" class="py-32">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-24">
-                <h3 class="text-xs font-bold text-red-600 uppercase tracking-[0.5em] mb-4">02. Engineering Sectors</h3>
-                <h2 class="text-5xl font-black text-white uppercase tracking-tighter">Seven Pillars of Propulsion</h2>
-                <p class="text-slate-500 mt-4 font-mono">// Total Vertical Integration</p>
-            </div>
+    <!-- ================= 5. FOUNDER & MASTER ARCHITECT (SUNNY KUSHWAHA) ================= -->
+    <section id="leadership" class="py-28 relative z-10 border-t border-white/10 overflow-hidden">
+        <div class="absolute top-0 right-0 p-12 opacity-5 select-none pointer-events-none font-display font-black text-[14rem] text-white">
+            CHAIR
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
                 
-                <!-- Rocket & Space -->
-                <div class="group p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.05] hover:border-red-600/30 transition-all duration-500">
-                    <div class="w-16 h-16 bg-red-600/10 rounded-2xl flex items-center justify-center text-red-600 mb-8 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-rocket text-2xl"></i>
-                    </div>
-                    <h4 class="text-white font-bold text-xl mb-4">Space Propulsion</h4>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">Cryogenic Nova-Class engines built for interplanetary transit and orbital delivery systems.</p>
-                    <div class="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Specs: LOX/CH4 | 2.2M Newtons</div>
-                </div>
+                <!-- Left: Holographic Portrait Card with HUD Laser Scan -->
+                <div class="lg:col-span-5">
+                    <div class="relative group max-w-[420px] mx-auto">
+                        
+                        <!-- Glowing aura behind portrait -->
+                        <div class="absolute -inset-4 bg-gradient-to-tr from-red-600/30 via-amber-500/20 to-transparent blur-2xl rounded-3xl group-hover:opacity-100 opacity-70 transition-all duration-500"></div>
 
-                <!-- Aircraft -->
-                <div class="group p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.05] hover:border-blue-500/30 transition-all duration-500">
-                    <div class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-600 mb-8 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-plane-up text-2xl"></i>
-                    </div>
-                    <h4 class="text-white font-bold text-xl mb-4">Aviation Systems</h4>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">Ultra-high-bypass turbofans with CMC components for the next generation of zero-emission flight.</p>
-                    <div class="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Specs: 14:1 Bypass | Ti-Al Blades</div>
-                </div>
+                        <!-- Main Image Container -->
+                        <div class="relative aspect-[3/4] w-full rounded-3xl overflow-hidden border-2 border-white/20 bg-zinc-950 shadow-2xl">
+                            
+                            <!-- Founder Photo -->
+                            <img 
+                                src="{{ url_for('static', filename='images/sunnykk.jpg') }}" 
+                                alt="Sunny Kushwaha" 
+                                class="w-full h-full object-cover object-top filter grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
+                            >
 
-                <!-- Maritime -->
-                <div class="group p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.05] hover:border-cyan-500/30 transition-all duration-500">
-                    <div class="w-16 h-16 bg-cyan-600/10 rounded-2xl flex items-center justify-center text-cyan-600 mb-8 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-ship text-2xl"></i>
-                    </div>
-                    <h4 class="text-white font-bold text-xl mb-4">Marine Propulsion</h4>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">Dual-fuel internal combustion reactors for global container fleets and research vessels.</p>
-                    <div class="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Specs: 7.5M NM Torque | H2 Ready</div>
-                </div>
+                            <!-- Gradient Shadow Overlay -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-85"></div>
 
-                <!-- Railway -->
-                <div class="group p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.05] hover:border-emerald-500/30 transition-all duration-500">
-                    <div class="w-16 h-16 bg-emerald-600/10 rounded-2xl flex items-center justify-center text-emerald-600 mb-8 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-train text-2xl"></i>
-                    </div>
-                    <h4 class="text-white font-bold text-xl mb-4">Locomotive Rail</h4>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">Hydrogen-cell locomotive engines designed for high-speed trans-continental freight logistics.</p>
-                    <div class="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Specs: Zero-Emission | 450KM/H</div>
-                </div>
+                            <!-- Animated Laser Scan Line -->
+                            <div class="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_15px_#ef4444] animate-hud-scan pointer-events-none"></div>
 
-                <!-- Supercars -->
-                <div class="group p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.05] hover:border-slate-300/30 transition-all duration-500">
-                    <div class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-white mb-8 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-gauge-high text-2xl"></i>
-                    </div>
-                    <h4 class="text-white font-bold text-xl mb-4">High-Performance</h4>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">V12 hybrid power units for hyper-cars, engineered for extreme thermal endurance and 12,000 RPM.</p>
-                    <div class="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Specs: 1150+ HP | Axial Flux</div>
-                </div>
+                            <!-- High-Tech HUD Badges on Portrait -->
+                            <div class="absolute top-5 right-5 flex flex-col items-end gap-1 font-mono">
+                                <span class="text-[10px] font-bold text-red-400 bg-black/80 px-2.5 py-1 rounded-md backdrop-blur-md border border-red-500/40 uppercase tracking-wider">
+                                    CHAIRPERSON
+                                </span>
+                                <span class="text-[8px] text-slate-400 uppercase tracking-widest">
+                                    BIO-AUTH // OMEGA LEVEL 5
+                                </span>
+                            </div>
 
-                <!-- AI Robotics -->
-                <div class="group p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.05] hover:border-purple-600/30 transition-all duration-500">
-                    <div class="w-16 h-16 bg-purple-600/10 rounded-2xl flex items-center justify-center text-purple-600 mb-8 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-robot text-2xl"></i>
-                    </div>
-                    <h4 class="text-white font-bold text-xl mb-4">Autonomous Robotics</h4>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-6">Sentient-AI automation systems for smart factories, assembly lines, and hazardous material handling.</p>
-                    <div class="text-[10px] font-mono text-slate-600 uppercase tracking-widest">Specs: 0.0001 Precision | Neural-OS</div>
-                </div>
+                            <!-- Bottom Floating Identity Pill -->
+                            <div class="absolute bottom-5 left-5 right-5 p-4 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/15">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="text-base font-display font-black text-white m-0">Sunny Kushwaha</h4>
+                                        <p class="text-[10px] font-mono text-red-400 m-0 uppercase tracking-widest">Founder &amp; Chief Architect</p>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-emerald-400 font-mono text-[10px]">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                                        <span>ACTIVE</span>
+                                    </div>
+                                </div>
+                            </div>
 
-            </div>
-        </div>
-    </section>
+                        </div>
 
-
-    <!-- Combined Leadership + Organization Section -->
-<section class="py-32 bg-[#030305] relative border-t border-white/5">
-
-    <!-- Subtle Grid Background -->
-    <div class="absolute inset-0 opacity-10"
-         style="background-image: linear-gradient(#000000 1px, transparent 1px),
-                linear-gradient(to right, #000000 1px, transparent 1px);
-                background-size: 40px 40px;">
-    </div>
-
-    <div class="max-w-7xl mx-auto px-6 relative z-10">
-
-        <!-- ===== Leadership Header ===== -->
-        <div class="text-center mb-24">
-            <h3 class="text-xs font-bold text-red-600 uppercase tracking-[0.5em] mb-6">
-                Leadership
-            </h3>
-            <h2 class="text-7xl md:text-8xl font-extrabold leading-tight">
-                <span class="text-white">S iCons</span>
-                <span class="bg-gradient-to-r from-red-600 to-rose-400 bg-clip-text text-transparent">
-                    Founder
-                </span>
-            </h2>
-        </div>
-
-        <!-- ===== Chairperson Grid ===== -->
-        <div class="grid md:grid-cols-2 gap-16 items-center mb-32">
-
-            <!-- Image -->
-            <div class="relative">
-                <div class="w-full aspect-square rounded-3xl bg-gradient-to-tr from-white/10 to-transparent p-1">
-                    <div class="w-full h-full bg-[#050507] rounded-3xl border border-white/10 overflow-hidden">
-                        <img
-                            src="{{ url_for('static', filename='images/sunnykk.jpg') }}"
-                            alt="Sunny Kushwaha - Founder"
-                            class="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
-                        >
                     </div>
                 </div>
-            </div>
 
-            <!-- Info -->
-            <div>
-                <h4 class="text-5xl font-bold text-white mb-4">
-                    SUNNY KUSHWAHA
-                </h4>
-                <p class="text-red-600 font-mono uppercase tracking-widest text-sm mb-6">
-                    Founder & Executive Chairperson
-                </p>
-                <p class="text-slate-400 leading-loose mb-6 text-sm">
-                    As the founding architect of S iCons, Sunny Kushwaha leads the organization’s strategic expansion across aerospace, intelligent propulsion, and autonomous industrial systems. With a vision rooted in advanced engineering and AI integration, the mission is to redefine global standards of power and precision.
-                </p>
+                <!-- Right: Vision, Directives & Strategic Portfolio -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] uppercase tracking-widest">
+                        <i class="fas fa-shield-halved"></i> Command &amp; Strategic Vision
+                    </div>
 
-                <div class="flex gap-6 text-xs uppercase tracking-widest text-slate-500">
-                    <span>Global Strategy</span>
-                    <span>AI Systems</span>
-                    <span>Industrial Architecture</span>
-                </div>
-            </div>
-        </div>
-</section>
-    <!-- 4. MANUFACTURING CORE: THE PRECISION LAB -->
-    <section class="py-32 bg-red-600 text-white relative overflow-hidden">
-        <div class="absolute inset-0 bg-black/10"></div>
-        <div class="max-w-7xl mx-auto px-6 relative z-10">
-            <div class="grid lg:grid-cols-2 gap-20 items-center">
-                <div>
-                    <h2 class="text-5xl font-black tracking-tighter mb-8 uppercase">Manufacturing <br/>Without Limits.</h2>
-                    <p class="text-red-100 text-lg leading-loose mb-10">
-                        We operate the world's most advanced 3D-metal sintering labs. By printing engine components from powdered titanium and inconel, we eliminate the weaknesses of traditional casting. Every component is verified by AI-driven ultrasound before assembly.
+                    <h2 class="text-4xl sm:text-6xl font-display font-black text-white leading-none uppercase tracking-tight">
+                        Sunny <br />
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-300 to-white">
+                            Kushwaha.
+                        </span>
+                    </h2>
+
+                    <!-- Quote Block -->
+                    <div class="p-6 rounded-2xl bg-white/[0.03] border-l-4 border-red-600 border-y border-r border-white/10 backdrop-blur-md">
+                        <p class="text-white text-base sm:text-lg italic font-light leading-relaxed m-0">
+                            "The industrial machine is a pure physical manifestation of human intent. Our mission is to engineer that machine to be autonomous, fault-tolerant, and boundless."
+                        </p>
+                    </div>
+
+                    <p class="text-slate-300 text-xs sm:text-sm leading-relaxed font-light">
+                        Under Sunny Kushwaha’s leadership, S iCons has transformed from a propulsion research laboratory into a multi-sector engineering powerhouse. He spearheads the deployment of <strong class="text-white">Neural-OS</strong> across heavy industrial equipment, hypersonic flight systems, and clinical healthcare computing via Spherix Clinic.
                     </p>
-                    <div class="grid grid-cols-2 gap-8">
+
+                    <!-- Core Directives & Social Links Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-white/10">
                         <div>
-                            <span class="block text-4xl font-black">0.0001mm</span>
-                            <span class="text-xs uppercase font-bold text-red-200 tracking-widest">Tolerance Level</span>
+                            <h5 class="text-xs font-mono font-bold text-red-400 uppercase tracking-widest mb-3">Core Directives</h5>
+                            <ul class="space-y-1.5 text-xs font-mono text-slate-300">
+                                <li class="flex items-center gap-2"><i class="fas fa-chevron-right text-[10px] text-red-500"></i> Interplanetary Transit</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-chevron-right text-[10px] text-red-500"></i> Neural-Sync Hardware</li>
+                                <li class="flex items-center gap-2"><i class="fas fa-chevron-right text-[10px] text-red-500"></i> Zero-Emission Energy Systems</li>
+                            </ul>
                         </div>
-                        <div>
-                            <span class="block text-4xl font-black">AI-GC</span>
-                            <span class="text-xs uppercase font-bold text-red-200 tracking-widest">Generative Design</span>
+                        <div class="flex flex-col justify-end space-y-3">
+                            <span class="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Connect &amp; Dispatch</span>
+                            <div class="flex items-center gap-3">
+                                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-blue-500/20 text-white flex items-center justify-center transition-all">
+                                    <i class="fab fa-linkedin-in text-sm"></i>
+                                </a>
+                                <a href="mailto:support@spherixclinic.com" class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/50 hover:bg-red-500/20 text-white flex items-center justify-center transition-all">
+                                    <i class="fas fa-envelope text-sm"></i>
+                                </a>
+                                <button type="button" onclick="openSiconsSidebar();" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold transition-all flex items-center gap-2 cursor-pointer">
+                                    <i class="fas fa-terminal text-red-500"></i>
+                                    <span>SSO Profile</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
+
                 </div>
-                <div class="grid grid-cols-1 gap-4">
-                    <div class="bg-black/20 p-8 rounded-2xl border border-white/20 backdrop-blur-md">
-                        <h4 class="font-bold mb-2">Sustainable Materials</h4>
-                        <p class="text-sm text-red-100">Pioneering the use of recyclable alloys and carbon-neutral casting processes.</p>
-                    </div>
-                    <div class="bg-black/20 p-8 rounded-2xl border border-white/20 backdrop-blur-md">
-                        <h4 class="font-bold mb-2">Neural Monitoring</h4>
-                        <p class="text-sm text-red-100">Every S iCons engine is born with a digital twin for 24/7 lifetime health tracking.</p>
-                    </div>
-                </div>
+
             </div>
         </div>
     </section>
 
-    <!-- 5. GLOBAL CONTACT & FOOTER -->
-    <section class="py-32 bg-[#030305]">
-        <div class="max-w-4xl mx-auto px-6">
-            <div class="text-center mb-16">
-                <h3 class="text-xs font-bold text-red-600 uppercase tracking-[0.5em] mb-4">04. Consultation</h3>
-                <h2 class="text-4xl font-bold text-white">Initialize Fleet Engineering</h2>
-            </div>
+    <!-- ================= 6. HERITAGE MILESTONES (THE ROAD TO 2026) ================= -->
+    <section id="heritage" class="py-28 relative z-10 bg-black/40 border-t border-white/10">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             
-            <form action="#" class="space-y-6 bg-white/[0.02] p-8 md:p-12 rounded-[2rem] border border-white/10">
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Full Name</label>
-                        <input type="text" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-red-600 transition-colors">
+            <div class="text-center mb-20">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] uppercase tracking-widest mb-3">
+                    <i class="fas fa-clock-rotate-left"></i> Historic Trajectory
+                </div>
+                <h2 class="text-4xl sm:text-5xl font-display font-black text-white uppercase tracking-tight">
+                    Evolution to <span class="gold-shimmer font-serif italic">2026</span>
+                </h2>
+            </div>
+
+            <!-- Milestones Timeline Tree -->
+            <div class="space-y-12 relative before:absolute before:inset-0 before:left-4 md:before:left-1/2 md:before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-red-600 before:via-amber-400 before:to-red-600">
+                
+                <!-- 2018 -->
+                <div class="relative flex flex-col md:flex-row items-center justify-between group">
+                    <div class="w-full md:w-5/12 text-left md:text-right pl-12 md:pl-0 md:pr-12">
+                        <span class="text-4xl sm:text-5xl font-mono font-black text-red-500/30 group-hover:text-red-500 transition-colors">2018</span>
+                        <h4 class="text-xl font-display font-bold text-white uppercase mt-1">The Genesis Lab</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed font-light mt-1">
+                            Founded in New Delhi as an advanced metallurgical and high-thermal aircraft alloy research facility.
+                        </p>
                     </div>
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Organization</label>
-                        <input type="text" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-red-600 transition-colors">
+                    <div class="absolute left-2.5 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 border-2 border-black shadow-[0_0_15px_#dc2626]"></div>
+                    <div class="hidden md:block w-5/12"></div>
+                </div>
+
+                <!-- 2021 -->
+                <div class="relative flex flex-col md:flex-row items-center justify-between group">
+                    <div class="hidden md:block w-5/12"></div>
+                    <div class="absolute left-2.5 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-amber-500 border-2 border-black shadow-[0_0_15px_#f59e0b]"></div>
+                    <div class="w-full md:w-5/12 text-left pl-12">
+                        <span class="text-4xl sm:text-5xl font-mono font-black text-amber-500/30 group-hover:text-amber-500 transition-colors">2021</span>
+                        <h4 class="text-xl font-display font-bold text-white uppercase mt-1">Neural Integration Patent</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed font-light mt-1">
+                            Secured international patent for the first AI-governed adaptive turbine control system for heavy maritime propulsion.
+                        </p>
                     </div>
                 </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Message</label>
-                    <textarea rows="4" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-red-600 transition-colors"></textarea>
+
+                <!-- 2024 -->
+                <div class="relative flex flex-col md:flex-row items-center justify-between group">
+                    <div class="w-full md:w-5/12 text-left md:text-right pl-12 md:pl-0 md:pr-12">
+                        <span class="text-4xl sm:text-5xl font-mono font-black text-blue-500/30 group-hover:text-blue-500 transition-colors">2024</span>
+                        <h4 class="text-xl font-display font-bold text-white uppercase mt-1">Heavy Cyber-Fab</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed font-light mt-1">
+                            Established automated mega-scale robotic manufacturing foundries producing single-crystal aerospace turbine blades.
+                        </p>
+                    </div>
+                    <div class="absolute left-2.5 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-500 border-2 border-black shadow-[0_0_15px_#3b82f6]"></div>
+                    <div class="hidden md:block w-5/12"></div>
                 </div>
-                <button type="submit" class="w-full py-5 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-red-600 hover:text-white transition-all duration-500">
-                    Send Transmission
-                </button>
-            </form>
+
+                <!-- 2026 -->
+                <div class="relative flex flex-col md:flex-row items-center justify-between group">
+                    <div class="hidden md:block w-5/12"></div>
+                    <div class="absolute left-2.5 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-emerald-500 border-2 border-black shadow-[0_0_15px_#10b981]"></div>
+                    <div class="w-full md:w-5/12 text-left pl-12">
+                        <span class="text-4xl sm:text-5xl font-mono font-black text-emerald-500/30 group-hover:text-emerald-500 transition-colors">2026</span>
+                        <h4 class="text-xl font-display font-bold text-white uppercase mt-1">Interplanetary Authority &amp; Spherix</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed font-light mt-1">
+                            7 Divisions operational. Primary deep-space transit propulsion contractor and technological engine behind Spherix Health Intelligence AI.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
         </div>
     </section>
 
-    <footer class="py-20 border-t border-white/5">
-        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
-            <div>
-                <div class="text-3xl font-black text-white tracking-tighter mb-2 ">S <span class="text-red-600">iCons</span></div>
-                <p class="text-xs text-slate-600 uppercase tracking-widest">Innovating Beyond Limits</p>
+    <!-- ================= 7. SPHERIX CLINIC TECH TRANSFER LINK ================= -->
+    <section id="spherix-link" class="py-28 relative z-10 bg-[#050914] border-y border-blue-500/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+                
+                <!-- Left Details -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/30 text-blue-400 font-mono text-[10px] uppercase tracking-widest">
+                        <i class="fas fa-heart-pulse"></i> Technology in Clinical Practice
+                    </div>
+                    
+                    <h2 class="text-4xl sm:text-6xl font-display font-black text-white uppercase tracking-tight">
+                        Powering <span class="bg-gradient-to-r from-blue-400 to-teal-300 bg-clip-text text-transparent">Spherix Clinic</span>
+                    </h2>
+                    
+                    <p class="text-slate-300 text-xs sm:text-sm leading-relaxed font-light">
+                        The neural algorithms, fault-tolerant databases, and precision robotics pioneered by S iCons form the operational backbone of <strong class="text-white">Spherix Clinic</strong>. Our aerospace-grade reliability ensures instantaneous patient diagnostic triage, ICU bed allocation sync, and digital pharmacy operations.
+                    </p>
+
+                    <!-- Synergy Highlights -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                        <div class="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/20">
+                            <i class="fas fa-brain text-blue-400 text-lg mb-2"></i>
+                            <h5 class="text-white text-xs font-bold uppercase m-0">AI Triage</h5>
+                            <p class="text-[10px] text-slate-400 m-0 mt-1">Real-time symptom diagnostic engine</p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/20">
+                            <i class="fas fa-hospital-user text-teal-400 text-lg mb-2"></i>
+                            <h5 class="text-white text-xs font-bold uppercase m-0">Bed Telemetry</h5>
+                            <p class="text-[10px] text-slate-400 m-0 mt-1">Instant ICU &amp; hospital synchronization</p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/20">
+                            <i class="fas fa-shield-virus text-indigo-400 text-lg mb-2"></i>
+                            <h5 class="text-white text-xs font-bold uppercase m-0">Zero Downtime</h5>
+                            <p class="text-[10px] text-slate-400 m-0 mt-1">99.98% high availability clinical cluster</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <a href="{{ url_for('home') }}" class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs font-bold uppercase tracking-[0.2em] rounded-full shadow-lg shadow-blue-500/25 transition-all hover:scale-105 text-decoration-none inline-flex items-center gap-3">
+                            <i class="fas fa-hospital text-sm"></i>
+                            <span>Launch Spherix Clinic Portal</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Brand Visual -->
+                <div class="lg:col-span-5">
+                    <div class="relative group max-w-[380px] mx-auto">
+                        <div class="absolute -inset-4 bg-blue-600/20 rounded-full blur-3xl group-hover:bg-blue-600/30 transition-all"></div>
+                        <div class="relative aspect-square rounded-full p-4 bg-gradient-to-tr from-blue-900/60 via-slate-900 to-black border-2 border-blue-500/40 shadow-2xl flex items-center justify-center">
+                            <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" alt="Spherix Clinic" class="w-full h-full object-cover rounded-full ring-4 ring-white/10 group-hover:scale-105 transition-transform duration-500">
+                        </div>
+                    </div>
+                </div>
+
             </div>
-            <div class="mt-8 md:mt-0 text-[10px] text-slate-600 tracking-[0.4em]">
-                &copy; 2026 S iCons Global Manufacturing Division. All Rights Reserved.
+        </div>
+    </section>
+
+    <!-- ================= 8. CAREER / DEPLOYMENT APPLICATION CTA ================= -->
+    <section class="py-24 relative z-10 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-5xl mx-auto p-8 sm:p-14 rounded-3xl bg-gradient-to-r from-red-950/60 via-slate-900/80 to-amber-950/60 border border-red-500/30 backdrop-blur-2xl text-center space-y-6 relative overflow-hidden shadow-2xl">
+            <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-red-600/20 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] uppercase tracking-widest">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> Global Talent Pipeline
             </div>
+
+            <h2 class="text-3xl sm:text-5xl font-display font-black text-white uppercase tracking-tight">
+                Build The Next Century of <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-amber-300">Industrial Power</span>
+            </h2>
+
+            <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed font-light">
+                We are actively scouting senior propulsion physicists, quantum neural-AI architects, superalloy metallurgists, and autonomous roboticists to join our global development laboratories.
+            </p>
+
+            <div class="pt-4">
+                <button type="button" onclick="openSiconsSidebar();" class="px-10 py-5 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-mono text-xs sm:text-sm font-black rounded-full shadow-2xl shadow-red-600/40 transition-all hover:scale-105 uppercase tracking-[0.25em] inline-flex items-center gap-3 cursor-pointer">
+                    <span>Submit Candidate Profile (SSO)</span>
+                    <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 9. ACKNOWLEDGMENT RECEIPT BANNER (IF ACK PRESENT) ================= -->
+    {% if ack_file %}
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 relative z-10">
+        <div class="p-8 rounded-3xl bg-slate-950/90 border-2 border-emerald-500/80 shadow-[0_0_50px_rgba(16,185,129,0.25)] text-center relative overflow-hidden backdrop-blur-2xl">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xl mb-3 border border-emerald-500/30">
+                <i class="fas fa-satellite-dish animate-pulse"></i>
+            </div>
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-bold tracking-widest uppercase mb-2">
+                TRANSMISSION VERIFIED &amp; ACCEPTED
+            </span>
+            <h3 class="text-2xl sm:text-3xl font-black text-white mb-2">Cryptographic Receipt Issued</h3>
+            <p class="text-slate-300 text-xs sm:text-sm max-w-lg mx-auto mb-6 leading-relaxed">
+                Your deployment dossier has been securely deposited into the S iCons private subnet. Download your official cryptographic PDF receipt for record verification.
+            </p>
+            <a href="{{ url_for('download_sicons_ack', filename=ack_file) }}" class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-xl hover:shadow-emerald-500/30 transition-all text-decoration-none">
+                <i class="fas fa-download text-sm"></i>
+                <span>Download Receipt (PDF)</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ================= 10. CYBER SUB-FOOTER ================= -->
+    <footer class="py-16 border-t border-white/10 bg-black relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+
+            <!-- Center Logo -->
+            <div class="flex items-center justify-center gap-3">
+                <img src="{{ url_for('static', filename='images/sicons.png') }}" alt="S iCons"
+                    class="h-9 w-auto filter invert opacity-80">
+                <span class="font-display font-black text-xl tracking-wider text-white">S iCons</span>
+            </div>
+
+            <!-- Footer Protocol Links -->
+            <div
+                class="flex flex-wrap justify-center gap-6 sm:gap-10 text-[11px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+                <a href="{{ url_for('legal_hub', policy_id='privacy-policy') }}"
+                    class="hover:text-red-400 transition-colors text-decoration-none">Privacy Protocol</a>
+                <a href="{{ url_for('legal_hub', policy_id='terms-of-service') }}"
+                    class="hover:text-red-400 transition-colors text-decoration-none">Legal Framework</a>
+                <a href="{{ url_for('careers') }}"
+                    class="hover:text-red-400 transition-colors text-decoration-none">Global Careers</a>
+                <a href="{{ url_for('home') }}"
+                    class="hover:text-blue-400 transition-colors text-decoration-none">Spherix Clinic</a>
+            </div>
+
+            <!-- Copyright Notice -->
+            <p class="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] max-w-xl mx-auto leading-relaxed">
+                &copy; {{ current_year | default(2026) }} S iCons Global Manufacturing Division. All Systems Engineered
+                for the Future of Civilization.
+            </p>
+
         </div>
     </footer>
 
-</div>
+    <!-- ================= 11. DEPLOYMENT APPLICATION SLIDE-OVER DRAWER ================= -->
+    
+    <!-- Drawer Backdrop Overlay -->
+    <div id="siconsSidebarBackdrop" onclick="closeSiconsSidebar();" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[210] opacity-0 pointer-events-none transition-opacity duration-500 ease-in-out"></div>
 
-<!-- Styles for smooth scrolling and hover effects -->
+    <!-- Right Slide-Over Panel -->
+    <aside id="siconsSidebarDrawer" class="fixed inset-y-0 right-0 z-[220] w-full max-w-2xl bg-[#030712]/98 border-l border-red-500/30 backdrop-blur-2xl shadow-[-25px_0_60px_rgba(239,68,68,0.25)] transform translate-x-full transition-transform duration-500 ease-in-out flex flex-col justify-between overflow-hidden">
+        
+        <!-- Top Drawer Header -->
+        <div class="p-6 border-b border-red-500/20 bg-slate-950/90 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <img src="{{ url_for('static', filename='images/sicons.png') }}" alt="S iCons Logo" class="h-7 w-auto brightness-0 invert">
+                <div>
+                    <h3 class="text-sm font-black font-mono text-white uppercase tracking-wider mb-0.5">Deployment Protocol</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                        <span class="text-[9px] font-mono text-red-400 uppercase tracking-widest font-bold">CLEARANCE LEVEL 4</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" onclick="closeSiconsSidebar();" class="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 hover:border-red-500/50 hover:bg-red-950/40 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer" title="Close Protocol Drawer">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Scrollable Drawer Body Form -->
+        <div class="p-6 sm:p-8 overflow-y-auto flex-1 space-y-8 custom-sidebar-scroll">
+            
+            <!-- Progress Tracker -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                <div class="flex items-center justify-between text-xs font-mono mb-2">
+                    <span class="text-slate-400">Dossier Completion</span>
+                    <span class="text-red-400 font-bold" id="sidebarCompletionPercent">0%</span>
+                </div>
+                <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                    <div id="sidebarCompletionBar" class="h-full bg-gradient-to-r from-red-600 via-rose-500 to-amber-500 rounded-full transition-all duration-500" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('sicons_application') }}" enctype="multipart/form-data" id="siconsSidebarForm" class="space-y-8">
+                
+                <!-- 01: Candidate Dossier -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+                        <span class="text-[10px] font-mono font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">01</span>
+                        <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider mb-0">Candidate Metadata</h4>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="sb_full_name" class="block text-[11px] font-mono text-slate-300 uppercase mb-1 font-bold">
+                                Full Name <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="sb_full_name" name="full_name" required placeholder="Dr. Alexander Vance"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-red-500 text-xs font-medium transition-all">
+                        </div>
+
+                        <div>
+                            <label for="sb_email" class="block text-[11px] font-mono text-slate-300 uppercase mb-1 font-bold">
+                                Secure Email <span class="text-red-500">*</span>
+                            </label>
+                            <input type="email" id="sb_email" name="email" required placeholder="vance@spherix.ai"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-red-500 text-xs font-medium transition-all">
+                        </div>
+
+                        <div>
+                            <label for="sb_phone" class="block text-[11px] font-mono text-slate-300 uppercase mb-1 font-bold">
+                                Phone Number <span class="text-red-500">*</span>
+                            </label>
+                            <input type="tel" id="sb_phone" name="phone" required placeholder="+1 (555) 019-2834"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-red-500 text-xs font-medium transition-all">
+                        </div>
+
+                        <div>
+                            <label for="sb_current_company" class="block text-[11px] font-mono text-slate-300 uppercase mb-1 font-bold">
+                                Current Role / Org
+                            </label>
+                            <input type="text" id="sb_current_company" name="current_company" placeholder="Lead Architect @ Orbital"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-red-500 text-xs font-medium transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 02: Deployment Target -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+                        <span class="text-[10px] font-mono font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">02</span>
+                        <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider mb-0">Target Division &amp; Position</h4>
+                    </div>
+
+                    <input type="hidden" name="department" id="sb_selectedDepartmentInput" required value="Space Tech">
+
+                    <div>
+                        <label class="block text-[11px] font-mono text-slate-300 uppercase mb-2 font-bold">
+                            Select Division <span class="text-red-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="sidebarDivisionGrid">
+                            <div onclick="selectSidebarDivision('Space Tech', this);" class="sb-div-card active-sb-card p-3 rounded-xl bg-slate-950 border border-red-500/60 cursor-pointer transition-all text-center group">
+                                <i class="fas fa-rocket text-red-400 text-base mb-1 block"></i>
+                                <span class="text-[11px] font-bold text-white block">Space Tech</span>
+                            </div>
+                            <div onclick="selectSidebarDivision('Aviation', this);" class="sb-div-card p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-red-500/50 cursor-pointer transition-all text-center group">
+                                <i class="fas fa-plane text-red-400 text-base mb-1 block"></i>
+                                <span class="text-[11px] font-bold text-white block">Aviation</span>
+                            </div>
+                            <div onclick="selectSidebarDivision('Maritime', this);" class="sb-div-card p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-red-500/50 cursor-pointer transition-all text-center group">
+                                <i class="fas fa-ship text-red-400 text-base mb-1 block"></i>
+                                <span class="text-[11px] font-bold text-white block">Maritime</span>
+                            </div>
+                            <div onclick="selectSidebarDivision('Locomotive', this);" class="sb-div-card p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-red-500/50 cursor-pointer transition-all text-center group">
+                                <i class="fas fa-train text-red-400 text-base mb-1 block"></i>
+                                <span class="text-[11px] font-bold text-white block">Locomotive</span>
+                            </div>
+                            <div onclick="selectSidebarDivision('Hyper-Cars', this);" class="sb-div-card p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-red-500/50 cursor-pointer transition-all text-center group">
+                                <i class="fas fa-car-side text-red-400 text-base mb-1 block"></i>
+                                <span class="text-[11px] font-bold text-white block">Hyper-Cars</span>
+                            </div>
+                            <div onclick="selectSidebarDivision('Neural Robotics', this);" class="sb-div-card p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-red-500/50 cursor-pointer transition-all text-center group">
+                                <i class="fas fa-robot text-red-400 text-base mb-1 block"></i>
+                                <span class="text-[11px] font-bold text-white block">Neural Robotics</span>
+                            </div>
+                            <div onclick="selectSidebarDivision('Spherix Clinic Integration', this);" class="sb-div-card col-span-2 sm:col-span-3 p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-red-500/50 cursor-pointer transition-all flex items-center justify-center gap-2 group">
+                                <i class="fas fa-dna text-red-400 text-sm"></i>
+                                <span class="text-[11px] font-bold text-white">Spherix Clinic Bio-Cybernetics</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="sb_position" class="block text-[11px] font-mono text-slate-300 uppercase mb-1 font-bold">
+                            Desired Position <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="sb_position" name="position" required placeholder="e.g. Principal Propulsion Architect"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-red-500 text-xs font-medium transition-all">
+                    </div>
+                </div>
+
+                <!-- 03: Digital Footprint -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+                        <span class="text-[10px] font-mono font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">03</span>
+                        <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider mb-0">Digital Footprint</h4>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="sb_linkedin" class="block text-[11px] font-mono text-slate-300 uppercase mb-1 font-bold">
+                                <i class="fab fa-linkedin text-sky-400 mr-1"></i> LinkedIn URL
+                            </label>
+                            <input type="url" id="sb_linkedin" name="linkedin_profile" placeholder="https://linkedin.com/in/..."
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-red-500 text-xs font-medium transition-all">
+                        </div>
+
+                        <div>
+                            <label for="sb_github" class="block text-[11px] font-mono text-slate-300 uppercase mb-1 font-bold">
+                                <i class="fab fa-github text-white mr-1"></i> GitHub URL
+                            </label>
+                            <input type="url" id="sb_github" name="github_profile" placeholder="https://github.com/..."
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-red-500 text-xs font-medium transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 04: Verification Dossiers -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+                        <span class="text-[10px] font-mono font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">04</span>
+                        <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider mb-0">Encrypted Dossiers</h4>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                            <label for="sb_resume" class="block text-[11px] font-mono font-bold text-white uppercase mb-1 cursor-pointer">
+                                Resume / CV (PDF) <span class="text-red-500">*</span>
+                            </label>
+                            <input type="file" id="sb_resume" name="resume" accept=".pdf" required class="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-mono file:bg-slate-800 file:text-slate-200 hover:file:bg-red-600 hover:file:text-white cursor-pointer w-full">
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                            <label for="sb_id_proof" class="block text-[11px] font-mono font-bold text-white uppercase mb-1 cursor-pointer">
+                                Gov ID Proof <span class="text-red-500">*</span>
+                            </label>
+                            <input type="file" id="sb_id_proof" name="id_proof" accept=".pdf,image/*" required class="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-mono file:bg-slate-800 file:text-slate-200 hover:file:bg-red-600 hover:file:text-white cursor-pointer w-full">
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                            <label for="sb_profile_photo" class="block text-[11px] font-mono font-bold text-white uppercase mb-1 cursor-pointer">
+                                Profile Photograph
+                            </label>
+                            <input type="file" id="sb_profile_photo" name="profile_photo" accept="image/*" class="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-mono file:bg-slate-800 file:text-slate-200 hover:file:bg-red-600 hover:file:text-white cursor-pointer w-full">
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                            <label for="sb_cover_letter" class="block text-[11px] font-mono font-bold text-white uppercase mb-1 cursor-pointer">
+                                Cover Letter (PDF)
+                            </label>
+                            <input type="file" id="sb_cover_letter" name="cover_letter" accept=".pdf" class="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-mono file:bg-slate-800 file:text-slate-200 hover:file:bg-red-600 hover:file:text-white cursor-pointer w-full">
+                        </div>
+
+                        <div class="sm:col-span-2 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                            <label for="sb_certificates" class="block text-[11px] font-mono font-bold text-white uppercase mb-1 cursor-pointer">
+                                Certificates &amp; Patents (Multiple)
+                            </label>
+                            <input type="file" id="sb_certificates" name="certificates" multiple accept=".pdf,image/*" class="text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-mono file:bg-slate-800 file:text-slate-200 hover:file:bg-red-600 hover:file:text-white cursor-pointer w-full max-w-sm mx-auto block">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 05: Authorization & Submit -->
+                <div class="pt-4 border-t border-slate-800 space-y-4">
+                    <div class="flex items-start gap-3">
+                        <input id="sb_terms" name="terms" type="checkbox" required class="h-4 w-4 rounded border-slate-700 bg-slate-950 text-red-600 focus:ring-red-500 cursor-pointer mt-0.5 shrink-0 accent-red-600">
+                        <label for="sb_terms" class="text-[11px] text-slate-400 leading-relaxed cursor-pointer">
+                            I verify all credentials and authorize neural screening under global deployment protocols.
+                        </label>
+                    </div>
+
+                    <button type="submit" class="w-full py-4 px-6 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-black uppercase tracking-[0.25em] text-xs rounded-xl shadow-lg shadow-red-600/30 transition-all cursor-pointer flex items-center justify-center gap-2">
+                        <span>Transmit Dossier</span>
+                        <i class="fas fa-satellite-dish text-xs"></i>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="p-4 border-t border-slate-800/80 bg-slate-950/80 text-center shrink-0">
+            <span class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">
+                AES-256-GCM ENCRYPTED TRANSMISSION // SPHERIX ICONS HQ
+            </span>
+        </div>
+    </aside>
+
 <style>
-    html { scroll-behavior: smooth; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #030305; }
-    ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #DC2626; }
+    .custom-sidebar-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-sidebar-scroll::-webkit-scrollbar-track { background: #030712; }
+    .custom-sidebar-scroll::-webkit-scrollbar-thumb { background: #ef4444; border-radius: 9999px; }
+
+    .sb-div-card.active-sb-card {
+        border-color: #ef4444 !important;
+        background: rgba(239, 68, 68, 0.15) !important;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
+    }
 </style>
+
+<script>
+    // Slide-Over Sidebar Drawer Logic
+    function openSiconsSidebar(divisionName) {
+        const drawer = document.getElementById('siconsSidebarDrawer');
+        const backdrop = document.getElementById('siconsSidebarBackdrop');
+        if (drawer && backdrop) {
+            backdrop.classList.remove('opacity-0', 'pointer-events-none');
+            backdrop.classList.add('opacity-100', 'pointer-events-auto');
+            drawer.classList.remove('translate-x-full');
+            drawer.classList.add('translate-x-0');
+            document.body.style.overflow = 'hidden';
+        }
+
+        if (divisionName) {
+            const cards = document.querySelectorAll('.sb-div-card');
+            cards.forEach(c => {
+                const title = c.querySelector('span');
+                if (title && title.innerText.trim().toLowerCase() === divisionName.trim().toLowerCase()) {
+                    selectSidebarDivision(divisionName, c);
+                }
+            });
+        }
+        updateSidebarCompletion();
+    }
+
+    function closeSiconsSidebar() {
+        const drawer = document.getElementById('siconsSidebarDrawer');
+        const backdrop = document.getElementById('siconsSidebarBackdrop');
+        if (drawer && backdrop) {
+            backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+            drawer.classList.remove('translate-x-0');
+            drawer.classList.add('translate-x-full');
+            document.body.style.overflow = '';
+        }
+    }
+
+    function selectSidebarDivision(name, cardEl) {
+        document.querySelectorAll('.sb-div-card').forEach(c => c.classList.remove('active-sb-card'));
+        if (cardEl) {
+            cardEl.classList.add('active-sb-card');
+        }
+        const input = document.getElementById('sb_selectedDepartmentInput');
+        if (input) {
+            input.value = name;
+        }
+        updateSidebarCompletion();
+    }
+
+    function updateSidebarCompletion() {
+        const reqs = [
+            document.getElementById('sb_full_name'),
+            document.getElementById('sb_email'),
+            document.getElementById('sb_phone'),
+            document.getElementById('sb_selectedDepartmentInput'),
+            document.getElementById('sb_position'),
+            document.getElementById('sb_resume'),
+            document.getElementById('sb_id_proof'),
+            document.getElementById('sb_terms')
+        ];
+
+        let count = 0;
+        reqs.forEach(input => {
+            if (!input) return;
+            if (input.type === 'checkbox' && input.checked) {
+                count++;
+            } else if (input.type === 'file' && input.files && input.files.length > 0) {
+                count++;
+            } else if (input.value && input.value.trim().length > 0) {
+                count++;
+            }
+        });
+
+        const pct = Math.round((count / reqs.length) * 100);
+        const pctEl = document.getElementById('sidebarCompletionPercent');
+        const barEl = document.getElementById('sidebarCompletionBar');
+        if (pctEl) pctEl.innerText = pct + '%';
+        if (barEl) barEl.style.width = pct + '%';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSiconsSidebar();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('siconsSidebarForm');
+        if (form) {
+            form.addEventListener('input', updateSidebarCompletion);
+            form.addEventListener('change', updateSidebarCompletion);
+        }
+
+        // Auto open if hash is #apply or query param has apply
+        if (window.location.hash === '#apply' || window.location.search.includes('apply=1')) {
+            setTimeout(() => { openSiconsSidebar(); }, 300);
+        }
+    });
+
+    // Header Blur & Scroll Progress Logic
+    window.addEventListener('scroll', function() {
+        const header = document.getElementById('mainHeader');
+        if (header) {
+            if (window.scrollY > 40) {
+                header.classList.add('shadow-2xl');
+            } else {
+                header.classList.remove('shadow-2xl');
+            }
+        }
+        
+        let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        let scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+        const scrollBar = document.getElementById("scrollBar");
+        if (scrollBar) {
+            scrollBar.style.width = scrolled + "%";
+        }
+    });
+</script>
+
+</div>
 {% endblock %}

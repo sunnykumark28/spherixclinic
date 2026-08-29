@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prescription Slip - {{ appt.patient_name }} ({{ appt.token_no if appt.token_no else 'TK-' ~ appt.id }})</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      margin: 0;
+      padding: 24px;
+    }
+    .print-sheet {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 36px 42px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      border: 1.5px solid #e2e8f0;
+      position: relative;
+    }
+    .clinic-banner {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+    .token-box {
+      background: #38bdf8;
+      color: #0f172a;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 18px;
+      display: inline-block;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #4361ee;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+    .vitals-grid {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .rx-symbol {
+      font-family: serif;
+      font-size: 28px;
+      font-weight: bold;
+      color: #4361ee;
+      line-height: 1;
+    }
+    .rx-line {
+      border-bottom: 1px dashed #cbd5e1;
+      height: 32px;
+      width: 100%;
+    }
+    
+    /* Official Spherix Stamp */
+    .stamp-box {
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      padding: 10px 14px;
+      text-align: center;
+      color: #1d4ed8;
+      background: rgba(37, 99, 235, 0.03);
+      position: relative;
+      width: 220px;
+      margin-left: auto;
+    }
+    .stamp-box .stamp-inner {
+      border: 1px dashed #3b82f6;
+      border-radius: 4px;
+      padding: 6px 10px;
+    }
+    .stamp-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .stamp-sub {
+      font-size: 9px;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+    .stamp-ref {
+      font-size: 10px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .no-print-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 99px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      display: flex;
+      gap: 12px;
+      z-index: 9999;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .print-sheet {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .no-print-bar {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Print Controls -->
+  <div class="no-print-bar">
+    <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="window.print()">
+      <i class="fas fa-print me-1"></i> Print Now
+    </button>
+    <a href="{{ url_for('walkin_receipt_pdf', appt_id=appt.id) }}" class="btn btn-outline-light btn-sm rounded-pill px-3" target="_blank">
+      <i class="fas fa-file-download me-1"></i> Download PDF
+    </a>
+    <button class="btn btn-light btn-sm rounded-pill px-3" onclick="window.close()">
+      Close
+    </button>
+  </div>
+
+  <div class="print-sheet">
+    
+    <!-- Clinic Header Banner -->
+    <div class="clinic-banner d-flex justify-content-between align-items-center">
+      <div>
+        <h3 class="fw-bold mb-1 tracking-tight"><i class="fas fa-clinic-medical text-primary me-2"></i>SPHERIX CLINIC</h3>
+        <p class="mb-0 small text-slate-400">Advanced Healthcare &bull; Smart Outpatient &bull; Multi-Specialty Hospital</p>
+      </div>
+      <div class="text-end">
+        <div class="token-box">
+          {{ appt.token_no if appt.token_no else ('TK-' ~ '%02d'|format(appt.id)) }}
+        </div>
+        <div class="small text-slate-400 mt-1" style="font-size:10px;">
+          OPD Token Number
+        </div>
+      </div>
+    </div>
+
+    <!-- Registration Meta -->
+    <div class="row g-3 mb-4">
+      <div class="col-7">
+        <div class="section-title">Patient Identification</div>
+        <div class="d-flex align-items-baseline gap-2 mb-1">
+          <span class="fs-5 fw-bold text-slate-900">{{ appt.patient_name }}</span>
+          {% if appt.priority == 'emergency' %}
+          <span class="badge bg-danger rounded-pill px-2 py-1 small">EMERGENCY PRIORITY</span>
+          {% endif %}
+        </div>
+        <div class="small text-muted mb-1">
+          <strong>Patient ID:</strong> {{ appt.patient_id if appt.patient_id else 'WALK-IN' }} 
+          {% if patient and patient.age %} &bull; <strong>Age:</strong> {{ patient.age }} yrs{% endif %}
+          {% if patient and patient.gender %} &bull; <strong>Gender:</strong> {{ patient.gender }}{% endif %}
+        </div>
+        <div class="small text-muted mb-1">
+          <strong>Phone:</strong> {{ appt.patient_phone or 'N/A' }} 
+          {% if patient and patient.address %} &bull; <strong>Address:</strong> {{ patient.address }}{% endif %}
+        </div>
+        <div class="small text-muted">
+          <strong>Chief Complaint:</strong> {{ appt.reason or 'General Consultation' }}
+        </div>
+      </div>
+
+      <div class="col-5 border-start ps-4">
+        <div class="section-title">Consultation &amp; Doctor</div>
+        <div class="fw-bold text-slate-800 mb-1">
+          {% if doctor %}
+          Dr. {{ doctor.first_name }} {{ doctor.last_name }}
+          {% else %}
+          Attending Medical Officer
+          {% endif %}
+        </div>
+        <div class="small text-muted mb-1">
+          <strong>Specialty:</strong> {{ doctor.specialty if doctor else 'General Medicine' }}
+        </div>
+        <div class="small text-muted mb-1">
+          <strong>OPD Room:</strong> <span class="badge bg-primary-subtle text-primary">{{ doctor.opd_room if doctor else 'Room 101' }}</span>
+        </div>
+        <div class="small text-muted">
+          <strong>Date &amp; Time:</strong> {{ appt.appointment_date }} &bull; {{ appt.appointment_time.strftime('%I:%M %p') if appt.appointment_time else '' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Triage & Recorded Vitals -->
+    <div class="mb-4">
+      <div class="section-title">Recorded Triage Vitals</div>
+      <div class="vitals-grid">
+        <div class="row g-2 text-center">
+          <div class="col">
+            <span class="text-muted d-block small" style="font-size:10px;">BLOOD PRESSURE</span>
+            <strong class="text-slate-800">{{ appt.vitals.bp if appt.vitals and appt.vitals.bp else '120/80' }}</strong> <small class="text-muted" style="font-size:9px;">mmHg</small>
+          </div>
+          <div class="col border-start">
+            <span class="text-muted d-block small" style="font-size:10px;">PULSE RATE</span>
+            <strong class="text-slate-800">{{ appt.vitals.pulse if appt.vitals and appt.vitals.pulse else '76' }}</strong> <small class="text-muted" style="font-size:9px;">bpm</small>
+          </div>
+          <div class="col border-start">
+            <span class="text-muted d-block small" style="font-size:10px;">TEMPERATURE</span>
+            <strong class="text-slate-800">{{ appt.vitals.temp if appt.vitals and appt.vitals.temp else '98.6' }}</strong> <small class="text-muted" style="font-size:9px;">°F</small>
+          </div>
+          <div class="col border-start">
+            <span class="text-muted d-block small" style="font-size:10px;">SpO2</span>
+            <strong class="text-slate-800">{{ appt.vitals.spo2 if appt.vitals and appt.vitals.spo2 else '99' }}</strong> <small class="text-muted" style="font-size:9px;">%</small>
+          </div>
+          <div class="col border-start">
+            <span class="text-muted d-block small" style="font-size:10px;">WEIGHT</span>
+            <strong class="text-slate-800">{{ appt.vitals.weight if appt.vitals and appt.vitals.weight else '—' }}</strong> <small class="text-muted" style="font-size:9px;">kg</small>
+          </div>
+          <div class="col border-start">
+            <span class="text-muted d-block small" style="font-size:10px;">ALLERGIES</span>
+            <strong class="text-danger">{{ appt.vitals.allergies if appt.vitals and appt.vitals.allergies else 'None Known' }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rx & Prescription Body Lines -->
+    <div class="mb-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="rx-symbol">℞</span>
+        <span class="section-title mb-0 flex-grow-1">Medical Prescription &amp; Clinical Advice</span>
+      </div>
+      
+      <div class="rx-lines pt-1">
+        <div class="rx-line"></div>
+        <div class="rx-line"></div>
+        <div class="rx-line"></div>
+        <div class="rx-line"></div>
+        <div class="rx-line"></div>
+        <div class="rx-line"></div>
+        <div class="rx-line"></div>
+      </div>
+    </div>
+
+    <!-- Fee & Stamp & Signatures -->
+    <div class="row align-items-end mt-4 pt-2">
+      <div class="col-6">
+        <div class="p-3 bg-light rounded-3 border mb-3">
+          <div class="small text-muted"><strong>Registration / Consultation Fee:</strong></div>
+          <div class="fs-6 fw-bold text-success">
+            Rs. {{ appt.fee_amount|int if appt.fee_amount else 300 }}.00 ({{ appt.payment_mode or 'Cash' }} - {{ appt.payment_status|upper if appt.payment_status else 'PAID' }})
+          </div>
+          <div class="small text-muted" style="font-size:10px;">Printed on: {{ now.strftime('%d %b %Y, %I:%M %p') }}</div>
+        </div>
+        
+        <div style="border-top: 1px solid #94a3b8; width: 200px; margin-top: 30px;">
+          <div class="small text-muted text-center pt-1" style="font-size:10px;">Attending Doctor Signature</div>
+        </div>
+      </div>
+
+      <div class="col-6 text-end">
+        <!-- Stamp Box -->
+        <div class="stamp-box">
+          <div class="stamp-inner">
+            <div class="stamp-title">SPHERIX CLINIC</div>
+            <div class="stamp-sub">Official OPD Stamp &bull; Reception Verified</div>
+            <div class="stamp-ref">TOKEN: {{ appt.token_no if appt.token_no else ('TK-' ~ appt.id) }}</div>
+            <div class="stamp-sub">{{ appt.appointment_date }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

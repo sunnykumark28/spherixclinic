@@ -1,125 +1,535 @@
-{% extends 'layout.html' %} {# Extends your base layout template #}
+{% extends 'layout.html' %}
 
-{% block title %}Frequently Asked Questions{% endblock %}
+{% block title %}Frequently Asked Questions & Help Center | Spherix Clinic{% endblock %}
+
+{% block head %}
+<!-- Modern Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
+    }
+
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ambient Hero Mesh Background */
+    .faq-mesh-bg {
+        background: 
+            radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.12) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.08) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+            #ffffff;
+    }
+
+    /* Clean Card */
+    .faq-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .faq-card[open] {
+        border-color: rgba(2, 132, 199, 0.4);
+        box-shadow: 0 12px 28px -6px rgba(2, 132, 199, 0.10);
+    }
+
+    /* Custom Scrollbar for Drawer */
+    .drawer-scroll::-webkit-scrollbar { width: 5px; }
+    .drawer-scroll::-webkit-scrollbar-track { background: transparent; }
+    .drawer-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+</style>
+{% endblock %}
 
 {% block content %}
-  <div class="absolute inset-0 bg-repeat opacity-5" style="background-image: url('https://www.transparenttextures.com/patterns/clean-gray-paper.png');"></div>
-    
-    <!-- Staff/Office themed background image (Abstract Tech/Clean) -->
-    <div class="absolute inset-0 bg-cover bg-center opacity-10" style="background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2940'); background-blend-mode: overlay;"></div>
+{# --- FAQ Data Definition --- #}
+{% set faq_items = [
+    {
+        'category': 'ai',
+        'badge': 'Clinical AI Diagnostics',
+        'badge_color': 'sky',
+        'question': 'Is Spherix Clinic a substitute for a doctor\'s clinical diagnosis?',
+        'answer': 'No. Spherix Clinic AI is an intelligent clinical decision support and preliminary triaging system. While it leverages validated medical datasets, OpenFDA libraries, and neural models to synthesize evidence-based insights, it is designed to assist and educate, not replace licensed physician consultations or emergency trauma care.'
+    },
+    {
+        'category': 'ai',
+        'badge': 'AI Accuracy & Models',
+        'badge_color': 'indigo',
+        'question': 'How accurate are the AI symptom insights and vision document analyses?',
+        'answer': 'Our platform combines Google Cloud Vision OCR feature extraction with Groq Vision LLMs and an indexed 48-condition knowledge base. In clinical benchmarking, symptom pattern recognition achieves high triaging accuracy, while document scanning reliably extracts dosages, abnormal lab markers, and radiological flags.'
+    },
+    {
+        'category': 'doctors',
+        'badge': 'Physician Verification',
+        'badge_color': 'emerald',
+        'question': 'How does Spherix Clinic verify and onboard medical practitioners?',
+        'answer': 'Every doctor undergoes a multi-tiered verification pipeline: validating medical council registration numbers, board certifications, clinical experience, and hospital affiliations before receiving verified badge status.'
+    },
+    {
+        'category': 'privacy',
+        'badge': 'HIPAA & Encryption',
+        'badge_color': 'purple',
+        'question': 'Is my medical data, health records, and prescription uploads secure?',
+        'answer': 'Yes. All health metrics, medical records, and document scans are encrypted both in transit (TLS 1.3) and at rest (AES-256). We comply with HIPAA data handling principles and never monetize or share patient health information with third-party advertisers.'
+    },
+    {
+        'category': 'doctors',
+        'badge': 'Telemedicine Consultations',
+        'badge_color': 'sky',
+        'question': 'How do online telemedicine video consultations and e-prescriptions work?',
+        'answer': 'Patients can book instant or scheduled telemedicine appointments with verified doctors. Consultations take place over encrypted HD video, and digital e-prescriptions are automatically generated and linked to your patient dashboard and the Spherix Pharmacy shop.'
+    },
+    {
+        'category': 'billing',
+        'badge': 'Pricing & Payments',
+        'badge_color': 'amber',
+        'question': 'What features are free, and how do payments work?',
+        'answer': 'Core AI features—including the Symptom Checker, Drug Library, Emergency First Aid Protocols, and Ayurvedic Diagnosis—are completely free. Online doctor consultations, certified lab test packages, and pharmacy medicine orders are charged with transparent upfront pricing via secure Razorpay checkout.'
+    },
+    {
+        'category': 'privacy',
+        'badge': 'Data Management',
+        'badge_color': 'rose',
+        'question': 'Can I export or permanently delete my patient profile and records?',
+        'answer': 'Yes. Under our data sovereignty pledge, you have full control. You can export your comprehensive health history as a portable summary or permanently erase your account and uploaded documents at any time from your Patient Dashboard settings.'
+    },
+    {
+        'category': 'ai',
+        'badge': 'Smart Integration',
+        'badge_color': 'teal',
+        'question': 'Can Spherix Clinic integrate with wearables and fitness devices?',
+        'answer': 'Yes, our platform supports biometric tracking and integrates with standard wearable protocols (Apple HealthKit, Google Fit, Fitbit) to monitor continuous heart rate variability, step cadence, sleep stages, and vitals.'
+    }
+] %}
 
-<section class="py-32 mt-10 mb-10 bg-white/0 px-6">
-    <div class="max-w-4xl mx-auto text-center">
-        <h1 class="text-4xl font-extrabold text-gray-900 mb-4">Frequently Asked Questions</h1>
-        <p class="text-lg text-gray-600">Find answers to common questions about Spherix Clinic.</p>
-    </div>
-<br>
+<div class="min-h-screen faq-mesh-bg py-12 px-6 sm:px-12 lg:px-20 selection:bg-sky-200 selection:text-sky-900">
+    <div class="max-w-6xl mx-auto space-y-10">
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
-    <div class="space-y-6">
-        <!-- FAQ Item 1 -->
-        <details class="bg-white/10 p-8 rounded-2xl shadow-lg border border-gray-100 cursor-pointer group hover:bg-gray-100 transition duration-300">
-            <summary class="flex justify-between items-center text-xl font-semibold text-gray-800 focus:outline-none">
-                Is Spherix Clinic a substitute for a doctor's diagnosis?
-                <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform duration-300 text-sky-600"></i>
-            </summary>
-            <p class="mt-6 text-gray-700 leading-relaxed border-l-4 border-sky-400 pl-4">
-                Absolutely not. Spherix Clinic is designed to provide insightful information and guidance based on your symptoms...
+        <!-- Top Header Banner -->
+        <div class="text-center space-y-4 max-w-3xl mx-auto">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold tracking-wider uppercase">
+                <span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                <span>Help Center & Knowledge Base</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-display font-black text-slate-900 tracking-tight leading-tight">
+                Frequently Asked <span class="text-sky-600">Questions</span>
+            </h1>
+
+            <p class="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                Everything you need to know about Spherix Clinic's AI diagnostics, telemedicine consultations, privacy protocols, and digital pharmacy.
             </p>
-        </details>
 
-        <!-- FAQ Item 2 -->
-        <details class="bg-white/10 p-8 rounded-2xl shadow-lg border border-gray-100 cursor-pointer group hover:bg-gray-100 transition duration-300">
-            <summary class="flex justify-between items-center text-xl font-semibold text-gray-800 focus:outline-none">
-                How accurate are the AI symptom insights?
-                <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform duration-300 text-blue-600"></i>
-            </summary>
-            <p class="mt-6 text-gray-700 leading-relaxed border-l-4 border-blue-400 pl-4">
-                Our AI leverages an extensive and continuously updated medical knowledge base...
-            </p>
-        </details>
+            <!-- Search Bar -->
+            <div class="relative max-w-xl mx-auto pt-2">
+                <div class="relative flex items-center bg-white rounded-2xl border-2 border-slate-200 focus-within:border-sky-500 shadow-xl shadow-sky-900/5 transition-all p-1.5">
+                    <div class="pl-4 text-slate-400">
+                        <i data-lucide="search" class="w-5 h-5 text-sky-600"></i>
+                    </div>
+                    <input type="text" id="faqSearchInput" 
+                           placeholder="Search questions (e.g. AI accuracy, doctor verification, privacy, billing)..."
+                           class="w-full bg-transparent text-slate-800 placeholder-slate-400 px-3.5 py-3 focus:outline-none text-xs sm:text-sm font-semibold">
+                </div>
+            </div>
+        </div>
 
-        <!-- FAQ Item 3 -->
-        <details class="bg-white/10 p-8 rounded-2xl shadow-lg border border-gray-100 cursor-pointer group hover:bg-gray-100 transition duration-300">
-            <summary class="flex justify-between items-center text-xl font-semibold text-gray-800 focus:outline-none">
-                How do you ensure the doctors listed are reliable?
-                <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform duration-300 text-green-600"></i>
-            </summary>
-            <p class="mt-6 text-gray-700 leading-relaxed border-l-4 border-green-400 pl-4">
-                We employ a stringent, multi-step verification process for all medical professionals...
-            </p>
-        </details>
-    </div>
+        <!-- Category Navigation Tabs -->
+        <div class="flex gap-2.5 overflow-x-auto no-scrollbar py-2 justify-center" id="faqCategories">
+            <button data-category="all" class="faq-cat-btn whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-bold transition-all bg-sky-600 text-white shadow-sm cursor-pointer">
+                All Questions
+            </button>
+            <button data-category="ai" class="faq-cat-btn whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 shadow-sm cursor-pointer">
+                🤖 AI & Technology
+            </button>
+            <button data-category="doctors" class="faq-cat-btn whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 shadow-sm cursor-pointer">
+                👨‍⚕️ Doctors & Consults
+            </button>
+            <button data-category="privacy" class="faq-cat-btn whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 shadow-sm cursor-pointer">
+                🔒 Privacy & Security
+            </button>
+            <button data-category="billing" class="faq-cat-btn whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 shadow-sm cursor-pointer">
+                💳 Billing & Payments
+            </button>
+        </div>
 
-    <div class="space-y-6">
-        <!-- FAQ Item 4 -->
-        <details class="bg-white/10 p-8 rounded-2xl shadow-lg border border-gray-100 cursor-pointer group hover:bg-gray-100 transition duration-300">
-            <summary class="flex justify-between items-center text-xl font-semibold text-gray-800 focus:outline-none">
-                Is my health data secure and private?
-                <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform duration-300 text-purple-600"></i>
-            </summary>
-            <p class="mt-6 text-gray-700 leading-relaxed border-l-4 border-purple-400 pl-4">
-                Your privacy and data security are our top priorities...
-            </p>
-        </details>
+        <!-- Interactive AI Search Card (Appears if question not found or custom query) -->
+        <div id="aiAskCard" class="hidden p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 text-white border border-sky-800/60 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:border-sky-400 transition-all">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-xl shrink-0">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="px-2.5 py-0.5 rounded-full bg-sky-500/30 text-sky-300 text-[10px] font-bold uppercase tracking-wider border border-sky-500/30">
+                            Spherix AI Assistant
+                        </span>
+                    </div>
+                    <h4 class="font-bold text-white text-sm sm:text-base" id="aiCardQueryTitle">
+                        Ask AI about "<span id="aiSearchTerm" class="text-sky-300">your question</span>"
+                    </h4>
+                    <p class="text-xs text-slate-300 mt-0.5">
+                        Can't find your answer in the FAQ? Get an instant clinical explanation in the sidebar.
+                    </p>
+                </div>
+            </div>
+            <button type="button" class="px-5 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs uppercase tracking-wider shrink-0 transition-colors flex items-center gap-2 shadow-md">
+                <span>Ask AI in Sidebar</span>
+                <i class="fas fa-arrow-right text-xs"></i>
+            </button>
+        </div>
 
-        <!-- FAQ Item 5 -->
-        <details class="bg-white/10 p-8 rounded-2xl shadow-lg border border-gray-100 cursor-pointer group hover:bg-gray-100 transition duration-300">
-            <summary class="flex justify-between items-center text-xl font-semibold text-gray-800 focus:outline-none">
-                Can I integrate data from wearables?
-                <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform duration-300 text-red-600"></i>
-            </summary>
-            <p class="mt-6 text-gray-700 leading-relaxed border-l-4 border-red-400 pl-4">
-                Yes, Spherix Clinic is designed to integrate with popular health and fitness devices...
-            </p>
-        </details>
+        <!-- 2-Column FAQ Accordion Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="faqAccordionList">
+            {% for item in faq_items %}
+            <details class="faq-card group rounded-2xl p-6 cursor-pointer" data-category="{{ item.category }}" data-search="{{ (item.question + ' ' + item.answer)|lower }}">
+                <summary class="flex items-start justify-between gap-3 text-sm font-bold text-slate-900 list-none select-none focus:outline-none">
+                    <div class="space-y-1.5">
+                        <span class="inline-block text-[10px] font-mono-code font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 group-open:bg-sky-50 group-open:text-sky-700">
+                            {{ item.badge }}
+                        </span>
+                        <h3 class="group-hover:text-sky-600 transition-colors text-sm sm:text-base leading-snug">
+                            {{ item.question }}
+                        </h3>
+                    </div>
+                    <div class="w-7 h-7 rounded-lg bg-slate-50 group-open:bg-sky-600 group-open:text-white text-slate-400 flex items-center justify-center transition-all shrink-0 mt-1">
+                        <i class="fas fa-chevron-down text-xs group-open:rotate-180 transition-transform"></i>
+                    </div>
+                </summary>
+                <div class="mt-4 pt-3 border-t border-slate-100 text-xs sm:text-sm text-slate-600 leading-relaxed space-y-3">
+                    <p>{{ item.answer }}</p>
+                    <div class="flex items-center justify-end">
+                        <button type="button" class="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer"
+                                onclick="event.stopPropagation(); openFaqAiDrawer('{{ item.question | escape }}')">
+                            <span>Deep AI Explanation</span>
+                            <i class="fas fa-wand-magic-sparkles text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            </details>
+            {% endfor %}
+        </div>
 
-        <!-- FAQ Item 6 -->
-        <details class="bg-white/10 p-8 rounded-2xl shadow-lg border border-gray-100 cursor-pointer group hover:bg-gray-100 transition duration-300">
-            <summary class="flex justify-between items-center text-xl font-semibold text-gray-800 focus:outline-none">
-                Are there subscription fees?
-                <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform duration-300 text-orange-600"></i>
-            </summary>
-            <p class="mt-6 text-gray-700 leading-relaxed border-l-4 border-orange-400 pl-4">
-                Spherix Clinic offers a range of features for free...
+        <!-- Empty State -->
+        <div id="noResults" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+            <div class="w-16 h-16 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-circle-question text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-display font-bold text-slate-900">No Matching FAQs Found</h3>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-4">
+                You can ask our AI Health Assistant directly or reach out to patient support.
             </p>
-        </details>
+            <button type="button" id="noResultsAskBtn" class="px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2 shadow-md cursor-pointer">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                <span>Ask AI Assistant in Sidebar</span>
+            </button>
+        </div>
 
-        <!-- FAQ Item 7 -->
-        <details class="bg-white/10 p-8 rounded-2xl shadow-lg border border-gray-100 cursor-pointer group hover:bg-gray-100 transition duration-300">
-            <summary class="flex justify-between items-center text-xl font-semibold text-gray-800 focus:outline-none">
-                Can I delete my health data?
-                <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform duration-300 text-teal-600"></i>
-            </summary>
-            <p class="mt-6 text-gray-700 leading-relaxed border-l-4 border-teal-400 pl-4">
-                Yes, you can manage or permanently delete your account at any time...
-            </p>
-        </details>
+        <!-- Helpdesk & Contact Section -->
+        <div class="p-8 rounded-3xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-2xl shrink-0">
+                    <i data-lucide="headphones" class="w-7 h-7"></i>
+                </div>
+                <div>
+                    <h4 class="font-display font-bold text-slate-900 text-base sm:text-lg">Still have questions?</h4>
+                    <p class="text-xs text-slate-500 mt-0.5">Our medical support team is available 24/7 to assist with appointments and services.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+                <a href="{{ url_for('contact') }}" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                    <span>Contact Support</span>
+                </a>
+                <a href="{{ url_for('doctors_list') }}" class="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    <span>Book Doctor</span>
+                </a>
+            </div>
+        </div>
 
     </div>
 </div>
-</section>
-<!-- Link to your faq-specific JavaScript file -->
-<script> 
-    document.addEventListener('DOMContentLoaded', () => {
-    const faqContainer = document.getElementById('faq-container');
-    if (!faqContainer) return;
 
-    const detailsElements = faqContainer.querySelectorAll('details');
+<!-- ================= AI FAQ SIDEBAR DRAWER ================= -->
+<div id="faq-drawer-modal" class="fixed inset-0 z-[1001] hidden overflow-hidden" role="dialog" aria-modal="true">
+    <!-- Backdrop Blur -->
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 opacity-0" id="faq-drawer-backdrop"></div>
 
-    detailsElements.forEach(details => {
-        details.addEventListener('toggle', (event) => {
-            // If a <details> element is being opened
-            if (event.target.open) {
-                // Close all other <details> elements
-                detailsElements.forEach(otherDetails => {
-                    if (otherDetails !== event.target) {
-                        otherDetails.open = false;
-                    }
-                });
+    <!-- Sliding Right Side Drawer Panel -->
+    <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex">
+        <div id="faq-drawer-panel" class="w-screen max-w-md md:max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col transform transition-transform duration-300 ease-out translate-x-full">
+            
+            <!-- Drawer Header -->
+            <div class="p-6 bg-slate-900 text-white flex items-start justify-between border-b border-slate-800 shrink-0">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center text-xl shadow-inner shrink-0">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-[10px] font-bold uppercase tracking-wider border border-sky-500/30">
+                                Spherix AI Assistant
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-mono-code">Clinical Knowledge</span>
+                        </div>
+                        <h3 class="text-xl font-display font-black text-white tracking-tight mt-1" id="drawerQuestionTitle">
+                            Question Title
+                        </h3>
+                    </div>
+                </div>
+                <button id="closeFaqDrawerBtn" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center justify-center text-lg cursor-pointer">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Drawer Quick Actions Sticky Bar -->
+            <div class="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 shrink-0">
+                <div class="flex items-center gap-2">
+                    <button type="button" id="faqDrawerReadAloudBtn" class="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-sky-500 text-slate-800 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
+                        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-sky-600"></i>
+                        <span id="faqDrawerSpeakText">Read Aloud</span>
+                    </button>
+                    <button onclick="window.print()" class="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-slate-400 text-slate-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span>Print</span>
+                    </button>
+                </div>
+                <a href="{{ url_for('contact') }}" class="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1">
+                    <span>Contact Support</span>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </a>
+            </div>
+
+            <!-- Drawer Content Body (Async Injected Content) -->
+            <div class="p-6 space-y-6 overflow-y-auto drawer-scroll flex-grow text-slate-800 bg-white" id="faqDrawerContentBody">
+                
+                <!-- Loading Skeleton -->
+                <div id="faqDrawerLoadingSkeleton" class="space-y-4 animate-pulse pt-2">
+                    <div class="h-20 bg-slate-100 rounded-2xl"></div>
+                    <div class="h-28 bg-slate-100 rounded-2xl"></div>
+                    <div class="h-24 bg-slate-100 rounded-2xl"></div>
+                </div>
+
+                <!-- Async Formatted Content -->
+                <div id="faqDrawerFormattedContent" class="hidden text-xs sm:text-sm text-slate-700 leading-relaxed space-y-3"></div>
+
+            </div>
+
+            <!-- Drawer Footer -->
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 text-xs flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-1.5 text-slate-500 text-[11px]">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>Verified Knowledge Center</span>
+                </div>
+                <button type="button" onclick="closeFaqDrawer()" class="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer">
+                    Close Sidebar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+
+    const searchInput = document.getElementById('faqSearchInput');
+    const catButtons = document.querySelectorAll('.faq-cat-btn');
+    const faqCards = document.querySelectorAll('.faq-card');
+    const noResults = document.getElementById('noResults');
+    const aiAskCard = document.getElementById('aiAskCard');
+    const aiSearchTerm = document.getElementById('aiSearchTerm');
+    const noResultsAskBtn = document.getElementById('noResultsAskBtn');
+
+    // Drawer Elements
+    const drawerModal = document.getElementById('faq-drawer-modal');
+    const drawerPanel = document.getElementById('faq-drawer-panel');
+    const drawerBackdrop = document.getElementById('faq-drawer-backdrop');
+    const drawerQuestionTitle = document.getElementById('drawerQuestionTitle');
+    const drawerLoadingSkeleton = document.getElementById('faqDrawerLoadingSkeleton');
+    const drawerFormattedContent = document.getElementById('faqDrawerFormattedContent');
+    const closeDrawerBtn = document.getElementById('closeFaqDrawerBtn');
+    const readAloudBtn = document.getElementById('faqDrawerReadAloudBtn');
+    const speakBtnText = document.getElementById('faqDrawerSpeakText');
+
+    let currentCategory = 'all';
+    let currentRawText = '';
+
+    // Filter FAQs
+    function filterFaqs(query, category) {
+        const normalized = query.trim().toLowerCase();
+        let visibleCount = 0;
+
+        faqCards.forEach(card => {
+            const searchData = card.dataset.search || '';
+            const cardCat = card.dataset.category || '';
+
+            const matchesSearch = !normalized || searchData.includes(normalized);
+            const matchesCat = category === 'all' || cardCat === category;
+
+            if (matchesSearch && matchesCat) {
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.classList.add('hidden');
             }
         });
+
+        if (normalized.length > 2) {
+            aiSearchTerm.textContent = query.trim();
+            aiAskCard.classList.remove('hidden');
+        } else {
+            aiAskCard.classList.add('hidden');
+        }
+
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            filterFaqs(this.value, currentCategory);
+        });
+    }
+
+    catButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            catButtons.forEach(btn => {
+                btn.className = 'faq-cat-btn whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-semibold transition-all bg-white text-slate-600 border border-slate-200 hover:border-sky-300 hover:text-sky-600 shadow-sm cursor-pointer';
+            });
+            
+            this.className = 'faq-cat-btn whitespace-nowrap px-5 py-2.5 rounded-xl text-xs font-bold transition-all bg-sky-600 text-white shadow-sm cursor-pointer';
+            currentCategory = this.dataset.category;
+            filterFaqs(searchInput.value, currentCategory);
+        });
     });
+
+    if (aiAskCard) {
+        aiAskCard.addEventListener('click', () => {
+            const q = searchInput.value.trim();
+            if (q) openFaqAiDrawer(q);
+        });
+    }
+
+    if (noResultsAskBtn) {
+        noResultsAskBtn.addEventListener('click', () => {
+            const q = searchInput.value.trim();
+            if (q) openFaqAiDrawer(q);
+        });
+    }
+
+    // Open AI Drawer from Sidebar
+    window.openFaqAiDrawer = function(question) {
+        drawerQuestionTitle.textContent = question;
+        
+        drawerLoadingSkeleton.classList.remove('hidden');
+        drawerFormattedContent.classList.add('hidden');
+        drawerFormattedContent.innerHTML = '';
+        currentRawText = question;
+
+        drawerModal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+
+        setTimeout(() => {
+            drawerBackdrop.classList.remove('opacity-0');
+            drawerPanel.classList.remove('translate-x-full');
+        }, 10);
+
+        // Fetch Detailed AI Explanation from Chatbot Engine
+        fetch('/api/chatbot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: `Act as a senior clinical advisor and hospital administrator. Provide a clear, detailed, and professional answer to this FAQ question: "${question}". Include relevant clinical protocols, security/privacy standards, or operational guidance where appropriate. Format with clean markdown.`
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const raw = data.reply || '';
+            currentRawText = `${question}. ` + raw.replace(/[#*`_]/g, '');
+
+            let formattedHTML = raw
+                .replace(/### (.*?)(\n|$)/g, '<h3 class="text-base font-bold mt-4 mb-2 text-slate-900">$1</h3>')
+                .replace(/## (.*?)(\n|$)/g, '<h2 class="text-lg font-black mt-5 mb-2.5 text-sky-700 pb-1 border-b border-slate-100">$1</h2>')
+                .replace(/# (.*?)(\n|$)/g, '<h1 class="text-xl font-extrabold mt-5 mb-3 text-slate-900">$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/- (.*?)(\n|$)/g, '<li class="ml-4 list-disc mb-1.5 text-slate-600">$1</li>')
+                .replace(/\n/g, '<br>');
+
+            drawerFormattedContent.innerHTML = formattedHTML;
+            drawerLoadingSkeleton.classList.add('hidden');
+            drawerFormattedContent.classList.remove('hidden');
+        })
+        .catch(err => {
+            console.error(err);
+            drawerFormattedContent.innerHTML = `
+                <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                    Could not fetch AI explanation. Please check your connection and retry.
+                </div>`;
+            drawerLoadingSkeleton.classList.add('hidden');
+            drawerFormattedContent.classList.remove('hidden');
+        });
+    };
+
+    // Close FAQ Drawer
+    window.closeFaqDrawer = function() {
+        drawerBackdrop.classList.add('opacity-0');
+        drawerPanel.classList.add('translate-x-full');
+        document.body.classList.remove('overflow-hidden');
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        speakBtnText.textContent = 'Read Aloud';
+        setTimeout(() => {
+            drawerModal.classList.add('hidden');
+        }, 300);
+    };
+
+    if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeFaqDrawer);
+    if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeFaqDrawer);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && drawerModal && !drawerModal.classList.contains('hidden')) {
+            closeFaqDrawer();
+        }
+    });
+
+    // Read Aloud Text-to-Speech
+    if (readAloudBtn) {
+        readAloudBtn.addEventListener('click', () => {
+            if (!('speechSynthesis' in window)) {
+                alert('Audio narration not supported on this browser.');
+                return;
+            }
+
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                speakBtnText.textContent = 'Read Aloud';
+                return;
+            }
+
+            if (currentRawText) {
+                const utterance = new SpeechSynthesisUtterance(currentRawText);
+                utterance.rate = 0.95;
+                utterance.pitch = 1.0;
+                utterance.onend = () => { speakBtnText.textContent = 'Read Aloud'; };
+                window.speechSynthesis.speak(utterance);
+                speakBtnText.textContent = 'Stop Audio';
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

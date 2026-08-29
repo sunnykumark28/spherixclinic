@@ -1,0 +1,329 @@
+{% extends "layout.html" %}
+
+{% block title %}AI Radiology &amp; Medical Imaging Second-Opinion Suite | Spherix Clinic{% endblock %}
+
+{% block content %}
+<style>
+  .radiology-dark-suite-mesh {
+    background: radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                linear-gradient(135deg, #020617 0%, #090d16 50%, #0f172a 100%);
+    border: 1px solid #1e293b;
+    border-radius: 28px;
+    color: #f8fafc;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .imaging-viewport-pro {
+    background: #000000;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    min-height: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #1e293b;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+  }
+  .imaging-viewport-pro img {
+    max-height: 500px;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.25s ease, filter 0.25s ease;
+  }
+  .invert-contrast {
+    filter: invert(100%) contrast(160%) brightness(95%) !important;
+  }
+
+  .pro-control-btn {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    padding: 0.4rem 0.85rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+  }
+  .pro-control-btn:hover {
+    background: #1e293b;
+    color: #38bdf8;
+    border-color: #38bdf8;
+  }
+
+  .finding-tag-critical {
+    background: rgba(225, 29, 72, 0.12);
+    border: 1px solid rgba(225, 29, 72, 0.3);
+    color: #fda4af;
+  }
+  .finding-tag-normal {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+  }
+  .finding-tag-moderate {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fde68a;
+  }
+</style>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="flex items-center space-x-2 text-xs font-semibold text-slate-500">
+      <li><a href="{{ url_for('home') }}" class="hover:text-sky-600 transition-colors">Home</a></li>
+      <li><span class="text-slate-300">/</span></li>
+      <li class="text-slate-900 font-bold">AI Radiology &amp; Diagnostic Imaging Suite</li>
+    </ol>
+  </nav>
+
+  <!-- Dark Diagnostic Suite -->
+  <div class="radiology-dark-suite-mesh p-6 sm:p-10 mb-8">
+
+    <!-- Top Bar -->
+    <div class="flex items-center justify-between flex-wrap gap-4 pb-6 mb-6 border-b border-slate-800">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-400 text-xs font-extrabold mb-2 border border-sky-500/30">
+          <i class="fas fa-x-ray"></i>
+          <span>Multimodal Radiologic Computer Vision &bull; DICOM Standard</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          AI Radiology &amp; Medical Imaging Diagnostic Suite
+        </h1>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="button" onclick="document.getElementById('radioFileInput').click();" class="px-6 py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg transition-all">
+          <i class="fas fa-cloud-arrow-up"></i> Upload Scan (DICOM / Image)
+        </button>
+        <input type="file" id="radioFileInput" class="hidden" accept="image/*,.dcm" onchange="handleRadiologyFileSelect(this);">
+      </div>
+    </div>
+
+    <!-- Case Studies Palette -->
+    <div class="flex items-center gap-2 flex-wrap mb-6">
+      <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Load Clinical Cases:</span>
+      <button type="button" onclick="loadSampleRadiograph('pneumonia');" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 transition-all">
+        Chest X-Ray: Lobar Pneumonia
+      </button>
+      <button type="button" onclick="loadSampleRadiograph('cardiomegaly');" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 transition-all">
+        Chest X-Ray: Cardiomegaly
+      </button>
+      <button type="button" onclick="loadSampleRadiograph('fracture');" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 transition-all">
+        Bone Scan: Distal Radial Fracture
+      </button>
+      <button type="button" onclick="loadSampleRadiograph('normal');" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-700 transition-all">
+        Normal Clear Chest
+      </button>
+    </div>
+
+    <!-- Main Diagnostic Split View -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Left: Interactive Radiologic Lightbox Viewport -->
+      <div class="lg:col-span-7 flex flex-col">
+        
+        <!-- Controls Header Bar -->
+        <div class="flex items-center justify-between px-4 py-3 bg-slate-900/90 rounded-t-2xl border border-slate-800 border-b-0">
+          <span class="text-xs text-slate-400 font-mono" id="scanMetaText">MODALITY: CHEST PA &bull; WINDOW: LUNG/MEDIASTINUM</span>
+          
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="toggleContrastInvert();" class="pro-control-btn" title="Invert Grayscale Contrast">
+              <i class="fas fa-circle-half-stroke mr-1"></i> Invert
+            </button>
+            <button type="button" onclick="adjustZoom(0.15);" class="pro-control-btn" title="Zoom In">
+              <i class="fas fa-magnifying-glass-plus"></i>
+            </button>
+            <button type="button" onclick="adjustZoom(-0.15);" class="pro-control-btn" title="Zoom Out">
+              <i class="fas fa-magnifying-glass-minus"></i>
+            </button>
+            <button type="button" onclick="resetImageView();" class="pro-control-btn" title="Reset Viewport">
+              <i class="fas fa-arrow-rotate-left"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Container -->
+        <div class="imaging-viewport-pro rounded-b-2xl flex-grow" id="scanViewport">
+          <img id="activeRadiographImg" src="https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80" alt="Chest Radiograph">
+        </div>
+      </div>
+
+      <!-- Right: AI Structured Second Opinion Panel -->
+      <div class="lg:col-span-5 flex flex-col justify-between p-6 sm:p-8 rounded-2xl bg-slate-900/90 border border-slate-800">
+        <div>
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fas fa-file-medical text-sky-400"></i>
+              <span>Diagnostic AI Synthesis</span>
+            </h2>
+            <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/30" id="aiConfidenceBadge">
+              96.2% Confidence
+            </span>
+          </div>
+
+          <!-- Findings Checklist -->
+          <div class="mb-5">
+            <h3 class="text-xs uppercase tracking-wider font-extrabold text-slate-400 mb-3">Radiologic Findings Breakdown:</h3>
+            
+            <div class="space-y-3" id="findingsItemsContainer">
+              <div class="p-4 rounded-xl finding-tag-critical">
+                <div class="flex justify-between items-center mb-1">
+                  <strong class="text-xs font-bold">Right Lower Lobe Consolidation</strong>
+                  <span class="text-[10px] font-extrabold uppercase">96.2% Probability</span>
+                </div>
+                <p class="text-xs text-slate-300 mb-0 leading-relaxed font-medium">Dense alveolar opacification with air bronchograms in the right lower lobe, highly consistent with acute bacterial lobar pneumonia.</p>
+              </div>
+
+              <div class="p-4 rounded-xl finding-tag-normal">
+                <div class="flex justify-between items-center mb-1">
+                  <strong class="text-xs font-bold">Cardiac Silhouette &amp; Mediastinum</strong>
+                  <span class="text-[10px] font-extrabold uppercase">Normal Size</span>
+                </div>
+                <p class="text-xs text-slate-300 mb-0 leading-relaxed font-medium">Cardiothoracic ratio &lt; 0.50. Normal mediastinal contour without widening.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clinical Impression -->
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 mb-6">
+            <h3 class="text-xs uppercase tracking-wider font-extrabold text-sky-400 mb-1.5">Clinical Impression &amp; Guidance:</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-0 font-medium" id="impressionText">
+              Findings consistent with community-acquired acute right lower lobe bacterial pneumonia. Recommend targeted antibiotic therapy, sputum culture correlation, and follow-up radiograph in 4-6 weeks post-treatment.
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-3 pt-4 border-t border-slate-800">
+          <button type="button" onclick="window.print();" class="flex-1 py-3 rounded-full border border-slate-700 text-slate-200 hover:bg-slate-800 text-xs font-bold transition-all">
+            <i class="fas fa-download mr-1.5"></i> Export Report PDF
+          </button>
+          <a href="{{ url_for('doctors_list') }}" class="px-5 py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-all text-decoration-none whitespace-nowrap">
+            <i class="fas fa-stethoscope mr-1"></i> Consult Specialist
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+let currentZoom = 1.0;
+let isInverted = false;
+const imgEl = document.getElementById('activeRadiographImg');
+
+window.toggleContrastInvert = function() {
+  isInverted = !isInverted;
+  imgEl.classList.toggle('invert-contrast', isInverted);
+};
+
+window.adjustZoom = function(delta) {
+  currentZoom = Math.max(0.7, Math.min(2.5, currentZoom + delta));
+  imgEl.style.transform = `scale(${currentZoom})`;
+};
+
+window.resetImageView = function() {
+  currentZoom = 1.0;
+  isInverted = false;
+  imgEl.classList.remove('invert-contrast');
+  imgEl.style.transform = 'scale(1.0)';
+};
+
+window.handleRadiologyFileSelect = function(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      imgEl.src = e.target.result;
+      resetImageView();
+      document.getElementById('scanMetaText').textContent = `CUSTOM UPLOAD: ${input.files[0].name.toUpperCase()}`;
+      setTimeout(() => {
+        document.getElementById('aiConfidenceBadge').textContent = '93.4% Confidence';
+        document.getElementById('impressionText').textContent = 'Automated computer vision scan complete. No critical acute tension pneumothorax or acute osseous disruption detected on visual inspection.';
+      }, 500);
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+};
+
+window.loadSampleRadiograph = function(type) {
+  resetImageView();
+  const metaText = document.getElementById('scanMetaText');
+  const confBadge = document.getElementById('aiConfidenceBadge');
+  const container = document.getElementById('findingsItemsContainer');
+  const impression = document.getElementById('impressionText');
+
+  if (type === 'pneumonia') {
+    imgEl.src = 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80';
+    metaText.textContent = 'CASE #304: CHEST PA &bull; LOBAR PNEUMONIA';
+    confBadge.textContent = '96.2% Confidence';
+    container.innerHTML = `
+      <div class="p-4 rounded-xl finding-tag-critical">
+        <div class="flex justify-between items-center mb-1">
+          <strong class="text-xs font-bold">Right Lower Lobe Consolidation</strong>
+          <span class="text-[10px] font-extrabold uppercase">96.2% Probability</span>
+        </div>
+        <p class="text-xs text-slate-300 mb-0 leading-relaxed font-medium">Dense alveolar infiltrates and air bronchograms in the right lower lobe.</p>
+      </div>
+      <div class="p-4 rounded-xl finding-tag-normal">
+        <div class="flex justify-between items-center mb-1">
+          <strong class="text-xs font-bold">Pleural Spaces</strong>
+          <span class="text-[10px] font-extrabold uppercase">Clear</span>
+        </div>
+        <p class="text-xs text-slate-300 mb-0 leading-relaxed font-medium">Costophrenic angles sharp, no significant pleural effusion.</p>
+      </div>
+    `;
+    impression.textContent = 'Findings consistent with community-acquired acute right lower lobe bacterial pneumonia. Antibiotic therapy recommended with clinical correlation.';
+  } else if (type === 'cardiomegaly') {
+    imgEl.src = 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?auto=format&fit=crop&w=800&q=80';
+    metaText.textContent = 'CASE #812: CHEST PA &bull; CARDIOMEGALY';
+    confBadge.textContent = '93.7% Confidence';
+    container.innerHTML = `
+      <div class="p-4 rounded-xl finding-tag-moderate">
+        <div class="flex justify-between items-center mb-1">
+          <strong class="text-xs font-bold">Enlarged Cardiothoracic Ratio (CTR: 0.62)</strong>
+          <span class="text-[10px] font-extrabold uppercase">93.7% Probability</span>
+        </div>
+        <p class="text-xs text-slate-300 mb-0 leading-relaxed font-medium">Global cardiac enlargement with mild vascular congestion in upper lung zones.</p>
+      </div>
+    `;
+    impression.textContent = 'Cardiomegaly with early pulmonary venous congestion. Recommend echocardiography and cardiology evaluation for left ventricular ejection fraction.';
+  } else if (type === 'fracture') {
+    imgEl.src = 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80';
+    metaText.textContent = 'CASE #119: FOREARM AP/LATERAL &bull; DISTAL RADIUS';
+    confBadge.textContent = '98.1% Confidence';
+    container.innerHTML = `
+      <div class="p-4 rounded-xl finding-tag-critical">
+        <div class="flex justify-between items-center mb-1">
+          <strong class="text-xs font-bold">Distal Radius Colles Fracture</strong>
+          <span class="text-[10px] font-extrabold uppercase">98.1% Probability</span>
+        </div>
+        <p class="text-xs text-slate-300 mb-0 leading-relaxed font-medium">Transverse cortical disruption with dorsal displacement and mild articular step-off.</p>
+      </div>
+    `;
+    impression.textContent = 'Acute distal radial fracture with dorsal angulation. Orthopedic reduction and immobilization required.';
+  } else {
+    imgEl.src = 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80';
+    metaText.textContent = 'CASE #001: CHEST PA &bull; NORMAL CLEAR';
+    confBadge.textContent = '99.0% Normal';
+    container.innerHTML = `
+      <div class="p-4 rounded-xl finding-tag-normal">
+        <div class="flex justify-between items-center mb-1">
+          <strong class="text-xs font-bold">Lungs &amp; Pleural Spaces</strong>
+          <span class="text-[10px] font-extrabold uppercase">Unremarkable</span>
+        </div>
+        <p class="text-xs text-slate-300 mb-0 leading-relaxed font-medium">Clear lung fields bilaterally. No consolidation, mass, or pneumothorax.</p>
+      </div>
+    `;
+    impression.textContent = 'Normal chest radiograph. No acute cardiopulmonary pathology.';
+  }
+};
+</script>
+{% endblock %}

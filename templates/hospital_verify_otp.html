@@ -1,78 +1,98 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Hospital OTP - Spherix Clinic</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { 
-            background-color: #ecfdf5; /* emerald-50 */
-            display: flex; align-items: center; justify-content: center; height: 100vh; 
-            font-family: 'Inter', sans-serif;
-        }
-        .card { border: none; border-radius: 15px; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.1); }
-        .btn-primary { background-color: #059669; border: none; padding: 10px; font-weight: 600; } /* emerald-600 */
-        .btn-primary:hover { background-color: #047857; } /* emerald-700 */
-        .text-emerald-600 { color: #059669; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-5">
-                <div class="card p-4">
-                    <div class="text-center mb-4">
-                        <h3 class="fw-bold text-emerald-600">Verify Hospital Email</h3>
-                        <p class="text-muted">We've sent a 6-digit code to your registered email.</p>
-                    </div>
-                    
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+{% extends 'layout.html' %}
 
-                    <form method="POST">
-                        <div class="mb-3">
-                            <label for="otp" class="form-label">Enter OTP</label>
-                            <input type="text" class="form-control form-control-lg text-center" id="otp" name="otp" maxlength="6" required placeholder="XXXXXX">
+{% block title %}Verify Hospital Registration | Spherix Clinic{% endblock %}
+
+{% block content %}
+<style>
+    .auth-bg-hospital {
+        background-color: #030a0e;
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.25) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.98) 0px, transparent 50%),
+            radial-gradient(at 50% 50%, rgba(5, 150, 105, 0.18) 0px, transparent 75%);
+    }
+    .grid-dots-auth {
+        background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+    .otp-input-box {
+        letter-spacing: 0.5em;
+        font-family: monospace;
+    }
+</style>
+
+<div class="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center p-6 sm:p-12 relative font-sans text-slate-800 bg-slate-50/70">
+    <div class="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl p-8 sm:p-10 relative overflow-hidden">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center text-xl mx-auto mb-5 shadow-sm">
+            <i class="fas fa-shield-check"></i>
+        </div>
+
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Verify Institutional Email</h2>
+            <p class="text-slate-500 text-xs mt-1">We've dispatched a 6-digit verification code to your hospital administrator email.</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                        <div class="flex items-center gap-2.5 text-xs p-3.5 rounded-xl border {{ 'border-emerald-200 bg-emerald-50 text-emerald-800' if category == 'success' or category == 'info' else 'border-rose-200 bg-rose-50 text-rose-800' }}">
+                            <i class="fas {{ 'fa-check-circle' if category == 'success' or category == 'info' else 'fa-exclamation-circle' }} text-sm flex-shrink-0"></i>
+                            <span class="font-semibold">{{ message }}</span>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Verify & Create Account</button>
-                    </form>
-                    <div class="d-flex justify-content-between mt-3">
-                        <a href="{{ url_for('hospital_resend_otp') }}" id="resendLink" class="text-decoration-none text-success">Resend OTP</a>
-                        <a href="{{ url_for('hospital_register') }}" class="text-decoration-none text-muted">Change Email</a>
-                    </div>
+                    {% endfor %}
                 </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider text-center mb-2">Enter 6-Digit Security Code</label>
+                <input type="text" name="otp" id="otp" maxlength="6" required autofocus
+                       placeholder="XXXXXX"
+                       class="otp-input-box w-full text-center text-2xl font-black px-4 py-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none transition-all text-slate-900">
             </div>
+
+            <button type="submit" 
+                    class="w-full py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider transition-all duration-300 shadow-xl shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fas fa-check"></i>
+                <span>Verify & Activate Facility Account</span>
+            </button>
+        </form>
+
+        <div class="flex items-center justify-between mt-6 pt-5 border-t border-slate-100 text-xs">
+            <a href="{{ url_for('hospital_resend_otp') }}" id="resendLink" class="text-emerald-600 hover:underline font-bold">
+                Resend OTP
+            </a>
+            <a href="{{ url_for('hospital_register') }}" class="text-slate-500 hover:text-slate-800 font-medium">
+                Edit Facility Details
+            </a>
         </div>
     </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            let timeLeft = 30;
-            const resendLink = document.getElementById('resendLink');
-            const originalText = resendLink.innerText;
-            
-            function updateTimer() {
-                if (timeLeft > 0) {
-                    resendLink.innerText = `Resend in ${timeLeft}s`;
-                    resendLink.style.pointerEvents = 'none';
-                    resendLink.style.opacity = '0.5';
-                    timeLeft--;
-                    setTimeout(updateTimer, 1000);
-                } else {
-                    resendLink.innerText = originalText;
-                    resendLink.style.pointerEvents = 'auto';
-                    resendLink.style.opacity = '1';
-                }
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let timeLeft = 30;
+        const resendLink = document.getElementById('resendLink');
+        const originalText = resendLink.innerText;
+        
+        function updateTimer() {
+            if (timeLeft > 0) {
+                resendLink.innerText = `Resend in ${timeLeft}s`;
+                resendLink.style.pointerEvents = 'none';
+                resendLink.style.opacity = '0.5';
+                timeLeft--;
+                setTimeout(updateTimer, 1000);
+            } else {
+                resendLink.innerText = originalText;
+                resendLink.style.pointerEvents = 'auto';
+                resendLink.style.opacity = '1';
             }
-            
-            updateTimer();
-        });
-    </script>
-</body>
-</html>
+        }
+        
+        updateTimer();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,374 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Donor Registry | Spherix Clinic Blood Bank{% endblock %}
+{% block page_title %}Blood Bank Management{% endblock %}
+{% block page_subtitle %}Manage blood inventory, donor registrations, and donation camps.{% endblock %}
+
+{% block header_actions %}
+<span class="dashboard-header-badge"><i class="fas fa-tint"></i> Blood Bank Portal</span>
+{% endblock %}
+
+{% block content %}
+<!-- Tab Navigation -->
+<div class="mb-4 border-bottom">
+    <ul class="nav nav-tabs">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('staff_blood_dashboard', tab='overview') }}">Overview</a></li>
+        <li class="nav-item"><a class="nav-link active" href="{{ url_for('staff_blood_dashboard', tab='donor_management') }}">Donor Registry</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('staff_blood_dashboard', tab='inventory') }}">Live Inventory</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('staff_blood_dashboard', tab='requests') }}">Blood Requests</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('staff_blood_dashboard', tab='camps') }}">Donation Camps</a></li>
+    </ul>
+</div>
+
+<!-- Donor Management Content -->
+<div class="dashboard-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">Donor Registry</h4>
+        <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="offcanvas" data-bs-target="#registerDonorDrawer">
+            <i class="fas fa-user-plus me-2"></i>Register New Donor
+        </button>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr class="text-slate-500 small">
+                    <th>Donor Details</th>
+                    <th>Blood Group</th>
+                    <th>Last Donation</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for donor in blood_donors %}
+                <tr>
+                    <td>
+                        <div class="fw-bold text-slate-800">{{ donor.name }}</div>
+                        <div class="text-muted small">{{ donor.email }} | {{ donor.phone }}</div>
+                    </td>
+                    <td><span class="badge bg-danger-subtle text-danger">{{ donor.blood_group }}</span></td>
+                    <td>
+                        {% if donor.last_donation %}
+                            <span class="fw-semibold text-slate-700">{{ donor.last_donation }}</span>
+                        {% else %}
+                            <span class="text-muted small">None recorded</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge rounded-pill {% if donor.status == 'approved' %}bg-success-subtle text-success{% elif donor.status == 'pending' %}bg-warning-subtle text-warning{% else %}bg-danger-subtle text-danger{% endif %}">
+                            {{ donor.status|capitalize }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2 flex-wrap">
+                            {% if donor.status == 'pending' %}
+                            <form action="{{ url_for('staff_blood_dashboard') }}" method="POST" class="d-inline">
+                                <input type="hidden" name="approve_blood_donor" value="1">
+                                <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Approve</button>
+                            </form>
+                            <form action="{{ url_for('staff_blood_dashboard') }}" method="POST" class="d-inline">
+                                <input type="hidden" name="reject_blood_donor" value="1">
+                                <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Reject</button>
+                            </form>
+                            {% else %}
+                            <button class="btn btn-sm btn-danger rounded-pill px-3 shadow-xs" data-bs-toggle="offcanvas" data-bs-target="#recordDonationDrawer-{{ donor.id }}">
+                                <i class="fas fa-hand-holding-droplet me-1"></i>Record Donation
+                            </button>
+                            {% if donor.last_donation %}
+                            <a href="{{ url_for('download_donation_certificate', donor_id=donor.id) }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill px-3">
+                                <i class="fas fa-certificate me-1"></i>Certificate
+                            </a>
+                            {% endif %}
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-toggle="offcanvas" data-bs-target="#editDonorDrawer-{{ donor.id }}">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </button>
+                            <form action="{{ url_for('staff_blood_dashboard') }}" method="POST" class="d-inline">
+                                <input type="hidden" name="delete_blood_donor" value="1">
+                                <input type="hidden" name="donor_id" value="{{ donor.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Are you sure you want to delete donor {{ donor.name }}?')">Delete</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No donors registered.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ============================================== -->
+<!--     SIDEBAR DRAWERS (OFFCANVAS SLIDE-OVERS)    -->
+<!-- ============================================== -->
+
+<!-- Offcanvas Sidebar: Register New Donor -->
+<div class="offcanvas offcanvas-end shadow-2xl border-0" tabindex="-1" id="registerDonorDrawer" aria-labelledby="registerDonorDrawerLabel" style="width: 520px; max-width: 95vw; background: #ffffff;">
+    <form action="{{ url_for('staff_blood_dashboard') }}" method="POST" class="d-flex flex-column h-100 mb-0">
+        <input type="hidden" name="staff_add_blood_donor" value="1">
+        <input type="hidden" name="redirect_tab" value="donor_management">
+        
+        <!-- Drawer Header -->
+        <div class="offcanvas-header border-bottom py-3.5 px-4 bg-slate-50">
+            <div class="d-flex align-items-center gap-3">
+                <div class="w-10 h-10 rounded-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div>
+                    <h5 class="offcanvas-title fw-bold text-slate-800 mb-0 fs-6" id="registerDonorDrawerLabel">Register Walk-in Donor</h5>
+                    <p class="text-muted small mb-0">Add a new verified donor to clinical inventory</p>
+                </div>
+            </div>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <!-- Drawer Body -->
+        <div class="offcanvas-body p-4 space-y-3 overflow-y-auto">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-slate-700">Full Name</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-user text-xs"></i></span>
+                    <input type="text" name="name" class="form-control border-start-0" placeholder="e.g. Rahul Sharma" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-slate-700">Email Address (Login ID)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-envelope text-xs"></i></span>
+                    <input type="email" name="email" class="form-control border-start-0" placeholder="donor@example.com" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-slate-700">Temporary Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-lock text-xs"></i></span>
+                    <input type="password" name="password" class="form-control border-start-0" placeholder="Set temporary password" required>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">Phone Number</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-phone text-xs"></i></span>
+                        <input type="tel" name="phone" class="form-control border-start-0" placeholder="+91..." required>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">Age</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-calendar-check text-xs"></i></span>
+                        <input type="number" name="age" class="form-control border-start-0" placeholder="Years" required min="18" max="65">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">Blood Group</label>
+                    <select name="blood_group" class="form-select" required>
+                        {% for group in blood_stock.keys() if blood_stock %}
+                        <option value="{{ group }}">{{ group }}</option>
+                        {% else %}
+                        <option value="A+">A+</option><option value="A-">A-</option>
+                        <option value="B+">B+</option><option value="B-">B-</option>
+                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                        <option value="O+">O+</option><option value="O-">O-</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">City / Region</label>
+                    <input type="text" name="city" class="form-control" placeholder="e.g. Motihari" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-slate-700">Last Donation Date <span class="text-muted fw-normal">(Optional)</span></label>
+                <input type="date" name="last_donation" class="form-control">
+            </div>
+
+            <div class="p-3 rounded-3 bg-light border text-muted small mt-4">
+                <i class="fas fa-shield-alt text-primary me-1"></i>
+                Registered walk-in donors will receive instant login access to their Spherix Blood Donor Portal and certificates.
+            </div>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="offcanvas-footer border-top p-3 px-4 bg-slate-50 d-flex justify-content-end gap-2 mt-auto">
+            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                <i class="fas fa-check-circle me-1"></i>Register Donor
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Offcanvas Sidebars: Record Donor Donation & Edit Donor -->
+{% for donor in blood_donors %}
+<!-- Offcanvas: Record Donation for {{ donor.name }} -->
+<div class="offcanvas offcanvas-end shadow-2xl border-0" tabindex="-1" id="recordDonationDrawer-{{ donor.id }}" aria-labelledby="recordDonationDrawerLabel-{{ donor.id }}" style="width: 500px; max-width: 95vw; background: #ffffff;">
+    <form action="{{ url_for('staff_blood_dashboard') }}" method="POST" class="d-flex flex-column h-100 mb-0">
+        <input type="hidden" name="record_donor_donation" value="1">
+        <input type="hidden" name="donor_id" value="{{ donor.id }}">
+        <input type="hidden" name="redirect_tab" value="donor_management">
+        
+        <!-- Drawer Header -->
+        <div class="offcanvas-header border-bottom py-3.5 px-4 bg-slate-50">
+            <div class="d-flex align-items-center gap-3">
+                <div class="w-10 h-10 rounded-3 bg-danger-subtle text-danger d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0">
+                    <i class="fas fa-hand-holding-droplet"></i>
+                </div>
+                <div>
+                    <h5 class="offcanvas-title fw-bold text-slate-800 mb-0 fs-6" id="recordDonationDrawerLabel-{{ donor.id }}">Record Blood Donation</h5>
+                    <p class="text-muted small mb-0">Donor: <span class="fw-semibold text-slate-700">{{ donor.name }}</span></p>
+                </div>
+            </div>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <!-- Drawer Body -->
+        <div class="offcanvas-body p-4 space-y-4 overflow-y-auto">
+            <!-- Donor Profile Mini Card -->
+            <div class="p-3.5 rounded-3 bg-slate-50 border border-slate-200 mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-slate-800 fs-6">{{ donor.name }}</span>
+                    <span class="badge bg-danger-subtle text-danger px-3 py-1.5 fs-6 fw-bold border border-danger-subtle">{{ donor.blood_group }}</span>
+                </div>
+                <div class="text-muted small d-flex flex-column gap-1">
+                    <div><i class="fas fa-envelope me-1 text-slate-400"></i>{{ donor.email }}</div>
+                    <div><i class="fas fa-phone me-1 text-slate-400"></i>{{ donor.phone }}</div>
+                    <div><i class="fas fa-map-marker-alt me-1 text-slate-400"></i>{{ donor.city | default('Registered Hub', true) }}</div>
+                </div>
+            </div>
+
+            <!-- Donation Inputs -->
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">Units Donated</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-vial text-xs"></i></span>
+                        <input type="number" name="quantity" class="form-control border-start-0" value="1" min="1" max="5" required>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">Donation Date</label>
+                    <input type="date" name="donation_date" class="form-control" required>
+                </div>
+            </div>
+
+            <!-- Automated Notice -->
+            <div class="p-3 rounded-3 bg-danger-subtle/50 border border-danger-subtle text-slate-700 small">
+                <div class="d-flex gap-2">
+                    <i class="fas fa-info-circle text-danger mt-1"></i>
+                    <div>
+                        <strong>Automated Clinical Sync:</strong> Submitting this record will:
+                        <ul class="mb-0 ps-3 mt-1 text-slate-600">
+                            <li>Increment live <strong>{{ donor.blood_group }}</strong> inventory stock.</li>
+                            <li>Update donor's last donation date.</li>
+                            <li>Generate an official downloadable Certificate of Honor.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="offcanvas-footer border-top p-3 px-4 bg-slate-50 d-flex justify-content-end gap-2 mt-auto">
+            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">
+                <i class="fas fa-plus me-1"></i>Submit Donation
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Offcanvas: Edit Donor {{ donor.name }} -->
+<div class="offcanvas offcanvas-end shadow-2xl border-0" tabindex="-1" id="editDonorDrawer-{{ donor.id }}" aria-labelledby="editDonorDrawerLabel-{{ donor.id }}" style="width: 500px; max-width: 95vw; background: #ffffff;">
+    <form action="{{ url_for('staff_blood_dashboard') }}" method="POST" class="d-flex flex-column h-100 mb-0">
+        <input type="hidden" name="edit_blood_donor" value="1">
+        <input type="hidden" name="donor_id" value="{{ donor.id }}">
+        <input type="hidden" name="redirect_tab" value="donor_management">
+        
+        <!-- Drawer Header -->
+        <div class="offcanvas-header border-bottom py-3.5 px-4 bg-slate-50">
+            <div class="d-flex align-items-center gap-3">
+                <div class="w-10 h-10 rounded-3 bg-info-subtle text-info d-flex align-items-center justify-content-center fs-5 shadow-xs flex-shrink-0">
+                    <i class="fas fa-user-pen"></i>
+                </div>
+                <div>
+                    <h5 class="offcanvas-title fw-bold text-slate-800 mb-0 fs-6" id="editDonorDrawerLabel-{{ donor.id }}">Edit Donor Profile</h5>
+                    <p class="text-muted small mb-0">{{ donor.name }} &bull; ID #{{ donor.id }}</p>
+                </div>
+            </div>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <!-- Drawer Body -->
+        <div class="offcanvas-body p-4 space-y-3 overflow-y-auto">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-slate-700">Full Name</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-user text-xs"></i></span>
+                    <input type="text" name="name" class="form-control border-start-0" value="{{ donor.name }}" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-slate-700">Email Address</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-envelope text-xs"></i></span>
+                    <input type="email" name="email" class="form-control border-start-0" value="{{ donor.email }}" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-slate-700">Phone Number</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="fas fa-phone text-xs"></i></span>
+                    <input type="tel" name="phone" class="form-control border-start-0" value="{{ donor.phone }}" required>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">Blood Group</label>
+                    <select name="blood_group" class="form-select" required>
+                        {% for group in blood_stock.keys() if blood_stock %}
+                        <option value="{{ group }}" {% if group == donor.blood_group %}selected{% endif %}>{{ group }}</option>
+                        {% else %}
+                        <option value="A+" {% if donor.blood_group == 'A+' %}selected{% endif %}>A+</option>
+                        <option value="B+" {% if donor.blood_group == 'B+' %}selected{% endif %}>B+</option>
+                        <option value="AB+" {% if donor.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+                        <option value="O+" {% if donor.blood_group == 'O+' %}selected{% endif %}>O+</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label small fw-bold text-slate-700">City / Location</label>
+                    <input type="text" name="city" class="form-control" value="{{ donor.city }}" required>
+                </div>
+            </div>
+
+            <div class="p-3 rounded-3 bg-light border text-muted small mt-4">
+                <i class="fas fa-info-circle text-info me-1"></i>
+                Modifications will be immediately reflected across clinical searches, hospital matching, and donor profile certificates.
+            </div>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="offcanvas-footer border-top p-3 px-4 bg-slate-50 d-flex justify-content-end gap-2 mt-auto">
+            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="offcanvas">Cancel</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                <i class="fas fa-save me-1"></i>Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,238 +1,1545 @@
-<!doctype html>
-<html lang="en" class="scroll-smooth">
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{% block title %}Spherix Clinic | Intelligent Health Companion{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Spherix Clinic Health Dashboard{% endblock %}</title>
 
-  <!-- Typography: 'Plus Jakarta Sans' (Modern, Geometric) & 'JetBrains Mono' (Data) -->
+  <!-- Modern Fonts & Framework Assets -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS & Alpine.js -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
-  <!-- Configuration -->
+  <style>
+    [x-cloak] { display: none !important; }
+
+    /* Universal Circular Cropper Styling */
+    .cropper-view-box,
+    .cropper-face {
+      border-radius: 50%;
+    }
+    .cropper-view-box {
+      outline: 2px solid #0284c7;
+      outline-color: rgba(2, 132, 199, 0.85);
+    }
+
+    :root {
+      --dashboard-bg: #f8fafc;
+      --panel-bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #0284c7;
+      --primary-soft: rgba(2, 132, 199, 0.08);
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-outfit: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      color: var(--text);
+      background: var(--dashboard-bg);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .font-display { font-family: var(--font-display); }
+    .font-outfit { font-family: var(--font-outfit); }
+
+    /* Custom Sleek Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.6);
+    }
+
+    /* Layout Structure */
+    .dashboard-wrapper {
+      display: flex;
+      min-height: 100vh;
+      width: 100vw;
+      position: relative;
+      z-index: 1;
+      background: var(--dashboard-bg);
+    }
+
+    /* Ultra-Modern Dark Glass Sidebar */
+    .dashboard-sidebar {
+      width: 280px;
+      min-width: 280px;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      background: #0b0f19;
+      border-right: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      flex-direction: column;
+      z-index: 1040;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .sidebar-brand {
+      height: 84px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      font-weight: 800;
+      font-size: 1.15rem;
+      gap: 12px;
+      color: #ffffff;
+      text-decoration: none;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .sidebar-brand img {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+
+    .sidebar-menu {
+      padding: 20px 14px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .sidebar-section-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 800;
+      margin: 18px 0 8px 12px;
+      letter-spacing: 0.14em;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      color: #94a3b8;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      margin-bottom: 3px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid transparent;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #ffffff;
+      transform: translateX(4px);
+    }
+
+    .sidebar-link.active {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+      font-weight: 700;
+    }
+
+    .sidebar-link.active:hover {
+      transform: none;
+    }
+
+    .sidebar-link i {
+      width: 20px;
+      text-align: center;
+      font-size: 1rem;
+      opacity: 0.85;
+    }
+
+    .sidebar-link.active i {
+      opacity: 1;
+    }
+
+    /* Sidebar Footer User Capsule */
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(11, 15, 25, 0.95);
+    }
+
+    .sidebar-footer .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(2, 132, 199, 0.2);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      border: 1.5px solid rgba(56, 189, 248, 0.35);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-footer .user-info {
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .sidebar-footer .user-name {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-footer .user-role {
+      font-size: 0.7rem;
+      color: #38bdf8;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+
+    .sidebar-footer .logout-btn {
+      color: #f87171;
+      font-size: 1rem;
+      padding: 8px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sidebar-footer .logout-btn:hover {
+      background: #ef4444;
+      color: #ffffff;
+      transform: scale(1.05);
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 1030;
+      transition: all 0.3s ease;
+    }
+
+    /* Main Dashboard Panel */
+    .dashboard-panel {
+      flex-grow: 1;
+      min-height: 100vh;
+      background: var(--panel-bg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 32px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+    }
+
+    .dashboard-title {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      font-family: var(--font-display);
+      letter-spacing: -0.01em;
+      color: #0f172a;
+    }
+
+    .dashboard-subtitle {
+      margin: 2px 0 0;
+      color: #64748b;
+      font-size: 0.82rem;
+    }
+
+    /* Global Search Form */
+    .header-search-form {
+      position: relative;
+      width: 280px;
+    }
+
+    .header-search-form .form-control {
+      padding-left: 36px;
+      padding-right: 48px;
+      border-radius: 12px;
+      background-color: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+      color: #0f172a !important;
+      font-size: 0.85rem !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .header-search-form .form-control:focus {
+      background-color: #ffffff !important;
+      border-color: #0284c7 !important;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
+    }
+
+    .header-search-form .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    .header-search-form .search-shortcut {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #94a3b8;
+      background: #ffffff;
+      padding: 2px 5px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .header-icon-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      transform: translateY(-1px);
+    }
+
+    /* Notification Drawer */
+    #notificationPanel {
+      display: none;
+      position: fixed;
+      top: 72px;
+      right: 24px;
+      width: 360px;
+      max-height: 480px;
+      background: #0f172a;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      z-index: 99999;
+      overflow: hidden;
+      flex-direction: column;
+    }
+
+    #notificationPanel.open {
+      display: flex;
+      animation: dropNotif 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes dropNotif {
+      from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    #notificationPanel .notif-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: #090d16;
+      flex-shrink: 0;
+    }
+
+    #notificationPanel .notif-header h6 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 14px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #notificationPanel .notif-scroll {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    #notificationPanel .notif-item {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #notificationPanel .notif-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    #notificationPanel .notif-item.unread {
+      background: rgba(2, 132, 199, 0.12);
+    }
+
+    #notificationPanel .notif-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(2, 132, 199, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: #38bdf8;
+    }
+
+    #notificationPanel .notif-body p {
+      margin: 0 0 3px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #e2e8f0;
+    }
+
+    #notificationPanel .notif-body .notif-time {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    #notificationPanel .notif-footer {
+      padding: 10px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: #090d16;
+      text-align: center;
+    }
+
+    .dashboard-content {
+      padding: 28px 32px 40px;
+      min-height: calc(100vh - 84px);
+      flex-grow: 1;
+    }
+
+    /* Component Utilities */
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+      border-color: #cbd5e1;
+    }
+
+    .table-wrapper {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .table-wrapper table {
+      width: 100%;
+      margin: 0;
+    }
+
+    .table-wrapper th {
+      background-color: #f8fafc;
+      color: #64748b;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 14px 18px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .table-wrapper td {
+      padding: 14px 18px;
+      font-size: 0.85rem;
+      color: #0f172a;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    .table-wrapper tr:last-child td {
+      border-bottom: none;
+    }
+
+    .table-wrapper tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    /* Buttons */
+    .btn-primary-custom {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+      border: none !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 0.85rem !important;
+      border-radius: 12px !important;
+      padding: 0.6rem 1.4rem !important;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .btn-primary-custom:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4) !important;
+    }
+
+    .btn-secondary-custom {
+      background-color: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      color: #475569 !important;
+      font-weight: 700 !important;
+      font-size: 0.85rem !important;
+      border-radius: 12px !important;
+      padding: 0.6rem 1.4rem !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .btn-secondary-custom:hover {
+      background-color: #f8fafc !important;
+      color: #0f172a !important;
+      border-color: #94a3b8 !important;
+    }
+
+    /* Global Tab Overrides */
+    .nav-tabs {
+      border-bottom: 2px solid #e2e8f0 !important;
+      gap: 6px;
+    }
+
+    .nav-tabs .nav-link {
+      border: none !important;
+      background: transparent !important;
+      color: #64748b !important;
+      font-weight: 700 !important;
+      font-size: 0.88rem !important;
+      padding: 10px 16px !important;
+      position: relative !important;
+      transition: all 0.2s ease !important;
+      border-radius: 0 !important;
+    }
+
+    .nav-tabs .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 3px;
+      border-radius: 99px;
+      background: #0284c7;
+      transition: width 0.25s ease;
+    }
+
+    .nav-tabs .nav-link:hover {
+      color: #0284c7 !important;
+    }
+
+    .nav-tabs .nav-link.active {
+      color: #0284c7 !important;
+    }
+
+    .nav-tabs .nav-link.active::after {
+      width: 100%;
+    }
+
+    @media (max-width: 991px) {
+      .dashboard-sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+      }
+
+      .dashboard-sidebar.active {
+        left: 0;
+        box-shadow: 0 0 50px rgba(15, 23, 42, 0.4);
+      }
+
+      .dashboard-sidebar.active ~ .sidebar-overlay {
+        display: block;
+      }
+
+      .dashboard-header,
+      .dashboard-content {
+        padding: 16px 20px;
+      }
+
+      .header-search-form {
+        display: none;
+      }
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+  {% set current_role = 'patient' %}
+  {% if current_user.is_authenticated %}
+    {% if current_user.email == 'admin@spherixclinic.com' %}
+      {% set current_role = 'admin' %}
+    {% else %}
+      {% set role_parts = current_user.get_id().split('-') %}
+      {% set current_role = role_parts[0] %}
+    {% endif %}
+  {% endif %}
+
+  <div class="dashboard-wrapper">
+
+    <!-- Render sidebar for logged-in users (non-admin) -->
+    {% if current_user.is_authenticated and current_role != 'admin' %}
+    <aside class="dashboard-sidebar">
+      
+      <!-- Brand Header -->
+      <a href="{{ url_for('home') }}" class="sidebar-brand">
+        <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" alt="Spherix Clinic" />
+        <div class="d-flex flex-column">
+          <span class="font-display font-bold">Spherix Clinic</span>
+          <span class="text-[10px] text-sky-400 font-mono font-bold uppercase tracking-wider" style="font-size: 10px; color: #38bdf8;">{{ current_role|capitalize }} Workspace</span>
+        </div>
+      </a>
+
+      <!-- Navigation Menu -->
+      <div class="sidebar-menu">
+        
+        <!-- ================= 1. PATIENT NAVIGATION ================= -->
+        {% if current_role == 'patient' %}
+        <div class="sidebar-section-title">My Health Portal</div>
+        {% set patient_nav = [
+          ('overview', 'fas fa-th-large', 'Overview'),
+          ('appointments', 'fas fa-calendar-check', 'My Consultations'),
+          ('telemedicine', 'fas fa-video', 'Telemedicine HD'),
+          ('prescriptions', 'fas fa-file-prescription', 'Prescriptions'),
+          ('orders', 'fas fa-shopping-bag', 'Pharmacy Orders'),
+          ('messages', 'fas fa-comments', 'Doctor Tele-Chat'),
+          ('settings', 'fas fa-user-cog', 'Profile & Settings')
+        ] %}
+        {% for id, icon, label in patient_nav %}
+        {% if id == 'telemedicine' %}
+        <a href="{{ url_for('telemedicine') }}"
+          class="sidebar-link {% if request.endpoint == 'telemedicine' %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('patient_dashboard', tab=id) }}"
+          class="sidebar-link {% if request.endpoint == 'patient_dashboard' and (request.args.get('tab', 'overview') == id) %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endif %}
+        {% endfor %}
+
+        <!-- ================= 2. DOCTOR NAVIGATION ================= -->
+        {% elif current_role == 'doctor' %}
+        <div class="sidebar-section-title">Doctor Portal</div>
+        {% set doctor_nav = [
+          ('overview', 'fas fa-th-large', 'Dashboard'),
+          ('today_schedule', 'fas fa-calendar-day', "Today's Schedule"),
+          ('appointments', 'fas fa-calendar-check', 'My Appointments'),
+          ('calendar', 'fas fa-calendar-alt', 'Calendar'),
+          ('availability', 'fas fa-clock', 'My Availability')
+        ] %}
+        {% for id, icon, label in doctor_nav %}
+        <a href="{{ url_for('doctor_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Patient Care</div>
+        {% set patient_care_nav = [
+          ('patient_list', 'fas fa-users', 'Patient List'),
+          ('health_tracker', 'fas fa-file-medical-alt', 'EHR Hub'),
+          ('prescriptions', 'fas fa-pills', 'Prescriptions'),
+          ('lab_requests', 'fas fa-vial', 'Lab Requests'),
+          ('ipd_management', 'fas fa-procedures', 'IPD Management'),
+          ('surgery_schedule', 'fas fa-syringe', 'Surgery Schedule')
+        ] %}
+        {% for id, icon, label in patient_care_nav %}
+        <a href="{{ url_for('doctor_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if request.args.get('tab') == id %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Communication</div>
+        {% set comms_nav = [
+          ('messages', 'fas fa-comments', 'Messages'),
+          ('telemedicine', 'fas fa-video', 'Telemedicine'),
+          ('notifications', 'fas fa-bell', 'Notifications')
+        ] %}
+        {% for id, icon, label in comms_nav %}
+        <a href="{{ url_for('doctor_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if request.args.get('tab') == id %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Analytics & Profile</div>
+        <a href="{{ url_for('doctor_dashboard') }}?tab=stats"
+          class="sidebar-link {% if request.args.get('tab') == 'stats' %}active{% endif %}"><i
+            class="fas fa-chart-bar fa-fw"></i> <span>Performance</span></a>
+        <a href="{{ url_for('doctor_dashboard') }}?tab=earnings"
+          class="sidebar-link {% if request.args.get('tab') == 'earnings' %}active{% endif %}"><i
+            class="fas fa-wallet fa-fw"></i> <span>Earnings</span></a>
+        <a href="{{ url_for('doctor_dashboard') }}?tab=settings"
+          class="sidebar-link {% if request.args.get('tab') == 'settings' %}active{% endif %}"><i
+            class="fas fa-cog fa-fw"></i> <span>Settings</span></a>
+
+        <!-- ================= 3. HOSPITAL NAVIGATION ================= -->
+        {% elif current_role == 'hospital' %}
+        <div class="sidebar-section-title">Facility Portal</div>
+        {% set hospital_nav = [
+          ('overview', 'fas fa-th-large', 'Dashboard'),
+          ('appointments', 'fas fa-calendar-check', 'Appointments'),
+          ('opd', 'fas fa-clinic-medical', 'OPD Management'),
+          ('ipd', 'fas fa-procedures', 'IPD Management'),
+          ('emergency', 'fas fa-first-aid', 'Emergency'),
+          ('telemedicine', 'fas fa-video', 'Telemedicine')
+        ] %}
+        {% for id, icon, label in hospital_nav %}
+        <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+          class="sidebar-link hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Clinical Services</div>
+        {% set clinical_nav = [
+          ('emr', 'fas fa-file-medical-alt', 'EMR Hub'),
+          ('pharmacy', 'fas fa-pills', 'Pharmacy'),
+          ('laboratory', 'fas fa-microscope', 'Laboratory'),
+          ('radiology', 'fas fa-x-ray', 'Radiology'),
+          ('ot_management', 'fas fa-syringe', 'OT Management'),
+          ('blood', 'fas fa-tint', 'Blood Bank'),
+          ('organs', 'fas fa-hand-holding-heart', 'Organ Network')
+        ] %}
+        {% for id, icon, label in clinical_nav %}
+        <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+          class="sidebar-link hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Administration</div>
+        {% set admin_nav = [
+          ('doctors', 'fas fa-user-md', 'Doctors'),
+          ('staff', 'fas fa-users-cog', 'Staff & HR'),
+          ('nursing', 'fas fa-user-nurse', 'Nursing'),
+          ('departments', 'fas fa-sitemap', 'Departments'),
+          ('beds', 'fas fa-bed', 'Bed Management'),
+          ('ambulance', 'fas fa-ambulance', 'Ambulance'),
+          ('inventory', 'fas fa-boxes', 'Inventory'),
+          ('billing', 'fas fa-file-invoice-dollar', 'Billing & Invoicing'),
+          ('insurance', 'fas fa-shield-alt', 'Insurance (TPA)'),
+          ('payroll', 'fas fa-money-check-alt', 'Payroll')
+        ] %}
+        {% for id, icon, label in admin_nav %}
+        <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+          class="sidebar-link hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">System</div>
+        {% set system_nav = [
+          ('reports', 'fas fa-chart-pie', 'Reports & Analytics'),
+          ('ai_intelligence', 'fas fa-brain', 'AI Intelligence'),
+          ('audit_logs', 'fas fa-history', 'Audit Logs'),
+          ('settings', 'fas fa-cog', 'Settings')
+        ] %}
+        {% for id, icon, label in system_nav %}
+        <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+          class="sidebar-link hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <!-- ================= 4. DONORS & STAFF NAVIGATION ================= -->
+        {% elif current_role == 'blood_donor' %}
+        <div class="sidebar-section-title">Blood Donor Portal</div>
+        <a href="{{ url_for('blood_donor_dashboard', tab='overview') }}" class="sidebar-link {% if request.endpoint == 'blood_donor_dashboard' and request.args.get('tab', 'overview') == 'overview' %}active{% endif %}">
+          <i class="fas fa-th-large"></i> <span>Workspace</span>
+        </a>
+        <a href="{{ url_for('blood_donor_dashboard', tab='settings') }}" class="sidebar-link {% if request.endpoint == 'blood_donor_dashboard' and request.args.get('tab') == 'settings' %}active{% endif %}">
+          <i class="fas fa-user-cog"></i> <span>Settings &amp; Profile</span>
+        </a>
+        <a href="{{ url_for('download_donation_certificate') }}" class="sidebar-link">
+          <i class="fas fa-certificate text-amber-400"></i> <span>PDF Certificate</span>
+        </a>
+        <a href="{{ url_for('download_blood_donor_id_card') }}" class="sidebar-link">
+          <i class="fas fa-id-card text-rose-400"></i> <span>Digital ID Card</span>
+        </a>
+        <a href="{{ url_for('blood_donation_camps') }}" class="sidebar-link {% if request.endpoint == 'blood_donation_camps' %}active{% endif %}">
+          <i class="fas fa-tent"></i> <span>Donation Camps</span>
+        </a>
+        <a href="{{ url_for('blood_bank') }}" class="sidebar-link {% if request.endpoint == 'blood_bank' %}active{% endif %}">
+          <i class="fas fa-tint"></i> <span>Search Blood Bank</span>
+        </a>
+
+        {% elif current_role == 'organ_donor' %}
+        <div class="sidebar-section-title">Organ Donor Portal</div>
+        <a href="{{ url_for('organ_donor_dashboard', tab='overview') }}" class="sidebar-link {% if request.endpoint == 'organ_donor_dashboard' and request.args.get('tab', 'overview') == 'overview' %}active{% endif %}">
+          <i class="fas fa-th-large"></i> <span>Workspace</span>
+        </a>
+        <a href="{{ url_for('organ_donor_dashboard', tab='settings') }}" class="sidebar-link {% if request.endpoint == 'organ_donor_dashboard' and request.args.get('tab') == 'settings' %}active{% endif %}">
+          <i class="fas fa-user-cog"></i> <span>Settings &amp; Profile</span>
+        </a>
+        <a href="{{ url_for('download_organ_donor_certificate') }}" class="sidebar-link">
+          <i class="fas fa-certificate text-amber-400"></i> <span>PDF Certificate</span>
+        </a>
+        <a href="{{ url_for('download_organ_donor_id_card') }}" class="sidebar-link">
+          <i class="fas fa-id-card text-indigo-400"></i> <span>Digital ID Card</span>
+        </a>
+        <a href="{{ url_for('organ_donors_list') }}" class="sidebar-link {% if request.endpoint == 'organ_donors_list' %}active{% endif %}">
+          <i class="fas fa-hand-holding-heart"></i> <span>Donors Directory</span>
+        </a>
+
+        {% elif current_role == 'staff' %}
+        <div class="sidebar-section-title">Staff Portal</div>
+        {% if current_user.role in ['Receptionist', 'Appointment Management'] %}
+        <a href="{{ url_for('staff_reception_dashboard') }}" class="sidebar-link active"><i class="fas fa-headset"></i> <span>Reception Desk</span></a>
+        {% elif current_user.role == 'Bed Management' %}
+        <a href="{{ url_for('staff_bed_dashboard') }}" class="sidebar-link active"><i class="fas fa-bed"></i> <span>Bed Telemetry</span></a>
+        {% elif current_user.role == 'Blood Donor Management' %}
+        {% set blood_nav = [
+          ('overview', 'fas fa-th-large', 'Overview'),
+          ('donor_management', 'fas fa-users', 'Donor Registry'),
+          ('inventory', 'fas fa-vials', 'Live Inventory'),
+          ('requests', 'fas fa-clipboard-list', 'Blood Requests'),
+          ('camps', 'fas fa-tent', 'Donation Camps')
+        ] %}
+        {% for id, icon, label in blood_nav %}
+        <a href="{{ url_for('staff_blood_dashboard', tab=id) }}"
+          class="sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}"><i
+            class="{{ icon }} fa-fw"></i> <span>{{ label }}</span></a>
+        {% endfor %}
+        {% elif current_user.role == 'Organ Donor Management' %}
+        {% set organ_nav = [
+          ('overview', 'fas fa-th-large', 'Overview'),
+          ('donor_registry', 'fas fa-users', 'Donor Registry'),
+          ('transplant_requests', 'fas fa-clipboard-list', 'Transplant Requests'),
+          ('matching_log', 'fas fa-network-wired', 'Matching Log')
+        ] %}
+        {% for id, icon, label in organ_nav %}
+        <a href="{{ url_for('staff_organ_dashboard', tab=id) }}"
+          class="sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}"><i
+            class="{{ icon }} fa-fw"></i> <span>{{ label }}</span></a>
+        {% endfor %}
+        {% elif current_user.role in ['Nurse', 'Nursing'] %}
+        <a href="{{ url_for('staff_nursing_dashboard') }}" class="sidebar-link active"><i class="fas fa-user-nurse"></i> <span>Nursing Station</span></a>
+        {% else %}
+        <a href="{{ url_for('staff_general_dashboard') }}" class="sidebar-link active"><i class="fas fa-th-large"></i> <span>Staff Workspace</span></a>
+        {% endif %}
+        {% endif %}
+
+        <div class="sidebar-section-title">Live Website</div>
+        <a href="{{ url_for('home') }}" class="sidebar-link">
+          <i class="fas fa-globe"></i> <span>Go to Live Portal</span>
+        </a>
+      </div>
+
+      <!-- User Profile Footer -->
+      <div class="sidebar-footer">
+        <div class="user-avatar">
+          {% if current_user.is_doctor %}
+          <img src="{{ url_for('get_doctor_image', doc_id=current_user.id) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+          {% elif current_user.is_doctor %}
+          {{ current_user.first_name[0] }}
+          {% else %}
+          {{ current_user.name[0] if current_user.name else 'U' }}
+          {% endif %}
+        </div>
+        <div class="user-info">
+          <div class="user-name">
+            {% if current_user.is_doctor %}
+            Dr. {{ current_user.first_name }} {{ current_user.last_name }}
+            {% else %}
+            {{ current_user.name }}
+            {% endif %}
+          </div>
+          <div class="user-role">{{ current_role }}</div>
+          {% if current_role == 'staff' and current_user.hospital_name %}
+          <div style="font-size: 10px; color: #38bdf8; font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px;" title="{{ current_user.hospital_name }}">
+            <i class="fas fa-hospital me-1"></i>{{ current_user.hospital_name }}
+          </div>
+          {% endif %}
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn" title="Sign Out">
+          <i class="fas fa-sign-out-alt"></i>
+        </a>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    {% endif %}
+
+    <!-- Main Dashboard Panel -->
+    <div class="dashboard-panel">
+      
+      <!-- Dashboard Top Header -->
+      <header class="dashboard-header">
+        <div class="d-flex align-items-center">
+          <div class="d-flex align-items-center dashboard-header-title">
+            {% if current_user.is_authenticated and current_role != 'admin' %}
+            <button class="btn btn-icon d-lg-none me-3" onclick="toggleSidebar()" style="padding: 0; border: none; background: transparent; color: #0f172a;">
+              <i class="fas fa-bars fs-4"></i>
+            </button>
+            {% endif %}
+            <div>
+              <h1 class="dashboard-title">{% block page_title %}Dashboard{% endblock %}</h1>
+              <p class="dashboard-subtitle">{% block page_subtitle %}Live clinical overview & operational controls{% endblock %}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Global Command Search -->
+          <form class="header-search-form d-none d-lg-block" onsubmit="event.preventDefault();">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="form-control" placeholder="Search records, appointments...">
+            <span class="search-shortcut">⌘K</span>
+          </form>
+
+          <!-- Notification Bell Button -->
+          <div style="position: relative;">
+            <button class="header-icon-btn position-relative" type="button" onclick="toggleNotificationsPanel(event)" id="notificationBellBtn" title="Notifications">
+              <i class="fas fa-bell"></i>
+              {% if unread_notifications_count > 0 %}
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="font-size: 9px; padding: 2px 6px;">
+                {{ unread_notifications_count }}
+              </span>
+              {% else %}
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="font-size: 9px; padding: 2px 6px; display:none;">0</span>
+              {% endif %}
+            </button>
+          </div>
+
+          <!-- Notification Panel Drawer -->
+          <div id="notificationPanel">
+            <div class="notif-header">
+              <h6>
+                <i class="fas fa-bell me-2 text-sky-400"></i>Notifications
+                {% if unread_notifications_count > 0 %}
+                <span class="badge rounded-pill bg-primary ms-2" id="notifPanelCount" style="font-size: 10px;">{{ unread_notifications_count }} new</span>
+                {% else %}
+                <span class="badge rounded-pill bg-primary ms-2" id="notifPanelCount" style="font-size: 10px; display:none;">0 new</span>
+                {% endif %}
+              </h6>
+              <div class="d-flex gap-2 align-items-center">
+                <button onclick="markAllReadAjax()" id="markAllReadBtn" style="font-size: 11px; color: #38bdf8; font-weight: 700; background: none; border: none; cursor: pointer; padding: 0;">Mark all read</button>
+                <button onclick="closeNotificationsPanel()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0;line-height:1;">&#x2715;</button>
+              </div>
+            </div>
+            
+            <div class="notif-scroll">
+              {% for notif in notifications %}
+              <a href="{{ notif.link or '#' }}" class="text-decoration-none" onclick="closeNotificationsPanel()">
+                <div class="notif-item {% if notif.status == 'unread' %}unread{% endif %}">
+                  <div class="notif-icon">
+                    <i class="fas fa-bell"></i>
+                  </div>
+                  <div class="notif-body">
+                    <p class="{% if notif.status == 'unread' %}fw-bold{% endif %}">{{ notif.message }}</p>
+                    <span class="notif-time"><i class="fas fa-clock me-1"></i>{{ notif.created_at.strftime('%b %d, %Y %H:%M') if notif.created_at else '' }}</span>
+                  </div>
+                </div>
+              </a>
+              {% else %}
+              <div class="p-4 text-center" style="color: #94a3b8;">
+                <i class="fas fa-bell-slash" style="font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.4;"></i>
+                <p style="font-size: 12px; margin: 0;">No new notifications</p>
+              </div>
+              {% endfor %}
+            </div>
+            
+            <div class="notif-footer">
+              <small style="color: #94a3b8; font-size: 11px;">Showing {{ notifications|length }} notification(s)</small>
+            </div>
+          </div>
+
+          <!-- User Profile Dropdown -->
+          <div class="dropdown">
+            <button class="header-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-user"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end mt-2 shadow-lg border border-slate-200 rounded-3 p-2">
+              {% if current_role == 'doctor' %}
+              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('doctor_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Account Settings</a></li>
+              {% elif current_role == 'hospital' %}
+              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('hospital_dashboard', tab='settings') }}"><i class="fas fa-cog me-2 text-muted"></i>Hospital Settings</a></li>
+              {% elif current_role == 'patient' %}
+              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('patient_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Profile Settings</a></li>
+              {% endif %}
+              <li><hr class="dropdown-divider my-1"></li>
+              <li><a class="dropdown-item text-danger rounded-2 py-2 text-xs font-bold" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Sign Out</a></li>
+            </ul>
+          </div>
+
+        </div>
+      </header>
+
+      <!-- Floating System Notification Popup Center -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div id="dashboard-toast-container" class="position-fixed top-0 end-0 p-3 p-md-4" style="z-index: 999999; max-width: 440px; width: 100%; pointer-events: none;">
+            {% for category, message in messages %}
+              {% set cat_norm = category|lower %}
+              {% set is_success = cat_norm in ['success', 'ok'] %}
+              {% set is_warning = cat_norm in ['warning', 'attention', 'warn'] %}
+              {% set is_danger = cat_norm in ['error', 'danger', 'critical'] %}
+              {% set border_color = '#a7f3d0' if is_success else ('#fde68a' if is_warning else ('#fecdd3' if is_danger else '#bae6fd')) %}
+              {% set bar_bg = 'linear-gradient(90deg, #10b981, #14b8a6)' if is_success else ('linear-gradient(90deg, #f59e0b, #ea580c)' if is_warning else ('linear-gradient(90deg, #f43f5e, #e11d48)' if is_danger else 'linear-gradient(90deg, #0284c7, #6366f1)')) %}
+              {% set icon_bg = 'linear-gradient(135deg, #10b981, #059669)' if is_success else ('linear-gradient(135deg, #f59e0b, #d97706)' if is_warning else ('linear-gradient(135deg, #f43f5e, #be123c)' if is_danger else 'linear-gradient(135deg, #0284c7, #2563eb)')) %}
+              {% set badge_bg = '#d1fae5' if is_success else ('#fef3c7' if is_warning else ('#ffe4e6' if is_danger else '#e0f2fe')) %}
+              {% set badge_color = '#065f46' if is_success else ('#92400e' if is_warning else ('#9f1239' if is_danger else '#075985')) %}
+              {% set btn_bg = '#059669' if is_success else ('#d97706' if is_warning else ('#e11d48' if is_danger else '#0f172a')) %}
+              
+              <div class="card border-0 shadow-2xl rounded-4 mb-3 overflow-hidden position-relative animate__animated animate__fadeInRight" 
+                   id="dash-flash-toast-{{ loop.index }}"
+                   style="pointer-events: auto; backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.96); --toast-border: {{ border_color }}; border: 1px solid var(--toast-border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;">
+                <div style="height: 5px; width: 100%; --bar-bg: {{ bar_bg }}; background: var(--bar-bg);"></div>
+                <div class="card-body p-3.5 p-md-4">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-sm"
+                         style="width: 42px; height: 42px; font-size: 18px; --icon-bg: {{ icon_bg }}; background: var(--icon-bg);">
+                      <i class="fas fa-{% if is_success %}check-circle{% elif is_warning %}exclamation-triangle{% elif is_danger %}shield-alt{% else %}info-circle{% endif %}"></i>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                      <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="badge rounded-pill text-uppercase px-2.5 py-1 fw-bold" 
+                              style="font-size: 10px; letter-spacing: 0.5px; --badge-bg: {{ badge_bg }}; --badge-col: {{ badge_color }}; background: var(--badge-bg); color: var(--badge-col);">
+                          {% if is_success %}Success{% elif is_warning %}Attention{% elif is_danger %}System Alert{% else %}Notice{% endif %}
+                        </span>
+                        <small class="text-muted" style="font-size: 11px;">Just now</small>
+                      </div>
+                      <h6 class="fw-bold text-dark mb-1" style="font-size: 13.5px;">
+                        {% if is_success %}Action Completed{% elif is_warning %}Attention{% elif is_danger %}Action Required{% else %}System Notice{% endif %}
+                      </h6>
+                      <p class="text-secondary small mb-2.5 leading-relaxed">{{ message }}</p>
+                      <div class="d-flex align-items-center gap-2 pt-2 border-top">
+                        <button type="button" 
+                                onclick="document.getElementById('dash-flash-toast-{{ loop.index }}').remove()" 
+                                class="btn btn-sm rounded-pill fw-bold text-white px-3 py-1 shadow-sm"
+                                style="font-size: 11.5px; --btn-bg: {{ btn_bg }}; background: var(--btn-bg);">
+                          <i class="fas fa-check me-1"></i> Got it
+                        </button>
+                        <button type="button" 
+                                onclick="document.getElementById('dash-flash-toast-{{ loop.index }}').remove()" 
+                                class="btn btn-sm btn-light rounded-pill text-muted px-2.5 py-1"
+                                style="font-size: 11.5px;">
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                    <button type="button" 
+                            onclick="document.getElementById('dash-flash-toast-{{ loop.index }}').remove()" 
+                            class="btn-close ms-auto flex-shrink-0" 
+                            aria-label="Close"></button>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Content Area -->
+      <div class="dashboard-content">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Global Book Appointment Modal -->
+  <!-- Global Book Appointment Offcanvas Side Drawer (Slides smoothly in from the right) -->
+  <div id="bookAppointmentModal" class="offcanvas offcanvas-end border-0 shadow-2xl" tabindex="-1" aria-labelledby="bookAppointmentModalLabel" style="width: 560px; max-width: 92vw; z-index: 1060;">
+    <div class="offcanvas-header bg-amber-400 text-white py-4 px-5 border-bottom border-slate-800">
+      <div class="d-flex align-items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-400 text-sky-400 d-flex align-items-center justify-content-center">
+          <i class="fas fa-calendar-plus fs-5"></i>
+        </div>
+        <div>
+          <h5 class="offcanvas-title font-display font-bold text-black fs-5 mb-0 bg-amber-400" id="bookAppointmentModalLabel">
+            Book Doctor Appointment
+          </h5>
+          <p class="text-xs text-black mb-0">Select attending specialist & lock your consultation slot</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    
+    <div class="offcanvas-body p-4 p-md-5 bg-white">
+      <form method="POST" action="{{ url_for('book_appointment') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Patient Full Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control rounded-3 py-2.5" value="{{ current_user.name if current_user.is_authenticated else '' }}" required placeholder="e.g. John Doe">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Email Address <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control rounded-3 py-2.5" value="{{ current_user.email if current_user.is_authenticated else '' }}" required placeholder="e.g. john@example.com">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Phone Number <span class="text-danger">*</span></label>
+            <input type="tel" name="phone" class="form-control rounded-3 py-2.5" value="{{ current_user.phone if current_user.is_authenticated and current_user.phone else '' }}" required placeholder="e.g. 9876543210">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Gender</label>
+            <select name="gender" class="form-select rounded-3 py-2.5">
+              <option value="Male" {% if current_user.is_authenticated and current_user.gender == 'Male' %}selected{% endif %}>Male</option>
+              <option value="Female" {% if current_user.is_authenticated and current_user.gender == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Other" {% if current_user.is_authenticated and current_user.gender == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Age / DOB</label>
+            <input type="text" name="dob" class="form-control rounded-3 py-2.5" value="{{ current_user.age if current_user.is_authenticated and current_user.age else '' }}" placeholder="e.g. 28">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Select Attending Specialist <span class="text-danger">*</span></label>
+            <select name="doctor_id" class="form-select rounded-3 py-2.5 fw-semibold" required>
+              <option value="">-- Choose Specialist Doctor --</option>
+              {% set doc_list = (doctors if doctors is defined and doctors else (global_doctors if global_doctors is defined and global_doctors else {})) %}
+              {% if doc_list %}
+                {% if doc_list is mapping %}
+                  {% for doc_id, doc in doc_list.items() %}
+                    {% if not doc.is_hidden and not doc.is_blocked %}
+                      <option value="{{ doc.id }}">
+                        Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.specialization or doc.department or 'General Medicine' }}) &bull; ₹{{ doc.consultation_fee or 500 }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {% for doc in doc_list %}
+                    {% if not doc.is_hidden and not doc.is_blocked %}
+                      <option value="{{ doc.id }}">
+                        Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.specialization or doc.department or 'General Medicine' }}) &bull; ₹{{ doc.consultation_fee or 500 }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endif %}
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Appointment Date <span class="text-danger">*</span></label>
+            <input type="date" name="date" class="form-control rounded-3 py-2.5" required min="{{ today.strftime('%Y-%m-%d') if today and today.strftime is defined else today }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Preferred Time Slot <span class="text-danger">*</span></label>
+            <input type="time" name="time" class="form-control rounded-3 py-2.5" required value="10:00">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Reason for Consultation / Symptoms</label>
+            <textarea name="reason" class="form-control rounded-3 p-3" rows="3" placeholder="Briefly describe your symptoms or reason for the visit..."></textarea>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-top d-flex gap-3">
+          <button type="button" class="btn btn-secondary-custom rounded-xl flex-grow-1 py-3 text-xs" data-bs-dismiss="offcanvas" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary-custom rounded-xl flex-grow-1 py-3 text-xs shadow-lg">
+            <i class="fas fa-check-circle me-1"></i> Confirm &amp; Proceed
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Core Dashboard Scripts -->
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            slate: {
-              850: '#151e32',
-              900: '#0f172a',
-              950: '#020617',
-            },
-            accent: {
-              cyan: '#06b6d4',
-              violet: '#6366f1',
-            }
-          },
-          backgroundImage: {
-            'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-            'grid-white': "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgba(255, 255, 255, 0.05)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e\")",
-          },
-          animation: {
-            'float': 'float 8s ease-in-out infinite',
-            'pulse-glow': 'pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'enter': 'enter 0.5s ease-out forwards',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-20px)' },
-            },
-            'pulse-glow': {
-              '0%, 100%': { opacity: 1, filter: 'blur(100px)' },
-              '50%': { opacity: 0.8, filter: 'blur(120px)' },
-            },
-            enter: {
-              '0%': { opacity: 0, transform: 'translateY(10px)' },
-              '100%': { opacity: 1, transform: 'translateY(0)' },
-            }
-          }
+    function toggleNotificationsPanel(event) {
+      event.stopPropagation();
+      const panel = document.getElementById('notificationPanel');
+      if (!panel) return;
+      const isOpening = !panel.classList.contains('open');
+      panel.classList.toggle('open');
+      if (isOpening) {
+        _markAllReadAjax();
+      }
+    }
+
+    function closeNotificationsPanel() {
+      const panel = document.getElementById('notificationPanel');
+      if (panel) panel.classList.remove('open');
+    }
+
+    function markAllReadAjax() {
+      _markAllReadAjax();
+    }
+
+    function _markAllReadAjax() {
+      const badge = document.getElementById('notifBadge');
+      const panelCount = document.getElementById('notifPanelCount');
+
+      if (badge) badge.style.display = 'none';
+      if (panelCount) panelCount.style.display = 'none';
+
+      document.querySelectorAll('#notificationPanel .notif-item.unread').forEach(item => {
+        item.classList.remove('unread');
+        const icon = item.querySelector('.notif-icon');
+        if (icon) {
+          icon.style.background = 'rgba(2, 132, 199, 0.2)';
+          icon.style.color = '#38bdf8';
+        }
+        const p = item.querySelector('p');
+        if (p) p.classList.remove('fw-bold');
+      });
+
+      fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({})
+      }).catch(err => console.warn('Mark-all-read failed:', err));
+    }
+
+    document.addEventListener('click', function (e) {
+      const panel = document.getElementById('notificationPanel');
+      const btn = document.getElementById('notificationBellBtn');
+      if (panel && panel.classList.contains('open')) {
+        if (!panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
+          panel.classList.remove('open');
+        }
+      }
+    });
+
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      if (sidebar) {
+        sidebar.classList.toggle('active');
+      }
+    }
+
+    function openBookAppointmentModal() {
+      const drawerEl = document.getElementById('bookAppointmentModal');
+      if (drawerEl) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+          bootstrap.Offcanvas.getOrCreateInstance(drawerEl).show();
+        } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(drawerEl).show();
+        } else {
+          drawerEl.classList.add('show');
+          drawerEl.style.display = 'block';
         }
       }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
   </script>
 
-  <style>
-    /* Base Aesthetic */
-    body {
-        background-color: #020617; /* Slate 950 */
-        color: #f8fafc;
-        overflow-x: hidden;
-    }
-
-    /* Cinematic Grain Overlay */
-    .noise-bg {
-        position: fixed;
-        top: 0; left: 0; width: 100vw; height: 100vh;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-        pointer-events: none;
-        z-index: 40;
-    }
-
-    /* Ambient Orbs */
-    .orb {
-        position: fixed;
-        border-radius: 50%;
-        filter: blur(100px);
-        z-index: -1;
-        opacity: 0.4;
-    }
-
-    /* Glassmorphism Classes */
-    .glass-nav {
-        background: rgba(15, 23, 42, 0.7);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    
-    .glass-panel {
-        background: rgba(30, 41, 59, 0.4);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #020617; }
-    ::-webkit-scrollbar-thumb { 
-        background: #334155; 
-        border-radius: 4px; 
-        border: 2px solid #020617;
-    }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-    /* Text Selection */
-    ::selection { background: rgba(6, 182, 212, 0.3); color: white; }
-  </style>
-  {% block head %}{% endblock %}
-</head>
-<body class="flex flex-col min-h-screen relative selection:bg-cyan-500 selection:text-white">
-
-    <!-- 1. Ambient Background Layers -->
-    <div class="noise-bg"></div>
-    <div class="fixed inset-0 bg-grid-white bg-[length:50px_50px] opacity-[0.03] pointer-events-none"></div>
-    
-    <!-- Animated Color Orbs -->
-    <div class="orb w-[500px] h-[500px] bg-indigo-600 top-[-10%] left-[-10%] animate-pulse-glow"></div>
-    <div class="orb w-[600px] h-[600px] bg-cyan-900 bottom-[-10%] right-[-10%] animate-float" style="animation-delay: 2s;"></div>
-
-    <!-- 2. Navigation (Floating Dock Style) -->
-    <nav x-data="{ scrolled: false }" 
-         @scroll.window="scrolled = (window.pageYOffset > 20)"
-         :class="{ 'border-b border-white/5 bg-slate-900/80': scrolled, 'bg-transparent border-transparent': !scrolled }"
-         class="fixed top-0 w-full z-50 transition-all duration-300 backdrop-blur-md">
+  <!-- ============================================== -->
+  <!-- UNIVERSAL IMAGE CROPPING MODAL                 -->
+  <!-- ============================================== -->
+  <div class="modal fade" id="universalCropModal" tabindex="-1" aria-labelledby="universalCropModalLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 99999;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden" style="background: #0f172a; color: #ffffff;">
         
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20">
+        <div class="modal-header px-4 py-3 border-bottom border-slate-800" style="background: #090d16;">
+          <div class="d-flex align-items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 d-flex align-items-center justify-content-center text-sm border border-sky-500/30" style="width: 34px; height: 34px;">
+              <i class="fas fa-crop-alt"></i>
+            </div>
+            <div>
+              <h6 class="modal-title font-black mb-0 text-sm text-white" id="universalCropModalLabel">Position &amp; Crop Profile Photo</h6>
+              <span class="text-slate-400 text-xs">Adjust and zoom inside the circular boundary</span>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="closeUniversalCropper();"></button>
+        </div>
+
+        <div class="modal-body p-4" style="background: #090d16;">
+          <div class="row g-3 align-items-center">
+            
+            <!-- Cropper Canvas Viewport -->
+            <div class="col-lg-8">
+              <div class="rounded-3 overflow-hidden d-flex align-items-center justify-content-center" style="max-height: 380px; min-height: 280px; background: #020617; border: 1px solid #1e293b;">
+                <img id="universalImageToCrop" src="" alt="Source image for cropping" style="max-width: 100%; display: block;">
+              </div>
+            </div>
+
+            <!-- Live Circular Preview & Control Toolbar -->
+            <div class="col-lg-4">
+              <div class="p-3 rounded-3 text-center" style="background: #0f172a; border: 1px solid #1e293b;">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider d-block mb-2">Avatar / ID Card Preview</span>
                 
-                <!-- Logo -->
-                <a href="#" class="flex items-center gap-3 group">
-                    <div class="relative w-10 h-10 flex items-center justify-center bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform duration-300">
-                        <i class="fas fa-brain text-white text-lg"></i>
-                        <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 rounded-xl transition-opacity"></div>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-xl font-bold tracking-tight text-white">Dev<span class="text-cyan-400">AI+</span></span>
-                        <span class="text-[10px] uppercase tracking-widest text-slate-400 font-mono group-hover:text-cyan-400 transition-colors">Health Core</span>
-                    </div>
-                </a>
-
-                <!-- Desktop Menu 
-                <div class="hidden md:flex items-center gap-1">
-                    <a href="#" class="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white rounded-lg hover:bg-white/5 transition-all">Dashboard</a>
-                    <a href="#" class="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white rounded-lg hover:bg-white/5 transition-all">History</a>
-                    <a href="#" class="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white rounded-lg hover:bg-white/5 transition-all">Settings</a>
-                    
-                    <div class="h-6 w-px bg-white/10 mx-2"></div>
-                    
-                    <button class="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 hover:border-cyan-500/50 transition-all group">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span>System Online</span>
-                    </button>
+                <!-- Circular Preview Ring -->
+                <div class="mx-auto mb-3" style="width: 110px; height: 110px; border-radius: 50%; overflow: hidden; border: 3px solid #0284c7; box-shadow: 0 0 16px rgba(2, 132, 199, 0.4);">
+                  <div class="universal-crop-preview-box" style="width: 100%; height: 100%; overflow: hidden;"></div>
                 </div>
-                -->
+                
+                <span class="text-xs text-slate-400 d-block mb-3">Drag to reposition &bull; Scroll to zoom</span>
 
-                <!-- Mobile Menu Button -->
-                <button class="md:hidden text-slate-300 hover:text-white">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
+                <!-- Toolbar Controls -->
+                <div class="d-flex justify-content-center flex-wrap gap-1.5 mb-2">
+                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.zoom(0.1);" title="Zoom In">
+                    <i class="fas fa-search-plus"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.zoom(-0.1);" title="Zoom Out">
+                    <i class="fas fa-search-minus"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.rotate(-90);" title="Rotate Left">
+                    <i class="fas fa-undo"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.rotate(90);" title="Rotate Right">
+                    <i class="fas fa-redo"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.reset();" title="Reset">
+                    <i class="fas fa-sync-alt"></i>
+                  </button>
+                </div>
+              </div>
             </div>
+
+          </div>
         </div>
-    </nav>
 
-    <!-- 3. Flash Messages (Notification Toast Style) -->
-    <div class="fixed top-24 right-4 z-50 flex flex-col gap-3 w-full max-w-sm pointer-events-none">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for cat, msg in messages %}
-                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
-                     x-transition:enter="transition ease-out duration-300"
-                     x-transition:enter-start="opacity-0 translate-x-8"
-                     x-transition:enter-end="opacity-100 translate-x-0"
-                     x-transition:leave="transition ease-in duration-300"
-                     x-transition:leave-start="opacity-100 translate-x-0"
-                     x-transition:leave-end="opacity-0 translate-x-8"
-                     class="pointer-events-auto glass-panel p-4 rounded-xl flex items-start gap-4 border-l-4 shadow-2xl backdrop-blur-xl
-                            {{ 'border-l-emerald-500 bg-emerald-900/20' if cat=='success' else 'border-l-rose-500 bg-rose-900/20' }}">
-                    
-                    <div class="flex-shrink-0 mt-0.5">
-                        <div class="w-8 h-8 rounded-full flex items-center justify-center {{ 'bg-emerald-500/20 text-emerald-400' if cat=='success' else 'bg-rose-500/20 text-rose-400' }}">
-                            <i class="{{ 'fas fa-check-circle' if cat=='success' else 'fas fa-exclamation-circle' }} text-lg"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="flex-1">
-                        <h3 class="text-sm font-bold text-white mb-1 font-sans">
-                            {{ 'Operation Successful' if cat=='success' else 'Attention Required' }}
-                        </h3>
-                        <p class="text-sm text-slate-300 leading-relaxed">{{ msg }}</p>
-                    </div>
+        <div class="modal-footer px-4 py-3 border-top border-slate-800 d-flex justify-content-between" style="background: #090d16;">
+          <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3 font-bold text-xs" data-bs-dismiss="modal" onclick="closeUniversalCropper();">
+            Cancel
+          </button>
+          <button type="button" id="universalApplyCropBtn" class="btn btn-sm btn-primary rounded-pill px-4 py-2 font-bold text-xs d-inline-flex align-items-center gap-1.5 shadow-md">
+            <i class="fas fa-check"></i>
+            <span>Apply Crop &amp; Save</span>
+          </button>
+        </div>
 
-                    <button @click="show = false" class="text-slate-400 hover:text-white transition-colors">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+      </div>
     </div>
+  </div>
 
-    <!-- 4. Main Content Wrapper -->
-    <main class="flex-grow pt-24 pb-12 relative z-10 animate-enter">
-        {% block content %}{% endblock %}
-    </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
-    <!-- 5. Minimalist Footer -->
-    <footer class="relative z-10 border-t border-white/5 bg-blue-950/50 backdrop-blur-sm">
-        <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-2 text-slate-500 text-sm">
-                <span>&copy; 2025 Spherix Clinic All Rights Reserved.</span>
-                <span class="w-1 h-1 rounded-full bg-slate-700"></span>
-                <span class="font-mono text-xs text-red-700">Designed by S iCons</span>
-            </div>
-            <!--
-            <div class="flex items-center gap-6">
-                <a href="#" class="text-slate-500 hover:text-cyan-400 transition-colors"><i class="fab fa-github"></i></a>
-                <a href="#" class="text-slate-500 hover:text-cyan-400 transition-colors"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="text-slate-500 hover:text-cyan-400 transition-colors"><i class="fas fa-globe"></i></a>
-            </div> -->
-        </div>
-    </footer>
+  <!-- Universal Image Cropper Engine -->
+  <script>
+    window._universalCropper = null;
+    window._universalCropCallback = null;
+    window._universalAutoSubmitFormId = null;
 
+    function openUniversalCropper(file, options) {
+      options = options || {};
+      const modalEl = document.getElementById('universalCropModal');
+      const imgEl = document.getElementById('universalImageToCrop');
+      if (!modalEl || !imgEl) return;
+
+      window._universalCropCallback = options.onCrop || null;
+      window._universalAutoSubmitFormId = options.autoSubmitFormId || null;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        imgEl.src = e.target.result;
+
+        // Show modal safely across any Bootstrap version or fallback
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else {
+          modalEl.classList.add('show');
+          modalEl.style.display = 'block';
+          document.body.classList.add('modal-open');
+        }
+
+        // Initialize or re-initialize Cropper.js once image is rendered
+        setTimeout(() => {
+          if (window._universalCropper) {
+            window._universalCropper.destroy();
+          }
+          if (typeof Cropper !== 'undefined') {
+            window._universalCropper = new Cropper(imgEl, {
+              aspectRatio: options.aspectRatio || 1,
+              viewMode: 1,
+              dragMode: 'move',
+              autoCropArea: 0.9,
+              restore: false,
+              guides: true,
+              center: true,
+              highlight: false,
+              cropBoxMovable: true,
+              cropBoxResizable: true,
+              toggleDragModeOnDblclick: false,
+              preview: '.universal-crop-preview-box'
+            });
+          }
+        }, 200);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function closeUniversalCropper() {
+      const modalEl = document.getElementById('universalCropModal');
+      if (modalEl) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        } else {
+          modalEl.classList.remove('show');
+          modalEl.style.display = 'none';
+          document.body.classList.remove('modal-open');
+        }
+      }
+      if (window._universalCropper) {
+        window._universalCropper.destroy();
+        window._universalCropper = null;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const applyBtn = document.getElementById('universalApplyCropBtn');
+      if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+          if (!window._universalCropper) return;
+
+          const canvas = window._universalCropper.getCroppedCanvas({
+            width: 400,
+            height: 400,
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high'
+          });
+
+          if (canvas) {
+            const base64Data = canvas.toDataURL('image/jpeg', 0.92);
+
+            if (typeof window._universalCropCallback === 'function') {
+              window._universalCropCallback(base64Data, canvas);
+            }
+
+            closeUniversalCropper();
+
+            if (window._universalAutoSubmitFormId) {
+              const form = document.getElementById(window._universalAutoSubmitFormId);
+              if (form) form.submit();
+            }
+          }
+        });
+      }
+
+      // Auto-bind any file input with data-crop-image="true" or class="crop-image-input"
+      document.body.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target && target.matches('input[type="file"][data-crop-image="true"], input[type="file"].crop-image-input')) {
+          if (target.files && target.files.length > 0) {
+            const file = target.files[0];
+            if (!file.type.match(/^image\//)) {
+              alert('Please choose a valid image file (PNG, JPG, WebP).');
+              return;
+            }
+
+            const hiddenTargetId = target.getAttribute('data-crop-target');
+            const previewTargetId = target.getAttribute('data-preview-target');
+            const autoSubmit = target.getAttribute('data-auto-submit') === 'true';
+            const formId = target.form ? target.form.id : null;
+
+            openUniversalCropper(file, {
+              onCrop: (base64) => {
+                if (hiddenTargetId) {
+                  const hiddenInput = document.getElementById(hiddenTargetId);
+                  if (hiddenInput) hiddenInput.value = base64;
+                }
+                if (previewTargetId) {
+                  const previewImg = document.getElementById(previewTargetId);
+                  if (previewImg) {
+                    previewImg.src = base64;
+                    previewImg.classList.remove('d-none');
+                  }
+                  const placeholder = document.getElementById(previewTargetId + 'Placeholder');
+                  if (placeholder) placeholder.classList.add('d-none');
+                }
+              },
+              autoSubmitFormId: autoSubmit ? formId : null
+            });
+          }
+        }
+      });
+    });
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
 </body>
+
 </html>

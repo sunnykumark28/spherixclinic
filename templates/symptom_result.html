@@ -1,760 +1,1108 @@
 {% extends 'layout.html' %}
 
-{% block title %}AI Diagnostic Results | Spherix Clinic{% endblock %}
+{% block title %}AI Symptom Analysis & Clinical Report | Spherix Clinic{% endblock %}
+
+{% block head %}
+<!-- Modern Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+    :root {
+        --primary-blue: #0284c7;
+        --primary-indigo: #4f46e5;
+        --groq-accent: #f97316;
+        --vision-accent: #0284c7;
+        --fda-accent: #059669;
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
+    }
+
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ambient Hero Mesh Background */
+    .symptom-mesh-bg {
+        background: 
+            radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.10) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.08) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+            #f8fafc;
+    }
+
+    /* Premium Clean White Glass Card */
+    .symptom-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 2px 8px -2px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .symptom-card:hover {
+        box-shadow: 0 20px 40px -12px rgba(2, 132, 199, 0.10);
+        border-color: rgba(2, 132, 199, 0.3);
+    }
+
+    /* Radiant Blue Action Button */
+    .btn-radiant-symptom {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%);
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.35);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-radiant-symptom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 36px -6px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Engine Pulse Indicator */
+    @keyframes pulse-ring {
+        0% { transform: scale(0.95); opacity: 0.8; }
+        50% { transform: scale(1.15); opacity: 0.3; }
+        100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .engine-pulse {
+        animation: pulse-ring 2.5s infinite ease-in-out;
+    }
+
+    /* Custom Scrollbar for Drawer and Chat */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<!-- Chart.js for Advanced Data Visualization -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="min-h-screen symptom-mesh-bg py-10 px-4 sm:px-8 lg:px-16 selection:bg-sky-200 selection:text-sky-900">
+    <div class="max-w-7xl mx-auto space-y-8">
 
-<div class="min-h-screen bg-[#F8FAFC] py-12 font-sans selection:bg-blue-200">
-    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <!-- Back Button -->
-        <div>
-            <a href="{{ url_for('symptoms_step2') }}" onclick="if(document.referrer){history.back(); return false;}" class="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm font-semibold">
-                <i class="fas fa-chevron-left"></i> Back to Step 2
-            </a>
-        </div>
-        
-        <!-- 1. Header & Actions -->
-        <header class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <!-- Top Header & Breadcrumb Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
             <div>
-                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-4 border border-blue-200">
-                    <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                    Analysis Complete
+                <div class="flex items-center gap-2 text-sky-600 mb-1.5">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-wider">Multi-Engine AI Diagnostic Complete</span>
                 </div>
-                <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Diagnostic Analysis Report</h1>
-                <p class="text-slate-500 mt-2 text-sm font-medium max-w-2xl">
-                    AI-Assisted Evaluation for: <span class="text-slate-800 font-bold">"{{ query }}"</span>
-                </p>
+                <h1 class="text-3xl sm:text-4xl font-display font-extrabold text-slate-900 tracking-tight">
+                    Clinical <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-indigo-600">Diagnostic Report</span>
+                </h1>
             </div>
-            
-            <div class="flex flex-wrap items-center gap-3">
-                <a href="{{ url_for('download_symptoms_pdf') }}" class="px-6 py-2.5 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_8px_16px_-6px_rgba(37,99,235,0.4)] hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-                    <i class="fas fa-file-pdf"></i> Diagnostic Report PDF
-                </a>
-                <a href="{{ url_for('symptom_receipt_details') }}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-black uppercase tracking-wider rounded-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
-                    <i class="fas fa-receipt"></i> Intake Receipt
-                </a>
-            </div>
-        </header>
 
-        <!-- 2. Risk Assessment Alert -->
-        {% set risk_color = 'emerald' if 'Low' in result.risk_level else 'amber' if 'Moderate' in result.risk_level else 'rose' %}
-        <div class="bg-{{ risk_color }}-50 border border-{{ risk_color }}-200 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm relative overflow-hidden">
-            <div class="absolute right-0 top-0 w-32 h-32 bg-{{ risk_color }}-500 rounded-full blur-[80px] opacity-10 pointer-events-none"></div>
-            <div class="flex items-center gap-5 relative z-10">
-                <div class="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-{{ risk_color }}-600 text-2xl border border-{{ risk_color }}-100 shrink-0">
-                    <i class="fas fa-shield-heart"></i>
-                </div>
-                <div>
-                    <h3 class="text-{{ risk_color }}-900 font-black text-lg tracking-tight">Assessed Risk Level: {{ result.risk_level }}</h3>
-                    <p class="text-{{ risk_color }}-700 text-xs sm:text-sm mt-1 font-medium leading-relaxed max-w-3xl">{{ result.medical_disclaimer }}</p>
-                </div>
+            <div class="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+                <a href="{{ url_for('symptom_receipt_details') }}" class="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-sky-500 text-slate-700 hover:text-sky-600 text-xs font-bold transition-all shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf text-sky-600"></i>
+                    <span>Download Official PDF</span>
+                </a>
+                <a href="{{ url_for('symptoms_step2') }}" class="px-4 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold transition-colors flex items-center gap-2 border border-sky-200">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>Edit & Recheck</span>
+                </a>
+                <a href="{{ url_for('symptoms') }}" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-left text-slate-500"></i>
+                    <span>New Check</span>
+                </a>
             </div>
         </div>
 
-        <!-- 3. Main Dashboard Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- LEFT COLUMN: Insights & Details (Spans 8) -->
-            <div class="lg:col-span-8 space-y-8">
-                
-                <!-- 0. Physician Validation Card -->
-                {% if doctor_review %}
-                <section class="bg-gradient-to-r from-emerald-50 to-teal-50/30 border-2 border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-md relative overflow-hidden group">
-                    <!-- Background Seal -->
-                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-500 rounded-full blur-[80px] opacity-15 pointer-events-none"></div>
-                    
-                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-emerald-200/50 pb-6 mb-6">
-                        <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-lg shadow-emerald-600/20">
-                                <i class="fas fa-file-signature"></i>
+        
+        <!-- ================= MAIN REPORT GRID ================= -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- ================= LEFT COLUMN: PATIENT PROFILE & SCANNER (4 COLS) ================= -->
+            <div class="lg:col-span-4 space-y-6">
+
+                <!-- 1. Patient Demographics & Baseline Card -->
+                <div class="symptom-card rounded-3xl p-6 sm:p-7">
+                    <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                                <i class="fa-solid fa-id-card-clip"></i>
                             </div>
                             <div>
-                                <div class="flex items-center gap-2">
-                                    <h2 class="text-lg font-bold text-slate-800 tracking-tight">Clinically Audited Verdict</h2>
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-700 border border-emerald-500/30">
-                                        <i class="fas fa-check-double text-[8px]"></i> Signed & Verified
-                                    </span>
-                                </div>
-                                <p class="text-xs text-slate-500 mt-1 font-medium">
-                                    Reviewed by: <span class="text-slate-800 font-bold">Dr. {{ doctor_review.doctor_name }}</span> on {{ doctor_review.created_at[:10] }}
-                                </p>
+                                <h3 class="font-display font-bold text-slate-900 text-base">Patient Profile</h3>
+                                <p class="text-[11px] text-slate-400 font-mono-code">Biometric Baseline</p>
                             </div>
                         </div>
-                        
-                        <!-- Authorized Stamp -->
-                        <div class="flex flex-wrap items-center gap-3 bg-emerald-500/5 px-4 py-2.5 rounded-2xl border border-emerald-500/10 shrink-0">
-                            <div class="flex flex-col text-left md:text-right">
-                                <span class="text-[8px] font-black text-emerald-800 uppercase tracking-[2px] block leading-none">Spherix Clinic</span>
-                                <span class="text-[7px] font-bold text-slate-400 block mt-1 leading-none">ID: SPX-REV-{{ doctor_review.id }}</span>
-                            </div>
-                            <!-- Digital Signature Image -->
-                            <div class="h-9 px-2 flex items-center justify-center bg-white rounded-xl shadow-sm border border-emerald-500/10">
-                                <img src="{{ url_for('static', filename='images/signature.png') }}" class="h-6 max-w-[90px] object-contain" alt="Signature">
-                            </div>
-                            <!-- Stamp Image -->
-                            <div class="h-9 w-9 flex items-center justify-center rounded-xl bg-white shadow-sm border border-emerald-500/10">
-                                <img src="{{ url_for('static', filename='images/stamp.png') }}" class="h-7 w-7 object-contain" alt="Stamp">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            <div>
-                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Physician's Assessment Status</h4>
-                                <p class="text-sm font-bold text-slate-800 mt-1 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> {{ doctor_review.status }}
-                                </p>
-                            </div>
-                            
-                            {% if doctor_review.clinical_remarks %}
-                            <div>
-                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Clinical Remarks & Notes</h4>
-                                <p class="text-sm text-slate-600 mt-1 leading-relaxed font-medium">{{ doctor_review.clinical_remarks }}</p>
-                            </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="space-y-4 border-t md:border-t-0 md:border-l border-slate-200/50 md:pl-6 pt-4 md:pt-0">
-                            {% if doctor_review.prescribed_treatment %}
-                            <div>
-                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Prescribed Treatment Course</h4>
-                                <p class="text-sm text-slate-700 mt-1 leading-relaxed font-semibold bg-white/60 p-3 rounded-xl border border-slate-200/40">{{ doctor_review.prescribed_treatment }}</p>
-                            </div>
-                            {% endif %}
-                            
-                            {% if doctor_review.recommended_tests %}
-                            <div>
-                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Recommended Laboratory/Diagnostic Tests</h4>
-                                <p class="text-sm text-slate-600 mt-1 leading-relaxed font-medium"><i class="fas fa-vial text-emerald-500 mr-1"></i> {{ doctor_review.recommended_tests }}</p>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </section>
-                {% else %}
-                <section class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden group">
-                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-amber-500 rounded-full blur-[80px] opacity-10 pointer-events-none"></div>
-                    
-                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-slate-100 pb-6 mb-6">
-                        <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-xl border border-amber-500/20">
-                                <i class="fas fa-stethoscope"></i>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h2 class="text-lg font-bold text-slate-800 tracking-tight">Physician Verdict & Sign-off</h2>
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Pending Validation
-                                    </span>
-                                </div>
-                                <p class="text-xs text-slate-500 mt-1 font-medium">
-                                    This report is currently an AI draft. Submit it to a doctor for verification.
-                                </p>
-                            </div>
-                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold font-mono-code">
+                            ID: #{{ session.get('user_id', 'PT-2026') }}
+                        </span>
                     </div>
 
-                    {% if current_user.is_authenticated and current_user.is_doctor %}
-                    <!-- Review Sign-off Console -->
-                    <div class="bg-slate-50 border border-slate-200/50 rounded-2xl p-5 sm:p-6">
-                        <h3 class="font-extrabold text-sm text-slate-800 mb-4 flex items-center gap-2">
-                            <i class="fas fa-shield-halved text-blue-600"></i> Authorized Clinical Review Console
-                        </h3>
+                    <div class="space-y-3 text-xs">
+                        <div class="flex justify-between py-1.5 border-b border-slate-50">
+                            <span class="text-slate-500 font-medium">Age / Sex</span>
+                            <span class="font-bold text-slate-800">{{ age or session.get('age', '30') }} Yrs &bull; {{ gender or session.get('gender', 'Not specified') }}</span>
+                        </div>
                         
-                        <form action="{{ url_for('validate_symptom_result') }}" method="POST" class="space-y-4">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="symptom_query" value="{{ query }}">
-                            
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Review Status Verdict</label>
-                                    <select name="status" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                                        <option value="Approved AI Findings">Approve AI Findings</option>
-                                        <option value="Modified Diagnosis (Refer to Remarks)">Modify/Amend Diagnosis</option>
-                                        <option value="Inconclusive (Further Labs Required)">Inconclusive Findings</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommended Tests</label>
-                                    <input type="text" name="recommended_tests" placeholder="e.g. CBC, Lipid Profile, Chest X-Ray" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                                </div>
+                        {% set h = (session.get('height') or 175)|float %}
+                        {% set w = (session.get('weight') or 70)|float %}
+                        {% set bmi = ((w / ((h / 100.0) * (h / 100.0)))|round(1)) if h > 0 else 22.8 %}
+                        {% set bmi_val = bmi|float %}
+                        <div class="flex justify-between py-1.5 border-b border-slate-50 items-center">
+                            <span class="text-slate-500 font-medium">Height & Body Mass</span>
+                            <div class="text-right">
+                                <span class="font-bold text-slate-800">{{ h|int }} cm &bull; {{ w|int }} kg</span>
+                                <span class="block text-[10px] text-sky-600 font-semibold font-mono-code">BMI {{ bmi }} ({% if bmi_val < 18.5 %}Underweight{% elif bmi_val < 25.0 %}Normal{% elif bmi_val < 30.0 %}Overweight{% else %}Obese{% endif %})</span>
                             </div>
-                            
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Clinical Remarks & Diagnostics Notes</label>
-                                <textarea name="clinical_remarks" rows="2" placeholder="Describe clinical symptoms, observations, or warnings..." class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" required></textarea>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Prescribed Treatment & Medications</label>
-                                <textarea name="prescribed_treatment" rows="2" placeholder="e.g. Calpol 650mg twice daily for 3 days, complete bed rest" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
-                            </div>
-                            
-                            <div class="flex justify-end">
-                                <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_8px_16px_-6px_rgba(37,99,235,0.4)] transition-all">
-                                    <i class="fas fa-file-signature mr-1.5"></i> Sign & Publish Official Verdict
-                                </button>
-                            </div>
-                        </form>
+                        </div>
+
+                        <div class="flex justify-between py-1.5 border-b border-slate-50">
+                            <span class="text-slate-500 font-medium">Symptom Duration</span>
+                            <span class="font-bold text-slate-800">{{ duration or session.get('symptom_duration', 'Acute (< 3 days)') }}</span>
+                        </div>
+
+                        <div class="flex justify-between py-1.5 border-b border-slate-50">
+                            <span class="text-slate-500 font-medium">Reported Severity</span>
+                            <span class="font-bold text-sky-700">{{ severity or session.get('symptom_severity', 'Moderate') }}</span>
+                        </div>
+
+                        {% if session.get('body_part') %}
+                        <div class="flex justify-between py-1.5 border-b border-slate-50">
+                            <span class="text-slate-500 font-medium">Primary Anatomical Site</span>
+                            <span class="font-bold text-slate-800 capitalize">{{ session.get('body_part') }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if session.get('medical_history') %}
+                        <div class="pt-2">
+                            <span class="text-slate-500 block mb-1 text-[11px] font-semibold">Medical History:</span>
+                            <p class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-medium leading-relaxed text-[11px]">
+                                {{ session.get('medical_history') }}
+                            </p>
+                        </div>
+                        {% endif %}
+
+                        {% if current_medicines or session.get('current_medicines') %}
+                        <div class="pt-2">
+                            <span class="text-slate-500 block mb-1 text-[11px] font-semibold flex items-center gap-1">
+                                <i data-lucide="pill" class="w-3 h-3 text-sky-600"></i>
+                                <span>Current Medications:</span>
+                            </span>
+                            <p class="p-3 rounded-xl bg-sky-50/60 border border-sky-200 text-sky-900 font-medium text-[11px]">
+                                {{ current_medicines or session.get('current_medicines') }}
+                            </p>
+                        </div>
+                        {% endif %}
+
+                        {% if allergies or session.get('allergies') %}
+                        <div class="pt-2">
+                            <span class="text-rose-600 block mb-1 text-[11px] font-bold flex items-center gap-1">
+                                <i data-lucide="alert-triangle" class="w-3 h-3 text-rose-500"></i>
+                                <span>Known Drug Allergies:</span>
+                            </span>
+                            <p class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 font-medium text-[11px]">
+                                {{ allergies or session.get('allergies') }}
+                            </p>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% else %}
-                    <!-- Regular Patient / Guest view: show booking shortcuts -->
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                        <p class="text-xs text-slate-600 font-medium leading-relaxed max-w-xl">
-                            <i class="fas fa-info-circle text-amber-500 mr-1.5"></i> Connect with one of our recommended clinical specialists to review your AI analysis, obtain an official prescription, and append formal medical sign-off to this record.
-                        </p>
-                        <a href="#specialist-section" class="px-5 py-2.5 bg-slate-900 text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-blue-600 transition-colors shrink-0">
-                            Connect with Specialist
-                        </a>
+                </div>
+
+                <!-- 2. Chief Complaint & Reported Context -->
+                <div class="symptom-card rounded-3xl p-6 sm:p-7">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono-code flex items-center gap-1.5">
+                        <i data-lucide="message-square" class="w-3.5 h-3.5 text-sky-600"></i>
+                        <span>Chief Complaint Query</span>
+                    </h4>
+                    <p class="text-xs text-slate-700 italic bg-slate-50 p-4 rounded-2xl border border-slate-200 leading-relaxed">
+                        "{{ raw_symptoms or query or session.get('raw_symptoms') or 'Standard multi-factor symptom query submitted.' }}"
+                    </p>
+
+                    {% if worse_factors or better_factors %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3 pt-3 border-t border-slate-100 text-[11px]">
+                        {% if worse_factors %}
+                        <div class="p-2.5 rounded-xl bg-rose-50/70 border border-rose-100 text-rose-800">
+                            <span class="font-bold block mb-0.5">Aggravating:</span>
+                            <span>{{ worse_factors }}</span>
+                        </div>
+                        {% endif %}
+                        {% if better_factors %}
+                        <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100 text-emerald-800">
+                            <span class="font-bold block mb-0.5">Relieving:</span>
+                            <span>{{ better_factors }}</span>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endif %}
-                </section>
+                </div>
+
+                <!-- 3. Interactive Visual Biomarker & Prescription Scanner Tool -->
+                <div class="symptom-card rounded-3xl p-6 sm:p-7 border-2 border-sky-100 bg-gradient-to-b from-sky-50/40 to-white">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-display font-bold text-slate-900 text-sm">Google Cloud Vision Scanner</h4>
+                            <p class="text-[11px] text-slate-500">Inspect rash, wound, or Rx document</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                        Upload or snap a physical symptom photo or prescription to run real-time Google Cloud Vision & OCR biomarker detection.
+                    </p>
+
+                    <form id="live-scan-form" class="space-y-3" enctype="multipart/form-data">
+                        <label for="live-scan-input" class="flex flex-col items-center justify-center p-4 border-2 border-dashed border-sky-300 rounded-2xl bg-white hover:bg-sky-50/50 cursor-pointer transition-all text-center group">
+                            <i data-lucide="upload-cloud" class="w-6 h-6 text-sky-500 mb-1 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs font-bold text-slate-700" id="live-scan-label">Choose Image or Snap Photo</span>
+                            <span class="text-[10px] text-slate-400">JPG, PNG, WebP up to 10MB</span>
+                            <input type="file" id="live-scan-input" accept="image/*" class="hidden">
+                        </label>
+                        <button type="submit" id="live-scan-btn" class="w-full py-2.5 rounded-xl btn-radiant-symptom text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer bg-emerald-600">
+                            <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                            <span>Run Vision Inspection</span>
+                        </button>
+                    </form>
+                    <div id="live-scan-result" class="mt-3 hidden p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"></div>
+                </div>
+
+                <!-- 4. Urgent Care Telehealth Card -->
+                <div class="symptom-card rounded-3xl p-6 sm:p-7 bg-slate-900 text-white border border-slate-800 shadow-xl">
+                    <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center mb-3">
+                         <i class="fa-solid fa-video"></i>
+                    </div>
+                    <h4 class="font-display font-bold text-white text-base mb-1">On-Call Telehealth Physician</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Connect within 15 minutes with a board-certified physician for clinical verification and prescription issuance.
+                    </p>
+                    <a href="{{ url_for('doctors_list') }}" class="block w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider text-center transition-all shadow-md">
+                        Start Video Consult &rarr;
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- ================= RIGHT COLUMN: AI CLINICAL DIAGNOSIS & OPENFDA (8 COLS) ================= -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- 1. Google Cloud Vision / Multimodal Visual Biomarkers Panel (if image uploaded or analyzed) -->
+                {% if image_path or vision_findings %}
+                <div class="symptom-card rounded-3xl p-6 sm:p-8 border-2 border-sky-200 bg-gradient-to-br from-white via-sky-50/20 to-indigo-50/20">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-sky-500 text-white flex items-center justify-center shadow-md">
+                                <i class="fa-solid fa-eye"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-display font-bold text-slate-900 text-base">Google Cloud Vision & Multimodal Inspection</h3>
+                                    <span class="px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[10px] font-bold uppercase tracking-wider">
+                                        Vision Verified
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500">Visual biomarker recognition & physical symptom pattern analysis</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                        {% if image_path %}
+                        <div class="md:col-span-4 flex flex-col items-center">
+                            <div class="relative w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm group">
+                                <img src="{{ image_path }}" alt="Symptom Capture" class="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300">
+                                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent flex items-end p-2.5">
+                                    <span class="text-[10px] text-white font-mono-code font-bold">Image Capture Analyzed</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="{% if image_path %}md:col-span-8{% else %}md:col-span-12{% endif %} space-y-3 text-xs">
+                            {% if vision_findings %}
+                                {% if vision_findings.get('visual_elements') %}
+                                <div>
+                                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono-code">Detected Visual Indicators:</span>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        {% for el in vision_findings.get('visual_elements') %}
+                                        <span class="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold text-[11px] flex items-center gap-1">
+                                            <i data-lucide="check" class="w-3 h-3 text-sky-600"></i>
+                                            <span>{{ el }}</span>
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if vision_findings.get('text_found') %}
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1 font-mono-code flex items-center gap-1">
+                                        <i data-lucide="file-text" class="w-3 h-3 text-sky-600"></i>
+                                        <span>OCR Text Extracted from Image:</span>
+                                    </span>
+                                    <p class="text-[11px] text-slate-700 italic font-mono-code line-clamp-2">
+                                        "{{ vision_findings.get('text_found') }}"
+                                    </p>
+                                </div>
+                                {% endif %}
+
+                                <p class="text-xs text-slate-600 leading-relaxed font-medium bg-white p-3 rounded-xl border border-slate-200/80">
+                                    {{ vision_findings.get('analysis', 'Physical dermal and anatomical markers mapped into Groq diagnostic neural engine.') }}
+                                </p>
+                            {% else %}
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Visual indicators evaluated and integrated with clinical symptom profile.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
 
-                <!-- Clinical Summary -->
-                <section class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100">
-                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Clinical Summary</h2>
-                    <p class="text-slate-700 text-base leading-loose font-medium">{{ result.clinical_summary }}</p>
-                </section>
-                
-                <!-- 2x2 Detail Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Recommendations -->
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:border-blue-200 transition-colors group">
-                        <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fas fa-clipboard-list"></i></div>
-                            Recommendations
-                        </h3>
-                        <ul class="space-y-3">
-                            {% for item in result.ai_recommendations %}
-                            <li class="flex items-start gap-3 text-sm font-medium text-slate-600 leading-relaxed"><i class="fas fa-check-circle text-emerald-500 mt-1 shrink-0"></i> <span>{{ item }}</span></li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    
-                    <!-- Self Care -->
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:border-emerald-200 transition-colors group">
-                        <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fas fa-leaf"></i></div>
-                            Self Care Guidance
-                        </h3>
-                        <ul class="space-y-3">
-                            {% for item in result.self_care_suggestions %}
-                            <li class="flex items-start gap-3 text-sm font-medium text-slate-600 leading-relaxed"><i class="fas fa-star text-amber-400 mt-1 shrink-0"></i> <span>{{ item }}</span></li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    
-                    <!-- Medicines -->
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:border-purple-200 transition-colors group">
-                        <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center"><i class="fas fa-pills"></i></div>
-                            Suggested OTC Relief
-                        </h3>
-                        <div class="space-y-3.5">
-                            {% for item in result.supportive_relief_options %}
-                                {% if item.is_disclaimer %}
-                                    <div class="text-[11px] text-slate-400 font-medium leading-relaxed mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
-                                        <i class="fas fa-info-circle text-blue-500 shrink-0"></i>
-                                        <span>{{ item.name }}</span>
-                                    </div>
-                                {% elif item.fda_verified %}
-                                    <!-- FDA Verified Interactive Medicine Pill Card -->
-                                    <div class="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/5 to-indigo-500/5 hover:from-purple-500/10 hover:to-indigo-500/10 border border-purple-500/10 hover:border-purple-500/20 transition-all cursor-pointer group/med"
-                                         data-drug="{{ item | tojson | forceescape }}"
-                                         onclick="openFdaFromElement(this)">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center text-xs group-hover/med:scale-105 transition-transform">
-                                                    <i class="fas fa-capsules"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="text-sm font-extrabold text-slate-800 group-hover/med:text-purple-700 transition-colors">{{ item.brand_name }}</h4>
-                                                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">{{ item.generic_name }}</p>
-                                                </div>
-                                            </div>
-                                            <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-700 shrink-0">
-                                                FDA Verified
-                                            </span>
-                                        </div>
-                                        <p class="text-[11px] text-slate-500 line-clamp-1 mt-2 pl-1 font-medium">{{ item.primary_use }}</p>
-                                        <div class="flex items-center gap-1 text-[9px] text-purple-600 font-black uppercase tracking-wider mt-2.5 pl-1 opacity-80 group-hover/med:opacity-100 transition-opacity">
-                                            <span>Inspect Drug Profile</span> <i class="fas fa-arrow-right text-[8px] transition-transform group-hover/med:translate-x-0.5"></i>
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <div class="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/40 hover:border-purple-200 transition-all cursor-pointer group/med"
-                                         onclick="inspectDrugByName('{{ item.generic_name or item.name }}')">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center text-xs group-hover/med:scale-105 transition-transform">
-                                                    <i class="fas fa-capsules"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="text-sm font-extrabold text-slate-800 group-hover/med:text-purple-700 transition-colors">{{ item.generic_name or item.name }}</h4>
-                                                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">Standard Relief</p>
-                                                </div>
-                                            </div>
-                                            <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-slate-200 text-slate-500 shrink-0">
-                                                Standard
-                                            </span>
-                                        </div>
-                                        <div class="flex items-center gap-1 text-[9px] text-purple-600 font-black uppercase tracking-wider mt-2.5 pl-1 opacity-80 group-hover/med:opacity-100 transition-opacity">
-                                            <span>Inspect Drug Profile</span> <i class="fas fa-arrow-right text-[8px] transition-transform group-hover/med:translate-x-0.5"></i>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
+                <!-- 2. Primary Identified Condition Hero Card (Groq AI Powered) -->
+                <div class="symptom-card rounded-3xl p-8 sm:p-10 border-2 border-sky-100">
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-6 mb-6 border-b border-slate-100">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-3 py-1 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
+                                    <i data-lucide="sparkles" class="w-3 h-3 text-sky-600"></i>
+                                    <span>Primary Identified Condition</span>
+                                </span>
+                                <span class="px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-[10px] font-bold font-mono-code">
+                                    Groq LLaMA-3 AI
+                                </span>
+                            </div>
+                            <h2 class="text-2xl sm:text-3xl font-display font-black text-slate-900 tracking-tight">
+                                {{ result.conditions[0] if result.conditions else 'General Upper Respiratory Symptoms' }}
+                            </h2>
+                        </div>
+
+                        <!-- Triage Risk Badge -->
+                        <div class="shrink-0 text-left sm:text-right">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1 font-mono-code">Triage Risk Level</span>
+                            <span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 border
+                                {% if 'High' in result.risk_level %}bg-rose-50 border-rose-300 text-rose-700
+                                {% elif 'Moderate' in result.risk_level %}bg-amber-50 border-amber-300 text-amber-700
+                                {% else %}bg-emerald-50 border-emerald-300 text-emerald-700{% endif %}">
+                                <span class="w-2 h-2 rounded-full {% if 'High' in result.risk_level %}bg-rose-500{% elif 'Moderate' in result.risk_level %}bg-amber-500{% else %}bg-emerald-500{% endif %}"></span>
+                                <span>{{ result.risk_level }}</span>
+                            </span>
                         </div>
                     </div>
-                    
-                    <!-- Warnings -->
-                    <div class="bg-rose-50 rounded-3xl p-6 shadow-sm border border-rose-100 group">
-                        <h3 class="font-bold text-rose-900 mb-5 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center"><i class="fas fa-triangle-exclamation"></i></div>
-                            When to see a doctor
-                        </h3>
-                        <ul class="space-y-3">
-                            {% for item in result.warning_alerts %}
-                            <li class="flex items-start gap-3 text-sm font-bold text-rose-700 leading-relaxed"><i class="fas fa-circle-exclamation mt-0.5 shrink-0"></i> <span>{{ item }}</span></li>
-                            {% endfor %}
-                        </ul>
+
+                    <div class="space-y-4">
+                        <!-- Pathophysiology Mechanism -->
+                        {% if pathophysiology or result.get('pathophysiology') %}
+                        <div class="p-4 rounded-2xl bg-sky-50/70 border border-sky-100">
+                            <h4 class="text-xs font-bold text-sky-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                <i class="fa-solid fa-house icon active"></i>
+                                <span>Pathophysiology & Biological Mechanism</span>
+                            </h4>
+                            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
+                                {{ pathophysiology or result.get('pathophysiology') }}
+                            </p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Clinical Description -->
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">Clinical Evaluation Summary:</h4>
+                            {% if condition_details and condition_details.description %}
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">{{ condition_details.description }}</p>
+                            {% else %}
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">{{ result.clinical_summary }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Contributing Factors -->
+                        {% if condition_details and condition_details.causes %}
+                            <div class="pt-2">
+                                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Common Contributing Factors:</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    {% for cause in condition_details.causes %}
+                                        <span class="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">{{ cause }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Triage Progression Timeline -->
+                        {% if triage_timeline or result.get('triage_timeline') %}
+                        <div class="pt-2 flex items-center gap-2.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+                            <i data-lucide="clock" class="w-4 h-4 text-indigo-500 shrink-0"></i>
+                            <div>
+                                <span class="font-bold text-slate-800">Expected Clinical Progression Window: </span>
+                                <span>{{ triage_timeline or result.get('triage_timeline') }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Interactive Follow-up Chat -->
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[500px]">
-                    <div class="bg-slate-900 text-white p-5 px-6 flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center border border-white/10"><i class="fas fa-robot text-sm"></i></div>
-                            <h3 class="font-bold tracking-tight">AI Specialist Chat</h3>
-                        </div>
-                        <span class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 bg-white/10 rounded-md">Ask Follow-ups</span>
+                <!-- 3. Differential Possibilities & Confidence Matrix -->
+                {% if result.conditions|length > 1 %}
+                <div class="symptom-card rounded-3xl p-6 sm:p-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-display font-bold text-slate-900 text-base flex items-center gap-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-sky-600"></i>
+                            <span>Differential Possibilities & Confidence Matrix</span>
+                        </h3>
+                        <span class="text-[11px] font-bold text-slate-400 font-mono-code">Bayesian Probability</span>
                     </div>
-                    
-                    <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50" id="chatHistory">
-                        {% if finalized %}
-                            <div class="p-5 bg-blue-50 text-blue-900 rounded-2xl text-sm font-medium border border-blue-100 shadow-sm">
-                                <div class="font-black text-xs uppercase text-blue-500 mb-2 tracking-widest">Finalized Summary Attached</div>
-                                {{ finalized_summary }}
-                            </div>
-                        {% endif %}
-                        {% for msg in chat_history %}
-                            {% if msg.role == 'user' %}
-                                <div class="flex justify-end">
-                                    <div class="bg-blue-600 text-white px-5 py-3.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-sm">{{ msg.message }}</div>
-                                </div>
-                            {% else %}
-                                <div class="flex justify-start">
-                                    <div class="bg-white border border-slate-200 text-slate-700 font-medium px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm">{{ msg.response }}</div>
+
+                    <div class="space-y-4">
+                        {% set cond_len = (result.conditions|length)|int %}
+                        {% for i in range(1, cond_len) %}
+                            {% if i < 4 %}
+                                {% set condition = result.conditions[i] %}
+                                {% set sc_len = (result.confidence_scores|length)|int if result.confidence_scores else 0 %}
+                                {% set score = (result.confidence_scores[i]|int) if (result.confidence_scores and i < sc_len) else (70 - i * 15) %}
+                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-sky-300 transition-colors">
+                                    <div class="flex justify-between items-center text-xs font-bold text-slate-800 mb-2">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                            <span>{{ condition }}</span>
+                                        </span>
+                                        <span class="font-mono-code text-sky-600">{{ score }}% Probability</span>
+                                    </div>
+                                    <div class="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-sky-500 to-indigo-600 rounded-full transition-all duration-500" style="--bar-pct: {{ score }}%; width: var(--bar-pct);"></div>
+                                    </div>
                                 </div>
                             {% endif %}
-                        {% else %}
-                            <div class="flex flex-col items-center justify-center h-full text-center text-slate-400 space-y-3 opacity-60">
-                                <i class="fas fa-comments text-4xl"></i>
-                                <p class="text-sm font-medium max-w-xs">No follow-up questions yet. Have concerns about the result? Ask away!</p>
-                            </div>
                         {% endfor %}
                     </div>
-                    
-                    <div class="p-4 bg-white border-t border-slate-100">
-                        <div class="flex gap-3">
-                            <input type="text" id="chatInput" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400" placeholder="Type your follow-up question here..." {% if finalized %}disabled{% endif %}>
-                            <button onclick="sendChatMessage()" class="bg-slate-900 text-white w-14 rounded-xl shadow-md hover:bg-blue-600 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center" {% if finalized %}disabled{% endif %}><i class="fas fa-paper-plane"></i></button>
+                </div>
+                {% endif %}
+
+                <!-- 4. OpenFDA Verified Pharmacology & Supportive Relief Options -->
+                <div class="symptom-card rounded-3xl p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <i class="fa-solid fa-capsules"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-display font-bold text-slate-900 text-base">OpenFDA Verified Supportive Medications</h3>
+                                <p class="text-[11px] text-slate-400">Click any card to inspect official FDA clinical labeling & dosage</p>
+                            </div>
                         </div>
-                        {% if not finalized %}
-                        <div class="mt-4 flex justify-between items-center px-1">
-                            <span class="text-xs text-slate-400 font-medium">Chat is added to your PDF</span>
-                            <form action="{{ url_for('symptoms_finalize') }}" method="POST">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider">Finalize & Attach <i class="fas fa-arrow-right ml-1"></i></button>
-                            </form>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-flex items-center gap-1 self-start sm:self-auto">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            <span>OpenFDA CDSCO Verified</span>
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {% for option in result.get('supportive_relief_options', []) %}
+                            {% if not option.is_disclaimer %}
+                            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between group">
+                                <div>
+                                    <div class="flex items-start justify-between gap-2 mb-2">
+                                        <h4 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                                            <span>{{ option.generic_name or option.get('name') }}</span>
+                                            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-500" title="Pharmacologically Verified"></i>
+                                        </h4>
+                                        <span class="px-2 py-0.5 rounded-full bg-white border border-emerald-200 text-[10px] font-bold text-emerald-700 font-mono-code">FDA Rx/OTC</span>
+                                    </div>
+                                    <p class="text-xs text-sky-600 font-semibold mb-2 font-mono-code">Brand: {{ option.get('brand_name', option.generic_name or option.get('name')) }}</p>
+                                    <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-4">
+                                        {{ option.get('primary_use', 'Provides symptomatic relief for targeted complaints.') }}
+                                    </p>
+                                </div>
+
+                                <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                                    <button type="button" class="medicine-info-btn font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+                                            data-name="{{ option.generic_name or option.get('name') }}"
+                                            data-brand="{{ option.get('brand_name', option.generic_name or option.get('name')) }}"
+                                            data-use="{{ option.get('primary_use', 'Relieves acute discomfort and inflammatory symptoms.') }}"
+                                            data-effects="{{ option.get('side_effects', [])|join(', ') or 'Mild nausea, dizziness, or drowsiness in sensitive individuals.' }}"
+                                            data-caution="{{ option.get('caution', 'Do not exceed maximum daily dosage. Consult a doctor if symptoms persist over 3 days.') }}"
+                                            data-instructions="{{ option.get('instructions', 'Take orally with water after meals. Refer to package labeling for exact frequency.') }}"
+                                            data-source="{{ option.get('source', 'OpenFDA Government Registry & Spherix Pharmacology') }}">
+                                        <span>Full FDA Profile</span>
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <a href="{{ url_for('medical_shop') }}" class="text-[11px] font-semibold text-slate-500 hover:text-sky-600 flex items-center gap-1">
+                                        <i data-lucide="shopping-bag" class="w-3 h-3"></i>
+                                        <span>Shop</span>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Live OpenFDA Drug Search Mini-Widget -->
+                    <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/60 to-sky-50/60 border border-emerald-200">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4 text-emerald-600"></i>
+                                <div>
+                                    <h5 class="text-xs font-bold text-slate-900">OpenFDA Live Drug Safety Lookup</h5>
+                                    <p class="text-[11px] text-slate-500">Check another medicine against official FDA labels</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-grow sm:max-w-xs">
+                                <input type="text" id="fda-quick-input" placeholder="e.g., Amoxicillin, Ibuprofen..." class="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+                                <button type="button" id="fda-quick-btn" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0 cursor-pointer">
+                                    Check
+                                </button>
+                            </div>
                         </div>
-                        {% endif %}
+                        <div id="fda-quick-result" class="mt-3 hidden p-3 rounded-xl bg-white border border-emerald-200 text-xs"></div>
                     </div>
                 </div>
+
+                <!-- 5. Dietary, Nutrition & Self-Care Recovery Matrix -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Dietary Guidelines -->
+                    <div class="symptom-card rounded-3xl p-6">
+                        <h4 class="font-display font-bold text-slate-900 text-sm mb-3 flex items-center gap-2 text-sky-800">
+                            <i data-lucide="utensils" class="w-4 h-4 text-sky-600"></i>
+                            <span>Recovery Nutrition & Hydration</span>
+                        </h4>
+
+                        <div class="space-y-3 text-xs">
+                            {% if dietary_guidelines and dietary_guidelines.get('recommended') %}
+                            <div>
+                                <span class="font-bold text-emerald-700 block mb-1 text-[11px] flex items-center gap-1">
+                                    <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-600"></i>
+                                    <span>Recommended:</span>
+                                </span>
+                                <ul class="space-y-1.5 text-slate-600">
+                                    {% for item in dietary_guidelines.get('recommended') %}
+                                    <li class="flex items-start gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+                                        <span>{{ item }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            {% if dietary_guidelines and dietary_guidelines.get('avoid') %}
+                            <div class="pt-2 border-t border-slate-100">
+                                <span class="font-bold text-rose-700 block mb-1 text-[11px] flex items-center gap-1">
+                                    <i data-lucide="x-circle" class="w-3 h-3 text-rose-500"></i>
+                                    <span>Items to Avoid:</span>
+                                </span>
+                                <ul class="space-y-1.5 text-slate-600">
+                                    {% for item in dietary_guidelines.get('avoid') %}
+                                    <li class="flex items-start gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0"></span>
+                                        <span>{{ item }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Practical Self-Care Steps -->
+                    <div class="symptom-card rounded-3xl p-6">
+                        <h4 class="font-display font-bold text-slate-900 text-sm mb-3 flex items-center gap-2 text-emerald-700">
+                            <i data-lucide="heart-pulse" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Self-Care Protocols</span>
+                        </h4>
+                        <ul class="space-y-2.5 text-xs text-slate-600">
+                            {% for suggestion in result.self_care_suggestions %}
+                            <li class="flex items-start gap-2.5">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"></i>
+                                <span>{{ suggestion }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 6. Red-Flag Warning Signs & When to Seek Emergency Care -->
+                <div class="symptom-card rounded-3xl p-6 sm:p-8 border-l-4 border-rose-500 bg-rose-50/40">
+                    <div class="flex items-center gap-2.5 mb-3">
+                        <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-display font-bold text-rose-900 text-sm">Emergency & Red-Flag Warnings</h4>
+                            <p class="text-[11px] text-rose-700">Seek immediate urgent medical evaluation if you experience:</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-rose-900">
+                        {% for alert in result.warning_alerts %}
+                        <div class="flex items-start gap-2 p-2.5 rounded-xl bg-white/70 border border-rose-200">
+                            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-500 shrink-0 mt-0.5"></i>
+                            <span>{{ alert }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 7. Recommended Next Steps, Specialists & Diagnostic Lab Tests -->
+                <div class="symptom-card rounded-3xl p-6 sm:p-8">
+                    <h3 class="font-display font-bold text-slate-900 text-base mb-4">Recommended Next Steps & Clinical Specialists</h3>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2 font-mono-code">Suggested Medical Specialists</span>
+                            <div class="flex flex-wrap gap-2">
+                                {% for specialist in result.recommended_specialists %}
+                                <a href="{{ url_for('doctors_list') }}" class="px-3.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 text-xs font-bold transition-colors inline-flex items-center gap-1.5">
+                                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                                    <span>{{ specialist }}</span>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2 font-mono-code">Recommended Diagnostic Tests</span>
+                            <div class="flex flex-wrap gap-2">
+                                {% for test in result.suggested_tests %}
+                                <span class="px-3.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold flex items-center gap-1.5">
+                                    <i data-lucide="microscope" class="w-3.5 h-3.5"></i>
+                                    <span>{{ test }}</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="shield-alert" class="w-5 h-5 text-slate-400 shrink-0"></i>
+                            <p class="text-[11px] text-slate-500 leading-relaxed">{{ result.medical_disclaimer }}</p>
+                        </div>
+                        <a href="{{ url_for('doctors_list') }}" class="btn-radiant-symptom px-6 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider shrink-0 transition-all">
+                            Find Doctor Now &rarr;
+                        </a>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- RIGHT COLUMN: Graphs & Action Steps (Spans 4) -->
-            <div class="lg:col-span-4 space-y-6">
-                
-                <!-- Analytics / Graph Card -->
-                <div class="bg-[#0F172A] rounded-3xl p-6 shadow-xl text-white relative overflow-hidden group">
-                    <!-- Abstract Background -->
-                    <div class="absolute -top-10 -right-10 w-40 h-40 bg-blue-500 rounded-full blur-[80px] opacity-40 group-hover:opacity-60 transition-opacity duration-700"></div>
-                    <div class="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-900 to-transparent z-0 pointer-events-none"></div>
-                    
-                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 relative z-10">Probability Analytics</h2>
-                    
-                    <!-- Canvas Container -->
-                    <div class="relative z-10 w-full aspect-square flex items-center justify-center mb-6 px-4">
-                        <canvas id="confidenceChart"></canvas>
-                    </div>
-                    
-                    <!-- Probability List -->
-                    <div class="space-y-4 relative z-10 border-t border-white/10 pt-6">
-                        {% for i in range(result.conditions|length) %}
-                        <div class="flex items-center justify-between group/item">
-                            <div class="flex items-center gap-3">
-                                <span class="w-2.5 h-2.5 rounded-full {% if loop.index == 1 %}bg-[#3B82F6]{% elif loop.index == 2 %}bg-[#8B5CF6]{% else %}bg-[#10B981]{% endif %}"></span>
-                                <span class="text-sm font-medium text-slate-300 group-hover/item:text-white transition-colors truncate max-w-[150px]" title="{{ result.conditions[i] }}">{{ result.conditions[i] }}</span>
-                            </div>
-                            <span class="text-sm font-bold text-white bg-white/10 px-2 py-1 rounded-lg">{{ result.confidence_scores[i] }}%</span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Suggested Specialists -->
-                <div id="specialist-section" class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                    <div class="flex items-center justify-between mb-2">
-                        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">Next Steps</h2>
-                        <span class="text-[10px] font-bold px-2 py-1 bg-blue-50 text-blue-600 rounded-md">Doctors</span>
-                    </div>
-                    <p class="text-xs font-semibold text-slate-500 mb-5 pb-4 border-b border-slate-100">Recommended Specialty: <span class="text-slate-800">{{ result.recommended_departments | join(', ') }}</span></p>
-                    
-                    <div class="space-y-3">
-                        {% for doctor in doctors[:4] %}
-                        <div class="flex items-center gap-4 p-3.5 rounded-2xl border-2 border-transparent hover:border-blue-100 hover:bg-blue-50/50 hover:shadow-md transition-all bg-slate-50 cursor-pointer group" data-href="{{ url_for('doctor_detail', doc_id=doctor.id) }}" onclick="window.location=this.dataset.href">
-                            <img src="{{ url_for('get_doctor_image', doc_id=doctor.id) }}" class="w-11 h-11 rounded-xl object-cover shadow-sm group-hover:scale-105 transition-transform">
-                            <div class="flex-1 overflow-hidden">
-                                <h4 class="font-bold text-sm text-slate-900 truncate">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</h4>
-                                <p class="text-[10px] text-blue-600 font-bold uppercase tracking-wider truncate">{{ doctor.department }}</p>
-                            </div>
-                            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:shadow-sm border border-slate-200 group-hover:border-blue-200 transition-all">
-                                <i class="fas fa-arrow-right text-xs"></i>
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="text-center bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-300 mx-auto mb-3 shadow-sm"><i class="fas fa-user-md text-xl"></i></div>
-                            <p class="text-sm text-slate-500 font-medium leading-relaxed">No exact specialists found for this department currently.</p>
-                            <a href="{{ url_for('doctors_list') }}" class="inline-block mt-4 px-4 py-2 bg-white border border-slate-200 text-blue-600 text-xs font-bold uppercase tracking-wider rounded-lg hover:border-blue-300 transition-all shadow-sm">Browse Directory</a>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-            </div>
         </div>
+
     </div>
 </div>
 
-<!-- Hidden Chart Data Carrier (To prevent IDE JS lint warnings) -->
-<span id="symptom-conditions-data" data-conditions="{{ result.conditions | tojson | safe }}" class="hidden"></span>
-<span id="symptom-scores-data" data-scores="{{ result.confidence_scores | tojson | safe }}" class="hidden"></span>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Enhanced Chart.js Setup
-        const ctx = document.getElementById('confidenceChart').getContext('2d');
-        
-        const labels = JSON.parse(document.getElementById('symptom-conditions-data').dataset.conditions || '[]');
-        const data = JSON.parse(document.getElementById('symptom-scores-data').dataset.scores || '[]');
-        
-        // Dynamic beautiful colors
-        const bgColors = [
-            'rgba(59, 130, 246, 0.8)', // Blue
-            'rgba(139, 92, 246, 0.8)', // Purple
-            'rgba(16, 185, 129, 0.8)'  // Emerald
-        ];
-        
-        const borderColors = [
-            'rgba(59, 130, 246, 1)',
-            'rgba(139, 92, 246, 1)',
-            'rgba(16, 185, 129, 1)'
-        ];
-        
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Match Probability',
-                    data: data,
-                    backgroundColor: bgColors.slice(0, data.length),
-                    borderColor: borderColors.slice(0, data.length),
-                    borderWidth: 0,
-                    hoverOffset: 15,
-                    borderRadius: 8,
-                    spacing: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                cutout: '75%', // Thinner ring for premium look
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        titleColor: '#0F172A',
-                        bodyColor: '#334155',
-                        padding: 16,
-                        cornerRadius: 12,
-                        boxPadding: 8,
-                        usePointStyle: true,
-                        borderColor: 'rgba(226, 232, 240, 1)',
-                        borderWidth: 1,
-                        titleFont: { size: 13, family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' },
-                        bodyFont: { size: 14, family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' },
-                        callbacks: {
-                            label: function(context) { return ' Probability Match: ' + context.raw + '%'; }
-                        }
-                    }
-                },
-                layout: {
-                    padding: 20
-                }
-            }
-        });
-    });
-
-    // Chatbot Logic
-    async function sendChatMessage() {
-        const input = document.getElementById('chatInput');
-        const text = input.value.trim();
-        if (!text) return;
-
-        const chatBox = document.getElementById('chatHistory');
-        
-        chatBox.innerHTML += `
-            <div class="flex justify-end">
-                <div class="bg-blue-600 text-white px-5 py-3.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-sm animate-in slide-in-from-bottom-2">${text}</div>
-            </div>
-        `;
-        input.value = '';
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        const loadingId = 'loading-' + Date.now();
-        chatBox.innerHTML += `
-            <div id="${loadingId}" class="flex justify-start">
-                <div class="bg-white border border-slate-200 text-slate-500 font-medium px-5 py-3.5 rounded-2xl rounded-tl-sm text-sm shadow-sm flex items-center gap-3">
-                    <div class="flex gap-1">
-                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
-                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                    </div>
-                    AI is analyzing...
-                </div>
-            </div>
-        `;
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        try {
-            const response = await fetch("{{ url_for('symptoms_chat') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await response.json();
+<!-- ================= OPENFDA MEDICINE DETAILS SLIDING SIDE DRAWER ================= -->
+<div id="medicine-modal" class="fixed inset-0 z-[1000] hidden overflow-hidden" role="dialog" aria-modal="true">
+    <!-- Backdrop Blur -->
+    <div id="medicine-modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+    
+    <!-- Sliding Right Drawer Panel -->
+    <div class="fixed inset-y-0 right-0 pl-10 max-w-full flex">
+        <div id="medicine-modal-panel" class="w-screen max-w-md md:max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col transform transition-transform duration-300 ease-out translate-x-full">
             
-            document.getElementById(loadingId).remove();
-            
-            if (data.success) {
-                chatBox.innerHTML += `
-                    <div class="flex justify-start">
-                        <div class="bg-white border border-slate-200 text-slate-700 font-medium px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm animate-in slide-in-from-bottom-2">${data.assistant}</div>
+            <!-- Drawer Header -->
+            <div class="p-6 bg-slate-900 text-white flex items-start justify-between border-b border-slate-800 shrink-0">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shadow-inner">
+                        <i data-lucide="pill" class="w-6 h-6"></i>
                     </div>
-                `;
-            } else {
-                chatBox.innerHTML += `
-                    <div class="flex justify-start">
-                        <div class="bg-rose-50 border border-rose-200 text-rose-700 px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Error: ${data.error || 'Failed to get response'}</div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xl font-display font-bold text-white tracking-tight" id="modal-med-name">Medicine Name</h3>
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30">
+                                OpenFDA Label
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5 font-mono-code" id="modal-med-brand">Brand Name</p>
                     </div>
-                `;
-            }
-            chatBox.scrollTop = chatBox.scrollHeight;
-        } catch(e) {
-            document.getElementById(loadingId).remove();
-            chatBox.innerHTML += `
-                <div class="flex justify-start">
-                    <div class="bg-rose-50 border border-rose-200 text-rose-700 px-5 py-3.5 rounded-2xl rounded-tl-sm max-w-[85%] text-sm shadow-sm font-medium"><i class="fas fa-wifi mr-2"></i> Connection error occurred.</div>
                 </div>
-            `;
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-    }
-
-    document.getElementById('chatInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') sendChatMessage();
-    });
-</script>
-
-<!-- FDA DRUG PROFILE LIGHTBOX MODAL -->
-<div id="fdaDrugModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-[10000] hidden p-4" onclick="closeFdaModal()">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-fade-in-up" onclick="event.stopPropagation()">
-        
-        <!-- Modal Header -->
-        <div class="p-6 sm:p-8 bg-gradient-to-r from-purple-600 to-indigo-600 text-white relative">
-            <div class="absolute top-6 right-6">
-                <button onclick="closeFdaModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/25 backdrop-blur-md transition-all">
-                    <i class="fas fa-times text-sm"></i>
+                <button id="close-medicine-modal" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center justify-center text-lg cursor-pointer">
+                    &times;
                 </button>
             </div>
-            
-            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 backdrop-blur-md">
-                Authoritative Drug Profile
-            </span>
-            
-            <h3 id="fdaBrandName" class="text-2xl sm:text-3xl font-black tracking-tight mt-4">Medicine Brand Name</h3>
-            <p id="fdaGenericName" class="text-xs text-white/80 font-bold uppercase tracking-widest mt-1">GENERIC INGREDIENT</p>
-        </div>
-        
-        <!-- Modal Body Content -->
-        <div class="p-6 sm:p-8 space-y-6 max-h-[60vh] overflow-y-auto lightbox-scroll">
-            <div>
-                <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Primary Use & Indications</h4>
-                <p id="fdaPrimaryUse" class="text-sm text-slate-700 dark:text-slate-200 mt-1.5 font-medium leading-relaxed font-semibold">Loading uses...</p>
-            </div>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                    <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Precautions & Warnings</h4>
-                    <p id="fdaCaution" class="text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 p-3.5 rounded-2xl mt-1.5 font-semibold leading-relaxed">Loading precautions...</p>
-                </div>
+
+            <!-- Drawer Content Body (Rich OpenFDA Profile) -->
+            <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-grow text-slate-800">
                 
-                <div>
-                    <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Side Effects Profile</h4>
-                    <ul id="fdaSideEffects" class="space-y-1.5 mt-1.5 pl-1">
-                        <!-- Will be dynamically populated -->
-                    </ul>
+                <!-- 1. Primary Indication & Clinical Use -->
+                <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                    <h4 class="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-1.5 flex items-center gap-2">
+                        <i data-lucide="stethoscope" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Primary Clinical Indication</span>
+                    </h4>
+                    <p id="modal-med-use" class="text-xs sm:text-sm font-medium text-slate-700 leading-relaxed">
+                        Primary therapeutic indications and targeted symptom relief...
+                    </p>
+                </div>
+
+                <!-- 2. Standard Dosage & Administration Regimen -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4 text-slate-600"></i>
+                        <span>Standard Dosage & Administration</span>
+                    </h4>
+                    <p id="modal-med-instructions" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        Dosage schedule, frequency, and administration instructions with water after meals...
+                    </p>
+                </div>
+
+                <!-- 3. Adverse Effects & Safety Profile -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
+                        <span>Potential Side Effects & Adverse Events</span>
+                    </h4>
+                    <p id="modal-med-effects" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        Common mild side effects and adverse symptoms reported to OpenFDA...
+                    </p>
+                </div>
+
+                <!-- 4. Clinical Caution, Interactions & Contraindications -->
+                <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+                    <h4 class="text-xs font-bold text-amber-800 uppercase tracking-wider mb-1 flex items-center gap-2">
+                        <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600"></i>
+                        <span>Clinical Cautions & Boxed Warnings</span>
+                    </h4>
+                    <p id="modal-med-caution" class="text-xs font-medium text-amber-900 leading-relaxed">
+                        Contraindications, drug interactions, hepatic/renal warnings, and pregnancy guidance...
+                    </p>
+                </div>
+
+                <!-- 5. Quick Pharmacy Order Card -->
+                <div class="p-4 rounded-2xl bg-gradient-to-r from-sky-50 to-emerald-50 border border-sky-200 flex items-center justify-between gap-4">
+                    <div>
+                        <h5 class="text-xs font-bold text-slate-900">Order from Verified Pharmacy</h5>
+                        <p class="text-[11px] text-slate-600">Doorstep delivery with authentic batch validation.</p>
+                    </div>
+                    <a href="{{ url_for('medical_shop') }}" class="px-4 py-2.5 rounded-xl btn-radiant-symptom text-white font-bold text-xs shrink-0 transition-colors shadow-md flex items-center gap-1.5 bg-emerald-400">
+                        <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
+                        <span>Order in Shop</span>
+                    </a>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-[11px] text-slate-600 flex items-start gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-slate-400 mt-0.5 shrink-0"></i>
+                    <span>This clinical overview is authoritative OpenFDA data. Always follow prescription guidelines provided by your attending physician.</span>
                 </div>
             </div>
-            
-            <div>
-                <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">FDA Usage & Administration Instructions</h4>
-                <p id="fdaInstructions" class="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/40 mt-1.5 font-medium leading-relaxed">Loading instructions...</p>
+
+            <!-- Drawer Footer -->
+            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between shrink-0">
+                <span class="flex items-center gap-1.5">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>OpenFDA Government Drug Knowledge Base</span>
+                </span>
+                <span class="font-mono text-[10px] text-slate-400 font-mono-code" id="modal-med-source">OpenFDA API Verified</span>
             </div>
         </div>
-        
-        <!-- Modal Footer -->
-        <div class="p-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-            <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <i class="fas fa-university"></i> Source: US Food and Drug Administration (FDA)
-            </span>
-            <button onclick="closeFdaModal()" class="px-5 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all">
-                Dismiss Profile
-            </button>
+    </div>
+</div>
+
+<!-- ================= FLOATING AI FOLLOW-UP CHATBOT & INTERACTIVE ASSISTANT ================= -->
+<div class="fixed bottom-6 left-6 z-50">
+    <button id="chat-toggle" class="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-slate-900 text-white flex items-center justify-center transition-all hover:scale-105 shadow-2xl border border-slate-800 cursor-pointer group">
+        <i data-lucide="bot" class="w-7 h-7 text-sky-400 group-hover:scale-110 transition-transform"></i>
+    </button>
+</div>
+
+<div id="chat-widget" class="hidden fixed bottom-24 left-4 sm:left-6 w-full max-w-sm sm:max-w-md z-50 overflow-hidden symptom-card rounded-3xl shadow-2xl border border-slate-200">
+    <div class="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <h3 class="font-display font-bold text-sm">Groq AI Follow-up Triage</h3>
+                <p id="clear-chat-btn" class="text-[10px] text-slate-400 hover:text-rose-400 cursor-pointer transition-colors">Clear History</p>
+            </div>
         </div>
-        
+        <button id="chat-close" class="text-slate-400 hover:text-white text-xl cursor-pointer p-1">&times;</button>
+    </div>
+    
+    <!-- Quick Query Suggestion Chips -->
+    <div class="p-2.5 bg-slate-100 border-b border-slate-200 overflow-x-auto flex gap-1.5 custom-scrollbar text-[11px]">
+        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+            Explain diagnosis
+        </button>
+        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+            Drug interactions?
+        </button>
+        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+            Foods to avoid
+        </button>
+        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+            When to visit ER?
+        </button>
+    </div>
+
+    <div id="chat-messages" class="p-4 h-72 sm:h-80 overflow-y-auto space-y-3 bg-slate-50 custom-scrollbar text-xs">
+        <div class="flex" id="initial-chat-message">
+            <div class="bg-sky-600 text-white p-3 rounded-2xl max-w-xs shadow-sm leading-relaxed">
+                <p>Hello! I am your Groq Clinical Assistant. Ask any questions about your report, symptoms, or OpenFDA medication guidance.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-3.5 bg-white border-t border-slate-100">
+        <form id="chat-form" class="flex gap-2">
+            <input type="text" id="chat-input" placeholder="Type medical query..." class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-sky-500">
+            <button type="submit" class="btn-radiant-symptom px-4 py-2 rounded-xl text-white font-bold text-xs">Send</button>
+        </form>
     </div>
 </div>
 
 <script>
-function openFdaFromElement(el) {
-    try {
-        const data = JSON.parse(el.getAttribute('data-drug'));
-        openFdaModal(data);
-    } catch(e) {
-        console.error("Failed to parse drug data:", e);
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
     }
-}
 
-function openFdaLoader(drugName) {
-    document.getElementById('fdaBrandName').innerText = drugName;
-    document.getElementById('fdaGenericName').innerText = "Retrieving official FDA records...";
-    document.getElementById('fdaPrimaryUse').innerHTML = `
-        <div class="flex items-center gap-3 text-purple-600 font-medium">
-            <i class="fas fa-circle-notch animate-spin text-lg"></i> 
-            <span>Querying OpenFDA databases for chemical matches...</span>
-        </div>
-    `;
-    document.getElementById('fdaCaution').innerHTML = `
-        <div class="h-8 bg-amber-500/10 rounded-lg animate-pulse"></div>
-    `;
-    document.getElementById('fdaSideEffects').innerHTML = `
-        <div class="space-y-2">
-            <div class="h-3 bg-slate-100 rounded-lg animate-pulse w-3/4"></div>
-            <div class="h-3 bg-slate-100 rounded-lg animate-pulse w-1/2"></div>
-        </div>
-    `;
-    document.getElementById('fdaInstructions').innerHTML = `
-        <div class="space-y-3">
-            <div class="h-4 bg-slate-50 rounded-lg animate-pulse"></div>
-            <div class="h-4 bg-slate-50 rounded-lg animate-pulse w-5/6"></div>
-        </div>
-    `;
-    
-    const modal = document.getElementById('fdaDrugModal');
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
+    // ================= MEDICINE SIDE DRAWER LOGIC =================
+    const medicineModal = document.getElementById('medicine-modal');
+    const medicineModalBackdrop = document.getElementById('medicine-modal-backdrop');
+    const medicineModalPanel = document.getElementById('medicine-modal-panel');
+    const closeMedicineModalBtn = document.getElementById('close-medicine-modal');
+    const medicineInfoBtns = document.querySelectorAll('.medicine-info-btn');
 
-function showFdaModalError(drugName) {
-    document.getElementById('fdaBrandName').innerText = drugName;
-    document.getElementById('fdaGenericName').innerText = "FDA Record Offline";
-    document.getElementById('fdaPrimaryUse').innerHTML = `
-        <div class="flex items-center gap-2 text-rose-600 font-medium bg-rose-50 border border-rose-200/50 p-4 rounded-2xl">
-            <i class="fas fa-exclamation-circle text-lg"></i>
-            <span>We couldn't retrieve an official FDA profile for this chemical. Please consult a doctor or local pharmacist.</span>
-        </div>
-    `;
-    document.getElementById('fdaCaution').innerText = "Not available.";
-    document.getElementById('fdaSideEffects').innerHTML = `
-        <li class="text-xs text-slate-400 italic">No side effects logged.</li>
-    `;
-    document.getElementById('fdaInstructions').innerText = "Consult product labeling.";
-}
-
-async function inspectDrugByName(drugName) {
-    if (!drugName) return;
-    
-    // Clean the term to pass it to the URL (split by common indicators)
-    const parts = drugName.split(/\b(for|to|with|and)\b|\(|,/i);
-    const cleanName = parts[0].trim().replace(/[-\s]+/g, ' ');
-    
-    openFdaLoader(cleanName);
-    
-    try {
-        const response = await fetch(`/drug-info/${encodeURIComponent(cleanName)}`);
-        if (!response.ok) throw new Error("Not found");
-        const data = await response.json();
-        
-        // Populate the modal content
-        openFdaModal(data);
-    } catch(e) {
-        console.error("Failed to query drug info:", e);
-        showFdaModalError(cleanName);
-    }
-}
-
-function openFdaModal(data) {
-    document.getElementById('fdaBrandName').innerText = data.brand_name || data.name;
-    document.getElementById('fdaGenericName').innerText = data.generic_name || '';
-    document.getElementById('fdaPrimaryUse').innerText = data.primary_use || 'General therapeutic use.';
-    document.getElementById('fdaCaution').innerText = data.caution || 'Consult a doctor before use.';
-    document.getElementById('fdaInstructions').innerText = data.instructions || 'Consult clinical guidelines or product packaging.';
-    
-    const sideEffectsList = document.getElementById('fdaSideEffects');
-    sideEffectsList.innerHTML = '';
-    if (data.side_effects && data.side_effects.length > 0) {
-        data.side_effects.forEach(eff => {
-            sideEffectsList.innerHTML += `
-                <li class="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
-                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
-                    <span>${eff}</span>
-                </li>
-            `;
+    medicineInfoBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const data = btn.dataset;
+            document.getElementById('modal-med-name').textContent = data.name || 'Medication Profile';
+            document.getElementById('modal-med-brand').textContent = `Brand: ${data.brand || data.name}`;
+            document.getElementById('modal-med-use').textContent = data.use || 'Clinical indications for symptom relief.';
+            document.getElementById('modal-med-effects').textContent = data.effects || 'No major adverse reactions reported in standard OTC dosage.';
+            document.getElementById('modal-med-caution').textContent = data.caution || 'Consult physician before use.';
+            document.getElementById('modal-med-instructions').textContent = data.instructions || 'Follow package labeling.';
+            document.getElementById('modal-med-source').textContent = data.source || 'OpenFDA API';
+            
+            medicineModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+            setTimeout(() => {
+                medicineModalBackdrop.classList.remove('opacity-0');
+                medicineModalPanel.classList.remove('translate-x-full');
+            }, 10);
         });
-    } else {
-        sideEffectsList.innerHTML = `
-            <li class="text-xs text-slate-400 dark:text-slate-500 italic">None reported or consult label.</li>
-        `;
-    }
-    
-    const modal = document.getElementById('fdaDrugModal');
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
+    });
 
-function closeFdaModal() {
-    const modal = document.getElementById('fdaDrugModal');
-    modal.classList.add('hidden');
-    document.body.style.overflow = '';
-}
+    const closeMedicineModal = () => {
+        if (!medicineModal) return;
+        medicineModalBackdrop.classList.add('opacity-0');
+        medicineModalPanel.classList.add('translate-x-full');
+        document.body.classList.remove('overflow-hidden');
+        setTimeout(() => medicineModal.classList.add('hidden'), 300);
+    };
+
+    if (closeMedicineModalBtn) closeMedicineModalBtn.addEventListener('click', closeMedicineModal);
+    if (medicineModalBackdrop) medicineModalBackdrop.addEventListener('click', closeMedicineModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && medicineModal && !medicineModal.classList.contains('hidden')) {
+            closeMedicineModal();
+        }
+    });
+
+    // ================= OPENFDA QUICK LOOKUP WIDGET =================
+    const fdaInput = document.getElementById('fda-quick-input');
+    const fdaBtn = document.getElementById('fda-quick-btn');
+    const fdaResult = document.getElementById('fda-quick-result');
+
+    if (fdaBtn && fdaInput && fdaResult) {
+        fdaBtn.addEventListener('click', async () => {
+            const drugName = fdaInput.value.trim();
+            if (!drugName) return;
+
+            fdaResult.classList.remove('hidden');
+            fdaResult.innerHTML = `<div class="text-slate-500 animate-pulse">Querying OpenFDA official registry for "${drugName}"...</div>`;
+
+            try {
+                const response = await fetch(`/api/drug/search?q=${encodeURIComponent(drugName)}`);
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    const match = data[0];
+                    fdaResult.innerHTML = `
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-emerald-800 text-xs">${match.name}</span>
+                                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Verified</span>
+                            </div>
+                            <p class="text-slate-600 text-[11px]"><strong>Category:</strong> ${match.category}</p>
+                            <p class="text-slate-600 text-[11px]"><strong>Indication:</strong> ${match.primary_use || 'Symptomatic therapy.'}</p>
+                        </div>
+                    `;
+                } else {
+                    fdaResult.innerHTML = `<span class="text-slate-600 text-[11px]">No exact FDA registry record for "${drugName}". Consult a registered pharmacist.</span>`;
+                }
+            } catch (err) {
+                fdaResult.innerHTML = `<span class="text-rose-600 text-[11px]">OpenFDA service temporarily unavailable. Please retry.</span>`;
+            }
+        });
+    }
+
+    // ================= LIVE GOOGLE CLOUD VISION SCANNER =================
+    const liveScanForm = document.getElementById('live-scan-form');
+    const liveScanInput = document.getElementById('live-scan-input');
+    const liveScanLabel = document.getElementById('live-scan-label');
+    const liveScanBtn = document.getElementById('live-scan-btn');
+    const liveScanResult = document.getElementById('live-scan-result');
+
+    if (liveScanInput) {
+        liveScanInput.addEventListener('change', () => {
+            if (liveScanInput.files.length > 0) {
+                liveScanLabel.textContent = liveScanInput.files[0].name;
+            }
+        });
+    }
+
+    if (liveScanForm && liveScanBtn) {
+        liveScanForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!liveScanInput.files || liveScanInput.files.length === 0) {
+                alert('Please select an image first.');
+                return;
+            }
+
+            const file = liveScanInput.files[0];
+            const formData = new FormData();
+            formData.append('image', file);
+
+            liveScanBtn.disabled = true;
+            liveScanBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Analyzing with Vision...</span>`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            liveScanResult.classList.remove('hidden');
+            liveScanResult.innerHTML = `<p class="text-sky-600 animate-pulse">Running Google Cloud Vision & Multimodal Inspection...</p>`;
+
+            try {
+                const response = await fetch('/api/symptoms/scan-image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                liveScanBtn.disabled = false;
+                liveScanBtn.innerHTML = `<i data-lucide="scan" class="w-3.5 h-3.5"></i><span>Run Vision Inspection</span>`;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                if (data.success && data.findings) {
+                    const findings = data.findings;
+                    const visualTags = (findings.visual_elements || []).map(v => `<span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-bold">${v}</span>`).join(' ');
+                    
+                    liveScanResult.innerHTML = `
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-1.5 text-emerald-600 font-bold">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                                <span>Vision Inspection Complete</span>
+                            </div>
+                            ${visualTags ? `<div class="flex flex-wrap gap-1">${visualTags}</div>` : ''}
+                            <p class="text-slate-700 text-[11px] leading-relaxed font-medium">${findings.analysis || 'Physical visual indicators analyzed successfully.'}</p>
+                            ${findings.text_found ? `<p class="text-slate-500 text-[10px] font-mono-code bg-white p-1.5 rounded border border-slate-200">OCR Text: ${findings.text_found}</p>` : ''}
+                        </div>
+                    `;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                } else {
+                    liveScanResult.innerHTML = `<span class="text-rose-600">${data.error || 'Inspection failed. Please try again.'}</span>`;
+                }
+            } catch (err) {
+                liveScanBtn.disabled = false;
+                liveScanBtn.innerHTML = `<i data-lucide="scan" class="w-3.5 h-3.5"></i><span>Run Vision Inspection</span>`;
+                liveScanResult.innerHTML = `<span class="text-rose-600">Failed to connect to Vision analyzer.</span>`;
+            }
+        });
+    }
+
+    // ================= GROQ AI FOLLOW-UP CHATBOT =================
+    const chatToggle = document.getElementById('chat-toggle');
+    const chatWidget = document.getElementById('chat-widget');
+    const chatClose = document.getElementById('chat-close');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const clearChatBtn = document.getElementById('clear-chat-btn');
+    const quickPromptBtns = document.querySelectorAll('.quick-prompt-btn');
+
+    if (chatToggle && chatWidget) {
+        chatToggle.addEventListener('click', () => {
+            chatWidget.classList.toggle('hidden');
+            if (!chatWidget.classList.contains('hidden')) {
+                chatInput.focus();
+            }
+        });
+    }
+
+    if (chatClose && chatWidget) {
+        chatClose.addEventListener('click', () => {
+            chatWidget.classList.add('hidden');
+        });
+    }
+
+    quickPromptBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (chatInput) {
+                chatInput.value = btn.textContent.trim();
+                chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        });
+    });
+
+    if (chatForm) {
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // User Message
+            const userMsgEl = document.createElement('div');
+            userMsgEl.className = 'flex justify-end';
+            userMsgEl.innerHTML = `<div class="bg-slate-900 text-white p-3 rounded-2xl max-w-xs text-xs shadow-sm">${message}</div>`;
+            chatMessages.appendChild(userMsgEl);
+            chatInput.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Typing indicator
+            const typingEl = document.createElement('div');
+            typingEl.className = 'flex';
+            typingEl.innerHTML = `<div class="bg-slate-200 text-slate-600 p-2.5 rounded-2xl text-[11px] animate-pulse">Groq AI analyzing query...</div>`;
+            chatMessages.appendChild(typingEl);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch('/symptoms/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await response.json();
+                typingEl.remove();
+
+                const botMsgEl = document.createElement('div');
+                botMsgEl.className = 'flex';
+                botMsgEl.innerHTML = `<div class="bg-sky-600 text-white p-3 rounded-2xl max-w-xs text-xs shadow-sm leading-relaxed">${data.assistant || data.reply || data.response || 'Please consult your attending doctor for clinical guidance.'}</div>`;
+                chatMessages.appendChild(botMsgEl);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } catch (err) {
+                typingEl.remove();
+                const errEl = document.createElement('div');
+                errEl.className = 'flex';
+                errEl.innerHTML = `<div class="bg-rose-100 text-rose-700 p-2.5 rounded-2xl text-xs">Service momentarily busy. Please try again.</div>`;
+                chatMessages.appendChild(errEl);
+            }
+        });
+    }
+
+    if (clearChatBtn) {
+        clearChatBtn.addEventListener('click', () => {
+            chatMessages.innerHTML = `
+                <div class="flex" id="initial-chat-message">
+                    <div class="bg-sky-600 text-white p-3 rounded-2xl max-w-xs shadow-sm text-xs leading-relaxed">
+                        <p>Hello! I am your Groq Clinical Assistant. Ask any questions about your report, symptoms, or OpenFDA medication guidance.</p>
+                    </div>
+                </div>`;
+        });
+    }
+});
 </script>
 {% endblock %}

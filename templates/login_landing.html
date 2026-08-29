@@ -1,305 +1,550 @@
 {% extends 'layout.html' %}
-{% block title %}Universal Gateway | Spherix Clinic{% endblock %}
+{% block title %}Universal Access Gateway | Spherix Clinic{% endblock %}
 {% block content %}
 
 <!-- Professional Modern Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Outfit:wght@100;300;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
     :root {
-        --bg: #030712;
-        --glass: rgba(255, 255, 255, 0.03);
-        --border: rgba(255, 255, 255, 0.08);
-        --accent-blue: #38bdf8;
-        --accent-purple: #818cf8;
+        --bg-dark: #030712;
+        --card-glass: rgba(15, 23, 42, 0.65);
+        --border-glass: rgba(255, 255, 255, 0.1);
+        --border-hover: rgba(255, 255, 255, 0.25);
     }
 
     body {
         margin: 0;
-        background-color: var(--bg);
-        font-family: 'Outfit', sans-serif;
+        background-color: var(--bg-dark);
+        font-family: 'Plus Jakarta Sans', sans-serif;
         color: white;
-        overflow: hidden; /* Clean, app-like feel */
-        height: 100vh;
-        width: 100vw;
+        overflow-x: hidden;
+        min-height: 100vh;
     }
 
-    /* Dynamic Mesh Background */
+    /* Ambient Dynamic Mesh Background */
     .mesh-container {
         position: fixed;
         inset: 0;
         z-index: -1;
         background: 
-            radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-            radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.15) 0px, transparent 50%),
-            radial-gradient(at 50% 50%, rgba(15, 23, 42, 1) 0px, transparent 100%);
+            radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.1) 0px, transparent 50%),
+            radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+            radial-gradient(at 50% 50%, rgba(15, 23, 42, 0.95) 0px, #030712 100%);
     }
 
-    /* Floating Orbs for Depth */
+    /* Floating Ambient Lights */
     .orb {
         position: absolute;
         border-radius: 50%;
-        filter: blur(80px);
+        filter: blur(100px);
         z-index: -1;
-        opacity: 0.5;
-        animation: floatOrb 20s infinite alternate ease-in-out;
+        opacity: 0.35;
+        animation: floatOrb 22s infinite alternate ease-in-out;
+        pointer-events: none;
     }
-    .orb-1 { width: 400px; height: 400px; background: #0ea5e9; top: 10%; left: 20%; }
-    .orb-2 { width: 300px; height: 300px; background: #6366f1; bottom: 10%; right: 20%; animation-delay: -5s; }
+    .orb-1 { width: 500px; height: 500px; background: #0284c7; top: 5%; left: 10%; }
+    .orb-2 { width: 450px; height: 450px; background: #6366f1; bottom: 5%; right: 10%; animation-delay: -7s; }
+    .orb-3 { width: 350px; height: 350px; background: #10b981; top: 40%; right: 30%; animation-delay: -12s; }
 
     @keyframes floatOrb {
         from { transform: translate(0, 0) scale(1); }
-        to { transform: translate(100px, 100px) scale(1.2); }
+        to { transform: translate(60px, 40px) scale(1.15); }
     }
 
-    /* Main Interface Wrapper */
-    .interface-wrapper {
-        height: 100vh;
+    /* Main Container */
+    .gateway-wrapper {
+        min-height: calc(100vh - 80px);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 0 40px;
-        perspective: 1200px;
+        padding: 48px 24px;
+        position: relative;
     }
 
-    .header-group {
+    .gateway-header {
         text-align: center;
-        margin-bottom: 60px;
-        z-index: 10;
+        margin-bottom: 48px;
+        max-width: 760px;
     }
 
-    .header-group h1 {
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 18px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: #38bdf8;
+        margin-bottom: 20px;
+        backdrop-filter: blur(8px);
+    }
+
+    .pulse-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background-color: #38bdf8;
+        box-shadow: 0 0 10px #38bdf8;
+        animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    .gateway-title {
         font-family: 'Space Grotesk', sans-serif;
-        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-size: clamp(2.2rem, 5vw, 3.8rem);
         font-weight: 700;
-        letter-spacing: -0.05em;
-        margin: 0;
-        background: linear-gradient(to bottom, #fff 40%, rgba(255,255,255,0.4));
+        letter-spacing: -0.04em;
+        line-height: 1.15;
+        margin: 0 0 16px 0;
+        background: linear-gradient(135deg, #ffffff 30%, rgba(255, 255, 255, 0.65) 100%);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
-    .status-bar {
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        padding: 6px 16px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid var(--border);
-        border-radius: 100px;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.2em;
-        color: var(--accent-blue);
-        margin-bottom: 20px;
+    .gateway-subtitle {
+        color: #94a3b8;
+        font-size: 1.05rem;
+        font-weight: 400;
+        margin: 0;
+        line-height: 1.6;
     }
 
-    /* The Floating Prism Layout */
-    .prism-layout {
-        display: flex;
+    /* Cards Grid */
+    .portal-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 24px;
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: 1200px;
+        width: 100%;
+        max-width: 1180px;
     }
 
-    /* Individual Portal Prism */
-    .portal-prism {
+    @media (max-width: 1024px) {
+        .portal-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .portal-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Individual Role Card */
+    .portal-card {
         position: relative;
-        width: 300px;
-        height: 200px;
-        background: var(--glass);
-        border: 1px solid var(--border);
-        border-radius: 24px;
-        padding: 30px;
-        text-decoration: none;
-        color: white;
-        backdrop-filter: blur(12px);
-        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        background: var(--card-glass);
+        border: 1px solid var(--border-glass);
+        border-radius: 20px;
+        padding: 28px;
+        backdrop-filter: blur(16px);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         overflow: hidden;
-        animation: floatCard 6s infinite ease-in-out;
+        min-height: 240px;
     }
 
-    /* Alternate floating speeds for organic feel */
-    .portal-prism:nth-child(even) { animation-duration: 7s; animation-delay: -1s; }
-    .portal-prism:nth-child(3n) { animation-duration: 8s; animation-delay: -2s; }
-
-    @keyframes floatCard {
-        0%, 100% { transform: translateY(0) rotateX(0deg); }
-        50% { transform: translateY(-15px) rotateX(5deg); }
+    .portal-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 20px;
+        padding: 1.5px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 60%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        pointer-events: none;
     }
 
-    .portal-prism:hover {
-        background: rgba(255,255,255,0.08);
-        border-color: rgba(255,255,255,0.3);
-        transform: scale(1.05) translateY(-20px) !important;
-        box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+    .portal-card:hover {
+        transform: translateY(-6px);
+        border-color: var(--border-hover);
+        box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
     }
 
-    /* Prism Content */
-    .prism-icon {
-        width: 48px;
-        height: 48px;
-        background: rgba(255,255,255,0.05);
+    /* Card Glow Spotlight */
+    .card-spotlight {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--accent-glow, rgba(56, 189, 248, 0.15)), transparent 60%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+    .portal-card:hover .card-spotlight {
+        opacity: 1;
+    }
+
+    /* Role Specific Accent Colors */
+    .card-patient { --accent-color: #6366f1; --accent-glow: rgba(99, 102, 241, 0.2); }
+    .card-doctor { --accent-color: #f59e0b; --accent-glow: rgba(245, 158, 11, 0.2); }
+    .card-hospital { --accent-color: #10b981; --accent-glow: rgba(16, 185, 129, 0.2); }
+    .card-blood { --accent-color: #f43f5e; --accent-glow: rgba(244, 63, 94, 0.2); }
+    .card-organ { --accent-color: #0ea5e9; --accent-glow: rgba(14, 165, 233, 0.2); }
+    .card-staff { --accent-color: #14b8a6; --accent-glow: rgba(20, 184, 166, 0.2); }
+    .card-admin { --accent-color: #3b82f6; --accent-glow: rgba(59, 130, 246, 0.25); }
+
+    /* Card Elements */
+    .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .card-icon {
+        width: 52px;
+        height: 52px;
         border-radius: 14px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--accent-blue);
-        margin-bottom: 10px;
-        transition: 0.3s;
+        color: var(--accent-color);
+        transition: all 0.3s;
     }
 
-    .portal-prism:hover .prism-icon {
-        background: var(--accent-blue);
-        color: var(--bg);
-        transform: scale(1.1) rotate(10deg);
+    .portal-card:hover .card-icon {
+        background: var(--accent-color);
+        color: #030712;
+        transform: scale(1.06);
+        box-shadow: 0 8px 20px -4px var(--accent-color);
     }
 
-    .prism-label {
-        font-size: 1.4rem;
-        font-weight: 600;
-        margin: 0;
-    }
-
-    .prism-subtext {
-        font-size: 0.8rem;
-        opacity: 0.5;
-        font-weight: 300;
-    }
-
-    /* Hover Glow Effect */
-    .glow {
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle at var(--x) var(--y), rgba(255,255,255,0.15), transparent 50%);
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-    .portal-prism:hover .glow { opacity: 1; }
-
-    /* Footer Navigation */
-    .system-footer {
-        position: fixed;
-        bottom: 40px;
-        display: flex;
-        gap: 40px;
+    .card-tag {
         font-size: 10px;
-        letter-spacing: 0.3em;
+        font-weight: 700;
         text-transform: uppercase;
-        opacity: 0.4;
+        letter-spacing: 0.12em;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #94a3b8;
     }
 
-    .system-footer a {
-        color: white;
+    .card-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0 0 6px 0;
+        letter-spacing: -0.02em;
+    }
+
+    .card-desc {
+        font-size: 0.88rem;
+        color: #94a3b8;
+        margin: 0 0 24px 0;
+        line-height: 1.5;
+    }
+
+    /* Action Buttons within Card */
+    .card-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: auto;
+    }
+
+    .btn-login {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        color: #ffffff;
+        font-size: 0.82rem;
+        font-weight: 600;
         text-decoration: none;
-        transition: opacity 0.3s;
+        transition: all 0.25s;
     }
 
-    .system-footer a:hover { opacity: 1; color: var(--accent-blue); }
+    .btn-login:hover {
+        background: #ffffff;
+        color: #030712;
+        border-color: #ffffff;
+        transform: translateY(-1px);
+    }
 
-    @media (max-width: 768px) {
-        body { overflow-y: auto; }
-        .interface-wrapper { height: auto; padding: 100px 20px; }
-        .portal-prism { width: 100%; height: 160px; }
+    .btn-register {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 14px;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: #94a3b8;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.25s;
+    }
+
+    .btn-register:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--accent-color);
+        border-color: var(--accent-color);
+    }
+
+    /* Footer */
+    .gateway-footer {
+        margin-top: 48px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        font-size: 0.82rem;
+        color: #64748b;
+    }
+
+    .gateway-footer a {
+        color: #94a3b8;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: color 0.2s;
+    }
+
+    .gateway-footer a:hover {
+        color: #38bdf8;
+    }
+
+    .security-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+        font-size: 0.75rem;
+        color: #64748b;
     }
 </style>
-    <div class="absolute inset-0 bg-cover bg-center opacity-10" style="background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2940'); background-blend-mode: overlay;"></div>
 
 <div class="mesh-container">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 </div>
 
-<main class="interface-wrapper">
-    <div class="header-group">
-        <div class="status-bar">
+<main class="gateway-wrapper">
+    <!-- Header -->
+    <header class="gateway-header">
+        <div class="status-badge">
             <span class="pulse-dot"></span>
-            System Online: Spherix Clinic Core
+            Spherix Clinic Core Gateway
         </div>
-        <h1>Universal Gateway</h1>
+        <h1 class="gateway-title">Unified Access Portal</h1>
+        <p class="gateway-subtitle">
+            Select your clinical, operational, or patient gateway to access secure encrypted health services and records.
+        </p>
+    </header>
+
+    <!-- Portal Grid -->
+    <div class="portal-grid">
+        <!-- 1. Patient Portal -->
+        <div class="portal-card card-patient">
+            <div class="card-spotlight"></div>
+            <div>
+                <div class="card-top">
+                    <div class="card-icon"><i data-lucide="user-round"></i></div>
+                    <span class="card-tag">Health Profile</span>
+                </div>
+                <h3 class="card-title">Patient Portal</h3>
+                <p class="card-desc">Access personal electronic health records, AI diagnostics, and consultations.</p>
+            </div>
+            <div class="card-actions">
+                <a href="{{ url_for('patient_login') }}" class="btn-login">
+                    <span>Sign In</span>
+                    <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </a>
+                <a href="{{ url_for('patient_create_account') }}" class="btn-register" title="Create Patient Account">
+                    <span>Register</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. Doctor / Provider Portal -->
+        <div class="portal-card card-doctor">
+            <div class="card-spotlight"></div>
+            <div>
+                <div class="card-top">
+                    <div class="card-icon"><i data-lucide="stethoscope"></i></div>
+                    <span class="card-tag">Clinical Suite</span>
+                </div>
+                <h3 class="card-title">Provider Portal</h3>
+                <p class="card-desc">Executive clinical diagnostic suite, prescriptions, telemedicine, and referrals.</p>
+            </div>
+            <div class="card-actions">
+                <a href="{{ url_for('doctor_login') }}" class="btn-login">
+                    <span>Sign In</span>
+                    <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </a>
+                <a href="{{ url_for('doctor_register') }}" class="btn-register" title="Apply for Provider Access">
+                    <span>Apply</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 3. Hospital / Facility Portal -->
+        <div class="portal-card card-hospital">
+            <div class="card-spotlight"></div>
+            <div>
+                <div class="card-top">
+                    <div class="card-icon"><i data-lucide="building-2"></i></div>
+                    <span class="card-tag">Operations</span>
+                </div>
+                <h3 class="card-title">Hospital Partner</h3>
+                <p class="card-desc">Facility bed allocation, IPD admissions, clinical inquiries, and resource tracking.</p>
+            </div>
+            <div class="card-actions">
+                <a href="{{ url_for('hospital_login') }}" class="btn-login">
+                    <span>Sign In</span>
+                    <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </a>
+                <a href="{{ url_for('hospital_register') }}" class="btn-register" title="Register Facility">
+                    <span>Register</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 4. Blood Donor Portal -->
+        <div class="portal-card card-blood">
+            <div class="card-spotlight"></div>
+            <div>
+                <div class="card-top">
+                    <div class="card-icon"><i data-lucide="droplet"></i></div>
+                    <span class="card-tag">Lifesaver</span>
+                </div>
+                <h3 class="card-title">Blood Donor</h3>
+                <p class="card-desc">Real-time blood bank network, donation certificates, camp schedules, and alerts.</p>
+            </div>
+            <div class="card-actions">
+                <a href="{{ url_for('blood_donor_login') }}" class="btn-login" style="flex: 1;">
+                    <span>Sign In to Donor Hub</span>
+                    <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- 5. Organ Donor Portal -->
+        <div class="portal-card card-organ">
+            <div class="card-spotlight"></div>
+            <div>
+                <div class="card-top">
+                    <div class="card-icon"><i data-lucide="heart-handshake"></i></div>
+                    <span class="card-tag">Legacy Registry</span>
+                </div>
+                <h3 class="card-title">Organ Donor</h3>
+                <p class="card-desc">Manage life gift pledges, donor cards, consent records, and legacy registry.</p>
+            </div>
+            <div class="card-actions">
+                <a href="{{ url_for('organ_donor_login') }}" class="btn-login" style="flex: 1;">
+                    <span>Sign In to Organ Hub</span>
+                    <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- 6. Staff Portal -->
+        <div class="portal-card card-staff">
+            <div class="card-spotlight"></div>
+            <div>
+                <div class="card-top">
+                    <div class="card-icon"><i data-lucide="shield-check"></i></div>
+                    <span class="card-tag">Internal Node</span>
+                </div>
+                <h3 class="card-title">Staff Terminal</h3>
+                <p class="card-desc">Reception desk, queue coordination, bed management, and operational workflows.</p>
+            </div>
+            <div class="card-actions">
+                <a href="{{ url_for('staff_login') }}" class="btn-login" style="width: 100%;">
+                    <span>Authenticate Staff</span>
+                    <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- 7. Administrator Console -->
+        <div class="portal-card card-admin">
+            <div class="card-spotlight"></div>
+            <div>
+                <div class="card-top">
+                    <div class="card-icon"><i data-lucide="terminal"></i></div>
+                    <span class="card-tag" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3);">Root Access</span>
+                </div>
+                <h3 class="card-title">System Administrator</h3>
+                <p class="card-desc">Core system terminal, database management, doctor verifications, and clinical oversight.</p>
+            </div>
+            <div class="card-actions">
+                <a href="{{ url_for('admin_login') }}" class="btn-login" style="width: 100%; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
+                    <span>Admin Terminal Sign In</span>
+                    <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i>
+                </a>
+            </div>
+        </div>
     </div>
 
-    <div class="prism-layout">
-        <a href="{{ url_for('patient_login') }}" class="portal-prism">
-            <div class="glow"></div>
-            <div class="prism-icon"><i data-lucide="user-circle"></i></div>
-            <div>
-                <p class="prism-label">Patient</p>
-                <p class="prism-subtext">Access Personal Health Records</p>
-            </div>
+    <!-- Gateway Footer -->
+    <footer class="gateway-footer">
+        <a href="{{ url_for('home') }}">
+            <i data-lucide="home" style="width: 14px; height: 14px;"></i>
+            <span>Home Portal</span>
         </a>
-
-        <a href="{{ url_for('doctor_login') }}" class="portal-prism">
-            <div class="glow"></div>
-            <div class="prism-icon"><i data-lucide="stethoscope"></i></div>
-            <div>
-                <p class="prism-label">Provider</p>
-                <p class="prism-subtext">Clinical Diagnostic Tools</p>
-            </div>
+        <a href="{{ url_for('contact') }}">
+            <i data-lucide="help-circle" style="width: 14px; height: 14px;"></i>
+            <span>Support & Helpdesk</span>
         </a>
-
-        <a href="{{ url_for('organ_donor_login') }}" class="portal-prism">
-            <div class="glow"></div>
-            <div class="prism-icon"><i data-lucide="heart-handshake"></i></div>
-            <div>
-                <p class="prism-label">Organ Donor</p>
-                <p class="prism-subtext">Life Registry Management</p>
-            </div>
+        <a href="{{ url_for('admin_login') }}">
+            <i data-lucide="terminal" style="width: 14px; height: 14px;"></i>
+            <span>Admin Terminal</span>
         </a>
-
-        <a href="{{ url_for('blood_donor_login') }}" class="portal-prism">
-            <div class="glow"></div>
-            <div class="prism-icon"><i data-lucide="droplets"></i></div>
-            <div>
-                <p class="prism-label">Blood Donor</p>
-                <p class="prism-subtext">Real-time Supply Network</p>
-            </div>
-        </a>
-
-        <a href="{{ url_for('hospital_login') }}" class="portal-prism">
-            <div class="glow"></div>
-            <div class="prism-icon"><i data-lucide="building"></i></div>
-            <div>
-                <p class="prism-label">Institution</p>
-                <p class="prism-subtext">Hospital Infrastructure</p>
-            </div>
-        </a>
-
-        <a href="{{ url_for('staff_login') }}" class="portal-prism">
-            <div class="glow"></div>
-            <div class="prism-icon"><i data-lucide="shield"></i></div>
-            <div>
-                <p class="prism-label">Staff</p>
-                <p class="prism-subtext">Security & Administration</p>
-            </div>
-        </a>
-    </div>
-
-    <footer class="system-footer">
-        <a href="/">Home System</a>
-        <a href="{{ url_for('contact') }}">Protocol Support</a>
-        <span>Encrypted SSL 256-bit</span>
+        <span class="security-tag">
+            <i data-lucide="lock" style="width: 12px; height: 12px; color: #10b981;"></i>
+            <span>256-Bit SSL Encrypted Node</span>
+        </span>
     </footer>
 </main>
 
 <script>
     lucide.createIcons();
 
-    // Mouse Glow Logic
-    const prisms = document.querySelectorAll('.portal-prism');
-    prisms.forEach(prism => {
-        prism.addEventListener('mousemove', (e) => {
-            const rect = prism.getBoundingClientRect();
+    // Mouse Spotlight Tracking Effect
+    const cards = document.querySelectorAll('.portal-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            prism.style.setProperty('--x', `${x}px`);
-            prism.style.setProperty('--y', `${y}px`);
+            card.style.setProperty('--x', `${x}px`);
+            card.style.setProperty('--y', `${y}px`);
         });
     });
 </script>

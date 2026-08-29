@@ -1,0 +1,467 @@
+{% extends 'layout.html' %}
+
+{% block title %}Medical Document & Prescription Analyzer | Spherix Clinic{% endblock %}
+
+{% block head %}
+<!-- Modern Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
+    }
+
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ambient Hero Mesh Background */
+    .analyzer-mesh-bg {
+        background: 
+            radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.12) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.08) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+            #ffffff;
+    }
+
+    /* Clean Elevated Card */
+    .analyzer-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 2px 8px -2px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .analyzer-card:hover {
+        border-color: rgba(2, 132, 199, 0.35);
+        box-shadow: 0 20px 40px -12px rgba(2, 132, 199, 0.12);
+    }
+
+    /* Radiant Action Button */
+    .btn-radiant-scan {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%);
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.35);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-radiant-scan:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 36px -6px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Scanning Laser Animation */
+    @keyframes scanLaser {
+        0% { top: 0%; opacity: 0.8; }
+        50% { top: 100%; opacity: 1; }
+        100% { top: 0%; opacity: 0.8; }
+    }
+    .scan-laser-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
+        box-shadow: 0 0 15px #38bdf8, 0 0 30px #818cf8;
+        animation: scanLaser 2.5s ease-in-out infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen analyzer-mesh-bg py-12 px-6 sm:px-12 lg:px-20 selection:bg-sky-200 selection:text-sky-900">
+    <div class="max-w-4xl mx-auto space-y-8">
+
+        <!-- Top Header Banner -->
+        <div class="text-center space-y-4 max-w-2xl mx-auto">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold tracking-wider uppercase">
+                <span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                <span>AI Vision & Neural Document OCR</span>
+            </div>
+            
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-display font-black text-slate-900 tracking-tight leading-tight">
+                Medical Document <span class="text-sky-600">Analyzer</span>
+            </h1>
+
+            <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                Upload handwritten prescriptions, lab blood reports, or X-Ray/MRI imaging. Spherix AI extracts clinical findings, abnormal values, and dosage instructions.
+            </p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="space-y-3">
+            {% for category, message in messages %}
+            <div class="p-4 rounded-2xl text-xs font-bold flex items-center gap-3 border
+                {{ 'bg-rose-50 border-rose-200 text-rose-800' if category == 'error' else 'bg-amber-50 border-amber-200 text-amber-800' }}">
+                <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Main Upload Form Card -->
+        <div class="analyzer-card rounded-3xl p-6 sm:p-10">
+            <form action="{{ url_for('read_files') }}" method="POST" enctype="multipart/form-data" id="documentUploadForm">
+                <input type="hidden" name="camera_image_data" id="camera_image_data">
+
+                <!-- 1. Select Document Category -->
+                <div class="space-y-3 mb-8">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px]">1</span>
+                            <span>Select Document Type</span>
+                        </label>
+                        <span class="text-[11px] text-slate-400">Optimizes AI OCR parameters</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                        <!-- Prescriptions -->
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="analysis_type" value="prescription" class="peer sr-only" checked>
+                            <div class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-white peer-checked:border-sky-500 peer-checked:bg-sky-50/50 peer-checked:text-sky-900 transition-all text-center flex flex-col items-center gap-2 h-full">
+                                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-sky-600 peer-checked:bg-sky-600 peer-checked:text-white flex items-center justify-center transition-colors">
+                                    <i class="fas fa-prescription text-lg"></i>
+                                </div>
+                                <span class="text-xs font-bold">Prescription</span>
+                                <span class="text-[10px] text-slate-400">Handwritten / Rx</span>
+                            </div>
+                        </label>
+
+                        <!-- Lab Report -->
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="analysis_type" value="report" class="peer sr-only">
+                            <div class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-white peer-checked:border-sky-500 peer-checked:bg-sky-50/50 peer-checked:text-sky-900 transition-all text-center flex flex-col items-center gap-2 h-full">
+                                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white flex items-center justify-center transition-colors">
+                                    <i class="fas fa-flask-vial text-lg"></i>
+                                </div>
+                                <span class="text-xs font-bold">Lab Report</span>
+                                <span class="text-[10px] text-slate-400">Blood, CBC, Lipids</span>
+                            </div>
+                        </label>
+
+                        <!-- X-Ray / MRI / CT -->
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="analysis_type" value="xray" class="peer sr-only">
+                            <div class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-white peer-checked:border-sky-500 peer-checked:bg-sky-50/50 peer-checked:text-sky-900 transition-all text-center flex flex-col items-center gap-2 h-full">
+                                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-indigo-600 peer-checked:bg-indigo-600 peer-checked:text-white flex items-center justify-center transition-colors">
+                                    <i class="fas fa-x-ray text-lg"></i>
+                                </div>
+                                <span class="text-xs font-bold">X-Ray / MRI</span>
+                                <span class="text-[10px] text-slate-400">Radiology Imaging</span>
+                            </div>
+                        </label>
+
+                        <!-- General / Discharge Summary -->
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="analysis_type" value="general" class="peer sr-only">
+                            <div class="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-white peer-checked:border-sky-500 peer-checked:bg-sky-50/50 peer-checked:text-sky-900 transition-all text-center flex flex-col items-center gap-2 h-full">
+                                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-amber-600 peer-checked:bg-amber-600 peer-checked:text-white flex items-center justify-center transition-colors">
+                                    <i class="fas fa-file-medical text-lg"></i>
+                                </div>
+                                <span class="text-xs font-bold">General Doc</span>
+                                <span class="text-[10px] text-slate-400">Discharge / Notes</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 2. Document Upload / Camera Capture -->
+                <div class="space-y-3 mb-8">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px]">2</span>
+                            <span>Upload Document or Snap Photo</span>
+                        </label>
+                        <span class="text-[11px] text-slate-400">Supports: JPG, PNG, WEBP (Max 15MB)</span>
+                    </div>
+
+                    <!-- Drop Zone Area -->
+                    <div id="dropZoneContainer" class="relative rounded-3xl border-2 border-dashed border-slate-300 hover:border-sky-500 bg-slate-50/70 p-8 sm:p-12 text-center transition-all">
+                        
+                        <!-- Upload Prompt State (Default) -->
+                        <div id="uploadPrompt" class="space-y-4">
+                            <div class="w-16 h-16 rounded-3xl bg-white border border-slate-200 text-sky-600 flex items-center justify-center mx-auto shadow-sm">
+                                <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Drag & drop your medical document here</h3>
+                                <p class="text-xs text-slate-500 mt-1">or browse from your computer or mobile gallery</p>
+                            </div>
+                            
+                            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                                <button type="button" id="browseFileBtn" class="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-sky-500 text-slate-800 hover:text-sky-600 font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer">
+                                    <i data-lucide="folder-open" class="w-4 h-4 text-sky-600"></i>
+                                    <span>Browse Files</span>
+                                </button>
+                                <button type="button" id="openCameraModalBtn" class="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer">
+                                    <i data-lucide="camera" class="w-4 h-4"></i>
+                                    <span>Take Photo</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Live File Preview State (When Selected) -->
+                        <div id="filePreviewContainer" class="hidden relative max-w-sm mx-auto">
+                            <div class="relative rounded-2xl overflow-hidden border-2 border-sky-400 shadow-xl bg-slate-900">
+                                <img id="previewImg" src="#" alt="Document Preview" class="w-full h-auto max-h-64 object-contain mx-auto">
+                                <button type="button" id="clearFileBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-900/80 text-white hover:bg-rose-600 flex items-center justify-center text-sm transition-colors cursor-pointer shadow-md">
+                                    &times;
+                                </button>
+                            </div>
+                            <p class="text-xs font-bold text-slate-700 mt-2.5 font-mono-code truncate" id="previewFilename">filename.jpg</p>
+                            <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
+                                Ready for AI OCR Analysis
+                            </span>
+                        </div>
+
+                        <input type="file" name="document" id="documentInput" class="hidden" accept="image/jpeg,image/png,image/jpg,image/webp">
+                    </div>
+                </div>
+
+                <!-- 3. Submit Action & Loading Trigger -->
+                <div>
+                    <button type="submit" id="analyzeSubmitBtn" class="btn-radiant-scan w-full py-4 rounded-2xl text-white font-display font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Start AI Document Analysis</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Privacy & Security Assurance -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-center">
+            <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                <i data-lucide="lock" class="w-5 h-5 text-sky-600 mx-auto mb-1.5"></i>
+                <h4 class="font-bold text-xs text-slate-900">HIPAA Compliant Privacy</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">End-to-end encrypted medical data</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                <i data-lucide="brain-circuit" class="w-5 h-5 text-indigo-600 mx-auto mb-1.5"></i>
+                <h4 class="font-bold text-xs text-slate-900">Dual Neural OCR</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">Google Vision + Groq LLM</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                <i data-lucide="file-check" class="w-5 h-5 text-emerald-600 mx-auto mb-1.5"></i>
+                <h4 class="font-bold text-xs text-slate-900">Immediate Results</h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">Instant summary & abnormal flags</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= CAMERA CAPTURE MODAL ================= -->
+<div id="cameraModal" class="fixed inset-0 z-[1000] hidden overflow-hidden" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" id="cameraModalBackdrop"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-slate-900 rounded-3xl p-6 text-white shadow-2xl border border-slate-800 space-y-4">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="camera" class="w-5 h-5 text-sky-400"></i>
+                    <h3 class="font-display font-bold text-base">Capture Medical Document</h3>
+                </div>
+                <button type="button" id="closeCameraBtn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Video Viewport -->
+            <div class="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+                <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                <canvas id="cameraCanvas" class="hidden"></canvas>
+                <div class="absolute inset-4 border border-dashed border-white/40 rounded-xl pointer-events-none flex items-center justify-center">
+                    <span class="text-[10px] font-mono-code text-white/60 uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded">
+                        Align Document in Frame
+                    </span>
+                </div>
+            </div>
+
+            <!-- Camera Action Buttons -->
+            <div class="flex items-center justify-center gap-3 pt-2">
+                <button type="button" id="capturePhotoBtn" class="px-6 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-lg">
+                    <i data-lucide="camera" class="w-4 h-4"></i>
+                    <span>Capture Snapshot</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= SCANNING ANIMATION OVERLAY ================= -->
+<div id="scanningOverlay" class="fixed inset-0 z-[2000] hidden bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white space-y-6">
+    <div class="relative w-28 h-28 rounded-3xl bg-slate-800 border-2 border-sky-500/50 shadow-2xl flex items-center justify-center overflow-hidden">
+        <i data-lucide="file-search" class="w-12 h-12 text-sky-400 animate-pulse"></i>
+        <div class="scan-laser-line"></div>
+    </div>
+    <div class="space-y-2">
+        <h3 class="text-xl font-display font-black tracking-tight">Analyzing Document with AI Vision...</h3>
+        <p class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Extracting clinical text, prescription dosages, and abnormalities using Google Cloud Vision & Groq Neural Engine.
+        </p>
+    </div>
+    <div class="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-sky-400 to-indigo-500 rounded-full animate-pulse w-full"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+
+    const dropZone = document.getElementById('dropZoneContainer');
+    const documentInput = document.getElementById('documentInput');
+    const browseFileBtn = document.getElementById('browseFileBtn');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const filePreviewContainer = document.getElementById('filePreviewContainer');
+    const previewImg = document.getElementById('previewImg');
+    const previewFilename = document.getElementById('previewFilename');
+    const clearFileBtn = document.getElementById('clearFileBtn');
+    const cameraImageData = document.getElementById('camera_image_data');
+    const documentUploadForm = document.getElementById('documentUploadForm');
+    const scanningOverlay = document.getElementById('scanningOverlay');
+
+    // Camera Elements
+    const openCameraModalBtn = document.getElementById('openCameraModalBtn');
+    const cameraModal = document.getElementById('cameraModal');
+    const closeCameraBtn = document.getElementById('closeCameraBtn');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const cameraCanvas = document.getElementById('cameraCanvas');
+    const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+    let cameraStream = null;
+
+    // Browse Button
+    if (browseFileBtn) {
+        browseFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            documentInput.click();
+        });
+    }
+
+    // Drag & Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-sky-500', 'bg-sky-50/50');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-sky-500', 'bg-sky-50/50');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-sky-500', 'bg-sky-50/50');
+        if (e.dataTransfer.files.length) {
+            documentInput.files = e.dataTransfer.files;
+            handleSelectedFile(documentInput.files[0]);
+        }
+    });
+
+    documentInput.addEventListener('change', () => {
+        if (documentInput.files.length) {
+            handleSelectedFile(documentInput.files[0]);
+        }
+    });
+
+    function handleSelectedFile(file) {
+        cameraImageData.value = '';
+        previewFilename.textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            uploadPrompt.classList.add('hidden');
+            filePreviewContainer.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Clear Selected File
+    if (clearFileBtn) {
+        clearFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            documentInput.value = '';
+            cameraImageData.value = '';
+            previewImg.src = '#';
+            filePreviewContainer.classList.add('hidden');
+            uploadPrompt.classList.remove('hidden');
+        });
+    }
+
+    // Camera Functions
+    if (openCameraModalBtn) {
+        openCameraModalBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            cameraModal.classList.remove('hidden');
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                cameraVideo.srcObject = cameraStream;
+            } catch (err) {
+                console.error("Camera access error:", err);
+                alert("Could not access camera device. Please check permissions or upload an image file.");
+                cameraModal.classList.add('hidden');
+            }
+        });
+    }
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        cameraModal.classList.add('hidden');
+    }
+
+    if (closeCameraBtn) closeCameraBtn.addEventListener('click', stopCamera);
+
+    if (capturePhotoBtn) {
+        capturePhotoBtn.addEventListener('click', () => {
+            const context = cameraCanvas.getContext('2d');
+            cameraCanvas.width = cameraVideo.videoWidth || 640;
+            cameraCanvas.height = cameraVideo.videoHeight || 480;
+            context.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height);
+
+            const base64Data = cameraCanvas.toDataURL('image/jpeg', 0.9);
+            cameraImageData.value = base64Data;
+            documentInput.value = '';
+
+            previewImg.src = base64Data;
+            previewFilename.textContent = `Camera_Scan_${new Date().toLocaleTimeString().replace(/:/g, '')}.jpg`;
+            uploadPrompt.classList.add('hidden');
+            filePreviewContainer.classList.remove('hidden');
+
+            stopCamera();
+        });
+    }
+
+    // Form Submission & Scanning Overlay Trigger
+    if (documentUploadForm) {
+        documentUploadForm.addEventListener('submit', (e) => {
+            const hasFile = documentInput.files && documentInput.files.length > 0;
+            const hasCamera = cameraImageData.value && cameraImageData.value.trim() !== '';
+
+            if (!hasFile && !hasCamera) {
+                e.preventDefault();
+                alert('Please upload a document file or snap a photo using the camera before proceeding.');
+                return;
+            }
+
+            // Show scanning overlay
+            scanningOverlay.classList.remove('hidden');
+        });
+    }
+});
+</script>
+{% endblock %}

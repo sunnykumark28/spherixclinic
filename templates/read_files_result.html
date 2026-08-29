@@ -1,0 +1,189 @@
+{% extends 'layout.html' %}
+
+{% block title %}Medical Document Analysis Report | Spherix Clinic{% endblock %}
+
+{% block head %}
+<!-- Modern Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
+    }
+
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ambient Hero Mesh Background */
+    .analyzer-mesh-bg {
+        background: 
+            radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.12) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.08) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+            #ffffff;
+    }
+
+    /* Clean Card */
+    .analyzer-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 2px 8px -2px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Radiant Button */
+    .btn-radiant-scan {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%);
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.35);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-radiant-scan:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 36px -6px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Markdown prose styles */
+    .report-prose h1, .report-prose h2, .report-prose h3 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        color: #0f172a;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .report-prose h2 { font-size: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+    .report-prose h3 { font-size: 1.1rem; color: #0284c7; }
+    .report-prose p { margin-bottom: 1rem; line-height: 1.7; font-size: 0.875rem; color: #334155; }
+    .report-prose ul, .report-prose ol { margin-bottom: 1rem; padding-left: 1.25rem; }
+    .report-prose li { margin-bottom: 0.35rem; font-size: 0.875rem; color: #334155; }
+    .report-prose strong { color: #0f172a; font-weight: 700; }
+    .report-prose table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.8rem; }
+    .report-prose th, .report-prose td { border: 1px solid #e2e8f0; padding: 0.5rem 0.75rem; text-align: left; }
+    .report-prose th { background-color: #f1f5f9; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen analyzer-mesh-bg py-12 px-6 sm:px-12 lg:px-20 selection:bg-sky-200 selection:text-sky-900">
+    <div class="max-w-6xl mx-auto space-y-8">
+
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+            <div>
+                <div class="flex items-center gap-2 text-sky-600 mb-1">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                    <span class="text-xs font-bold uppercase tracking-wider">AI Document OCR Synthesis Complete</span>
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900">
+                    Clinical Document <span class="text-sky-600">Analysis Report</span>
+                </h1>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="window.print()" class="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-sky-500 text-slate-700 hover:text-sky-600 text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+                    <i data-lucide="printer" class="w-4 h-4 text-sky-600"></i>
+                    <span>Print Report</span>
+                </button>
+                <a href="{{ url_for('read_files') }}" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span>Analyze Another</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 2-Column Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left: Document Preview & Actions (4 Cols) -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Document Image Card -->
+                <div class="analyzer-card rounded-3xl p-6">
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-2">
+                            <i data-lucide="file-image" class="w-4 h-4 text-sky-600"></i>
+                            <span>Uploaded Document</span>
+                        </h3>
+                        <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Processed
+                        </span>
+                    </div>
+
+                    <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-sm group relative bg-slate-900">
+                        <img src="{{ uploaded_image }}" alt="Uploaded Medical Document" class="w-full h-auto max-h-72 object-contain mx-auto">
+                        <a href="{{ uploaded_image }}" target="_blank" class="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-black/70 hover:bg-black text-white text-xs font-bold backdrop-blur-sm transition-all flex items-center gap-1.5 shadow-md">
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                            <span>Expand</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Specialist Consult Card -->
+                <div class="analyzer-card rounded-3xl p-6 bg-slate-900 text-white border-slate-800">
+                    <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center mb-3">
+                        <i data-lucide="stethoscope" class="w-5 h-5"></i>
+                    </div>
+                    <h4 class="font-display font-bold text-white text-base mb-1">Verify with a Specialist</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Share this AI analysis with a verified physician or radiologist for a conclusive medical assessment.
+                    </p>
+                    <a href="{{ url_for('doctors_list') }}" class="block w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs uppercase tracking-wider text-center transition-all shadow-md">
+                        Find a Specialist &rarr;
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Right: Detailed AI Analysis (8 Cols) -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Report Card -->
+                <div class="analyzer-card rounded-3xl p-8 sm:p-10">
+                    
+                    <div class="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-display font-bold text-slate-900">Clinical Findings & Summary</h2>
+                                <p class="text-xs text-slate-400 font-mono-code">Synthesized via Google Vision & Groq LLM</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="report-prose">
+                        {{ analysis_result|markdown }}
+                    </div>
+
+                </div>
+
+                <!-- Disclaimer Notice Card -->
+                <div class="p-5 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                    <p class="text-xs text-amber-900 leading-relaxed">
+                        <strong class="font-bold">Medical AI Disclaimer:</strong> This automated document transcription and visual evaluation is for clinical decision support and patient reference only. It is not an official medical diagnostic certification. Always follow the counsel of your licensed healthcare provider.
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

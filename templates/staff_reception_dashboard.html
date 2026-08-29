@@ -1,0 +1,2452 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Reception & Front Desk Command Center | Spherix Clinic{% endblock %}
+{% block page_title %}Reception Command Center{% endblock %}
+{% block page_subtitle %}Smart OPD token calling, instant patient onboarding, live triage telemetry, visitor passes &amp; doctor rosters.{% endblock %}
+
+{% block header_actions %}
+<div class="d-flex gap-2 align-items-center flex-wrap">
+  <a href="{{ url_for('export_reception_appointments_csv') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center gap-2">
+    <i class="fas fa-file-csv text-emerald-500"></i>
+    <span>Export CSV</span>
+  </a>
+  <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-none d-md-inline-flex align-items-center gap-2">
+    <i class="fas fa-print text-primary"></i>
+    <span>Print Queue</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-gradient-emerald rounded-pill px-3 shadow-sm text-white fw-bold d-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#registerPatientDrawer" onclick="openRegisterPatientDrawer()">
+    <i class="fas fa-user-plus"></i>
+    <span>New Patient</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-gradient-primary rounded-pill px-3 shadow-sm text-white fw-bold d-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#walkinDrawer" onclick="openWalkinDrawer()">
+    <i class="fas fa-walking"></i>
+    <span>Walk-in Token</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-gradient-amber rounded-pill px-3 shadow-sm text-white fw-bold d-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#visitorPassDrawer" onclick="openVisitorPassDrawer()">
+    <i class="fas fa-id-badge"></i>
+    <span>Visitor Pass</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm text-white fw-bold d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#receptionBedModal">
+    <i class="fas fa-bed"></i>
+    <span>Admit to Bed</span>
+  </button>
+  <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 shadow-sm text-white fw-bold d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#receptionBloodModal">
+    <i class="fas fa-tint"></i>
+    <span>Emergency Blood</span>
+  </button>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Color Gradients & Glow Utilities ── */
+  .btn-gradient-primary {
+    background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+    border: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-gradient-primary:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #4361ee 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(67, 97, 238, 0.45);
+  }
+
+  .btn-gradient-emerald {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    border: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-gradient-emerald:hover {
+    background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(16, 185, 129, 0.45);
+  }
+
+  .btn-gradient-amber {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-gradient-amber:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(245, 158, 11, 0.45);
+  }
+
+  /* ── Stat Cards ── */
+  .stat-card-luxury {
+    border-radius: 20px;
+    padding: 22px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03);
+  }
+  .stat-card-luxury:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 30px -10px rgba(67, 97, 238, 0.12);
+    border-color: #cbd5e1;
+  }
+  .stat-card-luxury::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .stat-glow-blue::after { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .stat-glow-amber::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .stat-glow-red::after { background: linear-gradient(90deg, #ef4444, #f87171); }
+  .stat-glow-emerald::after { background: linear-gradient(90deg, #10b981, #34d399); }
+  .stat-glow-purple::after { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+
+  .stat-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+  }
+  .stat-card-luxury:hover .stat-icon-wrap {
+    transform: scale(1.1) rotate(4deg);
+  }
+
+  /* ── Calling Billboard ── */
+  .calling-billboard {
+    background: radial-gradient(circle at 80% 20%, #1e293b 0%, #0f172a 100%);
+    color: #ffffff;
+    border-radius: 24px;
+    padding: 26px 32px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.4);
+  }
+  .calling-billboard::before {
+    content: "";
+    position: absolute;
+    top: -80px;
+    right: -60px;
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, rgba(0,0,0,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  
+  .digital-token-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'SF Pro Display', ui-monospace, Menlo, monospace;
+    font-size: 1.6rem;
+    font-weight: 900;
+    padding: 6px 16px;
+    border-radius: 14px;
+    background: #090d16;
+    color: #38bdf8;
+    letter-spacing: 1px;
+    border: 1.5px solid #1e293b;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2), inset 0 0 10px rgba(56, 189, 248, 0.1);
+  }
+
+  /* Equalizer Sound Waves */
+  .sound-equalizer {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 18px;
+  }
+  .sound-bar {
+    width: 3px;
+    background: #38bdf8;
+    border-radius: 2px;
+    animation: soundWave 1.2s infinite ease-in-out alternate;
+  }
+  .sound-bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+  .sound-bar:nth-child(2) { height: 16px; animation-delay: 0.3s; }
+  .sound-bar:nth-child(3) { height: 10px; animation-delay: 0.2s; }
+  .sound-bar:nth-child(4) { height: 18px; animation-delay: 0.4s; }
+  .sound-bar:nth-child(5) { height: 8px; animation-delay: 0.15s; }
+
+  @keyframes soundWave {
+    0% { height: 4px; }
+    100% { height: 18px; }
+  }
+
+  /* ── Filter Tabs ── */
+  .queue-tabs .nav-link {
+    border-radius: 99px !important;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: #64748b;
+    padding: 8px 20px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .queue-tabs .nav-link:hover {
+    color: #4361ee;
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+  }
+  .queue-tabs .nav-link.active {
+    background: #4361ee;
+    color: #ffffff;
+    border-color: #4361ee;
+    box-shadow: 0 4px 14px rgba(67, 97, 238, 0.35);
+  }
+
+  /* ── Status Badges ── */
+  .status-badge-lux {
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 99px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.2px;
+  }
+  .q-waiting { background:#fffbeb; color:#b45309; border: 1px solid #fde68a; }
+  .q-in_consultation { background:#eff6ff; color:#1d4ed8; border: 1px solid #bfdbfe; }
+  .q-completed { background:#f0fdf4; color:#15803d; border: 1px solid #bbf7d0; }
+  .q-skipped { background:#f1f5f9; color:#64748b; border: 1px solid #e2e8f0; }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-waiting { background-color: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.8); }
+  .dot-in_consultation { background-color: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.8); }
+  .dot-completed { background-color: #10b981; }
+
+  .emergency-tag {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 99px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    animation: pulseEmergency 1.8s infinite;
+  }
+  @keyframes pulseEmergency {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  }
+
+  /* ── Patient Avatar ── */
+  .avatar-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  /* ── Interactive Doctor Roster Cards ── */
+  .doctor-card-modern {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px 16px;
+    background: #ffffff;
+    margin-bottom: 10px;
+    transition: all 0.25s ease;
+  }
+  .doctor-card-modern:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 6px 18px rgba(67, 97, 238, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .patient-grid-card {
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 18px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  }
+  .patient-grid-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 12px 24px -8px rgba(59, 130, 246, 0.15);
+    transform: translateY(-3px);
+  }
+
+  /* ── Offcanvas Side-Drawer Luxury Styling ── */
+  .offcanvas-lux {
+    border-left: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: -20px 0 50px rgba(15, 23, 42, 0.2) !important;
+    background: #ffffff;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  .offcanvas-lux-wide {
+    width: 600px !important;
+    max-width: 92vw !important;
+  }
+  .offcanvas-lux-mid {
+    width: 500px !important;
+    max-width: 92vw !important;
+  }
+  .offcanvas-lux-compact {
+    width: 440px !important;
+    max-width: 92vw !important;
+  }
+
+  .drawer-header-primary {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+  }
+  .drawer-header-emerald {
+    background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+  }
+  .drawer-header-amber {
+    background: linear-gradient(135deg, #92400e 0%, #f59e0b 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+  }
+  .drawer-header-purple {
+    background: linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+  }
+  .drawer-header-slate {
+    background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+  }
+
+  .form-control-lux {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    transition: all 0.2s ease;
+  }
+  .form-control-lux:focus {
+    border-color: #4361ee;
+    box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.12);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Floating System Notification Popup Center ── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="reception-toast-container" class="position-fixed top-0 end-0 p-3 p-md-4" style="z-index: 999999; max-width: 440px; width: 100%; pointer-events: none;">
+      {% for category, message in messages %}
+        {% set cat_norm = category|lower %}
+        {% set is_success = cat_norm in ['success', 'ok'] %}
+        {% set is_warning = cat_norm in ['warning', 'attention', 'warn'] %}
+        {% set is_danger = cat_norm in ['error', 'danger', 'critical'] %}
+        {% set border_color = '#a7f3d0' if is_success else ('#fde68a' if is_warning else ('#fecdd3' if is_danger else '#bae6fd')) %}
+        {% set bar_bg = 'linear-gradient(90deg, #10b981, #14b8a6)' if is_success else ('linear-gradient(90deg, #f59e0b, #ea580c)' if is_warning else ('linear-gradient(90deg, #f43f5e, #e11d48)' if is_danger else 'linear-gradient(90deg, #0284c7, #6366f1)')) %}
+        {% set icon_bg = 'linear-gradient(135deg, #10b981, #059669)' if is_success else ('linear-gradient(135deg, #f59e0b, #d97706)' if is_warning else ('linear-gradient(135deg, #f43f5e, #be123c)' if is_danger else 'linear-gradient(135deg, #0284c7, #2563eb)')) %}
+        {% set badge_bg = '#d1fae5' if is_success else ('#fef3c7' if is_warning else ('#ffe4e6' if is_danger else '#e0f2fe')) %}
+        {% set badge_color = '#065f46' if is_success else ('#92400e' if is_warning else ('#9f1239' if is_danger else '#075985')) %}
+        {% set btn_bg = '#059669' if is_success else ('#d97706' if is_warning else ('#e11d48' if is_danger else '#0f172a')) %}
+        
+        <div class="card border-0 shadow-2xl rounded-4 mb-3 overflow-hidden position-relative animate__animated animate__fadeInRight" 
+             id="rec-flash-toast-{{ loop.index }}"
+             style="pointer-events: auto; backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.96); --toast-border: {{ border_color }}; border: 1px solid var(--toast-border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;">
+          <div style="height: 5px; width: 100%; --bar-bg: {{ bar_bg }}; background: var(--bar-bg);"></div>
+          <div class="card-body p-3.5 p-md-4">
+            <div class="d-flex align-items-start gap-3">
+              <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-sm"
+                   style="width: 42px; height: 42px; font-size: 18px; --icon-bg: {{ icon_bg }}; background: var(--icon-bg);">
+                <i class="fas fa-{% if is_success %}check-circle{% elif is_warning %}exclamation-triangle{% elif is_danger %}shield-alt{% else %}info-circle{% endif %}"></i>
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <span class="badge rounded-pill text-uppercase px-2.5 py-1 fw-bold" 
+                        style="font-size: 10px; letter-spacing: 0.5px; --badge-bg: {{ badge_bg }}; --badge-col: {{ badge_color }}; background: var(--badge-bg); color: var(--badge-col);">
+                    {% if is_success %}Success{% elif is_warning %}Attention{% elif is_danger %}System Alert{% else %}Notice{% endif %}
+                  </span>
+                  <small class="text-muted" style="font-size: 11px;">Just now</small>
+                </div>
+                <h6 class="fw-bold text-dark mb-1" style="font-size: 13.5px;">
+                  {% if is_success %}Action Completed{% elif is_warning %}Attention{% elif is_danger %}Action Required{% else %}System Notice{% endif %}
+                </h6>
+                <p class="text-secondary small mb-2.5 leading-relaxed">{{ message }}</p>
+                <div class="d-flex align-items-center gap-2 pt-2 border-top">
+                  <button type="button" 
+                          onclick="document.getElementById('rec-flash-toast-{{ loop.index }}').remove()" 
+                          class="btn btn-sm rounded-pill fw-bold text-white px-3 py-1 shadow-sm"
+                          style="font-size: 11.5px; --btn-bg: {{ btn_bg }}; background: var(--btn-bg);">
+                    <i class="fas fa-check me-1"></i> Got it
+                  </button>
+                  <button type="button" 
+                          onclick="document.getElementById('rec-flash-toast-{{ loop.index }}').remove()" 
+                          class="btn btn-sm btn-light rounded-pill text-muted px-2.5 py-1"
+                          style="font-size: 11.5px;">
+                    Close
+                  </button>
+                </div>
+              </div>
+              <button type="button" 
+                      onclick="document.getElementById('rec-flash-toast-{{ loop.index }}').remove()" 
+                      class="btn-close ms-auto flex-shrink-0" 
+                      aria-label="Close"></button>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{# ── METRICS COMPUTATION ── #}
+{% set today_appts = appointments | selectattr('appointment_date', 'equalto', today.date()) | list %}
+{% set waiting_count = appointments | selectattr('queue_status', 'defined') | selectattr('queue_status', 'equalto', 'waiting') | list | length %}
+{% set in_consultation_count = appointments | selectattr('queue_status', 'defined') | selectattr('queue_status', 'equalto', 'in_consultation') | list | length %}
+{% set emergency_count = appointments | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'emergency') | list | length %}
+{% set active_passes_count = visitor_passes | selectattr('status', 'equalto', 'active') | list | length %}
+
+{# ── 5 TOP STATS CARDS ── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-xl">
+    <div class="stat-card-luxury stat-glow-blue d-flex align-items-center gap-3">
+      <div class="stat-icon-wrap" style="background: rgba(59, 130, 246, 0.1); color: #2563eb;">
+        <i class="fas fa-calendar-check"></i>
+      </div>
+      <div>
+        <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">Today's OPD</div>
+        <div class="fs-4 fw-black text-slate-800">{{ today_appts | length }} <span class="small fw-normal text-muted" style="font-size:12px;">patients</span></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-6 col-md-4 col-xl">
+    <div class="stat-card-luxury stat-glow-amber d-flex align-items-center gap-3">
+      <div class="stat-icon-wrap" style="background: rgba(245, 158, 11, 0.1); color: #d97706;">
+        <i class="fas fa-hourglass-half"></i>
+      </div>
+      <div>
+        <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">In Waiting</div>
+        <div class="fs-4 fw-black text-slate-800">{{ waiting_count if waiting_count > 0 else (appointments | selectattr('status', 'equalto', 'pending') | list | length) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-xl">
+    <div class="stat-card-luxury stat-glow-red d-flex align-items-center gap-3">
+      <div class="stat-icon-wrap" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+        <i class="fas fa-ambulance"></i>
+      </div>
+      <div>
+        <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">Emergency</div>
+        <div class="fs-4 fw-black text-danger">{{ emergency_count }} <span class="small fw-normal text-muted" style="font-size:12px;">critical</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-xl">
+    <div class="stat-card-luxury stat-glow-emerald d-flex align-items-center gap-3">
+      <div class="stat-icon-wrap" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
+        <i class="fas fa-hospital-user"></i>
+      </div>
+      <div>
+        <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">Total Patients</div>
+        <div class="fs-4 fw-black text-emerald-600">{{ patients | length }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4 col-xl">
+    <div class="stat-card-luxury stat-glow-purple d-flex align-items-center gap-3">
+      <div class="stat-icon-wrap" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed;">
+        <i class="fas fa-user-md"></i>
+      </div>
+      <div>
+        <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">Doctors on Duty</div>
+        <div class="fs-4 fw-black text-slate-800">{{ doctors | length }} <span class="small fw-normal text-muted" style="font-size:12px;">OPD</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── LIVE OPD TOKEN CALLING BILLBOARD ── #}
+<div class="calling-billboard mb-4">
+  <div class="row align-items-center g-3">
+    <div class="col-lg-7">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <span class="badge rounded-pill bg-danger px-3 py-1 text-uppercase fw-black d-flex align-items-center gap-2" style="letter-spacing:1px; font-size:10px;">
+          <span class="pulse-dot bg-white" style="animation: pulseEmergency 1.2s infinite;"></span>
+          OPD Live Broadcast
+        </span>
+        <div class="sound-equalizer">
+          <div class="sound-bar"></div>
+          <div class="sound-bar"></div>
+          <div class="sound-bar"></div>
+          <div class="sound-bar"></div>
+          <div class="sound-bar"></div>
+        </div>
+        <span class="text-slate-400 small fw-mono" id="liveClock">--:--:--</span>
+      </div>
+      
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="digital-token-badge" id="currentCallingToken">
+          {% if today_appts and today_appts[0].token_no %}{{ today_appts[0].token_no }}{% else %}TK-01{% endif %}
+        </div>
+        <div>
+          <h3 class="fw-bold mb-0 text-white" id="currentCallingPatient">
+            {% if today_appts %}{{ today_appts[0].patient_name }}{% else %}Ready for token announcement{% endif %}
+          </h3>
+          <div class="text-slate-300 small mt-1" id="currentCallingDoctor">
+            {% if today_appts and today_appts[0].doctor %}
+              <i class="fas fa-stethoscope me-1 text-sky-400"></i> Dr. {{ today_appts[0].doctor.first_name }} {{ today_appts[0].doctor.last_name }} &bull; <strong class="text-white">{{ today_appts[0].doctor.opd_room or 'Room 101' }}</strong>
+            {% else %}
+              Click 'Voice Announce' to broadcast next patient token
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-5 text-lg-end">
+      <div class="d-flex gap-2 justify-content-lg-end flex-wrap">
+        <button class="btn btn-info text-dark fw-bold rounded-pill px-4 shadow d-flex align-items-center gap-2" onclick="announceCurrentPatient()">
+          <i class="fas fa-volume-up"></i>
+          <span>Voice Announce</span>
+        </button>
+        <button class="btn btn-outline-light rounded-pill px-3 d-flex align-items-center gap-2" onclick="testChimeSound()">
+          <i class="fas fa-bell"></i>
+          <span>Chime</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Master Reception Navigation Tabs -->
+<div class="bg-white p-2 rounded-4 shadow-sm border mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div class="nav nav-pills gap-2" id="receptionMasterTabs">
+    <button class="nav-link active rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2" id="tab-btn-opd" onclick="switchMasterTab('opd')">
+      <i class="fas fa-clipboard-list"></i>
+      <span>OPD Queue &amp; Flow</span>
+      <span class="badge bg-primary text-white rounded-pill ms-1 small">{{ appointments|length }}</span>
+    </button>
+    <button class="nav-link rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2" id="tab-btn-patients" onclick="switchMasterTab('patients')">
+      <i class="fas fa-users"></i>
+      <span>Registered Patients</span>
+      <span class="badge bg-emerald-100 text-emerald-800 rounded-pill ms-1 small">{{ patients|length }}</span>
+    </button>
+    <button class="nav-link rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2" id="tab-btn-doctors" onclick="switchMasterTab('doctors')">
+      <i class="fas fa-user-md"></i>
+      <span>Doctors &amp; OPD Rosters</span>
+      <span class="badge bg-sky-100 text-sky-800 rounded-pill ms-1 small">{{ doctors|length }}</span>
+    </button>
+  </div>
+  
+  <div class="d-none d-md-flex align-items-center gap-2 text-xs text-muted pe-3">
+    <span class="pulse-dot bg-success"></span>
+    <span class="fw-semibold text-slate-700">Reception Desk Online</span>
+  </div>
+</div>
+
+<!-- TAB PANE 1: OPD APPOINTMENTS & FLOW -->
+<div id="master-pane-opd" class="master-pane">
+  <div class="row g-4">
+
+  {# ── MAIN LEFT COLUMN ── #}
+  <div class="col-lg-8">
+
+    {# 1. MAIN APPOINTMENT & OPD QUEUE CARD #}
+    <div class="dashboard-card p-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h4 class="fw-bold mb-0 text-slate-900">OPD &amp; Patient Flow</h4>
+          <span class="text-muted small">Live patient triage telemetry and instant actions</span>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <select id="doctorFilter" class="form-select form-select-sm rounded-pill fw-bold" style="width: auto; font-size:12px; border-color:#cbd5e1;" onchange="applyFilters()">
+            <option value="all">👨‍⚕️ All Doctors ({{ doctors|length }})</option>
+            {% for doc in doctors %}
+            <option value="{{ doc.id }}">Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.opd_room or 'Room 101' }})</option>
+            {% endfor %}
+          </select>
+          <input type="text" id="apptSearch" class="form-control form-control-sm rounded-pill" placeholder="🔍 Search Token / Name..." style="width:190px;" oninput="filterAppointments()">
+        </div>
+      </div>
+
+      {# Queue Filter Tabs #}
+      <ul class="nav queue-tabs mb-3 gap-2 flex-wrap" id="queueTabs">
+        <li class="nav-item"><button class="nav-link active" onclick="filterTab('all', this)">All ({{ appointments|length }})</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="filterTab('today', this)">Today ({{ today_appts|length }})</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="filterTab('waiting', this)">Waiting</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="filterTab('in_consultation', this)">In Consult</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="filterTab('emergency', this)">Emergency (<span class="text-danger fw-bold">{{ emergency_count }}</span>)</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="filterTab('completed', this)">Completed</button></li>
+      </ul>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0" id="apptTable">
+          <thead>
+            <tr class="text-muted small border-bottom" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+              <th class="ps-0">Token &amp; Patient</th>
+              <th>Doctor &amp; OPD</th>
+              <th>Schedule</th>
+              <th>Vitals &amp; Fee</th>
+              <th>Status</th>
+              <th class="text-end pe-0">Actions &amp; Prescription</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for appt in appointments %}
+            {% set q_status = appt.queue_status if appt.queue_status else ('completed' if appt.status == 'completed' else 'waiting') %}
+            {% set priority = appt.priority if appt.priority else 'normal' %}
+            
+            <tr class="appt-row border-bottom"
+                data-status="{{ appt.status }}"
+                data-qstatus="{{ q_status }}"
+                data-priority="{{ priority }}"
+                data-doctor="{{ appt.doctor_id }}"
+                data-date="{{ appt.appointment_date }}"
+                data-token="{{ appt.token_no if appt.token_no else ('TK-' ~ appt.id) }}"
+                data-search="{{ (appt.token_no or '') | lower }} {{ appt.patient_name | lower }} {{ (appt.doctor.last_name if appt.doctor else '') | lower }}"
+                id="appt-row-{{ appt.id }}">
+              
+              {# Patient Info #}
+              <td class="ps-0 py-3">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="digital-token-badge py-1 px-2 fs-6" style="border-radius:10px;">{{ appt.token_no if appt.token_no else ('TK-' ~ '%02d'|format(appt.id)) }}</span>
+                  <div>
+                    <div class="fw-bold text-slate-900 d-flex align-items-center gap-1">
+                      {{ appt.patient_name }}
+                      {% if priority == 'emergency' %}
+                      <span class="emergency-tag ms-1">EMERGENCY</span>
+                      {% endif %}
+                    </div>
+                    {% if appt.patient_phone %}
+                    <div class="small text-muted" style="font-size:11px;"><i class="fas fa-phone-alt me-1 text-slate-400"></i>{{ appt.patient_phone }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+
+              {# Doctor Info #}
+              <td>
+                {% if appt.doctor %}
+                <div class="fw-bold text-slate-800 small">Dr. {{ appt.doctor.first_name }} {{ appt.doctor.last_name }}</div>
+                <div class="text-muted small" style="font-size:11px;">
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">{{ appt.doctor.opd_room or 'Room 101' }}</span> &bull; {{ appt.doctor.specialty or 'General' }}
+                </div>
+                {% else %}
+                <span class="text-muted small">Not assigned</span>
+                {% endif %}
+              </td>
+
+              {# Schedule #}
+              <td>
+                <div class="small fw-bold text-slate-800">{{ appt.appointment_date }}</div>
+                <div class="small text-muted" style="font-size:11px;"><i class="far fa-clock me-1 text-slate-400"></i>{{ appt.appointment_time.strftime('%I:%M %p') if appt.appointment_time else '' }}</div>
+              </td>
+
+              {# Vitals & Billing preview #}
+              <td>
+                <div>
+                  {% if appt.vitals and appt.vitals.bp %}
+                  <span class="badge bg-light text-dark border me-1" style="font-size:10px;">BP: {{ appt.vitals.bp }}</span>
+                  {% endif %}
+                  {% if appt.vitals and appt.vitals.pulse %}
+                  <span class="badge bg-light text-dark border" style="font-size:10px;">Pulse: {{ appt.vitals.pulse }}</span>
+                  {% endif %}
+                  {% if not appt.vitals or not appt.vitals.bp %}
+                  <button class="btn btn-link p-0 text-decoration-none small text-primary fw-semibold" style="font-size:11px;" 
+                          onclick="openVitalsDrawer(this.dataset.id, this.dataset.name, this.dataset.bp, this.dataset.pulse, this.dataset.temp, this.dataset.spo2, this.dataset.weight, this.dataset.allergies)"
+                          data-id="{{ appt.id }}"
+                          data-name="{{ appt.patient_name }}"
+                          data-bp="{{ appt.vitals.bp if appt.vitals else '' }}"
+                          data-pulse="{{ appt.vitals.pulse if appt.vitals else '' }}"
+                          data-temp="{{ appt.vitals.temp if appt.vitals else '' }}"
+                          data-spo2="{{ appt.vitals.spo2 if appt.vitals else '' }}"
+                          data-weight="{{ appt.vitals.weight if appt.vitals else '' }}"
+                          data-allergies="{{ appt.vitals.allergies if appt.vitals else '' }}">
+                    <i class="fas fa-plus-circle me-1"></i>Add Vitals
+                  </button>
+                  {% endif %}
+                </div>
+                <div class="mt-1">
+                  {% if appt.fee_amount %}
+                  <span class="badge rounded-pill {% if appt.payment_status == 'paid' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}" style="font-size:10px;">
+                    Rs. {{ appt.fee_amount|int }} ({{ appt.payment_mode or 'Cash' }})
+                  </span>
+                  {% endif %}
+                </div>
+              </td>
+
+              {# Queue Status #}
+              <td>
+                <span class="status-badge-lux q-{{ q_status }}">
+                  <span class="pulse-dot dot-{{ q_status }}"></span>
+                  {{ q_status.replace('_', ' ')|title }}
+                </span>
+              </td>
+
+              {# Actions #}
+              <td class="text-end pe-0">
+                <div class="d-flex gap-1 justify-content-end flex-wrap">
+                  
+                  {# 1. Live Call Button #}
+                  <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2" title="Broadcast & Call Token" 
+                          onclick="callPatientToken(this.dataset.token, this.dataset.name, this.dataset.doctor, this.dataset.room)"
+                          data-token="{{ appt.token_no if appt.token_no else ('TK-' ~ appt.id) }}"
+                          data-name="{{ appt.patient_name }}"
+                          data-doctor="{{ appt.doctor.last_name if appt.doctor else '' }}"
+                          data-room="{{ appt.doctor.opd_room if appt.doctor else 'Room 101' }}">
+                    <i class="fas fa-volume-up"></i>
+                  </button>
+
+                  {# 2. Vitals Drawer Button #}
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2" title="Record / Edit Vitals" 
+                          onclick="openVitalsDrawer(this.dataset.id, this.dataset.name, this.dataset.bp, this.dataset.pulse, this.dataset.temp, this.dataset.spo2, this.dataset.weight, this.dataset.allergies)"
+                          data-id="{{ appt.id }}"
+                          data-name="{{ appt.patient_name }}"
+                          data-bp="{{ appt.vitals.bp if appt.vitals else '' }}"
+                          data-pulse="{{ appt.vitals.pulse if appt.vitals else '' }}"
+                          data-temp="{{ appt.vitals.temp if appt.vitals else '' }}"
+                          data-spo2="{{ appt.vitals.spo2 if appt.vitals else '' }}"
+                          data-weight="{{ appt.vitals.weight if appt.vitals else '' }}"
+                          data-allergies="{{ appt.vitals.allergies if appt.vitals else '' }}">
+                    <i class="fas fa-stethoscope"></i>
+                  </button>
+
+                  {# 3. Queue status changer form #}
+                  {% if q_status == 'waiting' %}
+                  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="update_queue_status" value="1">
+                    <input type="hidden" name="appointment_id" value="{{ appt.id }}">
+                    <input type="hidden" name="queue_status" value="in_consultation">
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-2" title="Send In Consultation">
+                      <i class="fas fa-door-open"></i>
+                    </button>
+                  </form>
+                  {% elif q_status == 'in_consultation' %}
+                  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="complete_appointment" value="1">
+                    <input type="hidden" name="appointment_id" value="{{ appt.id }}">
+                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-2" title="Mark Completed">
+                      <i class="fas fa-check"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+
+                  {# 4. Direct Print Prescription Slip #}
+                  <a href="{{ url_for('prescription_print', appt_id=appt.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-2" title="🖨️ Instant Print Prescription Sheet" target="_blank">
+                    <i class="fas fa-print"></i>
+                  </a>
+
+                  {# 5. Download PDF Slip #}
+                  <a href="{{ url_for('walkin_receipt_pdf', appt_id=appt.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2" title="📥 Download Official PDF Slip" target="_blank">
+                    <i class="fas fa-file-pdf"></i>
+                  </a>
+
+                  {# 6. Reschedule #}
+                  {% if appt.status in ['pending', 'confirmed'] %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2" title="Reschedule" 
+                          onclick="openRescheduleDrawer(this.dataset.id, this.dataset.name, this.dataset.date, this.dataset.time)"
+                          data-id="{{ appt.id }}"
+                          data-name="{{ appt.patient_name }}"
+                          data-date="{{ appt.appointment_date }}"
+                          data-time="{{ appt.appointment_time.strftime('%H:%M') if appt.appointment_time else '' }}">
+                    <i class="fas fa-calendar-alt"></i>
+                  </button>
+                  
+                  {# 7. Cancel #}
+                  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="cancel_appointment" value="1">
+                    <input type="hidden" name="appointment_id" value="{{ appt.id }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2" title="Cancel" onclick="return confirm('Cancel appointment for {{ appt.patient_name }}?')">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+
+                </div>
+              </td>
+            </tr>
+
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-5">
+                <i class="fas fa-calendar-times fs-2 mb-2 text-slate-300 d-block"></i>
+                No appointments found in queue.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# 2. REGISTERED PATIENTS DIRECTORY CARD #}
+    <div class="dashboard-card p-4 mt-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h4 class="fw-bold mb-0 text-slate-900"><i class="fas fa-users text-primary me-2"></i>Patient Registry Directory</h4>
+          <span class="text-muted small">Search and instantly issue walk-in tokens for registered patients</span>
+        </div>
+        <div class="d-flex gap-2">
+          <input type="text" id="patientSearch" class="form-control form-control-sm rounded-pill" placeholder="🔍 Search Patient..." style="width:200px;" oninput="filterPatients()">
+          <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="openRegisterPatientDrawer()">
+            <i class="fas fa-plus me-1"></i> New Patient
+          </button>
+        </div>
+      </div>
+
+      <div class="row g-3" id="patientGrid">
+        {% for p in patients %}
+        <div class="col-md-6 patient-card-item" data-search="{{ p.name | lower }} {{ p.id | lower }} {{ (p.phone or '') | lower }}">
+          <div class="patient-grid-card h-100 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar-circle" style="background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);">
+                    {{ p.name[:2]|upper }}
+                  </div>
+                  <div>
+                    <div class="fw-bold text-slate-900 fs-6">{{ p.name }}</div>
+                    <span class="badge bg-dark font-monospace text-sky-400 py-0" style="font-size:10px;">{{ p.id }}</span>
+                  </div>
+                </div>
+                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill" style="font-size:10px;">
+                  {{ p.gender or 'Patient' }}{% if p.age %} &bull; {{ p.age }}y{% endif %}
+                </span>
+              </div>
+              
+              <div class="small text-muted mt-2" style="font-size:11.5px;">
+                {% if p.phone %}<div><i class="fas fa-phone-alt me-1 text-slate-400"></i>{{ p.phone }}</div>{% endif %}
+                {% if p.email and not p.email.endswith('.local') %}<div><i class="fas fa-envelope me-1 text-slate-400"></i>{{ p.email }}</div>{% endif %}
+                {% if p.clinical_record and p.clinical_record.get('blood_group') and p.clinical_record.get('blood_group') != 'Not Specified' %}
+                <div><i class="fas fa-tint text-danger me-1"></i>Blood Group: <strong class="text-danger">{{ p.clinical_record.get('blood_group') }}</strong></div>
+                {% endif %}
+                {% if p.address %}<div><i class="fas fa-map-marker-alt me-1 text-slate-400"></i>{{ p.address }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
+              <span class="text-muted" style="font-size:10px;"><i class="fas fa-check-circle text-success me-1"></i>Verified Record</span>
+              <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" style="font-size:11px;" 
+                      onclick="quickBookForPatient(this.dataset.name, this.dataset.phone)"
+                      data-name="{{ p.name }}"
+                      data-phone="{{ p.phone or '' }}">
+                <i class="fas fa-calendar-plus me-1"></i> Book Token
+              </button>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center text-muted py-4 small">No registered patients in hospital database.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# 3. VISITOR & ATTENDANT PASSES LOG TABLE #}
+    <div class="dashboard-card p-4 mt-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h4 class="fw-bold mb-0 text-slate-900"><i class="fas fa-id-card text-emerald-600 me-2"></i>Issued Visitor &amp; Attendant Passes</h4>
+          <span class="text-muted small">Hospital security gate and inpatient ward visitor ledger</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-gradient-emerald rounded-pill px-3 text-white fw-bold" onclick="openVisitorPassDrawer()">
+          <i class="fas fa-plus me-1"></i> Issue Pass
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr class="text-muted small border-bottom" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+              <th>Pass No</th>
+              <th>Visitor</th>
+              <th>Patient &amp; Ward</th>
+              <th>Validity</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pass in visitor_passes %}
+            <tr class="border-bottom">
+              <td><span class="badge bg-dark font-monospace text-emerald-400 px-2 py-1">{{ pass.pass_number }}</span></td>
+              <td>
+                <div class="fw-bold small text-slate-900">{{ pass.visitor_name }}</div>
+                <div class="text-muted small" style="font-size:10px;">{{ pass.visitor_phone }}</div>
+              </td>
+              <td>
+                <div class="small fw-bold text-slate-800">{{ pass.patient_name }}</div>
+                <div class="text-muted small" style="font-size:10px;"><i class="fas fa-bed me-1 text-slate-400"></i>{{ pass.ward_room }}</div>
+              </td>
+              <td class="small fw-semibold">{{ pass.valid_hours }} Hours</td>
+              <td>
+                <span class="badge rounded-pill {% if pass.status == 'active' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %}" style="font-size:10px;">
+                  {{ pass.status|upper }}
+                </span>
+              </td>
+              <td class="text-end">
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{{ url_for('visitor_pass_pdf', pass_id=pass.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-2" title="Print Official Pass PDF" target="_blank">
+                    <i class="fas fa-file-pdf"></i>
+                  </a>
+                  {% if pass.status == 'active' %}
+                  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="checkout_visitor_pass" value="1">
+                    <input type="hidden" name="pass_id" value="{{ pass.id }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-2" title="Check Out Pass">
+                      <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-4 small">No visitor passes issued today.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── RIGHT SIDEBAR ── #}
+  <div class="col-lg-4">
+
+    {# 1. DOCTOR LIVE ROSTER & OPD ROOM BOARD #}
+    <div class="dashboard-card p-4 mb-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-slate-900"><i class="fas fa-user-md text-primary me-2"></i>Doctor OPD Roster</h5>
+        <span class="badge bg-primary-subtle text-primary rounded-pill small fw-bold px-3 py-1">{{ doctors|length }} Active</span>
+      </div>
+
+      {% for doc in doctors %}
+      {% set r_status = doc.roster_status if doc.roster_status else 'Available' %}
+      <div class="doctor-card-modern">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <div class="fw-bold text-slate-900 small">
+              <span class="pulse-dot me-1 {% if r_status == 'Available' %}bg-success{% elif r_status == 'In Consultation' %}bg-primary{% elif r_status == 'On Break' %}bg-warning{% else %}bg-secondary{% endif %}"></span>
+              Dr. {{ doc.first_name }} {{ doc.last_name }}
+            </div>
+            <div class="text-muted small mt-1" style="font-size:11px;">
+              {{ doc.specialty or 'General Physician' }} &bull; <strong class="text-primary">{{ doc.opd_room or 'Room 101' }}</strong>
+            </div>
+          </div>
+          
+          {# Status update form #}
+          <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="update_doctor_roster" value="1">
+            <input type="hidden" name="doctor_id" value="{{ doc.id }}">
+            <input type="hidden" name="opd_room" value="{{ doc.opd_room or 'Room 101' }}">
+            <select name="roster_status" class="form-select form-select-sm py-0 px-2 rounded-pill fw-bold" style="font-size:10.5px; width:auto; border-color:#cbd5e1;" onchange="this.form.submit()">
+              <option value="Available" {% if r_status == 'Available' %}selected{% endif %}>🟢 Available</option>
+              <option value="In Consultation" {% if r_status == 'In Consultation' %}selected{% endif %}>🔵 In Consult</option>
+              <option value="On Break" {% if r_status == 'On Break' %}selected{% endif %}>🟡 On Break</option>
+              <option value="Off Duty" {% if r_status == 'Off Duty' %}selected{% endif %}>⚪ Off Duty</option>
+            </select>
+          </form>
+        </div>
+
+        <div class="d-flex gap-1 pt-2 border-top justify-content-end">
+          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" style="font-size:10.5px;" onclick="filterBySpecificDoctor('{{ doc.id }}')">
+            <i class="fas fa-filter me-1"></i>View Queue
+          </button>
+          <button type="button" class="btn btn-sm btn-primary rounded-pill px-2 py-0" style="font-size:10.5px;" onclick="quickBookWithDoctor('{{ doc.id }}')">
+            <i class="fas fa-plus me-1"></i>Book Token
+          </button>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-muted small">No doctors mapped to this hospital.</p>
+      {% endfor %}
+    </div>
+
+    {# 2. HOSPITAL QUICK CONTACT CARD #}
+    <div class="dashboard-card p-4 mb-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+      <h5 class="fw-bold mb-3 text-slate-900"><i class="fas fa-hospital text-primary me-2"></i>Hospital Telemetry</h5>
+      {% if hospital %}
+      <div class="p-3 bg-light rounded-3 mb-3">
+        <div class="fw-bold text-slate-900">{{ hospital.name }}</div>
+        <div class="small text-muted mt-1"><i class="fas fa-phone-alt me-1 text-primary"></i>{{ hospital.phone or '—' }}</div>
+        <div class="small text-muted"><i class="fas fa-envelope me-1 text-primary"></i>{{ hospital.email or '—' }}</div>
+        <div class="small text-muted"><i class="fas fa-map-marker-alt me-1 text-primary"></i>{{ hospital.address or '—' }}</div>
+      </div>
+
+      <form action="{{ url_for('staff_reception_dashboard') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="update_hospital_profile" value="1">
+        <div class="mb-2">
+          <input type="text" name="phone" class="form-control form-control-sm rounded-3" placeholder="Phone" value="{{ hospital.phone or '' }}">
+        </div>
+        <div class="mb-2">
+          <input type="email" name="email" class="form-control form-control-sm rounded-3" placeholder="Email" value="{{ hospital.email or '' }}">
+        </div>
+        <div class="mb-3">
+          <textarea name="address" class="form-control form-control-sm rounded-3" rows="2" placeholder="Address">{{ hospital.address or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4 w-100 fw-bold">Update Hospital Info</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {# 3. RECENT ACTIVITY LOG #}
+    <div class="dashboard-card p-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+      <h5 class="fw-bold mb-3 text-slate-900"><i class="fas fa-history text-primary me-2"></i>Reception Audit Trail</h5>
+      <div class="list-group list-group-flush">
+        {% for log in activity_logs[:6] %}
+        <div class="list-group-item px-0 py-2 border-0 border-bottom">
+          <div class="d-flex justify-content-between">
+            <span class="small fw-bold text-slate-900">{{ log.action }}</span>
+            <span class="text-muted font-monospace" style="font-size:10px;">{{ log.timestamp.strftime('%H:%M') if log.timestamp else '' }}</span>
+          </div>
+          <p class="small text-muted mb-0 mt-1" style="font-size:11px;">{{ log.details | truncate(55) }}</p>
+        </div>
+        {% else %}
+        <div class="text-center text-muted small py-3">No recent activity.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+</div><!-- End master-pane-opd -->
+
+<!-- TAB PANE 2: REGISTERED PATIENTS DIRECTORY -->
+<div id="master-pane-patients" class="master-pane" style="display:none;">
+  <div class="dashboard-card p-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+    <!-- Top toolbar -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      <div>
+        <h4 class="fw-bold mb-1 text-slate-900 d-flex align-items-center gap-2">
+          <i class="fas fa-users text-emerald-600"></i>
+          <span>Hospital Patient Directory &amp; EHR Telemetry</span>
+        </h4>
+        <p class="text-muted small mb-0">Browse complete electronic health records, consultation histories, and instant token generation</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-sm btn-gradient-emerald rounded-pill px-3 shadow-sm text-white fw-bold d-flex align-items-center gap-2" onclick="openRegisterPatientDrawer()">
+          <i class="fas fa-user-plus"></i>
+          <span>Register New Patient</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="row g-3 mb-4 p-3 bg-light rounded-4 border">
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 rounded-start-pill text-muted"><i class="fas fa-search"></i></span>
+          <input type="text" id="patientSearchInput" class="form-control border-start-0 rounded-end-pill" placeholder="Search by name, patient ID, phone, or email..." oninput="filterPatientsDirectory()">
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <select id="patientGenderFilter" class="form-select rounded-pill" onchange="filterPatientsDirectory()">
+          <option value="all">All Genders</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="col-md-4 col-6 d-flex align-items-center justify-content-end text-muted small fw-semibold">
+        <span id="patientCountDisplay">Showing {{ patients|length }} Registered Patients</span>
+      </div>
+    </div>
+
+    <!-- Patients Table -->
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="patientsTable">
+        <thead class="bg-light text-slate-600 small text-uppercase" style="font-size:11px; letter-spacing:0.5px;">
+          <tr>
+            <th class="ps-3 py-3">Patient Profile &amp; ID</th>
+            <th class="py-3">Age &amp; Gender</th>
+            <th class="py-3">Contact Details</th>
+            <th class="py-3">Blood Group &amp; Clinical</th>
+            <th class="py-3 text-center">Consultations</th>
+            <th class="text-end pe-3 py-3">Actions &amp; EHR</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in patients %}
+          {% set p_blood = p.clinical_record.get('blood_group', 'Not Specified') if p.clinical_record else 'Not Specified' %}
+          {% set p_allergies = p.clinical_record.get('allergies', 'None') if p.clinical_record else 'None' %}
+          {% set p_history = p.clinical_record.get('history', 'Routine Clinical Care') if p.clinical_record else 'Routine Clinical Care' %}
+          <tr class="patient-row border-bottom"
+              data-search="{{ (p.name or '') | lower }} {{ (p.id or '') | lower }} {{ (p.phone or '') | lower }} {{ (p.email or '') | lower }}"
+              data-gender="{{ (p.gender or 'all') | lower }}"
+              id="patient-row-{{ p.id }}">
+            <td class="ps-3 py-3">
+              <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-emerald-100 text-emerald-800 d-flex align-items-center justify-center fw-bold shadow-sm flex-shrink-0" style="width:40px; height:40px; font-size:14px;">
+                  {{ p.name[:2]|upper if p.name else 'PT' }}
+                </div>
+                <div>
+                  <div class="fw-bold text-slate-900">{{ p.name }}</div>
+                  <span class="badge bg-slate-100 text-slate-600 border rounded-pill font-monospace" style="font-size:10px;">{{ p.id }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="small fw-semibold text-slate-800">{{ p.age or '--' }} Yrs</div>
+              <span class="text-muted small text-capitalize" style="font-size:11px;">{{ p.gender or 'Not specified' }}</span>
+            </td>
+            <td>
+              <div class="small text-slate-900 font-medium">
+                <i class="fas fa-phone-alt me-1 text-slate-400"></i>{{ p.phone or 'No phone' }}
+              </div>
+              <div class="small text-muted" style="font-size:11px;">
+                <i class="far fa-envelope me-1 text-slate-400"></i>{{ p.email or 'N/A' }}
+              </div>
+            </td>
+            <td>
+              <div>
+                {% if p_blood and p_blood != 'Not Specified' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5 fw-bold" style="font-size:10px;">
+                  <i class="fas fa-tint me-0.5"></i>{{ p_blood }}
+                </span>
+                {% else %}
+                <span class="badge bg-light text-muted border rounded-pill" style="font-size:10px;">Not Tested</span>
+                {% endif %}
+              </div>
+              <div class="text-muted small mt-1" style="font-size:11px;" title="{{ p_allergies }}">
+                Allergies: {{ p_allergies | truncate(25) }}
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size:11px;">
+                {{ p.appointments|length }} Visit{% if p.appointments|length != 1 %}s{% endif %}
+              </span>
+            </td>
+            <td class="text-end pe-3">
+              <div class="d-flex justify-content-end align-items-center gap-1.5 flex-wrap">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                        onclick="showPatientDetailsFromData(this)"
+                        data-id="{{ p.id }}"
+                        data-name="{{ p.name }}"
+                        data-email="{{ p.email }}"
+                        data-phone="{{ p.phone or '' }}"
+                        data-age="{{ p.age or '' }}"
+                        data-gender="{{ p.gender or 'Not Specified' }}"
+                        data-address="{{ p.address or 'Address on file' }}"
+                        data-blood-group="{{ p_blood }}"
+                        data-allergies="{{ p_allergies }}"
+                        data-history="{{ p_history }}"
+                        data-visits="{{ p.appointments|length }}">
+                  <i class="fas fa-file-medical text-xs"></i>
+                  <span>Patient File</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-gradient-primary rounded-pill px-2.5 py-1 text-white fw-bold d-inline-flex align-items-center gap-1"
+                        onclick="openWalkinForPatient(this.dataset.name, this.dataset.phone)"
+                        data-name="{{ p.name }}"
+                        data-phone="{{ p.phone or '' }}">
+                  <i class="fas fa-plus text-xs"></i>
+                  <span>Token</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i class="fas fa-user-slash fa-2x mb-2 d-block text-slate-300"></i>
+              No registered patients found. Click 'Register New Patient' to add records.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB PANE 3: DOCTORS DIRECTORY & CLINICAL ROSTERS -->
+<div id="master-pane-doctors" class="master-pane" style="display:none;">
+  <div class="dashboard-card p-4 shadow-sm border-0 rounded-4" style="background:#fff;">
+    <!-- Top toolbar -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      <div>
+        <h4 class="fw-bold mb-1 text-slate-900 d-flex align-items-center gap-2">
+          <i class="fas fa-user-md text-sky-600"></i>
+          <span>Hospital Clinicians &amp; OPD Duty Rosters</span>
+        </h4>
+        <p class="text-muted small mb-0">Manage on-duty doctors, live consultation rooms, consultation fees, and patient queues</p>
+      </div>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <input type="text" id="doctorDirectorySearch" class="form-control form-control-sm rounded-pill" placeholder="🔍 Search clinician..." style="width:200px;" oninput="filterDoctorDirectorySearch()">
+      </div>
+    </div>
+
+    <!-- Department Selector Pills -->
+    {% if departments_with_doctors %}
+    <div class="bg-light p-2.5 rounded-4 border mb-4 d-flex align-items-center gap-2 overflow-x-auto">
+      <span class="text-xs font-bold text-slate-500 text-uppercase tracking-wider px-2 d-none d-sm-inline">Specialty:</span>
+      <button
+        type="button"
+        onclick="filterDoctorDirectory('all', this)"
+        class="doc-dept-pill btn btn-sm rounded-pill px-3 py-1 fw-bold btn-primary shadow-sm"
+      >
+        <i class="fas fa-layer-group me-1 text-xs"></i> All Departments ({{ doctors|length }})
+      </button>
+      {% for dept_name, dept_docs in departments_with_doctors.items() %}
+      <button
+        type="button"
+        onclick="filterDoctorDirectory('{{ dept_name }}', this)"
+        class="doc-dept-pill btn btn-sm rounded-pill px-3 py-1 fw-bold btn-light border text-slate-700"
+      >
+        <i class="fas fa-stethoscope me-1 text-xs"></i> {{ dept_name }} ({{ dept_docs|length }})
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Department Sections -->
+    {% if departments_with_doctors %}
+    <div class="space-y-4">
+      {% for dept_name, dept_docs in departments_with_doctors.items() %}
+      <div class="doc-dept-section bg-white rounded-4 border shadow-sm overflow-hidden mb-4" data-dept="{{ dept_name }}">
+        <!-- Section Header -->
+        <div class="p-3 bg-slate-50 border-bottom d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2.5">
+            <div class="rounded-3 bg-sky-100 text-sky-700 d-flex align-items-center justify-center font-bold" style="width:34px; height:34px;">
+              <i class="fas fa-hospital-user text-xs"></i>
+            </div>
+            <div>
+              <h6 class="fw-bold mb-0 text-slate-800 text-sm">Department of {{ dept_name }}</h6>
+              <span class="text-xs text-muted">{{ dept_docs|length }} Assigned Specialist{% if dept_docs|length > 1 %}s{% endif %}</span>
+            </div>
+          </div>
+          <span class="badge bg-sky-50 text-sky-700 border border-sky-200 rounded-pill px-2.5 py-1 text-xs font-bold">
+            {{ dept_docs|length }} Active
+          </span>
+        </div>
+
+        <!-- Table of Doctors in Department -->
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-slate-600 small text-uppercase" style="font-size:10.5px; letter-spacing:0.5px;">
+              <tr>
+                <th class="ps-3 py-2.5">Doctor &amp; Qualifications</th>
+                <th class="py-2.5">Specialty &amp; OPD Room</th>
+                <th class="py-2.5">Consultation Fee</th>
+                <th class="py-2.5">Live Duty Roster Status</th>
+                <th class="text-end pe-3 py-2.5">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in dept_docs %}
+              {% set r_status = doc.roster_status if doc.roster_status else 'Available' %}
+              <tr class="doctor-dir-row" data-search="{{ doc.first_name | lower }} {{ doc.last_name | lower }} {{ (doc.specialization or doc.specialty or '') | lower }} {{ (doc.department or '') | lower }}">
+                <td class="ps-3 py-3">
+                  <div class="d-flex align-items-center gap-2.5">
+                    <img 
+                      src="{{ url_for('get_doctor_image', doc_id=doc.id) }}" 
+                      alt="Dr. {{ doc.last_name }}"
+                      class="rounded-circle object-fit-cover border"
+                      style="width: 38px; height: 38px;"
+                      onerror="this.src='/static/img/default-doctor.png';"
+                    />
+                    <div>
+                      <div class="fw-bold text-slate-900 d-flex align-items-center gap-1">
+                        Dr. {{ doc.first_name }} {{ doc.last_name }}
+                        <span class="pulse-dot {% if r_status == 'Available' %}bg-success{% elif r_status == 'In Consultation' %}bg-primary{% elif r_status == 'On Break' %}bg-warning{% else %}bg-secondary{% endif %}"></span>
+                      </div>
+                      <div class="small text-muted" style="font-size:11px;">{{ doc.qualification or 'MD' }} &bull; {{ doc.experience or '10+ Yrs Exp' }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="fw-semibold text-slate-800 small">{{ doc.specialization or doc.specialty or 'General Medicine' }}</div>
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill small px-2 py-0.5 mt-0.5" style="font-size:10px;">
+                    <i class="fas fa-door-open me-0.5"></i>{{ doc.opd_room or 'Room 101' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="fw-bold text-emerald-700 small">&#8377;{{ doc.consultation_fee or '500' }}</div>
+                  <div class="text-muted" style="font-size:10px;">Per Visit</div>
+                </td>
+                <td>
+                  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="d-inline-flex align-items-center gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="update_doctor_roster" value="1">
+                    <input type="hidden" name="doctor_id" value="{{ doc.id }}">
+                    <input type="hidden" name="opd_room" value="{{ doc.opd_room or 'Room 101' }}">
+                    <select name="roster_status" class="form-select form-select-sm py-1 px-2.5 rounded-pill fw-bold" style="font-size:11px; width:auto; border-color:#cbd5e1;" onchange="this.form.submit()">
+                      <option value="Available" {% if r_status == 'Available' %}selected{% endif %}>🟢 Available</option>
+                      <option value="In Consultation" {% if r_status == 'In Consultation' %}selected{% endif %}>🔵 In Consult</option>
+                      <option value="On Break" {% if r_status == 'On Break' %}selected{% endif %}>🟡 On Break</option>
+                      <option value="Off Duty" {% if r_status == 'Off Duty' %}selected{% endif %}>⚪ Off Duty</option>
+                    </select>
+                  </form>
+                </td>
+                <td class="text-end pe-3">
+                  <div class="d-flex justify-content-end align-items-center gap-1.5 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-gradient-primary rounded-pill px-2.5 py-1 text-white fw-bold d-inline-flex align-items-center gap-1"
+                            onclick="quickBookWithDoctor('{{ doc.id }}')">
+                      <i class="fas fa-plus text-xs"></i>
+                      <span>Book Token</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1"
+                            onclick="filterBySpecificDoctor('{{ doc.id }}'); switchMasterTab('opd');" title="Filter queue for this doctor">
+                      <i class="fas fa-filter text-xs"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="fas fa-user-doctor fa-2x mb-2 d-block text-slate-300"></i>
+      No doctors affiliated with this hospital yet.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 4. SIDE DRAWER: PATIENT DETAILS & EHR DOSSIER -->
+<div class="offcanvas offcanvas-end offcanvas-lux offcanvas-lux-wide" tabindex="-1" id="patientDetailDrawer" aria-labelledby="patientDetailDrawerLabel">
+  <div class="offcanvas-header drawer-header-emerald">
+    <div>
+      <span class="badge bg-emerald-950 text-emerald-300 rounded-pill px-3 py-1 mb-1 font-monospace" style="font-size:10px;">PATIENT DOSSIER &amp; EHR</span>
+      <h5 class="offcanvas-title fw-bold mb-0 text-white" id="patientDetailDrawerLabel">
+        <i class="fas fa-id-card-alt me-2"></i> <span id="pDrawerName">Patient Details</span>
+      </h5>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" onclick="hideAppDrawer('patientDetailDrawer')"></button>
+  </div>
+
+  <div class="offcanvas-body p-4 flex-grow-1 overflow-y-auto">
+    <!-- Patient Profile Banner -->
+    <div class="p-4 rounded-4 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white mb-4 shadow-sm border border-emerald-800/40">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle bg-emerald-500/30 border border-emerald-400/50 text-emerald-300 d-flex align-items-center justify-center font-bold text-xl shadow-inner flex-shrink-0" id="pDrawerAvatar" style="width:56px; height:56px;">
+          PT
+        </div>
+        <div class="flex-grow-1">
+          <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-white" id="pDrawerFullName">Patient Full Name</h4>
+            <span class="badge bg-emerald-500 text-dark fw-bold rounded-pill px-2.5 py-0.5 small" id="pDrawerBlood">O+</span>
+          </div>
+          <p class="text-xs text-emerald-200/80 mb-0 mt-1">
+            <span class="font-monospace" id="pDrawerId">UID-PAT/001</span> &bull; 
+            <span id="pDrawerAgeGender">32 Yrs / Male</span> &bull; 
+            <span id="pDrawerVisitsCount">0 Visits</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact & Personal Details -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <div class="p-3 bg-light rounded-3 border h-100">
+          <span class="small fw-bold text-uppercase text-secondary d-block mb-1" style="font-size:10.5px;">Phone Number</span>
+          <div class="fw-bold text-slate-800" id="pDrawerPhone">+91 98765 43210</div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="p-3 bg-light rounded-3 border h-100">
+          <span class="small fw-bold text-uppercase text-secondary d-block mb-1" style="font-size:10.5px;">Email Address</span>
+          <div class="fw-bold text-slate-800 small text-break" id="pDrawerEmail">patient@example.com</div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="p-3 bg-light rounded-3 border">
+          <span class="small fw-bold text-uppercase text-secondary d-block mb-1" style="font-size:10.5px;">Address</span>
+          <div class="text-slate-800 small" id="pDrawerAddress">Street address on record</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clinical Vitals & Allergies -->
+    <div class="mb-4">
+      <h6 class="fw-bold text-slate-900 mb-2.5 d-flex align-items-center gap-2">
+        <i class="fas fa-heartbeat text-emerald-600"></i>
+        <span>Clinical Profile &amp; Allergies</span>
+      </h6>
+      <div class="row g-2">
+        <div class="col-6">
+          <div class="p-3 rounded-3 bg-rose-50 border border-rose-200">
+            <span class="text-rose-700 fw-bold text-xs d-block mb-1">Known Allergies</span>
+            <span class="text-slate-800 small fw-medium" id="pDrawerAllergies">None reported</span>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-3 rounded-3 bg-sky-50 border border-sky-200">
+            <span class="text-sky-700 fw-bold text-xs d-block mb-1">Clinical History</span>
+            <span class="text-slate-800 small fw-medium" id="pDrawerHistory">Routine Care</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Appointment & OPD History Timeline -->
+    <div>
+      <div class="d-flex justify-content-between align-items-center mb-2.5">
+        <h6 class="fw-bold text-slate-900 mb-0 d-flex align-items-center gap-2">
+          <i class="fas fa-calendar-check text-primary"></i>
+          <span>Consultation History &amp; Prescriptions</span>
+        </h6>
+        <span class="badge bg-light text-muted border rounded-pill" id="pDrawerTimelineCount">0 Records</span>
+      </div>
+
+      <div id="pDrawerAppointmentsList" class="space-y-3">
+        <!-- Dynamically rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="offcanvas-footer p-3 bg-light border-top d-flex gap-2">
+    <button type="button" class="btn btn-light rounded-pill px-4 flex-grow-1" data-bs-dismiss="offcanvas" onclick="hideAppDrawer('patientDetailDrawer')">Close</button>
+    <button type="button" class="btn btn-gradient-primary rounded-pill px-4 fw-bold text-white flex-grow-2" onclick="bookWalkinFromDrawer()">
+      <i class="fas fa-walking me-1"></i> Book New Token
+    </button>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# ── LUXURY SIDE-DRAWER PANELS (OFFCANVAS) ── #}
+{# ══════════════════════════════════════════════════════════════════ #}
+
+{# 1. SIDE DRAWER: REGISTER NEW PATIENT #}
+<div class="offcanvas offcanvas-end offcanvas-lux offcanvas-lux-wide" tabindex="-1" id="registerPatientDrawer" aria-labelledby="registerPatientDrawerLabel">
+  <div class="offcanvas-header drawer-header-emerald">
+    <div>
+      <span class="badge bg-emerald-950 text-emerald-300 rounded-pill px-3 py-1 mb-1 font-monospace" style="font-size:10px;">PATIENT ONBOARDING</span>
+      <h5 class="offcanvas-title fw-bold mb-0 text-white" id="registerPatientDrawerLabel">
+        <i class="fas fa-user-plus me-2"></i> Register New Patient
+      </h5>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" onclick="hideAppDrawer('registerPatientDrawer')"></button>
+  </div>
+
+  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="d-flex flex-column h-100">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="register_patient" value="1">
+    
+    <div class="offcanvas-body p-4 flex-grow-1 overflow-y-auto">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Full Name *</label>
+          <input type="text" name="patient_name" class="form-control form-control-lux" placeholder="e.g. Ramesh Chandra" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Phone Number *</label>
+          <input type="tel" name="patient_phone" class="form-control form-control-lux" placeholder="+91 98765 43210" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Email (Optional)</label>
+          <input type="email" name="patient_email" class="form-control form-control-lux" placeholder="patient@example.com">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Age (Yrs)</label>
+          <input type="number" name="patient_age" class="form-control form-control-lux" placeholder="32" min="0" max="130">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted">Gender</label>
+          <select name="patient_gender" class="form-select form-control-lux">
+            <option value="Male" selected>Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Blood Group</label>
+          <select name="blood_group" class="form-select form-control-lux">
+            <option value="Not Specified">Not Specified</option>
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Emergency Contact Phone</label>
+          <input type="tel" name="emergency_contact" class="form-control form-control-lux" placeholder="+91 XXXXX XXXXX">
+        </div>
+        <div class="col-12">
+          <label class="form-label small fw-bold text-muted">Known Allergies / Medical Notes</label>
+          <input type="text" name="allergies" class="form-control form-control-lux" placeholder="Penicillin, Peanuts, Hypertension...">
+        </div>
+        <div class="col-12">
+          <label class="form-label small fw-bold text-muted">Residential Address</label>
+          <textarea name="address" class="form-control form-control-lux" rows="2" placeholder="Street address, City, Pin code"></textarea>
+        </div>
+
+        {# Immediate OPD appointment booking section #}
+        <div class="col-12 mt-3">
+          <div class="p-3 rounded-4 bg-light border">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="bookAppointmentCheck" onchange="document.getElementById('immediateApptSection').classList.toggle('d-none', !this.checked)">
+              <label class="form-check-label fw-bold text-primary small" for="bookAppointmentCheck">
+                <i class="fas fa-calendar-plus me-1"></i> Book Immediate OPD Appointment / Token
+              </label>
+            </div>
+
+            <div id="immediateApptSection" class="row g-2 d-none mt-2">
+              <div class="col-md-6">
+                <label class="form-label small text-muted"><i class="fas fa-stethoscope text-primary me-1"></i>1. Department</label>
+                <select id="regDeptSelect" class="form-select form-select-sm rounded-3" onchange="onRegDeptFilter(this.value)">
+                  <option value="">All Departments</option>
+                  {% for dept in departments %}
+                  <option value="{{ dept }}">{{ dept }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted"><i class="fas fa-user-md text-primary me-1"></i>2. Assign Doctor</label>
+                <select name="doctor_id" id="regDoctorSelect" class="form-select form-select-sm rounded-3">
+                  <option value="">Select Doctor...</option>
+                  {% for dept_name, dept_docs in (departments_with_doctors or {}).items() %}
+                  <optgroup label="Department of {{ dept_name }}" data-dept="{{ dept_name }}">
+                    {% for doc in dept_docs %}
+                    <option value="{{ doc.id }}" data-dept="{{ doc.department }}">
+                      Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.opd_room or 'Room 101' }})
+                    </option>
+                    {% endfor %}
+                  </optgroup>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small text-muted">Priority</label>
+                <select name="priority" class="form-select form-select-sm rounded-3">
+                  <option value="normal" selected>Normal</option>
+                  <option value="emergency">Emergency</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small text-muted">Fee (Rs.)</label>
+                <input type="number" name="fee_amount" class="form-control form-control-sm rounded-3" value="300">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Reason for Visit</label>
+                <input type="text" name="reason" class="form-control form-control-sm rounded-3" placeholder="e.g. Health check-up, Cough...">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="offcanvas-footer p-3 bg-light border-top d-flex gap-2">
+      <button type="button" class="btn btn-light rounded-pill px-4 flex-grow-1" data-bs-dismiss="offcanvas" onclick="hideAppDrawer('registerPatientDrawer')">Cancel</button>
+      <button type="submit" class="btn btn-gradient-emerald rounded-pill px-4 fw-bold text-white flex-grow-2">
+        <i class="fas fa-save me-1"></i> Save &amp; Register Patient
+      </button>
+    </div>
+  </form>
+</div>
+
+{# 2. SIDE DRAWER: GENERATE WALK-IN TOKEN #}
+<div class="offcanvas offcanvas-end offcanvas-lux offcanvas-lux-wide" tabindex="-1" id="walkinDrawer" aria-labelledby="walkinDrawerLabel">
+  <div class="offcanvas-header drawer-header-primary">
+    <div>
+      <span class="badge bg-sky-950 text-sky-300 rounded-pill px-3 py-1 mb-1 font-monospace" style="font-size:10px;">WALK-IN TOKEN DESK</span>
+      <h5 class="offcanvas-title fw-bold mb-0 text-white" id="walkinDrawerLabel">
+        <i class="fas fa-walking me-2"></i> Register Walk-in Patient
+      </h5>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" onclick="hideAppDrawer('walkinDrawer')"></button>
+  </div>
+
+  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" id="walkinForm" class="d-flex flex-column h-100">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="book_walkin" value="1">
+    
+    <div class="offcanvas-body p-4 flex-grow-1 overflow-y-auto">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Patient Full Name *</label>
+          <input type="text" name="patient_name" id="walkinPatientName" class="form-control form-control-lux" placeholder="e.g. Rajesh Kumar" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Phone Number *</label>
+          <input type="tel" name="patient_phone" id="walkinPatientPhone" class="form-control form-control-lux" placeholder="+91 98765 43210" required>
+        </div>
+        
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted"><i class="fas fa-stethoscope text-primary me-1"></i>1. Select Department</label>
+          <select id="walkinDeptSelect" class="form-select form-control-lux" onchange="onWalkinDeptFilter(this.value)">
+            <option value="">All Clinical Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept }}">{{ dept }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted"><i class="fas fa-user-md text-primary me-1"></i>2. Choose Attending Doctor *</label>
+          <select name="doctor_id" id="walkinDoctorSelect" class="form-select form-control-lux" onchange="onDoctorChanged(this)" required>
+            <option value="">Select Doctor from Department...</option>
+            {% for dept_name, dept_docs in (departments_with_doctors or {}).items() %}
+            <optgroup label="Department of {{ dept_name }}" data-dept="{{ dept_name }}">
+              {% for doc in dept_docs %}
+              <option value="{{ doc.id }}" 
+                      data-dept="{{ doc.department }}"
+                      data-fee="{{ doc.consultation_fee or 300 }}" 
+                      data-room="{{ doc.opd_room or 'Room 101' }}" 
+                      data-specialty="{{ doc.specialization or doc.specialty or 'General' }}" 
+                      data-name="Dr. {{ doc.first_name }} {{ doc.last_name }}">
+                Dr. {{ doc.first_name }} {{ doc.last_name }} — {{ doc.specialization or doc.specialty or 'Specialist' }} ({{ doc.opd_room or 'Room 101' }})
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endfor %}
+          </select>
+          <div id="selectedDoctorNotice" class="p-2 mt-2 rounded-3 bg-primary-subtle text-primary small fw-semibold" style="display:none;"></div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Triage / Priority Level *</label>
+          <select name="priority" class="form-select form-control-lux" required>
+            <option value="normal" selected>Normal Queue</option>
+            <option value="emergency">Emergency / High Priority</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Date</label>
+          <input type="date" name="appointment_date" class="form-control form-control-lux" value="{{ today.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Time</label>
+          <input type="time" name="appointment_time" class="form-control form-control-lux" value="{{ now.strftime('%H:%M') }}" required>
+        </div>
+
+        {# Vitals Section #}
+        <div class="col-12">
+          <div class="p-3 rounded-4 bg-light border">
+            <span class="small fw-bold text-uppercase text-secondary d-block mb-2">
+              <i class="fas fa-stethoscope me-1 text-primary"></i> Initial Triage &amp; Vitals (Optional)
+            </span>
+            <div class="row g-2">
+              <div class="col-4 col-md-2">
+                <input type="text" name="bp" class="form-control form-control-sm rounded-3" placeholder="BP (120/80)">
+              </div>
+              <div class="col-4 col-md-2">
+                <input type="text" name="pulse" class="form-control form-control-sm rounded-3" placeholder="Pulse (72)">
+              </div>
+              <div class="col-4 col-md-2">
+                <input type="text" name="temp" class="form-control form-control-sm rounded-3" placeholder="Temp (°F)">
+              </div>
+              <div class="col-4 col-md-2">
+                <input type="text" name="spo2" class="form-control form-control-sm rounded-3" placeholder="SpO2 (%)">
+              </div>
+              <div class="col-4 col-md-2">
+                <input type="text" name="weight" class="form-control form-control-sm rounded-3" placeholder="Weight (kg)">
+              </div>
+              <div class="col-4 col-md-2">
+                <input type="text" name="allergies" class="form-control form-control-sm rounded-3" placeholder="Allergies">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# Billing Section #}
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Consultation Fee (Rs.)</label>
+          <input type="number" name="fee_amount" id="walkinFeeInput" class="form-control form-control-lux" value="300" step="50" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Payment Mode</label>
+          <select name="payment_mode" class="form-select form-control-lux">
+            <option value="Cash" selected>Cash</option>
+            <option value="UPI / QR">UPI / QR Code</option>
+            <option value="Card">Debit / Credit Card</option>
+            <option value="Insurance">Insurance / TPA</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold text-muted">Payment Status</label>
+          <select name="payment_status" class="form-select form-control-lux">
+            <option value="paid" selected>Paid</option>
+            <option value="unpaid">Unpaid / Collect Later</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label small fw-bold text-muted">Chief Complaint / Reason</label>
+          <textarea name="reason" class="form-control form-control-lux" rows="2" placeholder="e.g. Acute abdominal pain, fever for 3 days..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="offcanvas-footer p-3 bg-light border-top d-flex gap-2">
+      <button type="button" class="btn btn-light rounded-pill px-4 flex-grow-1" data-bs-dismiss="offcanvas" onclick="hideAppDrawer('walkinDrawer')">Cancel</button>
+      <button type="submit" class="btn btn-gradient-primary rounded-pill px-4 fw-bold text-white flex-grow-2">
+        <i class="fas fa-check-circle me-1"></i> Register &amp; Print Slip
+      </button>
+    </div>
+  </form>
+</div>
+
+{# 3. SIDE DRAWER: ISSUE VISITOR PASS #}
+<div class="offcanvas offcanvas-end offcanvas-lux offcanvas-lux-mid" tabindex="-1" id="visitorPassDrawer" aria-labelledby="visitorPassDrawerLabel">
+  <div class="offcanvas-header drawer-header-amber">
+    <div>
+      <span class="badge bg-amber-950 text-amber-300 rounded-pill px-3 py-1 mb-1 font-monospace" style="font-size:10px;">SECURITY DESK</span>
+      <h5 class="offcanvas-title fw-bold mb-0 text-white" id="visitorPassDrawerLabel">
+        <i class="fas fa-id-badge me-2"></i> Issue Visitor / Attendant Pass
+      </h5>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" onclick="hideAppDrawer('visitorPassDrawer')"></button>
+  </div>
+
+  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="d-flex flex-column h-100">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="issue_visitor_pass" value="1">
+    
+    <div class="offcanvas-body p-4 flex-grow-1 overflow-y-auto">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label small fw-bold text-muted">Visitor Full Name *</label>
+          <input type="text" name="visitor_name" class="form-control form-control-lux" placeholder="Full name of visitor" required>
+        </div>
+        <div class="col-12">
+          <label class="form-label small fw-bold text-muted">Visitor Phone Number *</label>
+          <input type="tel" name="visitor_phone" class="form-control form-control-lux" placeholder="+91 XXXXX XXXXX" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Patient Name *</label>
+          <input type="text" name="patient_name" class="form-control form-control-lux" placeholder="Admitted Patient" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Ward / Bed / Room No. *</label>
+          <input type="text" name="ward_room" class="form-control form-control-lux" placeholder="e.g. ICU-4, Room 201" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Relationship</label>
+          <input type="text" name="relation" class="form-control form-control-lux" placeholder="Family, Attendant, Friend">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-muted">Validity Duration</label>
+          <select name="valid_hours" class="form-select form-control-lux">
+            <option value="2" selected>2 Hours (Standard)</option>
+            <option value="4">4 Hours</option>
+            <option value="12">12 Hours (Attendant)</option>
+            <option value="24">24 Hours (Overnight)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="offcanvas-footer p-3 bg-light border-top d-flex gap-2">
+      <button type="button" class="btn btn-light rounded-pill px-4 flex-grow-1" data-bs-dismiss="offcanvas" onclick="hideAppDrawer('visitorPassDrawer')">Cancel</button>
+      <button type="submit" class="btn btn-gradient-amber rounded-pill px-4 fw-bold text-white flex-grow-2">
+        <i class="fas fa-id-card me-1"></i> Issue &amp; Print Pass
+      </button>
+    </div>
+  </form>
+</div>
+
+{# 4. SIDE DRAWER: RECORD / UPDATE TRIAGE VITALS #}
+<div class="offcanvas offcanvas-end offcanvas-lux offcanvas-lux-compact" tabindex="-1" id="vitalsDrawer" aria-labelledby="vitalsDrawerLabel">
+  <div class="offcanvas-header drawer-header-purple">
+    <div>
+      <span class="badge bg-purple-950 text-purple-300 rounded-pill px-3 py-1 mb-1 font-monospace" style="font-size:10px;">CLINICAL TRIAGE</span>
+      <h5 class="offcanvas-title fw-bold mb-0 text-white" id="vitalsDrawerLabel">
+        <i class="fas fa-stethoscope me-2"></i> Patient Triage Telemetry
+      </h5>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" onclick="hideAppDrawer('vitalsDrawer')"></button>
+  </div>
+
+  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="d-flex flex-column h-100">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="update_vitals" value="1">
+    <input type="hidden" name="appointment_id" id="vitalsApptId">
+    
+    <div class="offcanvas-body p-4 flex-grow-1 overflow-y-auto">
+      <div class="p-3 bg-light rounded-3 mb-3 text-muted small">
+        Patient: <strong class="text-slate-900 fs-6" id="vitalsPatientName"></strong>
+      </div>
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="form-label small fw-bold text-muted">Blood Pressure (mmHg)</label>
+          <input type="text" name="bp" id="vitalsBp" class="form-control form-control-lux" placeholder="120/80">
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-bold text-muted">Pulse (bpm)</label>
+          <input type="text" name="pulse" id="vitalsPulse" class="form-control form-control-lux" placeholder="76">
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-bold text-muted">Temperature (°F)</label>
+          <input type="text" name="temp" id="vitalsTemp" class="form-control form-control-lux" placeholder="98.6">
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-bold text-muted">SpO2 (%)</label>
+          <input type="text" name="spo2" id="vitalsSpo2" class="form-control form-control-lux" placeholder="99">
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-bold text-muted">Weight (kg)</label>
+          <input type="text" name="weight" id="vitalsWeight" class="form-control form-control-lux" placeholder="65">
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-bold text-muted">Known Allergies</label>
+          <input type="text" name="allergies" id="vitalsAllergies" class="form-control form-control-lux" placeholder="Penicillin...">
+        </div>
+      </div>
+    </div>
+
+    <div class="offcanvas-footer p-3 bg-light border-top d-flex gap-2">
+      <button type="button" class="btn btn-light rounded-pill px-4 flex-grow-1" data-bs-dismiss="offcanvas" onclick="hideAppDrawer('vitalsDrawer')">Cancel</button>
+      <button type="submit" class="btn btn-gradient-primary rounded-pill px-4 fw-bold text-white flex-grow-2">
+        <i class="fas fa-check-circle me-1"></i> Save Telemetry
+      </button>
+    </div>
+  </form>
+</div>
+
+{# 5. SIDE DRAWER: RESCHEDULE APPOINTMENT #}
+<div class="offcanvas offcanvas-end offcanvas-lux offcanvas-lux-compact" tabindex="-1" id="rescheduleDrawer" aria-labelledby="rescheduleDrawerLabel">
+  <div class="offcanvas-header drawer-header-slate">
+    <div>
+      <span class="badge bg-slate-950 text-slate-300 rounded-pill px-3 py-1 mb-1 font-monospace" style="font-size:10px;">CALENDAR RESCHEDULE</span>
+      <h5 class="offcanvas-title fw-bold mb-0 text-white" id="rescheduleDrawerLabel">
+        <i class="fas fa-calendar-alt me-2"></i> Reschedule Slot
+      </h5>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" onclick="hideAppDrawer('rescheduleDrawer')"></button>
+  </div>
+
+  <form action="{{ url_for('staff_reception_dashboard') }}" method="POST" class="d-flex flex-column h-100">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="reschedule_appointment" value="1">
+    <input type="hidden" name="appointment_id" id="rescheduleApptId">
+    
+    <div class="offcanvas-body p-4 flex-grow-1 overflow-y-auto">
+      <div class="p-3 bg-light rounded-3 mb-3 text-muted small">
+        Patient: <strong class="text-slate-900 fs-6" id="reschedulePatientName"></strong>
+      </div>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label small fw-bold text-muted">New Date *</label>
+          <input type="date" name="new_date" id="rescheduleDate" class="form-control form-control-lux" required>
+        </div>
+        <div class="col-12">
+          <label class="form-label small fw-bold text-muted">New Time *</label>
+          <input type="time" name="new_time" id="rescheduleTime" class="form-control form-control-lux" required>
+        </div>
+      </div>
+    </div>
+
+    <div class="offcanvas-footer p-3 bg-light border-top d-flex gap-2">
+      <button type="button" class="btn btn-light rounded-pill px-4 flex-grow-1" data-bs-dismiss="offcanvas" onclick="hideAppDrawer('rescheduleDrawer')">Cancel</button>
+      <button type="submit" class="btn btn-secondary rounded-pill px-4 fw-bold flex-grow-2">
+        <i class="fas fa-save me-1"></i> Save Reschedule
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Live Clock for Header
+  function updateLiveClock() {
+    const el = document.getElementById('liveClock');
+    if (el) {
+      el.innerText = new Date().toLocaleTimeString();
+    }
+  }
+  setInterval(updateLiveClock, 1000);
+  updateLiveClock();
+
+  // Master Reception Tab Switching (OPD Queue, Patients, Doctors)
+  function switchMasterTab(tabName) {
+    document.querySelectorAll('.master-pane').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('#receptionMasterTabs .nav-link').forEach(b => {
+      b.classList.remove('active');
+    });
+
+    const targetPane = document.getElementById('master-pane-' + tabName);
+    const targetBtn = document.getElementById('tab-btn-' + tabName);
+    if (targetPane) targetPane.style.display = 'block';
+    if (targetBtn) targetBtn.classList.add('active');
+  }
+
+  // Filter Patients Directory
+  function filterPatientsDirectory() {
+    const searchVal = (document.getElementById('patientSearchInput')?.value || '').toLowerCase().trim();
+    const genderVal = (document.getElementById('patientGenderFilter')?.value || 'all').toLowerCase();
+    const rows = document.querySelectorAll('#patientsTable .patient-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+      const searchData = row.dataset.search || '';
+      const genderData = row.dataset.gender || 'all';
+
+      const matchSearch = !searchVal || searchData.includes(searchVal);
+      const matchGender = genderVal === 'all' || genderData.includes(genderVal);
+
+      if (matchSearch && matchGender) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const countDisplay = document.getElementById('patientCountDisplay');
+    if (countDisplay) {
+      countDisplay.innerText = `Showing ${visibleCount} Registered Patients`;
+    }
+  }
+
+  // Filter Doctors Directory by Specialty
+  function filterDoctorDirectory(deptName, btn) {
+    document.querySelectorAll('.doc-dept-pill').forEach(b => {
+      b.classList.remove('btn-primary', 'shadow-sm');
+      b.classList.add('btn-light', 'border');
+    });
+    if (btn) {
+      btn.classList.remove('btn-light', 'border');
+      btn.classList.add('btn-primary', 'shadow-sm');
+    }
+
+    const sections = document.querySelectorAll('.doc-dept-section');
+    sections.forEach(sec => {
+      if (deptName === 'all' || sec.dataset.dept === deptName) {
+        sec.style.display = '';
+      } else {
+        sec.style.display = 'none';
+      }
+    });
+  }
+
+  // Doctor Directory Search
+  function filterDoctorDirectorySearch() {
+    const query = (document.getElementById('doctorDirectorySearch')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('.doctor-dir-row');
+    rows.forEach(row => {
+      const data = (row.dataset.search || '').toLowerCase();
+      row.style.display = (!query || data.includes(query)) ? '' : 'none';
+    });
+  }
+
+  // Patient Dossier & Details Viewer
+  let currentDrawerPatient = null;
+  function showPatientDetailsFromData(btn) {
+    const ds = btn.dataset;
+    showPatientDetails({
+      id: ds.id,
+      name: ds.name,
+      email: ds.email,
+      phone: ds.phone,
+      age: ds.age,
+      gender: ds.gender,
+      address: ds.address,
+      blood_group: ds.bloodGroup,
+      allergies: ds.allergies,
+      history: ds.history,
+      visits_count: ds.visits
+    });
+  }
+
+  function showPatientDetails(p) {
+    currentDrawerPatient = p;
+    document.getElementById('pDrawerName').innerText = p.name || 'Patient Details';
+    document.getElementById('pDrawerFullName').innerText = p.name || 'Patient Full Name';
+    document.getElementById('pDrawerAvatar').innerText = (p.name ? p.name.substring(0, 2).toUpperCase() : 'PT');
+    document.getElementById('pDrawerId').innerText = p.id || 'UID-PAT/001';
+    document.getElementById('pDrawerAgeGender').innerText = `${p.age || '--'} Yrs / ${p.gender || 'Not Specified'}`;
+    document.getElementById('pDrawerBlood').innerText = p.blood_group || 'Not Tested';
+    document.getElementById('pDrawerVisitsCount').innerText = `${p.visits_count || (p.appointments ? p.appointments.length : 0)} Consultations`;
+    document.getElementById('pDrawerPhone').innerText = p.phone || 'No phone on record';
+    document.getElementById('pDrawerEmail').innerText = p.email || 'N/A';
+    document.getElementById('pDrawerAddress').innerText = p.address || 'Address not specified';
+    document.getElementById('pDrawerAllergies').innerText = p.allergies || 'None reported';
+    document.getElementById('pDrawerHistory').innerText = p.history || 'Routine Care';
+
+    const timelineCount = document.getElementById('pDrawerTimelineCount');
+    const listEl = document.getElementById('pDrawerAppointmentsList');
+    if (timelineCount) timelineCount.innerText = `${p.appointments ? p.appointments.length : 0} Records`;
+
+    if (listEl) {
+      listEl.innerHTML = '';
+      if (!p.appointments || p.appointments.length === 0) {
+        listEl.innerHTML = '<div class="text-center p-4 bg-light rounded-3 text-muted small"><i class="fas fa-calendar-times mb-1 d-block text-slate-300 fs-4"></i>No recorded past visits or OPD consultations for this patient yet.</div>';
+      } else {
+        p.appointments.forEach(appt => {
+          const item = document.createElement('div');
+          item.className = 'p-3 rounded-3 bg-light border mb-2';
+          item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start mb-1.5">
+              <div>
+                <span class="badge bg-slate-900 text-sky-400 rounded-pill px-2 py-0.5 font-monospace small">${appt.token_no || ('TK-' + appt.id)}</span>
+                <span class="fw-bold text-slate-900 small ms-1">${appt.doctor_name || 'Attending Doctor'}</span>
+                <span class="text-muted small">(${appt.doctor_dept || 'General Medicine'} • ${appt.doctor_room || 'Room 101'})</span>
+              </div>
+              <span class="badge ${appt.status === 'completed' ? 'bg-success-subtle text-success' : (appt.status === 'confirmed' ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning')} rounded-pill px-2 py-0.5 text-xs text-uppercase">${appt.status}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center text-xs text-muted">
+              <div><i class="far fa-calendar-alt me-1"></i>${appt.date} • ${appt.time}</div>
+              ${appt.vitals_bp ? `<span class="badge bg-white border text-dark">BP: ${appt.vitals_bp} | Pulse: ${appt.vitals_pulse || '--'}</span>` : ''}
+            </div>
+            <div class="text-slate-700 text-xs mt-1.5 p-2 bg-white rounded-2 border">
+              <strong>Reason:</strong> ${appt.reason || 'General Consultation'}
+            </div>
+          `;
+          listEl.appendChild(item);
+        });
+      }
+    }
+
+    showAppDrawer('patientDetailDrawer');
+  }
+
+  function openWalkinForPatient(name, phone) {
+    openWalkinDrawer();
+    const nameInput = document.getElementById('walkinPatientName');
+    const phoneInput = document.getElementById('walkinPatientPhone');
+    if (nameInput) nameInput.value = name;
+    if (phoneInput) phoneInput.value = phone;
+  }
+
+  function bookWalkinFromDrawer() {
+    if (currentDrawerPatient) {
+      hideAppDrawer('patientDetailDrawer');
+      openWalkinForPatient(currentDrawerPatient.name, currentDrawerPatient.phone);
+    }
+  }
+
+  // Universal Resilient Side-Drawer (Offcanvas) Open/Close
+  function showAppDrawer(drawerId) {
+    const drawerEl = document.getElementById(drawerId);
+    if (!drawerEl) return;
+    if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+      try {
+        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(drawerEl);
+        offcanvas.show();
+        return;
+      } catch (e) {
+        console.warn('Bootstrap offcanvas fallback:', e);
+      }
+    }
+    // Pure DOM Fallback
+    drawerEl.classList.add('show');
+    drawerEl.style.visibility = 'visible';
+    drawerEl.style.transform = 'none';
+    document.body.classList.add('modal-open');
+    if (!document.getElementById('drawer-fallback-backdrop')) {
+      const backdrop = document.createElement('div');
+      backdrop.id = 'drawer-fallback-backdrop';
+      backdrop.className = 'offcanvas-backdrop fade show';
+      backdrop.onclick = () => hideAppDrawer(drawerId);
+      document.body.appendChild(backdrop);
+    }
+  }
+
+  function hideAppDrawer(drawerId) {
+    const drawerEl = document.getElementById(drawerId);
+    if (!drawerEl) return;
+    if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+      try {
+        const offcanvas = bootstrap.Offcanvas.getInstance(drawerEl);
+        if (offcanvas) {
+          offcanvas.hide();
+          return;
+        }
+      } catch (e) {}
+    }
+    drawerEl.classList.remove('show');
+    drawerEl.style.visibility = 'hidden';
+    drawerEl.style.transform = 'translateX(100%)';
+    document.body.classList.remove('modal-open');
+    const backdrop = document.getElementById('drawer-fallback-backdrop');
+    if (backdrop) backdrop.remove();
+  }
+
+  function openRegisterPatientDrawer() {
+    showAppDrawer('registerPatientDrawer');
+  }
+
+  function openWalkinDrawer() {
+    showAppDrawer('walkinDrawer');
+  }
+
+  function openVisitorPassDrawer() {
+    showAppDrawer('visitorPassDrawer');
+  }
+
+  function openVitalsDrawer(id, name, bp, pulse, temp, spo2, weight, allergies) {
+    document.getElementById('vitalsApptId').value = id;
+    document.getElementById('vitalsPatientName').innerText = name || '';
+    document.getElementById('vitalsBp').value = bp || '';
+    document.getElementById('vitalsPulse').value = pulse || '';
+    document.getElementById('vitalsTemp').value = temp || '';
+    document.getElementById('vitalsSpo2').value = spo2 || '';
+    document.getElementById('vitalsWeight').value = weight || '';
+    document.getElementById('vitalsAllergies').value = allergies || '';
+
+    showAppDrawer('vitalsDrawer');
+  }
+
+  function openRescheduleDrawer(id, name, date, time) {
+    document.getElementById('rescheduleApptId').value = id;
+    document.getElementById('reschedulePatientName').innerText = name || '';
+    document.getElementById('rescheduleDate').value = date || '';
+    document.getElementById('rescheduleTime').value = time || '';
+
+    showAppDrawer('rescheduleDrawer');
+  }
+
+  // Department Filter Sync in Reception Walk-in Form
+  function onWalkinDeptFilter(selectedDept) {
+    const docSelect = document.getElementById('walkinDoctorSelect');
+    if (!docSelect) return;
+    const optgroups = docSelect.querySelectorAll('optgroup');
+    optgroups.forEach(og => {
+      if (!selectedDept || og.dataset.dept === selectedDept) {
+        og.style.display = '';
+        og.disabled = false;
+      } else {
+        og.style.display = 'none';
+        og.disabled = true;
+      }
+    });
+    docSelect.value = "";
+    const notice = document.getElementById('selectedDoctorNotice');
+    if (notice) notice.style.display = 'none';
+  }
+
+  // Department Filter Sync in Patient Registration Form
+  function onRegDeptFilter(selectedDept) {
+    const docSelect = document.getElementById('regDoctorSelect');
+    if (!docSelect) return;
+    const optgroups = docSelect.querySelectorAll('optgroup');
+    optgroups.forEach(og => {
+      if (!selectedDept || og.dataset.dept === selectedDept) {
+        og.style.display = '';
+        og.disabled = false;
+      } else {
+        og.style.display = 'none';
+        og.disabled = true;
+      }
+    });
+    docSelect.value = "";
+  }
+
+  // Doctor Selector Sync in Walk-in Form
+  function onDoctorChanged(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) {
+      const notice = document.getElementById('selectedDoctorNotice');
+      if (notice) notice.style.display = 'none';
+      return;
+    }
+    const fee = opt.dataset.fee || 300;
+    const room = opt.dataset.room || 'Room 101';
+    const name = opt.dataset.name;
+    const feeInput = document.getElementById('walkinFeeInput');
+    if (feeInput) feeInput.value = fee;
+    
+    const notice = document.getElementById('selectedDoctorNotice');
+    if (notice) {
+      notice.innerHTML = `<i class="fas fa-hospital-user me-1 text-primary"></i>Assigned to <strong>${name}</strong> &bull; OPD: <strong>${room}</strong> &bull; Fee: <strong>Rs. ${fee}</strong>`;
+      notice.style.display = 'block';
+    }
+  }
+
+  function filterBySpecificDoctor(docId) {
+    const sel = document.getElementById('doctorFilter');
+    if (sel) {
+      sel.value = docId;
+      applyFilters();
+    }
+    document.getElementById('apptTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function quickBookWithDoctor(docId) {
+    openWalkinDrawer();
+    const docSel = document.getElementById('walkinDoctorSelect');
+    if (docSel) {
+      docSel.value = docId;
+      onDoctorChanged(docSel);
+    }
+  }
+
+  // Token Announcer & Web Audio Chime
+  function playChime(callback) {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      osc2.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc1.start();
+      osc1.stop(audioCtx.currentTime + 0.15);
+      osc2.start(audioCtx.currentTime + 0.15);
+      osc2.stop(audioCtx.currentTime + 0.5);
+
+      setTimeout(() => {
+        if (callback) callback();
+      }, 550);
+    } catch(e) {
+      if (callback) callback();
+    }
+  }
+
+  function testChimeSound() {
+    playChime();
+  }
+
+  function callPatientToken(token, patientName, doctorLastName, room) {
+    document.getElementById('currentCallingToken').innerText = token;
+    document.getElementById('currentCallingPatient').innerText = patientName;
+    document.getElementById('currentCallingDoctor').innerText = 'Dr. ' + (doctorLastName || 'Physician') + ' • ' + (room || 'Room 101');
+    
+    // Announce via Web Speech API
+    playChime(() => {
+      if ('speechSynthesis' in window) {
+        const text = `Token number ${token}, Patient ${patientName}, please proceed to ${room || 'Room 101'}.`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.05;
+        window.speechSynthesis.speak(utterance);
+      }
+    });
+  }
+
+  function announceCurrentPatient() {
+    const token = document.getElementById('currentCallingToken').innerText;
+    const patient = document.getElementById('currentCallingPatient').innerText;
+    
+    playChime(() => {
+      if ('speechSynthesis' in window) {
+        const text = `Attention please. Token number ${token}, Patient ${patient}, please proceed to your consultation room.`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+      }
+    });
+  }
+
+  // Filter Queue
+  let activeTab = 'all';
+  const todayStr = '{{ today.strftime("%Y-%m-%d") }}';
+
+  function filterTab(tab, btn) {
+    activeTab = tab;
+    document.querySelectorAll('#queueTabs .nav-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  }
+
+  function filterAppointments() {
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const search = document.getElementById('apptSearch').value.toLowerCase();
+    const selectedDoctor = document.getElementById('doctorFilter') ? document.getElementById('doctorFilter').value : 'all';
+    
+    document.querySelectorAll('#apptTable tbody .appt-row').forEach(row => {
+      const status = row.dataset.status;
+      const qstatus = row.dataset.qstatus;
+      const priority = row.dataset.priority;
+      const date = row.dataset.date;
+      const docId = String(row.dataset.doctor || '');
+      const searchText = row.dataset.search || '';
+
+      let matchTab = false;
+      if (activeTab === 'all') matchTab = true;
+      else if (activeTab === 'today') matchTab = (date === todayStr);
+      else if (activeTab === 'waiting') matchTab = (qstatus === 'waiting');
+      else if (activeTab === 'in_consultation') matchTab = (qstatus === 'in_consultation');
+      else if (activeTab === 'emergency') matchTab = (priority === 'emergency');
+      else if (activeTab === 'completed') matchTab = (qstatus === 'completed' || status === 'completed');
+
+      const matchDoctor = (selectedDoctor === 'all' || docId === selectedDoctor);
+      const matchSearch = !search || searchText.includes(search);
+      const isVisible = matchTab && matchDoctor && matchSearch;
+      row.style.display = isVisible ? '' : 'none';
+    });
+  }
+
+  // Filter Patients Directory
+  function filterPatients() {
+    const search = document.getElementById('patientSearch').value.toLowerCase();
+    document.querySelectorAll('.patient-card-item').forEach(card => {
+      const searchData = card.dataset.search || '';
+      card.style.display = (!search || searchData.includes(search)) ? '' : 'none';
+    });
+  }
+
+  // Quick Book Token for Existing Patient
+  function quickBookForPatient(patientName, patientPhone) {
+    openWalkinDrawer();
+    const nameInput = document.getElementById('walkinPatientName');
+    const phoneInput = document.getElementById('walkinPatientPhone');
+    if (nameInput) nameInput.value = patientName;
+    if (phoneInput) phoneInput.value = patientPhone;
+  }
+
+  // Real-time live polling for Reception Desk
+  function fetchReceptionLiveFeed() {
+    fetch('/api/staff/reception/live-stats')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.stats) {
+          const availBedsBadge = document.getElementById('liveAvailBedsBadge');
+          if (availBedsBadge) {
+            availBedsBadge.innerText = `${d.stats.available_beds} Gen / ${d.stats.available_icu_beds} ICU`;
+          }
+        }
+      })
+      .catch(e => console.error('Error polling reception live stats:', e));
+  }
+  setInterval(fetchReceptionLiveFeed, 4500);
+</script>
+
+<!-- Reception Direct Bed Admission Modal -->
+<div class="modal fade" id="receptionBedModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <form action="{{ url_for('staff_reception_dashboard') }}" method="POST">
+        <input type="hidden" name="direct_bed_admission" value="1">
+        <div class="modal-header bg-success text-white rounded-top-4">
+          <h5 class="modal-title fw-bold"><i class="fas fa-bed me-2"></i>Reception Direct Inpatient Bed Admission</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Patient Name</label>
+            <input type="text" name="patient_name" class="form-control" placeholder="Full patient name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Patient Phone</label>
+            <input type="text" name="patient_phone" class="form-control" placeholder="Phone number" required>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Bed Ward Type</label>
+              <select name="bed_type" class="form-select">
+                <option value="General">General Ward</option>
+                <option value="ICU">ICU (Critical Care)</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Room / Bed No.</label>
+              <input type="text" name="room_number" class="form-control" placeholder="e.g. Ward-A 102" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Admission Reason / Clinical Notes</label>
+            <textarea name="reason" class="form-control" rows="2" placeholder="Emergency triage / Surgery admission / Direct OPD admit..."></textarea>
+          </div>
+          <div class="p-3 bg-light rounded-3 text-muted small">
+            <i class="fas fa-info-circle text-primary me-1"></i>
+            This patient admission will be written directly to the SQL database and immediately dispatched to the <strong>Bed Management</strong> and <strong>Nursing Station</strong>.
+          </div>
+        </div>
+        <div class="modal-footer border-0 p-3 pt-0">
+          <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success rounded-3 fw-bold px-4">
+            <i class="fas fa-check-circle me-1"></i> Admit &amp; Transfer to Nursing
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Reception Emergency Blood Requisition Modal -->
+<div class="modal fade" id="receptionBloodModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <form action="{{ url_for('staff_reception_dashboard') }}" method="POST">
+        <input type="hidden" name="request_emergency_blood" value="1">
+        <div class="modal-header bg-danger text-white rounded-top-4">
+          <h5 class="modal-title fw-bold"><i class="fas fa-tint me-2"></i>Reception Emergency Blood Requisition</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Patient Name</label>
+            <input type="text" name="patient_name" class="form-control" placeholder="Trauma / Walk-in patient name" required>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Blood Group</label>
+              <select name="blood_group" class="form-select fw-bold text-danger">
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+" selected>O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Units Needed</label>
+              <input type="number" name="units" class="form-control" value="1" min="1" max="10" required>
+            </div>
+          </div>
+          <div class="p-3 bg-danger-subtle rounded-3 text-danger small">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            Dispatches high-priority transfusion call directly to <strong>Blood Bank Management</strong>.
+          </div>
+        </div>
+        <div class="modal-footer border-0 p-3 pt-0">
+          <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">
+            <i class="fas fa-paper-plane me-1"></i> Dispatch Blood Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

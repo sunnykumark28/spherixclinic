@@ -1,0 +1,510 @@
+{% extends 'layout.html' %}
+
+{% block title %}Medicine Live Delivery &amp; GPS Telemetry Portal • Spherix Rx{% endblock %}
+
+{% block head_extra %}
+<!-- Leaflet Map CSS & JS for Live Telemetry Tracking -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- Premium Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<style>
+    * { font-family: 'Outfit', sans-serif; }
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .delivery-hero-mesh {
+        background: radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.12) 0%, transparent 40%),
+                    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.12) 0%, transparent 40%),
+                    linear-gradient(135deg, #0f172a 0%, #064e3b 60%, #042f2e 100%);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 32px;
+        color: #ffffff;
+        box-shadow: 0 20px 40px -15px rgba(6, 78, 59, 0.35);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .light-glass-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 28px;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .light-glass-card:hover {
+        border-color: #38bdf8;
+        box-shadow: 0 12px 30px -4px rgba(14, 165, 233, 0.12);
+    }
+
+    .pulse-ring {
+        display: block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulseRing 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes pulseRing {
+        to {
+            box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);
+        }
+    }
+
+    #deliveryMap {
+        height: 480px;
+        width: 100%;
+        border-radius: 24px;
+        z-index: 1;
+    }
+</style>
+
+<div class="bg-slate-50 min-h-screen text-slate-800 pb-28">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-6">
+            <ol class="flex items-center space-x-2 text-xs font-semibold text-slate-500">
+                <li><a href="{{ url_for('home') }}" class="hover:text-emerald-600 transition-colors text-slate-600">Home</a></li>
+                <li><span class="text-slate-400">/</span></li>
+                <li><a href="{{ url_for('medical_shop') }}" class="hover:text-emerald-600 transition-colors text-slate-600">Spherix Rx Pharmacy</a></li>
+                <li><span class="text-slate-400">/</span></li>
+                <li class="text-emerald-600 font-bold">Live GPS Delivery Portal</li>
+            </ol>
+        </nav>
+
+        <!-- ================= HERO HEADER ================= -->
+        <div class="delivery-hero-mesh p-6 sm:p-12 mb-10 shadow-xl">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-8">
+                    <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-extrabold mb-4 backdrop-blur-md">
+                        <span class="pulse-ring"></span>
+                        <span>Live GPS Telemetry &bull; Cold-Chain Active</span>
+                    </div>
+
+                    <h1 class="text-3xl sm:text-5xl font-display font-extrabold text-white tracking-tight leading-tight mb-3">
+                        Online Medicine Delivery Portal.
+                    </h1>
+                    <p class="text-emerald-100 text-sm sm:text-base max-w-2xl leading-relaxed mb-6 font-normal">
+                        Real-time doorstep dispatch tracking for prescription pharmaceuticals, insulin, and emergency therapeutics with climate-monitored courier vans.
+                    </p>
+
+                    <!-- Fast Order Switcher / Lookup -->
+                    <form action="{{ url_for('medicine_delivery_portal') }}" method="GET" class="flex flex-wrap items-center gap-3 max-w-lg">
+                        <div class="relative flex-1 min-w-[240px]">
+                            <i class="fas fa-barcode absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 text-sm"></i>
+                            <input 
+                                type="text" 
+                                name="order_id" 
+                                placeholder="Enter Order ID (e.g. #{{ order.id or order.get('id') }})..." 
+                                value="{{ order.id if order and not is_demo else '' }}"
+                                class="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-900/90 border border-emerald-500/40 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 font-mono"
+                            >
+                        </div>
+                        <button type="submit" class="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/30 cursor-pointer border-0">
+                            Track Order
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right: Active Order Telemetry Quick Card -->
+                <div class="lg:col-span-4">
+                    <div class="p-6 rounded-3xl bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tracking Parcel</span>
+                            <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold">
+                                #ORD-{{ order.id if order else '10482' }}
+                            </span>
+                        </div>
+
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Estimated Arrival</span>
+                            <div class="text-4xl font-display font-black text-white font-mono flex items-baseline gap-2">
+                                <span id="etaMinutesDisplay">18</span>
+                                <span class="text-sm font-semibold text-emerald-400 uppercase">Mins Left</span>
+                            </div>
+                        </div>
+
+                        <!-- Cold Chain Gauge -->
+                        <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400 font-semibold flex items-center gap-1.5">
+                                    <i class="fas fa-snowflake text-sky-400"></i> Cold-Chain Sensor
+                                </span>
+                                <span class="text-emerald-400 font-mono font-bold" id="tempSensorDisplay">4.2°C</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-gradient-to-r from-sky-400 to-emerald-400 h-full rounded-full w-2/3"></div>
+                            </div>
+                            <span class="text-[10px] text-slate-500 block">Target range: 2.0°C to 8.0°C (Insulin &amp; Biologics safe)</span>
+                        </div>
+
+                        <!-- OTP Delivery Seal -->
+                        <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Delivery Verification PIN:</span>
+                            <span class="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-sm font-mono font-extrabold tracking-widest" id="otpCodeDisplay">
+                                8492
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MAIN LIVE TELEMETRY GRID ================= -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+
+            <!-- Left 8 Columns: Live GPS Route Map & Driver Telemetry -->
+            <div class="lg:col-span-8 space-y-8">
+                
+                <!-- 1. Interactive Live GPS Map -->
+                <div class="light-glass-card p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                                <h2 class="text-xl font-display font-bold text-slate-900 mb-0">Live Courier GPS Radar</h2>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-0">Real-time coordinates updated every 3 seconds via encrypted telemetry</p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] font-mono text-slate-700">
+                                <i class="fas fa-satellite text-sky-600 mr-1"></i> GPS: ±1.5m
+                            </span>
+                            <button type="button" onclick="centerMapOnCourier();" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold transition-colors cursor-pointer border border-slate-200">
+                                <i class="fas fa-crosshairs mr-1 text-emerald-600"></i> Center
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Leaflet Container -->
+                    <div id="deliveryMap" class="shadow-inner border border-slate-200"></div>
+
+                    <!-- Route Details Bar -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold block">Vehicle</span>
+                            <span class="text-xs font-bold text-slate-800">Spherix EV Van #18</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold block">Avg Speed</span>
+                            <span class="text-xs font-bold text-emerald-600 font-mono">28 km/h</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold block">Distance Left</span>
+                            <span class="text-xs font-bold text-sky-600 font-mono">3.4 km</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold block">Tamper Seal</span>
+                            <span class="text-xs font-bold text-emerald-600">Intact (100%)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Interactive Delivery Stepper / Milestones -->
+                <div class="light-glass-card p-6 sm:p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg border border-sky-200">
+                                <i class="fas fa-route"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-display font-bold text-slate-900 mb-0">Delivery Status Timeline</h3>
+                                <span class="text-xs text-slate-500">Order Verification &bull; Fulfillment Pipeline</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
+                            {{ order.status if order else 'Out for Delivery' }}
+                        </span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Step 1 -->
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-md shadow-emerald-600/20">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="flex-1 pb-4 border-b border-slate-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-900 mb-0.5">Prescription Validated by Registered Pharmacist</h4>
+                                    <span class="text-[10px] text-slate-400 font-mono">15m ago</span>
+                                </div>
+                                <p class="text-xs text-slate-600 mb-0">Verified by Dr. Rajesh Verma (Reg #BHR-PHARM-88421). Dosage and drug interaction safety check passed.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-md shadow-emerald-600/20">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="flex-1 pb-4 border-b border-slate-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-900 mb-0.5">Cold-Chain Secure Packed &amp; RFID Sealed</h4>
+                                    <span class="text-[10px] text-slate-400 font-mono">11m ago</span>
+                                </div>
+                                <p class="text-xs text-slate-600 mb-0">Pharmaceutical temperature-controlled cooler box locked at 4.2°C with tamper-evident serial band #SB-9942.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-md shadow-emerald-600/20">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="flex-1 pb-4 border-b border-slate-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-900 mb-0.5">Dispatched from Spherix Central Dispensary</h4>
+                                    <span class="text-[10px] text-slate-400 font-mono">6m ago</span>
+                                </div>
+                                <p class="text-xs text-slate-600 mb-0">Departed Motihari Main Pharmacy Hub aboard Electric Dispatch Unit.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 (Active) -->
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-md shadow-sky-600/20 animate-pulse">
+                                <i class="fas fa-truck-fast"></i>
+                            </div>
+                            <div class="flex-1 pb-4 border-b border-slate-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-sky-700 mb-0.5">Out for Express Doorstep Delivery</h4>
+                                    <span class="text-[10px] text-sky-700 bg-sky-100 px-2 py-0.5 rounded-md font-mono font-bold">ACTIVE NOW</span>
+                                </div>
+                                <p class="text-xs text-slate-700 mb-0">Paramedic rider Amit Sharma is navigating along Station Road toward your address.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 5 (Pending) -->
+                        <div class="flex items-start gap-4 opacity-50">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                <i class="fas fa-box-check"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-500 mb-0.5">Doorstep Handover &amp; OTP Settlement</h4>
+                                    <span class="text-[10px] text-slate-400 font-mono">Pending</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-0">Show your secure PIN <strong>8492</strong> to rider upon arrival to unlock tamper seal.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right 4 Columns: Assigned Courier, Prescription Details & Actions -->
+            <div class="lg:col-span-4 space-y-6">
+
+                <!-- 1. Assigned Delivery Paramedic Card -->
+                <div class="light-glass-card p-6 sm:p-7 space-y-5">
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-sky-600/20">
+                                <i class="fas fa-motorcycle"></i>
+                            </div>
+                            <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"></span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Assigned Paramedic Courier</span>
+                            <h3 class="text-base font-bold text-slate-900 mb-0.5">Amit Kumar Sharma</h3>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="text-amber-500 font-bold"><i class="fas fa-star text-[10px]"></i> 4.95</span>
+                                <span class="text-slate-300">&bull;</span>
+                                <span class="text-slate-500">1,420 Deliveries</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <a href="tel:+919334325920" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors text-decoration-none shadow-sm">
+                            <i class="fas fa-phone-alt"></i>
+                            <span>Call Rider</span>
+                        </a>
+                        <a href="https://wa.me/919334325920?text=Hi%20Amit,%20checking%20status%20for%20medicine%20order" target="_blank" class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors text-decoration-none border border-slate-200">
+                            <i class="fab fa-whatsapp text-emerald-600"></i>
+                            <span>WhatsApp</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 2. Prescription Order Contents Card -->
+                <div class="light-glass-card p-6 sm:p-7 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <h4 class="text-sm font-display font-bold text-slate-900 mb-0">Prescription Package</h4>
+                        <span class="text-xs text-slate-500 font-mono">
+                            {{ order_items|length if order_items else 3 }} Items
+                        </span>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="space-y-3 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                        {% if order_items %}
+                            {% for itm in order_items %}
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                                <div class="flex items-center gap-2.5">
+                                    <i class="fas fa-pills text-sky-600 text-xs"></i>
+                                    <div>
+                                        <h5 class="text-xs font-bold text-slate-800 mb-0">{{ itm.name }}</h5>
+                                        <span class="text-[10px] text-slate-500 font-mono">Qty: {{ itm.quantity }}</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-slate-900 font-mono">₹{{ "%.2f"|format(itm.price * itm.quantity) }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                                <div class="flex items-center gap-2.5">
+                                    <i class="fas fa-pills text-sky-600 text-xs"></i>
+                                    <div>
+                                        <h5 class="text-xs font-bold text-slate-800 mb-0">Paracetamol 500mg</h5>
+                                        <span class="text-[10px] text-slate-500 font-mono">Qty: 2</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-slate-900 font-mono">₹98.00</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Destination Address -->
+                    <div class="pt-3 border-t border-slate-100 space-y-1">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold block">Delivery Address</span>
+                        <p class="text-xs text-slate-700 leading-relaxed mb-0 font-medium">
+                            <i class="fas fa-map-pin text-rose-500 mr-1"></i>
+                            {{ order.shipping_address if order and order.shipping_address else 'Flat 402, Royal Residency, Station Road, Motihari - 845401' }}
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="pt-2 flex flex-col gap-2">
+                        {% if order and not is_demo %}
+                        <a href="{{ url_for('print_invoice', order_id=order.id) }}" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold text-center transition-colors text-decoration-none block border border-slate-200">
+                            <i class="fas fa-file-invoice text-sky-600 mr-1.5"></i> Download PDF Invoice
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('medical_shop') }}" class="w-full py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold text-center transition-colors text-decoration-none block border border-sky-200">
+                            <i class="fas fa-repeat text-sky-600 mr-1.5"></i> Order More Medications
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 3. Regulatory & Pharmacist Verification Seal -->
+                <div class="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-2 text-slate-600 text-xs">
+                    <div class="flex items-center gap-2 text-emerald-700 font-bold">
+                        <i class="fas fa-stamp"></i>
+                        <span>DCGI &amp; FDA Certified Fulfillment</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed mb-0">
+                        Every package is sealed in tamper-evident barcoded bags. Always inspect seal integrity before giving your verification PIN.
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= SCRIPT: LEAFLET TELEMETRY & LIVE SIMULATOR ================= -->
+<script>
+let deliveryMap, courierMarker, patientMarker, pharmacyMarker, routePolyline;
+
+// Coordinates for Motihari Dispensary & Sample Destination
+const pharmacyCoords = [26.6469, 84.9089]; // Spherix Central Pharmacy
+const patientCoords = [26.6590, 84.9250];  // Patient Residence
+
+// Simulated courier initial position along the route
+let courierCoords = [26.6530, 84.9170];
+
+document.addEventListener('DOMContentLoaded', () => {
+    initDeliveryMap();
+    startTelemetryPolling();
+});
+
+function initDeliveryMap() {
+    // Custom clean tile layer
+    deliveryMap = L.map('deliveryMap').setView(courierCoords, 14);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 19
+    }).addTo(deliveryMap);
+
+    // 1. Pharmacy Marker
+    const pharmacyIcon = L.divIcon({
+        className: 'custom-pin',
+        html: `<div style="background: #0284c7; color: white; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(2,132,199,0.5); border: 2px solid white;"><i class="fas fa-hospital text-sm"></i></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+    });
+    pharmacyMarker = L.marker(pharmacyCoords, { icon: pharmacyIcon }).addTo(deliveryMap)
+        .bindPopup('<b>Spherix Central Pharmacy</b><br>Dispatched at 21:40');
+
+    // 2. Patient Marker
+    const patientIcon = L.divIcon({
+        className: 'custom-pin',
+        html: `<div style="background: #e11d48; color: white; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(225,29,72,0.5); border: 2px solid white;"><i class="fas fa-house-medical text-sm"></i></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+    });
+    patientMarker = L.marker(patientCoords, { icon: patientIcon }).addTo(deliveryMap)
+        .bindPopup('<b>Your Delivery Address</b><br>Station Road, Motihari');
+
+    // 3. Live Courier Vehicle Marker (Pulsing)
+    const courierIcon = L.divIcon({
+        className: 'custom-courier-pin',
+        html: `<div style="background: #10b981; color: #ffffff; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(16,185,129,0.9); border: 3px solid white; animation: floatPulse 2s infinite;"><i class="fas fa-truck-fast text-base"></i></div>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+    });
+    courierMarker = L.marker(courierCoords, { icon: courierIcon }).addTo(deliveryMap)
+        .bindPopup('<b>Spherix Rx Express Van #18</b><br>Rider: Amit Sharma<br>Temp: 4.2°C');
+
+    // Route Polyline
+    routePolyline = L.polyline([pharmacyCoords, courierCoords, patientCoords], {
+        color: '#0284c7',
+        weight: 4,
+        dashArray: '8, 8',
+        opacity: 0.8
+    }).addTo(deliveryMap);
+}
+
+function centerMapOnCourier() {
+    if (deliveryMap && courierMarker) {
+        deliveryMap.setView(courierMarker.getLatLng(), 15, { animate: true });
+    }
+}
+
+// Telemetry Polling & Live Movement Simulation
+function startTelemetryPolling() {
+    let step = 0;
+    setInterval(() => {
+        step += 0.0001;
+        // Slowly nudge courier closer to destination
+        const newLat = 26.6530 + Math.sin(step * 10) * 0.001 + (step * 0.05);
+        const newLng = 84.9170 + Math.cos(step * 10) * 0.001 + (step * 0.05);
+
+        if (courierMarker) {
+            courierMarker.setLatLng([newLat, newLng]);
+        }
+
+        // Live micro fluctuation on cold chain sensor
+        const tempElem = document.getElementById('tempSensorDisplay');
+        if (tempElem) {
+            const currentTemp = (4.1 + Math.random() * 0.2).toFixed(1);
+            tempElem.textContent = `${currentTemp}°C`;
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

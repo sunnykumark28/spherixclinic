@@ -1,0 +1,631 @@
+{% extends "layout.html" %}
+
+{% block title %}AI Multi-Drug &amp; Food Interaction Safety Checker | Spherix Clinic{% endblock %}
+
+{% block content %}
+<style>
+  /* Spherix Linear/Apple-Grade Pharmacovigilance Suite */
+  .pharma-hero-mesh {
+    background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.2) 0%, transparent 40%),
+                linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 28px;
+    color: #ffffff;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pharma-glass-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05), 0 0 1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .pill-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    transition: all 0.25s ease;
+  }
+  .pill-chip:hover {
+    transform: translateY(-1px);
+    border-color: #6366f1;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  }
+
+  .severity-card-severe {
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    border: 1px solid #fecdd3;
+    border-left: 6px solid #e11d48;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px -5px rgba(225, 29, 72, 0.08);
+  }
+
+  .severity-card-major {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid #fde68a;
+    border-left: 6px solid #d97706;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.08);
+  }
+
+  .severity-card-moderate {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #bfdbfe;
+    border-left: 6px solid #2563eb;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.08);
+  }
+
+  .severity-card-safe {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #bbf7d0;
+    border-left: 6px solid #16a34a;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.08);
+  }
+
+  .food-contraindication-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+  }
+  .food-contraindication-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
+  }
+
+  .glow-btn-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+    transition: all 0.3s ease;
+  }
+  .glow-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px -5px rgba(79, 70, 229, 0.6);
+    color: #ffffff;
+  }
+</style>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="flex items-center space-x-2 text-xs font-semibold text-slate-500">
+      <li><a href="{{ url_for('home') }}" class="hover:text-indigo-600 transition-colors">Home</a></li>
+      <li><span class="text-slate-300">/</span></li>
+      <li class="text-slate-900 font-bold">AI Drug &amp; Food Interaction Safety Suite</li>
+    </ol>
+  </nav>
+
+  <!-- Hero Banner -->
+  <div class="pharma-hero-mesh p-6 sm:p-10 mb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div class="lg:col-span-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-xs font-bold mb-4 backdrop-blur-md">
+          <i class="fas fa-shield-halved text-indigo-400"></i>
+          <span>Clinical Pharmacovigilance &bull; Cytochrome P450 Matrix</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight mb-3">
+          AI Multi-Drug &amp; Food Interaction Checker
+        </h1>
+        <p class="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed font-normal mb-0">
+          Verify polypharmacy safety before taking medications. Analyzes hepatic CYP3A4/CYP2C19 competitive inhibition, renal clearance collisions, and adverse dietary interactions.
+        </p>
+      </div>
+
+      <div class="lg:col-span-4 lg:text-right">
+        <div class="p-5 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 text-left inline-block w-full sm:w-auto shadow-2xl">
+          <div class="flex items-center gap-3.5 mb-2">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-500 to-pink-500 text-white flex items-center justify-center text-xl font-bold shadow-lg flex-shrink-0">
+              <i class="fas fa-capsules"></i>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider font-bold text-indigo-300">Safety Standard</div>
+              <div class="text-base font-bold text-white">FDA &amp; NCCN Aligned</div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-300 flex items-center gap-1.5 pt-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Live Pharmacopeia Knowledge Base</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Medication Selector Station -->
+  <div class="pharma-glass-card p-6 sm:p-8 mb-8">
+    <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+      <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+        <i class="fas fa-search-plus text-indigo-600"></i>
+        <span>Select Prescribed &amp; Over-the-Counter Medications</span>
+      </h2>
+      <span class="text-xs text-slate-500 font-semibold">Enter 2+ medicines to test cross-conflicts</span>
+    </div>
+
+    <!-- Search Input with Live Autocomplete Dropdown -->
+    <div class="relative my-4">
+      <div class="flex items-center rounded-2xl border-2 border-slate-200 focus-within:border-indigo-600 bg-slate-50/70 transition-all p-1 shadow-inner">
+        <div class="pl-4 pr-2 text-slate-400">
+          <i class="fas fa-search text-base"></i>
+        </div>
+        <input 
+          type="text" 
+          id="drugSearchInput" 
+          class="w-full bg-transparent border-0 py-3 px-2 text-sm sm:text-base font-medium text-slate-900 placeholder-slate-400 focus:outline-none" 
+          placeholder="Search medication name (e.g., Warfarin, Aspirin, Lisinopril, Metformin, Atorvastatin, Ciprofloxacin)..."
+          autocomplete="off"
+        >
+        <button class="glow-btn-primary px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 flex-shrink-0" type="button" id="btnAddManualDrug">
+          <i class="fas fa-plus"></i> Add Drug
+        </button>
+      </div>
+
+      <!-- Autocomplete Dropdown -->
+      <div id="drugSuggestionsDropdown" class="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 divide-y divide-slate-100 hidden z-50 max-h-72 overflow-y-auto">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Quick Add Pills Palette -->
+    <div class="flex items-center gap-2 flex-wrap mb-5 pt-1">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">Quick Select:</span>
+      <button type="button" onclick="addDrugTag('Warfarin (Coumadin)');" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all">+ Warfarin</button>
+      <button type="button" onclick="addDrugTag('Aspirin (Acetylsalicylic Acid)');" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all">+ Aspirin</button>
+      <button type="button" onclick="addDrugTag('Clopidogrel (Plavix)');" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all">+ Clopidogrel</button>
+      <button type="button" onclick="addDrugTag('Omeprazole (Prilosec)');" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all">+ Omeprazole</button>
+      <button type="button" onclick="addDrugTag('Atorvastatin (Lipitor)');" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all">+ Atorvastatin</button>
+      <button type="button" onclick="addDrugTag('Lisinopril (Prinivil, Zestril)');" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all">+ Lisinopril</button>
+      <button type="button" onclick="addDrugTag('Ibuprofen (Advil, Motrin)');" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all">+ Ibuprofen</button>
+    </div>
+
+    <!-- Active Selected Regimen Container -->
+    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 mb-6">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-xs uppercase tracking-wider font-extrabold text-slate-600 flex items-center gap-1.5" id="selectedCountLabel">
+          <i class="fas fa-list-check text-indigo-500"></i> Selected Regimen (0 Medications)
+        </span>
+        <button type="button" onclick="clearAllDrugTags();" class="text-xs text-rose-600 hover:text-rose-800 font-bold hidden flex items-center gap-1" id="btnClearAll">
+          <i class="fas fa-trash-alt"></i> Clear Regimen
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2.5 flex-wrap" id="selectedDrugsTagsContainer">
+        <span class="text-slate-400 text-xs italic" id="emptyDrugHint">No medications selected yet. Search above or click quick tags.</span>
+      </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="flex items-center justify-between flex-wrap gap-4 pt-2 border-t border-slate-100">
+      <div class="text-xs text-slate-500 flex items-center gap-2">
+        <i class="fas fa-info-circle text-indigo-500 text-sm"></i>
+        <span>Runs pairwise molecular interaction analysis, organ burden assessment &amp; dietary rules.</span>
+      </div>
+      <button 
+        type="button" 
+        id="btnAnalyzeInteractions" 
+        class="glow-btn-primary px-8 py-3.5 rounded-full font-bold text-xs sm:text-sm flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+        disabled
+      >
+        <i class="fas fa-bolt"></i>
+        <span>Run Pharmacological Safety Analysis</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="drugAnalysisLoading" class="pharma-glass-card p-12 text-center hidden mb-8">
+    <div class="inline-block animate-spin text-indigo-600 mb-4">
+      <i class="fas fa-circle-notch text-4xl"></i>
+    </div>
+    <h3 class="text-lg font-bold text-slate-800 mb-1">Cross-Referencing Pharmacokinetic Pathways...</h3>
+    <p class="text-xs text-slate-500 mb-0">Evaluating enzyme clearance competition and biological half-life overlaps...</p>
+  </div>
+
+  <!-- Results Viewport -->
+  <div id="drugAnalysisResults" class="hidden space-y-8">
+
+    <!-- Overall Risk Executive Banner -->
+    <div class="p-6 sm:p-8 rounded-3xl" id="overallRiskBanner">
+      <!-- Injected dynamically -->
+    </div>
+
+    <!-- Pair-wise Drug Interactions Matrix -->
+    <div class="pharma-glass-card p-6 sm:p-8">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-6">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i class="fas fa-exchange-alt text-indigo-600"></i>
+            <span>Drug-to-Drug Interaction Matrix</span>
+          </h3>
+          <p class="text-xs text-slate-500 mb-0">Detailed breakdown of competitive metabolic pathways</p>
+        </div>
+        <span class="px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-extrabold" id="interactionPairCountBadge">
+          0 Pairs Evaluated
+        </span>
+      </div>
+
+      <div id="drugInteractionsList" class="space-y-4">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Food, Drink & Nutritional Contraindications Grid -->
+    <div class="pharma-glass-card p-6 sm:p-8">
+      <div class="mb-6">
+        <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <i class="fas fa-utensils text-amber-500"></i>
+          <span>Food, Drink &amp; Dietary Supplement Contraindications</span>
+        </h3>
+        <p class="text-xs text-slate-500 mb-0">Specific nutritional guidelines to avoid toxicity or blunted efficacy</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="foodInteractionsGrid">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Official OpenFDA Boxed Warnings & Clinical Monographs -->
+    <div class="pharma-glass-card p-6 sm:p-8" id="openFdaMonographsSection">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-6">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i class="fas fa-landmark text-sky-600"></i>
+            <span>Official OpenFDA Regulatory Drug Monographs</span>
+          </h3>
+          <p class="text-xs text-slate-500 mb-0">Authoritative FDA government label warnings, indications &amp; adverse effect profiles</p>
+        </div>
+        <span class="px-3 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-xs font-extrabold flex items-center gap-1.5">
+          <i class="fas fa-check-circle text-sky-600"></i>
+          <span>OpenFDA Verified Data</span>
+        </span>
+      </div>
+
+      <div class="space-y-4" id="openFdaMonographsList">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Clinical Doctor Recommendation Bar -->
+    <div class="p-6 rounded-3xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl border border-indigo-900/50">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-2xl font-bold flex-shrink-0 border border-indigo-400/20">
+          <i class="fas fa-user-doctor"></i>
+        </div>
+        <div>
+          <h4 class="text-base font-bold text-white mb-0.5">Need a Specialist to Adjust Your Regimen?</h4>
+          <p class="text-xs text-indigo-200 mb-0">Connect instantly with an affiliated cardiologist or internal medicine physician for prescription review.</p>
+        </div>
+      </div>
+      <a href="{{ url_for('doctors_list') }}" class="glow-btn-primary px-6 py-3 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-2 text-decoration-none flex-shrink-0">
+        <i class="fas fa-calendar-check"></i> Book Telehealth Consultation
+      </a>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+let selectedDrugs = [];
+const searchInput = document.getElementById('drugSearchInput');
+const dropdown = document.getElementById('drugSuggestionsDropdown');
+const analyzeBtn = document.getElementById('btnAnalyzeInteractions');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.trim();
+  if (q.length < 1) {
+    dropdown.classList.add('hidden');
+    dropdown.innerHTML = '';
+    return;
+  }
+
+  fetch(`/api/drug/search?q=${encodeURIComponent(q)}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.results && data.results.length > 0) {
+        let html = '';
+        data.results.forEach(d => {
+          html += `
+            <button type="button" class="w-full text-left p-3.5 hover:bg-indigo-50/70 transition-colors flex items-center justify-between text-xs" onclick="addDrugTag('${d.name.replace(/'/g, "\\'")}');">
+              <div>
+                <strong class="text-slate-800 block font-bold text-sm">${d.name}</strong>
+                <span class="text-slate-500 text-[11px]">${d.category || 'Clinical Drug'} &bull; ${d.primary_use || ''}</span>
+              </div>
+              <i class="fas fa-plus text-indigo-600"></i>
+            </button>
+          `;
+        });
+        dropdown.innerHTML = html;
+        dropdown.classList.remove('hidden');
+      } else {
+        dropdown.innerHTML = `<div class="p-4 text-xs text-slate-500 text-center">No exact match in fast index. Click "Add Drug" to evaluate with AI.</div>`;
+        dropdown.classList.remove('hidden');
+      }
+    });
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+    dropdown.classList.add('hidden');
+  }
+});
+
+document.getElementById('btnAddManualDrug').addEventListener('click', function() {
+  const val = searchInput.value.trim();
+  if (val) addDrugTag(val);
+});
+
+window.addDrugTag = function(drugName) {
+  if (!selectedDrugs.includes(drugName)) {
+    selectedDrugs.push(drugName);
+    renderSelectedTags();
+  }
+  searchInput.value = '';
+  dropdown.classList.add('hidden');
+};
+
+window.removeDrugTag = function(drugName) {
+  selectedDrugs = selectedDrugs.filter(d => d !== drugName);
+  renderSelectedTags();
+};
+
+window.clearAllDrugTags = function() {
+  selectedDrugs = [];
+  renderSelectedTags();
+  document.getElementById('drugAnalysisResults').classList.add('hidden');
+};
+
+function renderSelectedTags() {
+  const container = document.getElementById('selectedDrugsTagsContainer');
+  const countLabel = document.getElementById('selectedCountLabel');
+  const clearBtn = document.getElementById('btnClearAll');
+
+  countLabel.innerHTML = `<i class="fas fa-list-check text-indigo-500"></i> Selected Regimen (${selectedDrugs.length} Medication${selectedDrugs.length === 1 ? '' : 's'})`;
+
+  if (selectedDrugs.length === 0) {
+    container.innerHTML = `<span class="text-slate-400 text-xs italic">No medications selected yet. Search above or click quick tags.</span>`;
+    clearBtn.classList.add('hidden');
+    analyzeBtn.disabled = true;
+    return;
+  }
+
+  clearBtn.classList.remove('hidden');
+  analyzeBtn.disabled = selectedDrugs.length < 1;
+
+  let tagsHtml = '';
+  selectedDrugs.forEach(d => {
+    tagsHtml += `
+      <span class="pill-chip">
+        <i class="fas fa-capsules text-indigo-600"></i>
+        <span>${d}</span>
+        <button type="button" onclick="removeDrugTag('${d.replace(/'/g, "\\'")}');" class="text-slate-400 hover:text-rose-600 transition-colors ml-1" aria-label="Remove">
+          <i class="fas fa-times"></i>
+        </button>
+      </span>
+    `;
+  });
+  container.innerHTML = tagsHtml;
+}
+
+// Run Analysis
+analyzeBtn.addEventListener('click', function() {
+  if (selectedDrugs.length === 0) return;
+
+  const loadingEl = document.getElementById('drugAnalysisLoading');
+  const resultsEl = document.getElementById('drugAnalysisResults');
+
+  loadingEl.classList.remove('hidden');
+  resultsEl.classList.add('hidden');
+  analyzeBtn.disabled = true;
+
+  fetch('/api/drug/check-interactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ drugs: selectedDrugs })
+  })
+  .then(res => res.json())
+  .then(data => {
+    loadingEl.classList.add('hidden');
+    analyzeBtn.disabled = false;
+
+    if (!data.success) {
+      alert(data.error || 'Failed to analyze drug interactions.');
+      return;
+    }
+
+    resultsEl.classList.remove('hidden');
+
+    // 1. Overall Banner
+    const bannerEl = document.getElementById('overallRiskBanner');
+    let bannerClasses = 'bg-emerald-50 text-emerald-900 border border-emerald-200';
+    let bannerIcon = 'fa-check-circle text-emerald-600';
+    let bannerTitle = 'No Critical Adverse Interactions Detected';
+    let bannerDesc = 'Your chosen combination does not exhibit major documented pharmacokinetic collisions.';
+
+    if (data.highest_severity === 'severe') {
+      bannerClasses = 'bg-rose-50 text-rose-950 border border-rose-200';
+      bannerIcon = 'fa-triangle-exclamation text-rose-600';
+      bannerTitle = 'CRITICAL WARNING: Severe Drug Interaction Detected';
+      bannerDesc = 'One or more drug combinations in this regimen may cause severe clinical toxicity or organ hemorrhage. Physician review required before taking together.';
+    } else if (data.highest_severity === 'major') {
+      bannerClasses = 'bg-amber-50 text-amber-950 border border-amber-200';
+      bannerIcon = 'fa-circle-exclamation text-amber-600';
+      bannerTitle = 'Major Interactions Detected – Close Monitoring Required';
+      bannerDesc = 'Dosage titration or separated administration intervals are advised to avoid adverse pharmacological responses.';
+    }
+
+    if (data.summary_title) bannerTitle = data.summary_title;
+    if (data.summary_description) bannerDesc = data.summary_description;
+
+    const poweredByBadge = data.powered_by ? `
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-extrabold uppercase tracking-wide mb-2">
+        <i class="fas fa-brain text-indigo-600"></i>
+        <span>${data.powered_by}</span>
+      </div>
+    ` : '';
+
+    bannerEl.className = `p-6 sm:p-8 rounded-3xl shadow-sm ${bannerClasses}`;
+    bannerEl.innerHTML = `
+      <div class="flex items-start gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm flex-shrink-0">
+          <i class="fas ${bannerIcon}"></i>
+        </div>
+        <div class="flex-grow">
+          ${poweredByBadge}
+          <h3 class="text-lg font-bold mb-1">${bannerTitle}</h3>
+          <p class="text-xs sm:text-sm text-slate-700 mb-0 leading-relaxed font-medium">${bannerDesc}</p>
+        </div>
+      </div>
+    `;
+
+    // 2. Interaction Pair Breakdown
+    const listEl = document.getElementById('drugInteractionsList');
+    document.getElementById('interactionPairCountBadge').textContent = `${data.interactions.length} Pair${data.interactions.length === 1 ? '' : 's'} Evaluated`;
+
+    if (data.interactions.length === 0) {
+      listEl.innerHTML = `
+        <div class="severity-card-safe p-5">
+          <div class="flex items-center gap-2 text-emerald-800 font-bold text-sm mb-1">
+            <i class="fas fa-check-circle"></i> Single Agent / Compatible Regimen
+          </div>
+          <p class="text-xs text-slate-600 mb-0">No direct competitive metabolic collisions detected between the specified agents.</p>
+        </div>
+      `;
+    } else {
+      let listHtml = '';
+      data.interactions.forEach(pair => {
+        let cardClass = 'severity-card-safe';
+        let badgeClass = 'bg-emerald-600 text-white';
+        if (pair.severity_level === 'severe') {
+          cardClass = 'severity-card-severe';
+          badgeClass = 'bg-rose-600 text-white';
+        } else if (pair.severity_level === 'major') {
+          cardClass = 'severity-card-major';
+          badgeClass = 'bg-amber-500 text-white';
+        } else if (pair.severity_level === 'moderate') {
+          cardClass = 'severity-card-moderate';
+          badgeClass = 'bg-blue-600 text-white';
+        }
+
+        listHtml += `
+          <div class="${cardClass} p-5 sm:p-6 transition-all">
+            <div class="flex justify-between items-center flex-wrap gap-2 mb-3">
+              <h4 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <i class="fas fa-pills text-indigo-600"></i> ${pair.drug1} <span class="text-slate-400 font-normal">&harr;</span> ${pair.drug2}
+              </h4>
+              <span class="px-3 py-1 rounded-full ${badgeClass} text-[11px] font-extrabold uppercase tracking-wide">
+                ${pair.severity}
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-800 font-semibold mb-3">${pair.risk_description || 'Pharmacological interaction observed.'}</p>
+            <div class="p-3.5 rounded-xl bg-white/80 border border-slate-200/80 mb-3">
+              <span class="text-[10px] text-slate-500 uppercase font-extrabold block mb-1">Molecular Mechanism:</span>
+              <span class="text-xs text-slate-700 font-medium">${pair.mechanism || 'Competitive enzyme inhibition or additive pharmacodynamic response.'}</span>
+            </div>
+            ${pair.clinical_guidance ? `
+              <div class="text-xs text-slate-700 flex items-start gap-2 pt-1 font-medium">
+                <i class="fas fa-stethoscope text-indigo-600 mt-0.5"></i>
+                <span><strong>Clinical Recommendation:</strong> ${pair.clinical_guidance}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+      listEl.innerHTML = listHtml;
+    }
+
+    // 3. Food Interactions
+    const foodGridEl = document.getElementById('foodInteractionsGrid');
+    if (!data.food_interactions || data.food_interactions.length === 0) {
+      foodGridEl.innerHTML = `<div class="col-span-3 text-center py-6 text-xs text-slate-500 font-medium">No specific severe food contraindications listed for the selected drugs.</div>`;
+    } else {
+      let foodHtml = '';
+      data.food_interactions.forEach(item => {
+        const riskColor = item.risk === 'High' ? 'text-rose-700 bg-rose-50 border-rose-200' : 'text-amber-700 bg-amber-50 border-amber-200';
+        foodHtml += `
+          <div class="food-contraindication-box p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center mb-2.5">
+                <span class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fas fa-triangle-exclamation text-amber-500"></i> ${item.food}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full border ${riskColor} text-[10px] font-extrabold uppercase">
+                  ${item.risk} Risk
+                </span>
+              </div>
+              <div class="text-xs text-slate-500 mb-2">Target Medicine: <strong class="text-slate-800">${item.drug}</strong></div>
+              <p class="text-xs text-slate-600 leading-relaxed mb-0 font-medium">${item.details}</p>
+            </div>
+          </div>
+        `;
+      });
+      foodGridEl.innerHTML = foodHtml;
+    }
+
+    // 4. OpenFDA Official Monographs
+    const fdaListEl = document.getElementById('openFdaMonographsList');
+    const fdaSection = document.getElementById('openFdaMonographsSection');
+    if (!data.fda_monographs || data.fda_monographs.length === 0) {
+      fdaSection.classList.add('hidden');
+    } else {
+      fdaSection.classList.remove('hidden');
+      let fdaHtml = '';
+      data.fda_monographs.forEach(m => {
+        fdaHtml += `
+          <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+            <div class="flex justify-between items-center flex-wrap gap-2 mb-2">
+              <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i class="fas fa-prescription-bottle text-sky-600"></i> ${m.drug_name || 'Medication'}
+              </h4>
+              <span class="px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[10px] font-extrabold uppercase">
+                FDA Label Monograph
+              </span>
+            </div>
+            ${m.clinical_notes ? `
+              <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-950 text-xs font-semibold mb-2.5">
+                <span class="text-[10px] uppercase font-extrabold text-rose-700 block mb-0.5"><i class="fas fa-triangle-exclamation mr-1"></i> FDA Boxed Warning:</span>
+                ${m.clinical_notes}
+              </div>
+            ` : ''}
+            <div class="text-xs text-slate-700 space-y-1 font-medium">
+              <div><strong>Primary Indication:</strong> ${m.primary_use || 'General therapy.'}</div>
+              <div><strong>Warnings &amp; Cautions:</strong> ${m.caution || 'Consult clinical physician.'}</div>
+              ${m.common_side_effects && m.common_side_effects.length > 0 ? `
+                <div><strong>Reported Adverse Reactions:</strong> ${m.common_side_effects.join(', ')}</div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+      fdaListEl.innerHTML = fdaHtml;
+    }
+
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  })
+  .catch(err => {
+    loadingEl.classList.add('hidden');
+    analyzeBtn.disabled = false;
+    alert('Error checking drug interactions: ' + err.message);
+  });
+});
+</script>
+{% endblock %}

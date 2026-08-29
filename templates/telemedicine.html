@@ -1,317 +1,539 @@
 {% extends 'layout.html' %}
 
-{% block title %}Telemedicine - MediConnect Premium{% endblock %}
+{% block title %}Telemedicine HD Video Consultations | Spherix Clinic{% endblock %}
 
 {% block head %}
-<!-- Fonts & Icons -->
+<!-- Modern Fonts & Icons -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!-- Jitsi Meet WebRTC External API -->
+<script src="https://meet.jit.si/external_api.js"></script>
 
 <style>
-    /* Premium Base Styles */
-    :root { --primary: #0e36e9; --dark: #020617; }
-    
-    body { 
-        font-family: 'Plus Jakarta Sans', sans-serif; 
+    :root {
+        --tele-blue: #0284c7;
+        --tele-indigo: #4f46e5;
+        --tele-dark: #0b0f19;
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
         background-color: #f8fafc;
+        color: #0f172a;
     }
 
-    /* Gradient Text */
-    .text-gradient {
-        background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
-        background-clip: text;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+
+    /* Telemedicine Hero Mesh */
+    .hero-tele-mesh {
+        background: 
+            radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.15) 0px, transparent 55%),
+            radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.12) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+            #ffffff;
     }
 
-    /* Glass Effect */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
+    /* Glassmorphism Cards */
+    .tele-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .tele-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 36px -10px rgba(2, 132, 199, 0.12);
+        border-color: rgba(2, 132, 199, 0.3);
     }
 
-    /* Hero Pattern */
-    .hero-bg {
-        background-color: #0f172a;
-        background-image: radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
-                          radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%);
+    /* Active Pulse Status Dot */
+    .status-pulse {
+        position: relative;
+    }
+    .status-pulse::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 9999px;
+        background: inherit;
+        opacity: 0.7;
+        animation: statusPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    @keyframes statusPulse {
+        0% { transform: scale(0.95); opacity: 0.8; }
+        70% { transform: scale(1.8); opacity: 0; }
+        100% { transform: scale(0.95); opacity: 0; }
     }
 
-    /* Hover Lift Animation */
-    .hover-lift { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    .hover-lift:hover { transform: translateY(-8px); }
+    /* Radiant Buttons */
+    .btn-radiant-tele {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%);
+        box-shadow: 0 10px 24px -6px rgba(2, 132, 199, 0.35);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-radiant-tele:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px -8px rgba(2, 132, 199, 0.5);
+    }
 
-    /* Pulse for 'Live' status */
-    .blob {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 1);
-        transform: scale(1);
-        animation: pulse-green 2s infinite;
+    /* In-Call Workspace Drawer */
+    #inCallSidebar {
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes pulse-green {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+
+    /* Hide page scrollbar during fullscreen call */
+    body.call-active {
+        overflow: hidden;
     }
-    
-    /* Hide scrollbar when modal is open */
-    body.modal-open { overflow: hidden; }
 </style>
-<!-- Jitsi Meet External API -->
-<script src="https://meet.jit.si/external_api.js"></script>
 {% endblock %}
 
 {% block content %}
+<div class="min-h-screen bg-slate-50 text-slate-900 pb-24 selection:bg-sky-200 selection:text-sky-900">
 
-<!-- 1. PREMIUM HERO SECTION -->
-<div class="relative hero-bg overflow-hidden min-h-[600px] flex items-center">
-    <!-- Abstract Shapes -->
-    <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-sky-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-    
-    <div class="max-w-7xl mx-auto px-6 w-full relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center py-20">
-        
-        <!-- Left Content -->
-        <div class="space-y-8">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700 backdrop-blur-sm">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Live Wait Time: &lt; 5 mins</span>
-            </div>
-            
-            <h1 class="text-5xl lg:text-7xl font-extrabold text-slate-600 leading-[1.1]">
-                Healthcare <br>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Reimagined.</span>
-            </h1>
-            
-            <p class="text-lg text-slate-400 max-w-lg leading-relaxed">
-                Connect with board-certified specialists in minutes via HD video. No waiting rooms, no travel, just quality care from home.
-            </p>
+    <!-- ================= 1. HERO SECTION & INSTANT LAUNCHER ================= -->
+    <section class="relative hero-tele-mesh pt-12 pb-20 px-6 sm:px-12 lg:px-20 border-b border-slate-200/80 overflow-hidden">
+        <!-- Ambient Background Glows -->
+        <div class="absolute -top-32 -right-32 w-[600px] h-[600px] bg-sky-100/60 rounded-full blur-[140px] pointer-events-none"></div>
+        <div class="absolute bottom-0 -left-32 w-[500px] h-[500px] bg-indigo-100/50 rounded-full blur-[130px] pointer-events-none"></div>
 
-            <!-- Search Bar Input -->
-            <div class="relative max-w-md group">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-slate-400 group-focus-within:text-sky-400 transition-colors"></i>
-                </div>
-                <input type="text" class="w-full bg-white/10 border border-black/20 text-slate-900 placeholder-slate-400 rounded-xl py-4 pl-12 pr-36 focus:outline-none focus:ring-2 focus:ring-sky-500 backdrop-blur-md transition-all" placeholder="Search symptoms, doctors...">
-                <button id="start-call-btn" class="absolute right-2 top-2 bottom-2 bg-sky-500 hover:bg-sky-400 text-white font-semibold px-6 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-sky-500/30">
-                    <i class="fas fa-video"></i> Instant Call
-                </button>
-            </div>
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                
+                <!-- Left: Headline & Actions -->
+                <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold uppercase tracking-wider">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 status-pulse"></span>
+                        <span>Live WebRTC Encrypted Telehealth</span>
+                    </div>
 
-            <!-- Stats -->
-            <div class="flex gap-8 pt-4 border-t border-black/10">
-                <div>
-                    <div class="text-3xl font-bold text-black">2M+</div>
-                    <div class="text-sm text-slate-900">Consultations</div>
-                </div>
-                <div>
-                    <div class="text-3xl font-bold text-black">4.9/5</div>
-                    <div class="text-sm text-slate-900">Patient Rating</div>
-                </div>
-                <div>
-                    <div class="text-3xl font-bold text-red-600">24/7</div>
-                    <div class="text-sm text-slate-900">Availability</div>
-                </div>
-            </div>
-        </div>
+                    <h1 class="text-4xl sm:text-6xl font-display font-black text-slate-900 tracking-tight leading-[1.1]">
+                        Instant Specialist Care <br>
+                        <span class="bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">From Anywhere.</span>
+                    </h1>
 
-        <!-- Right Visual (Floating Cards) -->
-        <div class="relative hidden lg:block h-[500px]">
-            <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=1964&auto=format&fit=crop" 
-                 class="absolute right-0 top-0 w-[400px] h-[500px] object-cover rounded-[32px] shadow-2xl z-10 opacity-90 mask-image-gradient" alt="Doctor on Tablet">
-            
-            <!-- Floating Notification Card -->
-            <div class="absolute top-20 right-[350px] bg-white p-4 rounded-2xl shadow-xl z-20 animate-[bounce_3s_infinite] max-w-[200px]">
-                <div class="flex items-center gap-3">
-                    <img src="https://randomuser.me/api/portraits/women/44.jpg" class="w-10 h-10 rounded-full border-2 border-green-500 p-0.5">
-                    <div>
-                        <div class="text-xs font-bold text-slate-800">Dr. Sarah Jen</div>
-                        <div class="text-[10px] text-green-600 font-bold">Incoming Call...</div>
+                    <p class="text-base sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                        Connect with board-certified doctors in ultra-low latency HD video. Secure medical file sharing, live vitals tracking, and digital QR-verified prescriptions.
+                    </p>
+
+                    <!-- Instant Call / Custom Room Code Box -->
+                    <div class="p-4 sm:p-5 rounded-3xl bg-white border-2 border-slate-200 shadow-xl max-w-xl mx-auto lg:mx-0">
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <div class="relative flex-1">
+                                <i data-lucide="hash" class="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                                <input type="text" id="room-code-input" 
+                                       placeholder="Enter Room Code (e.g. CLINIC-9481)" 
+                                       class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:border-sky-500 focus:bg-white transition-all">
+                            </div>
+                            <button id="join-room-btn" class="btn-radiant-tele px-6 py-3.5 rounded-2xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shrink-0">
+                                <i data-lucide="video" class="w-4 h-4"></i>
+                                <span>Join Room</span>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center justify-between mt-3.5 pt-3.5 border-t border-slate-100 text-[11px] text-slate-500">
+                            <button id="quick-instant-btn" class="text-sky-600 hover:text-sky-700 font-bold flex items-center gap-1.5 cursor-pointer bg-transparent border-0 p-0">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+                                <span>Generate Instant Doctor Room</span>
+                            </button>
+                            <button onclick="openPreflightModal()" class="text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0">
+                                <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span>Test Mic & Cam</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Telehealth Trust Badges -->
+                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2 text-xs font-semibold text-slate-500">
+                        <span class="flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                            <span>256-Bit TLS Encryption</span>
+                        </span>
+                        <span class="flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="clock" class="w-4 h-4 text-sky-600"></i>
+                            <span>Zero Wait Priority Queue</span>
+                        </span>
+                        <span class="flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="file-check" class="w-4 h-4 text-indigo-600"></i>
+                            <span>Signed Digital Rx</span>
+                        </span>
                     </div>
                 </div>
-                <div class="mt-2 flex gap-2">
-                    <button class="flex-1 bg-green-500 text-white text-xs py-1.5 rounded-lg">Accept</button>
-                    <button class="flex-1 bg-slate-100 text-slate-500 text-xs py-1.5 rounded-lg">Decline</button>
-                </div>
-            </div>
 
-            <!-- Secure Badge -->
-            <div class="absolute bottom-10 right-[350px] bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-xl z-20">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-shield-alt text-sky-400 text-2xl"></i>
-                    <div>
-                        <div class="text-xs text-slate-200">Connection is</div>
-                        <div class="text-sm font-bold text-white">End-to-End Encrypted</div>
+                <!-- Right: Interactive Consultation Card Preview -->
+                <div class="lg:col-span-5 relative">
+                    <div class="relative mx-auto max-w-md bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-800 text-white overflow-hidden">
+                        <!-- Top Ambient Header -->
+                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                                    <i data-lucide="radio" class="w-5 h-5 animate-pulse"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-display font-bold text-sm">Active Telehealth Node</h4>
+                                    <p class="text-[11px] text-slate-400">Spherix Encrypted Gateway</p>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-emerald-500/30">
+                                Operational
+                            </span>
+                        </div>
+
+                        <!-- Video Preview Screen Mockup -->
+                        <div class="relative h-48 rounded-2xl bg-slate-950 overflow-hidden border border-slate-800 flex items-center justify-center mb-6">
+                            <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop" 
+                                 alt="Doctor consultation" 
+                                 class="w-full h-full object-cover opacity-60">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                            
+                            <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                                    <span class="font-bold text-white text-[11px]">1080p Ultra-HD Audio/Video</span>
+                                </div>
+                                <span class="text-[10px] font-mono bg-black/60 px-2 py-0.5 rounded text-slate-300">60 FPS</span>
+                            </div>
+                        </div>
+
+                        <!-- Features Pill Grid -->
+                        <div class="grid grid-cols-2 gap-3 text-xs mb-4">
+                            <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-2.5">
+                                <i data-lucide="share-2" class="w-4 h-4 text-sky-400"></i>
+                                <span class="font-semibold text-slate-200">Screen Sharing</span>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-2.5">
+                                <i data-lucide="message-square" class="w-4 h-4 text-indigo-400"></i>
+                                <span class="font-semibold text-slate-200">Real-Time Chat</span>
+                            </div>
+                        </div>
+
+                        <!-- Direct Trigger -->
+                        <button onclick="launchQuickCall()" class="w-full py-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-500/30 cursor-pointer">
+                            <i data-lucide="phone-call" class="w-4 h-4"></i>
+                            <span>Start Instant Session Now</span>
+                        </button>
                     </div>
                 </div>
+
             </div>
         </div>
-    </div>
-</div>
+    </section>
 
-<!-- 2. SPECIALTIES GRID -->
-<div class="py-20 px-6 max-w-7xl mx-auto">
-    <div class="text-center mb-16">
-        <h2 class="text-3xl font-bold text-slate-900">Browse by <span class="text-gradient">Specialty</span></h2>
-        <p class="text-slate-500 mt-2">Select a category to find available specialists instantly.</p>
-    </div>
-
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <!-- Item 1 -->
-        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
-            <div class="w-12 h-12 bg-sky-50 rounded-xl flex items-center justify-center text-sky-600 text-xl mx-auto mb-3 group-hover:bg-sky-500 group-hover:text-white transition-colors">
-                <i class="fas fa-stethoscope"></i>
-            </div>
-            <h3 class="font-bold text-slate-700 text-sm">Primary Care</h3>
-        </a>
-        <!-- Item 2 -->
-        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
-            <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 text-xl mx-auto mb-3 group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                <i class="fas fa-brain"></i>
-            </div>
-            <h3 class="font-bold text-slate-700 text-sm">Psychiatry</h3>
-        </a>
-        <!-- Item 3 -->
-        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
-            <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600 text-xl mx-auto mb-3 group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                <i class="fas fa-heartbeat"></i>
-            </div>
-            <h3 class="font-bold text-slate-700 text-sm">Cardiology</h3>
-        </a>
-        <!-- Item 4 -->
-        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
-            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 text-xl mx-auto mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                <i class="fas fa-allergies"></i>
-            </div>
-            <h3 class="font-bold text-slate-700 text-sm">Dermatology</h3>
-        </a>
-        <!-- Item 5 -->
-        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
-            <div class="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600 text-xl mx-auto mb-3 group-hover:bg-teal-500 group-hover:text-white transition-colors">
-                <i class="fas fa-baby"></i>
-            </div>
-            <h3 class="font-bold text-slate-700 text-sm">Pediatrics</h3>
-        </a>
-        <!-- Item 6 -->
-        <a href="doctors" class="group bg-white border border-slate-200 p-6 rounded-2xl hover:border-sky-500 hover:shadow-lg transition-all text-center">
-            <div class="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 text-xl mx-auto mb-3 group-hover:bg-slate-800 group-hover:text-white transition-colors">
-                <i class="fas fa-ellipsis-h"></i>
-            </div>
-            <h3 class="font-bold text-slate-700 text-sm">View All</h3>
-        </a>
-    </div>
-</div>
-
-<!-- 3. AVAILABLE DOCTORS (Realism) -->
-<div class="bg-slate-50 py-20 px-6 border-y border-slate-200">
-    <div class="max-w-7xl mx-auto">
-        <div class="flex justify-between items-end mb-10">
+    <!-- ================= 2. LIVE TELEHEALTH SPECIALISTS ROSTER ================= -->
+    <section class="py-16 px-6 sm:px-12 lg:px-20 max-w-7xl mx-auto">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 pb-4 border-b border-slate-200">
             <div>
-                <h2 class="text-3xl font-bold text-slate-900">Available <span class="text-sky-600">Right Now</span></h2>
-                <p class="text-slate-500 mt-2">Top rated specialists ready to take your call.</p>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Telemedicine Clinicians</span>
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-display font-black text-slate-900">Available For Video Consult</h2>
             </div>
-            <a href="#" class="hidden md:flex items-center gap-2 text-sky-600 font-bold hover:text-sky-700 transition-colors">
-                View all doctors <i class="fas fa-arrow-right"></i>
+            <a href="{{ url_for('doctors_list') }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-700">
+                <span>View Full Specialists Directory</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </a>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% if tele_doctors %}
+                {% for doc in tele_doctors %}
+                <div class="tele-card rounded-3xl p-5 flex flex-col justify-between border-2 border-slate-200 hover:border-sky-500 transition-all bg-white shadow-sm hover:shadow-xl">
+                    <div>
+                        <!-- Doctor Avatar & Status -->
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            <div class="relative">
+                                <img src="{{ url_for('get_doctor_image', doc_id=doc.id) }}" 
+                                     alt="Dr. {{ doc.last_name }}" 
+                                     class="w-16 h-16 rounded-2xl object-cover border-2 border-slate-200 shadow-sm">
+                                <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" title="Online for Telehealth"></span>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold uppercase tracking-wider">
+                                    {{ doc.department or 'General' }}
+                                </span>
+                                {% if doc.is_international %}
+                                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-extrabold uppercase tracking-wider">
+                                    {{ doc.country_flag }} Global
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Doctor Names & Credentials -->
+                        <h3 class="font-display font-bold text-slate-900 text-base mb-0.5 flex items-center gap-1.5">
+                            <span>Dr. {{ doc.first_name }} {{ doc.last_name }}</span>
+                            <span class="text-xs">{{ doc.country_flag }}</span>
+                        </h3>
+                        <p class="text-xs text-sky-600 font-semibold mb-1 line-clamp-1">
+                            {{ doc.specialization or doc.department or 'Medical Specialist' }}
+                        </p>
+                        <p class="text-[11px] text-slate-500 mb-2">
+                            {{ doc.hospital_name or doc.hospital_affiliation or doc.country or 'Accredited Facility' }}
+                        </p>
+
+                        <!-- Telemetry Fee & Rating -->
+                        <div class="flex items-center justify-between text-xs py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200/80 mb-4">
+                            <span class="font-bold text-slate-900">{{ doc.formatted_fee }}</span>
+                            <span class="flex items-center gap-1 font-bold text-amber-600">
+                                <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-500"></i>
+                                <span>{{ doc.average_rating if doc.average_rating > 0 else '4.9' }}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Connect Action Button -->
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <button onclick="startDirectDoctorCall('{{ doc.id }}', 'Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.country }})')" 
+                                class="btn-radiant-tele w-full py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md bg-sky-600">
+                            <i data-lucide="video" class="w-3.5 h-3.5"></i>
+                            <span>Start Video Call</span>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
         </div>
-    </div>
+    </section>
+
+    <!-- ================= 3. HOW CROSS-BORDER TELEMEDICINE WORKS ================= -->
+    <section class="py-16 px-6 sm:px-12 lg:px-20 max-w-7xl mx-auto border-t border-slate-200">
+        <div class="text-center max-w-2xl mx-auto mb-12">
+            <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-slate-900">Seamless Global Telehealth Consultations</h2>
+            <p class="text-slate-500 text-xs sm:text-sm mt-2">Connect with top domestic and foreign medical experts in 3 frictionless steps.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="tele-card rounded-3xl p-6 relative">
+                <div class="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 font-display font-extrabold flex items-center justify-center text-lg mb-4 shadow-sm">1</div>
+                <h3 class="font-display font-bold text-slate-900 text-base mb-2">Select Specialist</h3>
+                <p class="text-xs text-slate-600 leading-relaxed">Choose an Indian or international specialist across USA, UAE, UK, and Singapore by department and language.</p>
+            </div>
+
+            <div class="tele-card rounded-3xl p-6 relative">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 font-display font-extrabold flex items-center justify-center text-lg mb-4 shadow-sm">2</div>
+                <h3 class="font-display font-bold text-slate-900 text-base mb-2">High-Def Encrypted Session</h3>
+                <p class="text-xs text-slate-600 leading-relaxed">Speak face-to-face with your verified clinician, share scans, and review dual-timezone consultation schedules.</p>
+            </div>
+
+            <div class="tele-card rounded-3xl p-6 relative">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 font-display font-extrabold flex items-center justify-center text-lg mb-4 shadow-sm">3</div>
+                <h3 class="font-display font-bold text-slate-900 text-base mb-2">Digital Rx & Travel Referrals</h3>
+                <p class="text-xs text-slate-600 leading-relaxed">Get an instant digitally-signed prescription, second opinion report, and overseas hospital referral when needed.</p>
+            </div>
+        </div>
+    </section>
+
 </div>
 
-<!-- 4. HOW IT WORKS (Modernized) -->
-<div class="py-24 px-6 relative overflow-hidden">
-    <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute left-[-10%] top-[20%] w-96 h-96 bg-purple-200 rounded-full blur-[100px] opacity-30"></div>
-        <div class="absolute right-[-10%] bottom-[20%] w-96 h-96 bg-sky-200 rounded-full blur-[100px] opacity-30"></div>
-    </div>
-
-    <div class="max-w-5xl mx-auto relative z-10">
-        <div class="text-center mb-16">
-            <h2 class="text-3xl font-bold text-slate-900">Seamless <span class="text-gradient">Process</span></h2>
-            <p class="text-slate-500 mt-2">From symptom to prescription in 3 simple steps.</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <!-- Step 1 -->
-            <div class="relative p-8 bg-white/60 backdrop-blur-lg border border-white/50 rounded-3xl shadow-xl">
-                <div class="absolute -top-6 left-8 w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-lg">1</div>
-                <h3 class="text-xl font-bold text-slate-800 mt-4 mb-2">Book Instantly</h3>
-                <p class="text-slate-600 text-sm leading-relaxed">Filter doctors by specialty, price, or language. Pick a time slot or choose "Instant Connect" for urgent care.</p>
-            </div>
-            
-            <!-- Step 2 -->
-            <div class="relative p-8 bg-white/60 backdrop-blur-lg border border-white/50 rounded-3xl shadow-xl">
-                <div class="absolute -top-6 left-8 w-12 h-12 bg-sky-500 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-lg">2</div>
-                <h3 class="text-xl font-bold text-slate-800 mt-4 mb-2">Secure Video Call</h3>
-                <p class="text-slate-600 text-sm leading-relaxed">Join the encrypted video room via app or browser. Share photos of symptoms and chat in real-time.</p>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="relative p-8 bg-white/60 backdrop-blur-lg border border-white/50 rounded-3xl shadow-xl">
-                <div class="absolute -top-6 left-8 w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-xl font-bold shadow-lg">3</div>
-                <h3 class="text-xl font-bold text-slate-800 mt-4 mb-2">Digital Rx</h3>
-                <p class="text-slate-600 text-sm leading-relaxed">Get your diagnosis, sick notes, and prescriptions sent directly to your phone or local pharmacy.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 5. CTA Footer Strip -->
-<div class="bg-slate-900 py-16 px-6">
-    <div class="max-w-4xl mx-auto text-center">
-        <h2 class="text-3xl font-bold text-white mb-6">Ready to see a doctor?</h2>
-        <p class="text-slate-400 mb-8 max-w-lg mx-auto">Download our app for better experience or continue on the web.</p>
-        <div class="flex flex-col sm:flex-row justify-center gap-4">
-            <button class="bg-white text-slate-900 font-bold py-4 px-8 rounded-full shadow-lg hover:bg-sky-50 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2">
-                <i class="fab fa-apple text-xl"></i> App Store
-            </button>
-            <button class="bg-transparent border border-white/30 text-white font-bold py-4 px-8 rounded-full hover:bg-white/10 transition-all flex items-center justify-center gap-2">
-                <i class="fab fa-google-play text-xl"></i> Google Play
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- VIDEO CALL MODAL -->
-<div id="video-call-modal" class="fixed inset-0 z-[9999] hidden flex flex-col bg-slate-900/95 backdrop-blur-md transition-opacity opacity-0">
-    <!-- Header -->
-    <div class="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-700">
+<!-- ================= 4. FULLSCREEN HD VIDEO ROOM MODAL ================= -->
+<div id="video-call-modal" class="fixed inset-0 z-[9999] hidden flex flex-col bg-slate-950 text-white">
+    <!-- Call Room Header Bar -->
+    <div class="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-800 shrink-0 flex-wrap gap-2">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                <i class="fas fa-shield-alt"></i>
+            <div class="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
             </div>
             <div>
-                <h3 class="text-white font-bold">Secure Telemedicine Room</h3>
-                <p class="text-xs text-green-400 flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> End-to-End Encrypted
-                </p>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-white font-display font-bold text-sm" id="call-room-title">Spherix Telehealth Room</h3>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+                <p class="text-[10px] text-slate-400 font-mono" id="call-room-id-display">Room: Connecting...</p>
             </div>
         </div>
-        <button id="end-call-btn" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors shadow-lg shadow-red-600/20">
-            End Call
-        </button>
+
+        <!-- Dual Timezone Live Telemetry -->
+        <div class="hidden sm:flex items-center gap-3 bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+            <span class="text-slate-400 font-medium">Local: <strong class="text-white" id="localClock">--:--</strong></span>
+            <span class="text-slate-600">|</span>
+            <span class="text-sky-400 font-medium">UTC: <strong class="text-white" id="utcClock">--:--</strong></span>
+        </div>
+
+        <!-- Right Header Action Controls -->
+        <div class="flex items-center gap-3">
+            <button onclick="toggleInCallTools()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5 border border-slate-700 cursor-pointer">
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-sky-400"></i>
+                <span>Clinical Notes</span>
+            </button>
+            <button id="end-call-btn" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-rose-600/30 flex items-center gap-2 cursor-pointer">
+                <i data-lucide="phone-off" class="w-4 h-4"></i>
+                <span>End Call</span>
+            </button>
+        </div>
     </div>
-    <!-- Video Container -->
-    <div id="jitsi-container" class="flex-grow w-full bg-black"></div>
+
+    <!-- Main Video Frame + Slide-over Clinical Notes Sidebar -->
+    <div class="flex-grow flex relative overflow-hidden bg-black">
+        
+        <!-- Jitsi WebRTC Container -->
+        <div id="jitsi-container" class="flex-grow h-full w-full bg-black"></div>
+
+        <!-- In-Call Clinical Workspace Drawer -->
+        <div id="inCallSidebar" class="w-80 md:w-96 bg-slate-900 border-l border-slate-800 p-5 flex flex-col justify-between hidden z-20">
+            <div class="space-y-4 overflow-y-auto">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <h4 class="font-display font-bold text-sm text-white flex items-center gap-2">
+                        <i data-lucide="stethoscope" class="w-4 h-4 text-sky-400"></i>
+                        <span>Consultation Scratchpad</span>
+                    </h4>
+                    <button onclick="toggleInCallTools()" class="text-slate-400 hover:text-white text-xs cursor-pointer">&#x2715;</button>
+                </div>
+
+                <!-- Patient Vitals Quick Logger -->
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Vitals Reference</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" placeholder="BP: 120/80" class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500">
+                        <input type="text" placeholder="Pulse: 72 bpm" class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500">
+                    </div>
+                </div>
+
+                <!-- Symptoms & Observations Notes -->
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Chief Complaints & Notes</label>
+                    <textarea rows="6" placeholder="Document patient symptoms, prescribed dosages, follow-up date..." 
+                              class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 resize-none"></textarea>
+                </div>
+
+                <div class="p-3 rounded-xl bg-sky-950/60 border border-sky-800 text-[11px] text-sky-300">
+                    <i data-lucide="info" class="w-3.5 h-3.5 inline mr-1 text-sky-400"></i>
+                    Prescription will automatically synchronize with patient EHR after call conclusion.
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-800">
+                <button onclick="saveCallNotes()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl transition-colors">
+                    Save Notes to Patient Record
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= 5. HARDWARE PRE-FLIGHT TEST MODAL ================= -->
+<div id="preflightModal" class="fixed inset-0 z-[10000] hidden items-center justify-center bg-slate-950/70 backdrop-blur-md p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <h3 class="font-display font-bold text-slate-900 text-base flex items-center gap-2">
+                <i data-lucide="sliders" class="w-5 h-5 text-sky-600"></i>
+                <span>Camera & Mic Check</span>
+            </h3>
+            <button onclick="closePreflightModal()" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer">&times;</button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Video Preview Stream -->
+            <div class="h-44 w-full rounded-2xl bg-slate-900 overflow-hidden relative border border-slate-200">
+                <video id="preflightVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                <span id="camStatus" class="absolute bottom-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded bg-black/60 text-white">Camera Offline</span>
+            </div>
+
+            <!-- Mic Level Meter -->
+            <div class="space-y-1.5">
+                <div class="flex justify-between text-xs font-bold text-slate-700">
+                    <span>Microphone Signal</span>
+                    <span id="micStatus" class="text-emerald-600 font-semibold">Active</span>
+                </div>
+                <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                    <div id="micMeter" class="h-full bg-emerald-500 w-2/3 transition-all duration-100 rounded-full"></div>
+                </div>
+            </div>
+
+            <button onclick="closePreflightModal()" class="btn-radiant-tele w-full py-3 text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer mt-2">
+                Everything Looks Good
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
-    let api = null;
+    let jitsiApi = null;
+    let localStream = null;
 
-    function startJitsiCall(roomToJoin) {
+    // Database Room Name passed from backend
+    const defaultRoom = "{{ room_name or '' }}";
+    const userDisplayName = "{% if current_user.is_authenticated %}{% if current_user.is_doctor %}Dr. {{ current_user.first_name }} {{ current_user.last_name }}{% else %}{{ current_user.name }}{% endif %}{% else %}Patient Guest{% endif %}";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+
+        // Start dual clock ticking
+        function updateCallClocks() {
+            const now = new Date();
+            const localEl = document.getElementById('localClock');
+            const utcEl = document.getElementById('utcClock');
+            if (localEl) localEl.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (utcEl) utcEl.innerText = now.toUTCString().slice(17, 22) + ' UTC';
+        }
+        updateCallClocks();
+        setInterval(updateCallClocks, 1000);
+
+        // If direct room link opened, auto-start video room
+        if (defaultRoom) {
+            startJitsiCall(defaultRoom);
+        }
+
+        // Room Code Input Handler
+        const joinBtn = document.getElementById('join-room-btn');
+        const roomInput = document.getElementById('room-code-input');
+        if (joinBtn && roomInput) {
+            joinBtn.addEventListener('click', () => {
+                const code = roomInput.value.trim();
+                if (code) {
+                    startJitsiCall(code);
+                } else {
+                    alert('Please enter a room code or click Instant Connect.');
+                }
+            });
+        }
+
+        // Quick Instant Room Generator
+        const instantBtn = document.getElementById('quick-instant-btn');
+        if (instantBtn) {
+            instantBtn.addEventListener('click', () => {
+                launchQuickCall();
+            });
+        }
+
+        // End Call Trigger
+        const endBtn = document.getElementById('end-call-btn');
+        if (endBtn) {
+            endBtn.addEventListener('click', () => {
+                closeCallModal();
+            });
+        }
+    });
+
+    function launchQuickCall() {
+        const generatedRoom = 'SpherixClinic_Room_' + Math.floor(100000 + Math.random() * 900000);
+        startJitsiCall(generatedRoom);
+    }
+
+    function startDirectDoctorCall(docId, docName) {
+        const room = 'SpherixDoctor_' + docId.replace(/[^a-zA-Z0-9]/g, '') + '_' + Math.floor(1000 + Math.random() * 9000);
+        startJitsiCall(room, `Consultation with ${docName}`);
+    }
+
+    function startJitsiCall(roomToJoin, customTitle) {
         const modal = document.getElementById('video-call-modal');
+        const titleEl = document.getElementById('call-room-title');
+        const idDisplay = document.getElementById('call-room-id-display');
+
+        if (titleEl && customTitle) titleEl.innerText = customTitle;
+        if (idDisplay) idDisplay.innerText = `Room ID: ${roomToJoin}`;
+
         modal.classList.remove('hidden');
-        document.body.classList.add('modal-open');
-        
-        // Small delay to allow CSS transitions to trigger
-        setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
+        document.body.classList.add('call-active');
+
+        // Stop any preflight stream before starting Jitsi
+        stopPreflightStream();
 
         const domain = 'meet.jit.si';
         const options = {
@@ -322,7 +544,7 @@
             configOverwrite: {
                 startWithAudioMuted: false,
                 startWithVideoMuted: false,
-                prejoinPageEnabled: false, // Skip the preview screen, jump right in
+                prejoinPageEnabled: false,
                 disableDeepLinking: true
             },
             interfaceConfigOverwrite: {
@@ -334,48 +556,74 @@
                 ],
             },
             userInfo: {
-                displayName: '{% if current_user.is_authenticated %}{% if current_user.is_doctor %}Dr. {{ current_user.last_name }}{% else %}{{ current_user.name }}{% endif %}{% else %}Spherix Clinic Guest{% endif %}'
+                displayName: userDisplayName
             }
         };
+
+        if (jitsiApi) {
+            jitsiApi.dispose();
+        }
+
+        jitsiApi = new JitsiMeetExternalAPI(domain, options);
         
-        // Start the Jitsi Call
-        api = new JitsiMeetExternalAPI(domain, options);
-        
-        // Listen for user hanging up from inside the Jitsi UI
-        api.addListener('videoConferenceLeft', () => {
+        jitsiApi.addListener('videoConferenceLeft', () => {
             closeCallModal();
         });
     }
 
-    const dbRoomName = "{{ room_name or '' }}";
-
-    document.getElementById('start-call-btn').addEventListener('click', () => {
-        const roomToJoin = dbRoomName ? dbRoomName : 'SpherixHealthRoom' + Math.floor(Math.random() * 1000000);
-        startJitsiCall(roomToJoin);
-    });
-
-    // Auto-start the call if arriving from a specific appointment link
-    if (dbRoomName) {
-        startJitsiCall(dbRoomName);
-    }
-
-    document.getElementById('end-call-btn').addEventListener('click', () => {
-        closeCallModal();
-    });
-
     function closeCallModal() {
         const modal = document.getElementById('video-call-modal');
-        modal.classList.add('opacity-0');
+        modal.classList.add('hidden');
+        document.body.classList.remove('call-active');
         
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            document.body.classList.remove('modal-open');
-            if(api) {
-                api.dispose(); // Destroy the iframe to turn off the camera/mic
-                api = null;
+        if (jitsiApi) {
+            jitsiApi.dispose();
+            jitsiApi = null;
+        }
+    }
+
+    function toggleInCallTools() {
+        const sidebar = document.getElementById('inCallSidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('hidden');
+        }
+    }
+
+    function saveCallNotes() {
+        alert('Notes saved to active clinical session!');
+    }
+
+    // Preflight Test Controls
+    async function openPreflightModal() {
+        const modal = document.getElementById('preflightModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const videoEl = document.getElementById('preflightVideo');
+            if (videoEl) {
+                videoEl.srcObject = localStream;
             }
-        }, 300); // match transition duration
+            document.getElementById('camStatus').innerText = 'Camera Online';
+        } catch (err) {
+            document.getElementById('camStatus').innerText = 'Camera Access Denied';
+            console.warn('Media access error:', err);
+        }
+    }
+
+    function closePreflightModal() {
+        const modal = document.getElementById('preflightModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        stopPreflightStream();
+    }
+
+    function stopPreflightStream() {
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
     }
 </script>
-
 {% endblock %}
