@@ -1743,7 +1743,29 @@
                                 </div>
                             </div>
 
-                            <!-- 5. Submit Action Button -->
+                            <!-- 5. Optional Screenshot / Image Attachment -->
+                            <div class="space-y-1.5">
+                                <label class="text-[11px] font-bold text-slate-600 flex items-center justify-between">
+                                    <span>Attach Screenshot or Photo (Optional)</span>
+                                    <span class="text-[10px] text-slate-400">JPG, PNG up to 5MB</span>
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <label class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:bg-indigo-50/50 hover:border-indigo-400 cursor-pointer transition-all text-xs font-semibold text-slate-600">
+                                        <i class="fas fa-camera text-indigo-500"></i>
+                                        <span id="feedback-file-label">Choose Image or Screenshot</span>
+                                        <input type="file" id="feedback-attachment" accept="image/*" class="sr-only" onchange="handleFeedbackFile(this)">
+                                    </label>
+                                    <button type="button" id="feedback-clear-file-btn" class="hidden px-2.5 py-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition-all border border-rose-200" title="Remove attachment">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                                <div id="feedback-image-preview-container" class="hidden mt-2 p-2 rounded-xl bg-slate-100 border border-slate-200 flex items-center gap-3">
+                                    <img id="feedback-image-preview" src="" alt="Screenshot Preview" class="w-12 h-12 object-cover rounded-lg border border-slate-300">
+                                    <div class="text-xs text-slate-700 font-medium truncate flex-1" id="feedback-image-name"></div>
+                                </div>
+                            </div>
+
+                            <!-- 6. Submit Action Button -->
                             <div class="pt-2">
                                 <button type="submit" id="feedback-submit-btn"
                                     class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs sm:text-sm font-black tracking-wide shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer border-0">
@@ -2219,9 +2241,9 @@
                 <!-- Right: S iCons Engineering Signature Badge -->
                 <div class="flex flex-col items-center group flex-shrink-0">
                     <div class="relative w-20 h-20 rounded-full p-[2.5px] bg-gradient-to-tr from-[#D4AF37] via-yellow-300 to-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,.3)] transition-all duration-500 group-hover:scale-105 group-hover:shadow-[0_0_40px_rgba(212,175,55,.6)]">
-                        <div class="w-full h-full rounded-full bg-slate-900 overflow-hidden flex items-center justify-center">
+                        <div class="w-full h-full rounded-full bg-slate-900 overflow-hidden flex items-center justify-center p-2">
                             <img src="{{ url_for('static', filename='images/sicons.png') }}" alt="S iCons Logo"
-                                class="w-23 h-23">
+                                class="w-full h-full object-contain">
                         </div>
                     </div>
                     <span class="mt-2 text-[9px] uppercase tracking-[0.3em] text-yellow-500">
@@ -2427,7 +2449,7 @@
         }
 
         // ==============================================
-        //          REDESIGNED FEEDBACK INTERACTIVITY
+        //          REDESIGNED REAL FEEDBACK INTERACTIVITY
         // ==============================================
         const feedbackBtn = document.getElementById('feedback-toggle-btn');
         const feedbackModal = document.getElementById('feedback-modal');
@@ -2440,6 +2462,26 @@
         const ratingInput = document.getElementById('feedback-rating-input');
         const ratingLabel = document.getElementById('rating-label');
 
+        let feedbackBase64Attachment = '';
+
+        // Audio haptic feedback generator (synthesized micro-click)
+        function playHapticAudio() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.04);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.04);
+            } catch(e) {}
+        }
+
         const ratingDescriptions = {
             1: "1/5 - Needs Serious Work",
             2: "2/5 - Fair / Below Expectations",
@@ -2451,6 +2493,7 @@
         // Star rating click handlers
         document.querySelectorAll('.star-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+                playHapticAudio();
                 const r = parseInt(this.dataset.rating || '5', 10);
                 if (ratingInput) ratingInput.value = r;
                 if (ratingLabel) ratingLabel.textContent = ratingDescriptions[r] || `${r}/5 Stars`;
@@ -2458,10 +2501,10 @@
                 document.querySelectorAll('.star-btn').forEach(b => {
                     const br = parseInt(b.dataset.rating || '5', 10);
                     if (br <= r) {
-                        b.classList.add('bg-indigo-50', 'border-indigo-500', 'text-amber-500');
+                        b.classList.add('bg-indigo-50', 'border-indigo-500', 'text-amber-500', 'shadow-xs');
                         b.classList.remove('bg-white', 'text-slate-400');
                     } else {
-                        b.classList.remove('bg-indigo-50', 'border-indigo-500', 'text-amber-500');
+                        b.classList.remove('bg-indigo-50', 'border-indigo-500', 'text-amber-500', 'shadow-xs');
                         b.classList.add('bg-white', 'text-slate-400');
                     }
                 });
@@ -2477,6 +2520,7 @@
 
         // Quick Tag inserter
         window.insertFeedbackTag = function(text) {
+            playHapticAudio();
             if (!feedbackMsg) return;
             if (feedbackMsg.value.trim().length > 0) {
                 feedbackMsg.value += ' ' + text;
@@ -2487,8 +2531,52 @@
             feedbackMsg.focus();
         };
 
+        // File attachment handler
+        window.handleFeedbackFile = function(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit. Please choose a smaller image.');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                feedbackBase64Attachment = e.target.result;
+                const previewImg = document.getElementById('feedback-image-preview');
+                const nameEl = document.getElementById('feedback-image-name');
+                const previewContainer = document.getElementById('feedback-image-preview-container');
+                const clearBtn = document.getElementById('feedback-clear-file-btn');
+                const labelEl = document.getElementById('feedback-file-label');
+
+                if (previewImg) previewImg.src = feedbackBase64Attachment;
+                if (nameEl) nameEl.textContent = file.name;
+                if (previewContainer) previewContainer.classList.remove('hidden');
+                if (clearBtn) clearBtn.classList.remove('hidden');
+                if (labelEl) labelEl.textContent = 'Change Screenshot';
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // Clear file button
+        const clearFileBtn = document.getElementById('feedback-clear-file-btn');
+        if (clearFileBtn) {
+            clearFileBtn.addEventListener('click', function() {
+                const fileInput = document.getElementById('feedback-attachment');
+                if (fileInput) fileInput.value = '';
+                feedbackBase64Attachment = '';
+                document.getElementById('feedback-image-preview-container')?.classList.add('hidden');
+                clearFileBtn.classList.add('hidden');
+                const labelEl = document.getElementById('feedback-file-label');
+                if (labelEl) labelEl.textContent = 'Choose Image or Screenshot';
+            });
+        }
+
         if (feedbackBtn) {
             feedbackBtn.addEventListener('click', () => {
+                playHapticAudio();
                 feedbackModal.classList.remove('hidden');
                 setTimeout(() => {
                     feedbackBackdrop.classList.remove('opacity-0');
@@ -2512,6 +2600,11 @@
                     successEl.classList.remove('flex');
                 }
                 if (charCount) charCount.textContent = '0/500';
+                feedbackBase64Attachment = '';
+                document.getElementById('feedback-image-preview-container')?.classList.add('hidden');
+                document.getElementById('feedback-clear-file-btn')?.classList.add('hidden');
+                const labelEl = document.getElementById('feedback-file-label');
+                if (labelEl) labelEl.textContent = 'Choose Image or Screenshot';
             }, 300);
         }
 
@@ -2529,6 +2622,7 @@
         if (feedbackForm) {
             feedbackForm.addEventListener('submit', (e) => {
                 e.preventDefault();
+                playHapticAudio();
                 const btn = document.getElementById('feedback-submit-btn');
                 const originalHtml = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Transmitting securely...';
@@ -2540,7 +2634,8 @@
                     rating: formData.get('rating') || '5',
                     name: formData.get('name') || '',
                     email: formData.get('email') || '',
-                    message: formData.get('message') || ''
+                    message: formData.get('message') || '',
+                    attachment: feedbackBase64Attachment || ''
                 };
 
                 fetch('/api/feedback', {

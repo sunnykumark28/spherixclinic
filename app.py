@@ -10908,6 +10908,27 @@ def submit_feedback():
     custom_name = data.get('name', '').strip()
     custom_email = data.get('email', '').strip()
     
+    attachment_b64 = data.get('attachment', '')
+    attachment_url = ''
+    if attachment_b64 and ';base64,' in attachment_b64:
+        try:
+            import base64
+            feedback_dir = os.path.join(app.static_folder, 'uploads', 'feedback')
+            os.makedirs(feedback_dir, exist_ok=True)
+            header, encoded = attachment_b64.split(';base64,', 1)
+            ext = 'png'
+            if 'image/jpeg' in header or 'image/jpg' in header:
+                ext = 'jpg'
+            elif 'image/webp' in header:
+                ext = 'webp'
+            filename = f"feedback_{int(datetime.now().timestamp())}_{os.urandom(4).hex()}.{ext}"
+            file_path = os.path.join(feedback_dir, filename)
+            with open(file_path, 'wb') as f:
+                f.write(base64.b64decode(encoded))
+            attachment_url = f"/static/uploads/feedback/{filename}"
+        except Exception as e:
+            print(f"⚠️ Error saving feedback attachment: {e}")
+
     if message:
         user_info = custom_name or "Guest Patient"
         user_email = custom_email or "guest@spherixclinic.com"
@@ -10922,10 +10943,15 @@ def submit_feedback():
 
         star_str = "⭐" * int(rating) if str(rating).isdigit() else "⭐ 5/5"
 
+        msg_body = f"Rating: {rating}/5 Stars\nType: {feedback_type.title()}\n\n{message}"
+        if attachment_url:
+            msg_body += f"\n\nAttached Screenshot: {attachment_url}"
+
         new_message = {
             'name': f'[{star_str}] Feedback ({feedback_type.title()}) - {user_info}',
             'email': user_email,
-            'message': f"Rating: {rating}/5 Stars\nType: {feedback_type.title()}\n\n{message}",
+            'message': msg_body,
+            'attachment': attachment_url,
             'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         TEMP_DATA.setdefault('contact_messages', []).insert(0, new_message)
@@ -10933,6 +10959,9 @@ def submit_feedback():
         
         admin_email = 'admin@spherixclinic.com'
         subject = f"[{star_str}] New Feedback ({feedback_type.title()}) from {user_info}"
+        
+        img_html = f'<div style="margin-top: 12px;"><p><strong>Attached Screenshot:</strong></p><img src="{attachment_url}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #cbd5e1;" /></div>' if attachment_url else ''
+
         body = f"""
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1e293b; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 16px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
@@ -10942,6 +10971,7 @@ def submit_feedback():
             <p style="margin: 4px 0;"><strong>Category:</strong> <span style="background: #eef2ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-weight: bold;">{feedback_type.title()}</span></p>
             <p style="margin: 4px 0;"><strong>Patient Rating:</strong> {star_str} ({rating}/5)</p>
             <div style="margin-top: 16px; background: #f8fafc; padding: 16px; border-left: 4px solid #4f46e5; border-radius: 8px; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">{message}</div>
+            {img_html}
             <p style="margin-top: 20px; font-size: 12px; color: #94a3b8;">Logged into Spherix Central Intelligence Node at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         </div>
         """
