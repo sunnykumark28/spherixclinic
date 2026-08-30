@@ -1564,6 +1564,13 @@
 </script>
 
 {% elif script_tab in ['patient_list', 'health_tracker'] %}
+<script type="application/json" id="doctorApptsJson">
+[
+  {% for appt in appointments %}
+  {"id": "{{ appt.id }}", "patientId": "{{ appt.patient_id }}", "status": "{{ appt.status }}", "date": "{{ appt.appointment_date }}"}{% if not loop.last %},{% endif %}
+  {% endfor %}
+]
+</script>
 <script>
   let activeEhrPatientId = null;
   let activeEhrPatientName = null;
@@ -1667,11 +1674,8 @@
       });
 
     // Determine target confirmed appointment for prescription
-    const appts = [
-      {% for appt in appointments %}
-        { id: "{{ appt.id }}", patientId: "{{ appt.patient_id }}", status: "{{ appt.status }}", date: "{{ appt.appointment_date }}" },
-      {% endfor %}
-    ];
+    const apptsEl = document.getElementById('doctorApptsJson');
+    const appts = apptsEl ? JSON.parse(apptsEl.textContent || '[]') : [];
 
     const targetAppt = appts.find(a => a.patientId === patientId && a.status === 'confirmed');
     if (targetAppt) {
@@ -2205,15 +2209,17 @@
     });
   }
 </script>
-{% elif script_tab == 'stats' %}
+<script type="application/json" id="doctorStatsJson">{{ {'labels': analytics_labels or [], 'volume': analytics_volume or [], 'earnings': analytics_earnings or []}|tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     const ctx = document.getElementById('doctorStatsChart').getContext('2d');
     
-    const labels = {{ analytics_labels | tojson | safe }};
-    const volumeData = {{ analytics_volume | tojson | safe }};
-    const earningsData = {{ analytics_earnings | tojson | safe }};
+    const statsEl = document.getElementById('doctorStatsJson');
+    const statsData = statsEl ? JSON.parse(statsEl.textContent || '{}') : {};
+    const labels = statsData.labels || [];
+    const volumeData = statsData.volume || [];
+    const earningsData = statsData.earnings || [];
     
     new Chart(ctx, {
       type: 'line',
@@ -2265,17 +2271,17 @@
   });
 </script>
 {% elif script_tab == 'notifications' %}
+<script type="application/json" id="unreadNotifsJson">{{ (unread_notifications | map(attribute='id') | list)|tojson }}</script>
 <script>
   function markAllNotificationsRead() {
+    const unreadEl = document.getElementById('unreadNotifsJson');
+    const notifIds = unreadEl ? JSON.parse(unreadEl.textContent || '[]') : [];
     fetch('/api/notifications/mark-read', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token() }}'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        ids: [{% for n in unread_notifications %}{{ n.id }}{% if not loop.last %}, {% endif %}{% endfor %}]
-      })
+      body: JSON.stringify({ ids: notifIds })
     })
     .then(res => res.json())
     .then(data => {
