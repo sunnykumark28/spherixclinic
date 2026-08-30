@@ -10901,47 +10901,56 @@ def pharmacist():
 @app.route('/api/feedback', methods=['POST'])
 @csrf.exempt
 def submit_feedback():
-    data = request.json
-    feedback_type = data.get('type')
-    message = data.get('message')
+    data = request.json or {}
+    feedback_type = data.get('type', 'general')
+    message = data.get('message', '').strip()
+    rating = data.get('rating', '5')
+    custom_name = data.get('name', '').strip()
+    custom_email = data.get('email', '').strip()
     
-    if feedback_type and message:
-        user_info = "Guest"
-        user_email = "Guest"
+    if message:
+        user_info = custom_name or "Guest Patient"
+        user_email = custom_email or "guest@spherixclinic.com"
         if current_user.is_authenticated:
-            user_email = getattr(current_user, 'email', 'Guest')
+            user_email = custom_email or getattr(current_user, 'email', 'patient@spherixclinic.com')
             if hasattr(current_user, 'name'):
-                user_info = current_user.name
+                user_info = custom_name or current_user.name
             elif hasattr(current_user, 'first_name'):
-                user_info = f"Dr. {current_user.first_name} {current_user.last_name}"
+                user_info = custom_name or f"Dr. {current_user.first_name} {current_user.last_name}"
             else:
-                user_info = f"User {current_user.id}"
+                user_info = custom_name or f"User #{current_user.id}"
+
+        star_str = "⭐" * int(rating) if str(rating).isdigit() else "⭐ 5/5"
 
         new_message = {
-            'name': f'Feedback ({feedback_type.title()}) - {user_info}',
+            'name': f'[{star_str}] Feedback ({feedback_type.title()}) - {user_info}',
             'email': user_email,
-            'message': message,
+            'message': f"Rating: {rating}/5 Stars\nType: {feedback_type.title()}\n\n{message}",
             'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        TEMP_DATA['contact_messages'].insert(0, new_message)
+        TEMP_DATA.setdefault('contact_messages', []).insert(0, new_message)
         save_data()
         
         admin_email = 'admin@spherixclinic.com'
-        subject = f"New Feedback ({feedback_type.title()}) from {user_info}"
+        subject = f"[{star_str}] New Feedback ({feedback_type.title()}) from {user_info}"
         body = f"""
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #4f46e5;">New System Feedback</h2>
-            <p><strong>From:</strong> {user_info} ({user_email})</p>
-            <p><strong>Type:</strong> {feedback_type.title()}</p>
-            <p><strong>Message:</strong></p>
-            <div style="background: #f8fafc; padding: 15px; border-left: 4px solid #4f46e5; border-radius: 4px;">
-                {message}
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1e293b; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+                <h2 style="color: #4f46e5; margin: 0;">Spherix Clinic Feedback Hub</h2>
             </div>
+            <p style="margin: 4px 0;"><strong>From:</strong> {user_info} (&lt;{user_email}&gt;)</p>
+            <p style="margin: 4px 0;"><strong>Category:</strong> <span style="background: #eef2ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-weight: bold;">{feedback_type.title()}</span></p>
+            <p style="margin: 4px 0;"><strong>Patient Rating:</strong> {star_str} ({rating}/5)</p>
+            <div style="margin-top: 16px; background: #f8fafc; padding: 16px; border-left: 4px solid #4f46e5; border-radius: 8px; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">{message}</div>
+            <p style="margin-top: 20px; font-size: 12px; color: #94a3b8;">Logged into Spherix Central Intelligence Node at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         </div>
         """
-        send_notification_email(admin_email, subject, body, is_html=True)
-        return jsonify({'success': True})
-    return jsonify({'success': False, 'error': 'Missing data'}), 400
+        try:
+            send_notification_email(admin_email, subject, body, is_html=True)
+        except Exception:
+            pass
+        return jsonify({'success': True, 'message': 'Feedback successfully received. Thank you!'})
+    return jsonify({'success': False, 'error': 'Message content is required.'}), 400
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
