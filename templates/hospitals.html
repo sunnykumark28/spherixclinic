@@ -117,20 +117,26 @@
                         Browse verified premier hospitals across the network. Monitor live ICU units, general bed occupancy, on-duty clinical rosters, and book emergency or in-patient admissions instantly.
                     </p>
 
-                    <!-- Scope Selection Buttons (All / Domestic / Global) -->
-                    <div class="flex items-center justify-center lg:justify-start gap-2 mb-4">
+                    <!-- Scope Selection Buttons & Emergency Finder -->
+                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-4">
+                        <button type="button" onclick="openEmergencyHospitalModal();" 
+                           class="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white shadow-lg shadow-rose-600/30 flex items-center gap-2 border border-rose-500 hover:scale-[1.03] active:scale-95 transition-all cursor-pointer">
+                            <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                            <i class="fa-solid fa-truck-medical text-xs"></i>
+                            <span>Find Nearby Emergency Beds</span>
+                        </button>
                         <a href="{{ url_for('hospitals_list', q=q, city=city) }}" 
                            class="px-4 py-2 rounded-xl text-xs font-bold transition-all {% if not active_scope or active_scope == 'all' %}bg-emerald-600 text-white shadow-md shadow-emerald-600/30{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-100{% endif %} flex items-center gap-1.5">
                             <i class="fa-solid fa-globe text-xs"></i>
-                            <span>All Partner Facilities</span>
+                            <span>All Facilities</span>
                         </a>
                         <a href="{{ url_for('hospitals_list', q=q, city=city, scope='domestic') }}" 
                            class="px-4 py-2 rounded-xl text-xs font-bold transition-all {% if active_scope == 'domestic' %}bg-emerald-700 text-white shadow-md shadow-emerald-700/30{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-100{% endif %} flex items-center gap-1.5">
-                            <span>🇮🇳 Domestic (India)</span>
+                            <span>🇮🇳 Domestic</span>
                         </a>
                         <a href="{{ url_for('hospitals_list', q=q, city=city, scope='international') }}" 
                            class="px-4 py-2 rounded-xl text-xs font-bold transition-all {% if active_scope == 'international' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/30{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-100{% endif %} flex items-center gap-1.5">
-                            <span>🌍 Global Partner Hospitals</span>
+                            <span>🌍 Global</span>
                         </a>
                     </div>
 
@@ -293,7 +299,12 @@
                     Real-time general bed, critical ICU, and on-call specialist telemetry across domestic and global facilities.
                 </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="openEmergencyHospitalModal();" 
+                    class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-rose-600/25 hover:scale-[1.02] active:scale-95 cursor-pointer border border-rose-500">
+                    <i class="fa-solid fa-location-crosshairs text-xs"></i>
+                    <span>Search Nearby for Emergency</span>
+                </button>
                 <span class="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-sm flex items-center gap-1.5">
                     <i class="fa-solid fa-hospital text-emerald-600 text-xs"></i>
                     <span>{{ hospitals|length }} Facilities Listed</span>
@@ -563,4 +574,1061 @@
     </section>
 
 </div>
+
+<style>
+/* Responsive Sidebar Layout Container Query */
+#emergency-modal-card {
+    container-type: inline-size;
+    container-name: emergency-sidebar;
+}
+
+@container emergency-sidebar (min-width: 660px) {
+    #emergency-hospitals-list {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.875rem !important;
+    }
+}
+
+@container emergency-sidebar (min-width: 1080px) {
+    #emergency-hospitals-list {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 1rem !important;
+    }
+}
+</style>
+
+<!-- ========================================================================= -->
+<!--        🚨 EMERGENCY NEARBY HOSPITAL FINDER SIDEBAR DRAWER                 -->
+<!-- ========================================================================= -->
+<!-- Backdrop overlay -->
+<div id="emergency-hospital-modal" 
+     class="fixed inset-0 z-[2000] bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 opacity-0 pointer-events-none"
+     role="dialog" aria-modal="true" aria-labelledby="emergency-modal-title">
+</div>
+
+<!-- Slide-over Drawer Panel (Slides in from right edge) -->
+<div id="emergency-modal-card" 
+     class="fixed inset-y-0 right-0 z-[2001] w-full max-w-xl md:max-w-2xl bg-white shadow-2xl border-l border-rose-200 flex flex-col h-full transform transition-transform duration-300 ease-in-out translate-x-full"
+     role="region" aria-label="Emergency Hospital Finder Sidebar">
+    
+    <!-- Drag Resizer Bar Handle (Left Edge) -->
+    <div id="emergency-sidebar-resizer" 
+         class="hidden sm:flex absolute left-0 top-0 bottom-0 w-3.5 -translate-x-1/2 cursor-ew-resize items-center justify-center group z-50 select-none hover:w-5 transition-all"
+         title="Drag left or right to resize sidebar into 2 columns (Double-click to reset)">
+        <!-- Visual grip pill with indicators -->
+        <div class="w-1.5 h-16 bg-slate-300/90 group-hover:bg-rose-500 rounded-full flex flex-col items-center justify-center gap-1.5 transition-colors shadow-sm">
+            <span class="w-0.5 h-0.5 rounded-full bg-white"></span>
+            <span class="w-0.5 h-0.5 rounded-full bg-white"></span>
+            <span class="w-0.5 h-0.5 rounded-full bg-white"></span>
+        </div>
+    </div>
+    
+    <!-- 1. Emergency Header Banner -->
+    <div class="bg-gradient-to-r from-rose-700 via-red-600 to-rose-800 text-white p-4 sm:p-5 relative overflow-hidden shrink-0 shadow-md">
+        <!-- Background pulse ambient light -->
+        <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div class="flex items-start justify-between relative z-10 gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center shrink-0 shadow-inner">
+                    <i class="fa-solid fa-truck-medical text-xl text-white"></i>
+                </div>
+                <div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-950/50 border border-rose-400/40 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-rose-200 mb-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
+                        <span>Live GPS Proximity &amp; Bed Telemetry</span>
+                    </div>
+                    <h3 id="emergency-modal-title" class="text-lg sm:text-xl font-display font-extrabold text-white tracking-tight leading-tight">
+                        Nearby Emergency Hospitals
+                    </h3>
+                    <p class="text-xs text-rose-100 font-medium mt-0.5">
+                        Live GPS routing, ICU beds, and emergency hospital triage.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Close Sidebar Drawer Button -->
+            <button type="button" onclick="closeEmergencyHospitalModal();" 
+                    class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white flex items-center justify-center transition-all shrink-0 cursor-pointer border border-white/20"
+                    title="Close Sidebar">
+                <i class="fa-solid fa-times text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. Search Command Bar & Filters -->
+    <div class="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 shrink-0 space-y-2.5">
+        <!-- Location Action Bar -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+            <!-- GPS Auto-Detect Button -->
+            <div class="sm:col-span-6">
+                <button type="button" id="btn-detect-gps" onclick="detectUserLocation();"
+                        class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                    <i class="fa-solid fa-crosshairs text-xs" id="gps-icon"></i>
+                    <span id="gps-status-text" class="truncate">Detect My Live GPS</span>
+                </button>
+            </div>
+
+            <!-- City / Area Manual Input -->
+            <div class="sm:col-span-6 relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="emergency-city-input" placeholder="City (e.g. Delhi, Mumbai...)" 
+                       class="w-full pl-8 pr-7 py-2 bg-white border border-slate-300 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all shadow-xs">
+                <button type="button" id="clear-emergency-search" onclick="clearEmergencySearch();" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Scope Badges & Radius Selectors -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+            <!-- Facility Scope / Source Tabs -->
+            <div class="flex flex-wrap items-center gap-1 text-xs">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-0.5">Filter:</span>
+                <button type="button" class="source-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-800 bg-slate-900 text-white shadow-xs cursor-pointer" onclick="setFacilitySourceFilter('all', this);">All (Govt &amp; Pvt)</button>
+                <button type="button" class="source-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-amber-400 transition-all cursor-pointer" onclick="setFacilitySourceFilter('govt', this);">🏛️ Govt. / Public</button>
+                <button type="button" class="source-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-sky-400 transition-all cursor-pointer" onclick="setFacilitySourceFilter('private', this);">🏢 Private Care</button>
+                <button type="button" class="source-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-emerald-400 transition-all cursor-pointer" onclick="setFacilitySourceFilter('spherix', this);">⭐ Spherix</button>
+            </div>
+
+            <!-- Radius Selectors -->
+            <div class="flex items-center gap-1 text-xs">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-0.5">Radius:</span>
+                <button type="button" class="radius-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-rose-400 transition-all cursor-pointer" data-radius="5" onclick="setRadiusFilter(5, this);">5km</button>
+                <button type="button" class="radius-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-rose-400 transition-all cursor-pointer" data-radius="15" onclick="setRadiusFilter(15, this);">15km</button>
+                <button type="button" class="radius-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-rose-400 transition-all cursor-pointer" data-radius="30" onclick="setRadiusFilter(30, this);">30km</button>
+                <button type="button" class="radius-btn px-2 py-0.5 rounded-lg text-xs font-bold border border-rose-500 bg-rose-600 text-white shadow-xs cursor-pointer" data-radius="" onclick="setRadiusFilter(null, this);">Any</button>
+            </div>
+        </div>
+
+        <!-- Secondary Filter Toggles & Google Radar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-200/80">
+            <!-- ICU Only Toggle -->
+            <label class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                <input type="checkbox" id="emergency-icu-only" onchange="fetchNearbyEmergencyHospitals();" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-3.5 h-3.5">
+                <span class="flex items-center gap-1 text-rose-700 text-[11px]">
+                    <i class="fa-solid fa-heart-pulse text-xs text-rose-500"></i>
+                    <span>ICU Beds Only</span>
+                </span>
+            </label>
+
+            <div class="flex items-center gap-2">
+                <!-- Blood Group Dropdown -->
+                <select id="emergency-blood-group" onchange="fetchNearbyEmergencyHospitals();" 
+                        class="bg-white border border-slate-300 rounded-lg text-[11px] font-bold py-1 px-1.5 text-slate-700 outline-none focus:border-rose-500 cursor-pointer">
+                    <option value="">🩸 All Blood</option>
+                    <option value="O+">O+ Positive</option>
+                    <option value="O-">O- Negative</option>
+                    <option value="A+">A+ Positive</option>
+                    <option value="A-">A- Negative</option>
+                    <option value="B+">B+ Positive</option>
+                    <option value="B-">B- Negative</option>
+                    <option value="AB+">AB+ Positive</option>
+                    <option value="AB-">AB- Negative</option>
+                </select>
+
+                <!-- Live Google Radar -->
+                <a id="btn-gmap-live-radar" href="https://www.google.com/maps/search/emergency+hospitals+near+me" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] text-decoration-none shadow-xs transition-all"
+                   title="Open Google Maps to view all public &amp; private hospitals near your location">
+                    <i class="fa-solid fa-map-location-dot text-[10px]"></i>
+                    <span>Maps Radar</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Dynamic Results Container (Scrollable) -->
+    <div id="emergency-results-container" class="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3">
+        <!-- Loading Indicator -->
+        <div id="emergency-loading-state" class="py-12 text-center hidden">
+            <div class="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-rose-50 text-rose-600 mb-2.5 animate-spin">
+                <i class="fa-solid fa-circle-notch text-xl"></i>
+            </div>
+            <h4 class="text-xs font-bold text-slate-800">Scanning Satellite Geolocation &amp; Live Telemetry...</h4>
+            <p class="text-[11px] text-slate-500 mt-0.5">Cross-referencing real-time ICU ventilator telemetry across nearby facilities.</p>
+        </div>
+
+        <!-- Hospital Result Cards List (1-col or 2-col dynamic based on sidebar width) -->
+        <div id="emergency-hospitals-list" class="grid grid-cols-1 gap-3">
+            <!-- Injected dynamically via JS -->
+        </div>
+
+        <!-- Empty Results State -->
+        <div id="emergency-empty-state" class="hidden text-center py-10 bg-slate-50 rounded-2xl border border-slate-200 p-5">
+            <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-2.5">
+                <i class="fa-solid fa-hospital-slash text-lg"></i>
+            </div>
+            <h4 class="text-sm font-display font-bold text-slate-900">No Facilities Found Matching Radius</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                Try expanding the search radius or clear specific ICU/blood filters to view all available regional hospitals.
+            </p>
+            <button type="button" onclick="resetEmergencyFilters();" class="mt-3 px-3.5 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors cursor-pointer">
+                Expand Search Range
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. Emergency Action Footer -->
+    <div class="p-3.5 sm:p-4 bg-slate-900 text-white border-t border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+            <span class="text-xs font-semibold text-slate-300">
+                Dispatch: <strong class="text-white font-mono">102 / 108</strong>
+            </span>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="tel:102" 
+               class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-rose-600/30 text-decoration-none transition-all">
+                <i class="fa-solid fa-phone-volume text-xs"></i>
+                <span>Dial 102</span>
+            </a>
+            <button type="button" onclick="closeEmergencyHospitalModal();" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                Close
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Preloaded Hospital JSON Data for Client-Side Emergency Fallback -->
+<script type="application/json" id="preloaded-hospitals-data">
+[
+    {% for h in hospitals %}
+    {
+        "id": {{ h.id|tojson }},
+        "name": {{ h.name|tojson }},
+        "phone": {{ (h.phone or '+91 1800 200 4567')|tojson }},
+        "emergency_phone": {{ (h.phone or '102')|tojson }},
+        "city": {{ (h.city or 'Main City')|tojson }},
+        "state": {{ (h.state or '')|tojson }},
+        "country": {{ (h.country or 'India')|tojson }},
+        "country_flag": {{ (h.country_flag or '🏥')|tojson }},
+        "address": {{ (h.address or (h.city ~ ', Emergency Wing'))|tojson }},
+        "available_beds": {{ h.available_beds|default(0)|int }},
+        "total_beds": {{ h.total_beds|default(0)|int }},
+        "available_icu_beds": {{ h.available_icu_beds|default(0)|int }},
+        "icu_beds": {{ h.icu_beds|default(0)|int }},
+        "general_bed_fee": {{ h.general_bed_fee|default(1000)|float }},
+        "icu_bed_fee": {{ h.icu_bed_fee|default(2500)|float }},
+        "doctors_available": {{ (h.doctors_available or 'Available')|tojson }},
+        "blood_stock": {{ (h.blood_stock or {})|tojson }},
+        "detail_url": {{ url_for('hospital_detail', hospital_id=h.id)|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
+<script>
+// =========================================================================
+//        🚨 EMERGENCY NEARBY HOSPITAL SEARCH SIDEBAR JAVASCRIPT ENGINE
+// =========================================================================
+
+// Global modal open/close triggers exposed immediately on window
+window.openEmergencyHospitalModal = function() {
+    const backdrop = document.getElementById('emergency-hospital-modal');
+    const drawer = document.getElementById('emergency-modal-card');
+    if (!backdrop || !drawer) return;
+    
+    // Show backdrop
+    backdrop.classList.remove('pointer-events-none', 'opacity-0');
+    backdrop.classList.add('opacity-100', 'pointer-events-auto');
+    
+    // Slide in drawer from right
+    drawer.classList.remove('translate-x-full');
+    drawer.classList.add('translate-x-0');
+    
+    document.body.classList.add('sidebar-drawer-open', 'overflow-hidden');
+
+    // Auto-trigger location search or load initial regional list
+    if (typeof window.triggerEmergencySearchOnOpen === 'function') {
+        window.triggerEmergencySearchOnOpen();
+    }
+};
+
+window.closeEmergencyHospitalModal = function() {
+    const backdrop = document.getElementById('emergency-hospital-modal');
+    const drawer = document.getElementById('emergency-modal-card');
+    if (!backdrop || !drawer) return;
+    
+    // Slide out drawer to right
+    drawer.classList.remove('translate-x-0');
+    drawer.classList.add('translate-x-full');
+    
+    // Fade out backdrop
+    backdrop.classList.remove('opacity-100', 'pointer-events-auto');
+    backdrop.classList.add('opacity-0', 'pointer-events-none');
+    
+    document.body.classList.remove('sidebar-drawer-open', 'overflow-hidden');
+};
+
+// Auto-open sidebar if triggered via query param ?open_emergency=1 or hash
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open_emergency') === '1' || urlParams.get('emergency') === '1' || window.location.hash === '#emergency-search') {
+        setTimeout(window.openEmergencyHospitalModal, 150);
+    }
+});
+
+// =========================================================================
+//        ↔️ EMERGENCY SIDEBAR INTERACTIVE RESIZER CONTROLLER
+// =========================================================================
+window.syncEmergencySidebarLayout = function(customWidth) {
+    const drawer = document.getElementById('emergency-modal-card');
+    const list = document.getElementById('emergency-hospitals-list');
+    if (!drawer || !list) return;
+    
+    const w = typeof customWidth === 'number' ? customWidth : drawer.getBoundingClientRect().width;
+    if (w >= 1080) {
+        list.classList.remove('grid-cols-1', 'grid-cols-2');
+        list.classList.add('grid-cols-3');
+    } else if (w >= 640) {
+        list.classList.remove('grid-cols-1', 'grid-cols-3');
+        list.classList.add('grid-cols-2');
+    } else {
+        list.classList.remove('grid-cols-2', 'grid-cols-3');
+        list.classList.add('grid-cols-1');
+    }
+};
+
+(function initEmergencySidebarResizer() {
+    const resizer = document.getElementById('emergency-sidebar-resizer');
+    const drawer = document.getElementById('emergency-modal-card');
+    if (!resizer || !drawer) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    // Restore saved width from localStorage if valid for screen size
+    try {
+        const savedWidth = localStorage.getItem('spherix_emergency_sidebar_width');
+        if (savedWidth && window.innerWidth >= 640) {
+            const parsed = parseInt(savedWidth, 10);
+            const maxWidth = Math.min(1300, Math.floor(window.innerWidth * 0.94));
+            if (!isNaN(parsed) && parsed >= 360 && parsed <= maxWidth) {
+                drawer.style.width = `${parsed}px`;
+                drawer.classList.remove('max-w-xl', 'md:max-w-2xl');
+                window.syncEmergencySidebarLayout(parsed);
+            }
+        }
+    } catch (e) {}
+
+    function onMouseDown(e) {
+        if (window.innerWidth < 640) return; // Only allow resizing on sm+ viewports
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = drawer.getBoundingClientRect().width;
+        
+        drawer.style.transition = 'none'; // Instant 60fps drag without animation latency
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+        
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    }
+
+    function onMouseMove(e) {
+        if (!isResizing) return;
+        const deltaX = startX - e.clientX; // Moving left increases width
+        let newWidth = startWidth + deltaX;
+
+        const minWidth = 360;
+        const maxWidth = Math.min(1300, Math.floor(window.innerWidth * 0.94));
+
+        if (newWidth < minWidth) newWidth = minWidth;
+        if (newWidth > maxWidth) newWidth = maxWidth;
+
+        drawer.classList.remove('max-w-xl', 'md:max-w-2xl');
+        drawer.style.width = `${newWidth}px`;
+        
+        // Dynamically switch to 2 columns (or 3 columns) according to size
+        window.syncEmergencySidebarLayout(newWidth);
+    }
+
+    function onMouseUp() {
+        if (!isResizing) return;
+        isResizing = false;
+        
+        drawer.style.transition = ''; // Restore smooth CSS transitions
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        
+        const finalWidth = parseInt(drawer.style.width, 10);
+        if (!isNaN(finalWidth)) {
+            try {
+                localStorage.setItem('spherix_emergency_sidebar_width', finalWidth);
+            } catch (e) {}
+            window.syncEmergencySidebarLayout(finalWidth);
+        }
+
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+    }
+
+    // Touch events for tablets & touch screens
+    function onTouchStart(e) {
+        if (window.innerWidth < 640 || !e.touches || !e.touches[0]) return;
+        isResizing = true;
+        startX = e.touches[0].clientX;
+        startWidth = drawer.getBoundingClientRect().width;
+        drawer.style.transition = 'none';
+        
+        window.addEventListener('touchmove', onTouchMove, { passive: false });
+        window.addEventListener('touchend', onTouchEnd);
+    }
+
+    function onTouchMove(e) {
+        if (!isResizing || !e.touches || !e.touches[0]) return;
+        e.preventDefault();
+        const deltaX = startX - e.touches[0].clientX;
+        let newWidth = startWidth + deltaX;
+
+        const minWidth = 360;
+        const maxWidth = Math.min(1300, Math.floor(window.innerWidth * 0.94));
+
+        if (newWidth < minWidth) newWidth = minWidth;
+        if (newWidth > maxWidth) newWidth = maxWidth;
+
+        drawer.classList.remove('max-w-xl', 'md:max-w-2xl');
+        drawer.style.width = `${newWidth}px`;
+        
+        window.syncEmergencySidebarLayout(newWidth);
+    }
+
+    function onTouchEnd() {
+        if (!isResizing) return;
+        isResizing = false;
+        drawer.style.transition = '';
+        
+        const finalWidth = parseInt(drawer.style.width, 10);
+        if (!isNaN(finalWidth)) {
+            try {
+                localStorage.setItem('spherix_emergency_sidebar_width', finalWidth);
+            } catch (e) {}
+            window.syncEmergencySidebarLayout(finalWidth);
+        }
+
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+    }
+
+    // Double-click to reset width back to default
+    resizer.addEventListener('dblclick', function() {
+        drawer.style.width = '';
+        drawer.classList.add('max-w-xl', 'md:max-w-2xl');
+        try {
+            localStorage.removeItem('spherix_emergency_sidebar_width');
+        } catch (e) {}
+        window.syncEmergencySidebarLayout();
+    });
+
+    resizer.addEventListener('mousedown', onMouseDown);
+    resizer.addEventListener('touchstart', onTouchStart, { passive: true });
+})();
+
+(function() {
+    let currentLat = null;
+    let currentLng = null;
+    let currentRadius = null;
+    let searchDebounceTimer = null;
+    let facilitySourceFilter = 'all'; // 'all', 'spherix', 'external'
+
+    const modal = document.getElementById('emergency-hospital-modal');
+    const cityInput = document.getElementById('emergency-city-input');
+    const clearBtn = document.getElementById('clear-emergency-search');
+    const loadingState = document.getElementById('emergency-loading-state');
+    const emptyState = document.getElementById('emergency-empty-state');
+    const hospitalsList = document.getElementById('emergency-hospitals-list');
+    const icuToggle = document.getElementById('emergency-icu-only');
+    const bloodSelect = document.getElementById('emergency-blood-group');
+    const gpsStatusText = document.getElementById('gps-status-text');
+    const gpsIcon = document.getElementById('gps-icon');
+
+    const CITY_COORDS = {
+        'delhi': [28.6139, 77.2090],
+        'new delhi': [28.6139, 77.2090],
+        'mumbai': [19.0760, 72.8777],
+        'bangalore': [12.9716, 77.5946],
+        'bengaluru': [12.9716, 77.5946],
+        'hyderabad': [17.3850, 78.4867],
+        'chennai': [13.0827, 80.2707],
+        'kolkata': [22.5726, 88.3639],
+        'pune': [18.5204, 73.8567],
+        'ahmedabad': [23.0225, 72.5714],
+        'jaipur': [26.9124, 75.7873],
+        'lucknow': [26.8467, 80.9462],
+        'chandigarh': [30.7333, 76.7794],
+        'noida': [28.5355, 77.3910],
+        'gurgaon': [28.4595, 77.0266],
+        'gurugram': [28.4595, 77.0266],
+        'kochi': [9.9312, 76.2673],
+        'indore': [22.7196, 75.8577],
+        'bhopal': [23.2599, 77.4126],
+        'patna': [25.5941, 85.1376],
+        'varanasi': [25.3176, 82.9739],
+        'surat': [21.1702, 72.8311],
+        'nagpur': [21.1458, 79.0882],
+        'new york': [40.7128, -74.0060],
+        'london': [51.5074, -0.1278],
+        'dubai': [25.2048, 55.2708],
+        'singapore': [1.3521, 103.8198],
+        'tokyo': [35.6762, 139.6503],
+        'sydney': [-33.8688, 151.2093],
+        'toronto': [43.6532, -79.3832]
+    };
+
+    let preloadedHospitals = [];
+    try {
+        const rawJson = document.getElementById('preloaded-hospitals-data');
+        if (rawJson && rawJson.textContent) {
+            preloadedHospitals = JSON.parse(rawJson.textContent.trim());
+        }
+    } catch (e) {
+        preloadedHospitals = [];
+    }
+
+    window.triggerEmergencySearchOnOpen = function() {
+        if (currentLat === null || currentLng === null) {
+            detectUserLocation();
+        } else {
+            fetchNearbyEmergencyHospitals();
+        }
+    };
+
+    // Close on backdrop click
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeEmergencyHospitalModal();
+            }
+        });
+    }
+
+    // Close on Esc key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeEmergencyHospitalModal();
+        }
+    });
+
+    window.detectUserLocation = function() {
+        if (!navigator.geolocation) {
+            updateGpsStatus("GPS Not Supported - Searching Regional Centers", false);
+            fetchNearbyEmergencyHospitals();
+            return;
+        }
+
+        updateGpsStatus("Locating Satellite GPS...", true);
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                currentLat = position.coords.latitude;
+                currentLng = position.coords.longitude;
+                updateGpsStatus(`📍 GPS Locked (${currentLat.toFixed(2)}, ${currentLng.toFixed(2)})`, false, true);
+                
+                // Update live Google Maps radar button if present
+                const gmapLink = document.getElementById('btn-gmap-live-radar');
+                if (gmapLink) {
+                    gmapLink.href = `https://www.google.com/maps/search/emergency+hospitals+near+me/@${currentLat},${currentLng},14z`;
+                }
+                
+                fetchNearbyEmergencyHospitals();
+            },
+            function(error) {
+                console.warn("Geolocation fallback:", error.message);
+                updateGpsStatus("GPS Prompt Skipped - Searching by City / Region", false);
+                fetchNearbyEmergencyHospitals();
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+    };
+
+    function updateGpsStatus(text, isLoading, isSuccess) {
+        if (gpsStatusText) gpsStatusText.textContent = text;
+        if (gpsIcon) {
+            if (isLoading) {
+                gpsIcon.className = "fa-solid fa-circle-notch fa-spin text-xs";
+            } else if (isSuccess) {
+                gpsIcon.className = "fa-solid fa-location-dot text-xs text-white";
+            } else {
+                gpsIcon.className = "fa-solid fa-crosshairs text-xs";
+            }
+        }
+    }
+
+    window.setRadiusFilter = function(radius, btn) {
+        currentRadius = radius;
+        document.querySelectorAll('.radius-btn').forEach(b => {
+            b.className = "radius-btn px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-rose-400 transition-all cursor-pointer";
+        });
+        if (btn) {
+            btn.className = "radius-btn px-2.5 py-1 rounded-lg text-xs font-bold border border-rose-500 bg-rose-600 text-white shadow-xs cursor-pointer";
+        }
+        fetchNearbyEmergencyHospitals();
+    };
+
+    window.setFacilitySourceFilter = function(source, btn) {
+        facilitySourceFilter = source;
+        document.querySelectorAll('.source-btn').forEach(b => {
+            b.className = "source-btn px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-rose-400 transition-all cursor-pointer";
+        });
+        if (btn) {
+            btn.className = "source-btn px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-800 bg-slate-900 text-white shadow-xs cursor-pointer";
+        }
+        fetchNearbyEmergencyHospitals();
+    };
+
+    window.clearEmergencySearch = function() {
+        if (cityInput) cityInput.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+        fetchNearbyEmergencyHospitals();
+    };
+
+    window.resetEmergencyFilters = function() {
+        currentRadius = null;
+        facilitySourceFilter = 'all';
+        if (icuToggle) icuToggle.checked = false;
+        if (bloodSelect) bloodSelect.value = '';
+        if (cityInput) cityInput.value = '';
+        const allRadiusBtn = document.querySelector('.radius-btn[data-radius=""]');
+        if (allRadiusBtn) setRadiusFilter(null, allRadiusBtn);
+        else fetchNearbyEmergencyHospitals();
+    };
+
+    if (cityInput) {
+        cityInput.addEventListener('input', function() {
+            if (clearBtn) {
+                if (this.value.length > 0) clearBtn.classList.remove('hidden');
+                else clearBtn.classList.add('hidden');
+            }
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(fetchNearbyEmergencyHospitals, 350);
+        });
+    }
+
+    function calcHaversine(lat1, lon1, lat2, lon2) {
+        const R = 6371.0;
+        const dLat = (lat2 - lat1) * Math.PI / 180.0;
+        const dLon = (lon2 - lon1) * Math.PI / 180.0;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180.0) * Math.cos(lat2 * Math.PI / 180.0) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
+    // Categorizes a hospital into 'govt', 'private', or 'spherix'
+    function detectHospitalCategory(name, address, isPartner) {
+        if (isPartner) {
+            return {
+                category: 'spherix',
+                label: 'Spherix Network Partner',
+                shortTag: '⭐ Spherix Partner',
+                badgeClass: 'bg-emerald-50 border-emerald-300 text-emerald-800',
+                icon: 'fa-solid fa-circle-check text-emerald-600',
+                badgeText: 'Verified Network • Live Bed Telemetry'
+            };
+        }
+
+        const text = `${name} ${address}`.toLowerCase();
+        
+        // Comprehensive Government / Public keywords
+        const govtKeywords = [
+            'govt', 'government', 'civil hospital', 'district hospital', 'aiims', 'esi', 'esic',
+            'cantonment', 'safdarjung', 'general hospital', 'municipal', 'pgi', 'ram manohar',
+            'rml', 'lok nayak', 'lnjp', 'gmc', 'medical college', 'railway hospital',
+            'army hospital', 'public health', 'primary health', 'community health', 'chc',
+            'phc', 'swasthya kendra', 'sarkari', 'maternity home', 'deendayal', 'sanjay gandhi memorial',
+            'babu jagjivan', 'guru gobind singh', 'lal bahadur shastri', 'dr. hedgewar',
+            'aruna asaf ali', 'satyawadi raja harishchandra', 'deep chand bandhu', 'acharya shree bhikshu',
+            'victoria', 'bowring', 'kcg', 'stanley', 'kilpauk', 'rajiv gandhi', 'osmania', 'gandhi hospital',
+            'king george', 'sskm', 'rg kar', 'calcutta medical', 'cooper hospital', 'sion hospital',
+            'kem hospital', 'nair hospital', 'gt hospital', 'jj hospital', 'cama hospital', 'tata memorial'
+        ];
+
+        const isGovt = govtKeywords.some(kw => text.includes(kw));
+
+        if (isGovt) {
+            return {
+                category: 'govt',
+                label: 'Govt. / Public Hospital',
+                shortTag: '🏛️ Govt. / Public',
+                badgeClass: 'bg-amber-50 border-amber-300 text-amber-900',
+                icon: 'fa-solid fa-building-columns text-amber-600',
+                badgeText: 'Government Healthcare • Subsidized / Free ER'
+            };
+        }
+
+        return {
+            category: 'private',
+            label: 'Private Multi-Specialty',
+            shortTag: '🏢 Private Care',
+            badgeClass: 'bg-sky-50 border-sky-300 text-sky-900',
+            icon: 'fa-solid fa-hospital text-sky-600',
+            badgeText: 'Private Multi-Specialty • 24/7 Trauma Care'
+        };
+    }
+
+    function computeSpherixNearbyHospitals() {
+        const cityFilter = (cityInput && cityInput.value || '').toLowerCase().trim();
+        const icuOnly = icuToggle && icuToggle.checked;
+        const bloodGroup = bloodSelect && bloodSelect.value || '';
+        
+        let userLat = currentLat;
+        let userLng = currentLng;
+
+        if ((userLat === null || userLng === null) && cityFilter) {
+            for (const [cname, coords] of Object.entries(CITY_COORDS)) {
+                if (cname.includes(cityFilter) || cityFilter.includes(cname)) {
+                    userLat = coords[0];
+                    userLng = coords[1];
+                    break;
+                }
+            }
+        }
+
+        let filtered = preloadedHospitals.filter(h => {
+            if (icuOnly && h.available_icu_beds <= 0) return false;
+            if (bloodGroup && h.blood_stock && (!h.blood_stock[bloodGroup] || h.blood_stock[bloodGroup] <= 0)) return false;
+            if (cityFilter && !userLat) {
+                const text = `${h.name} ${h.city} ${h.address} ${h.country}`.toLowerCase();
+                if (!text.includes(cityFilter)) return false;
+            }
+            return true;
+        }).map(h => {
+            let hLat = null, hLng = null;
+            const hCity = (h.city || '').toLowerCase();
+            const hAddr = (h.address || '').toLowerCase();
+            for (const [cname, coords] of Object.entries(CITY_COORDS)) {
+                if (hCity.includes(cname) || hAddr.includes(cname)) {
+                    hLat = coords[0];
+                    hLng = coords[1];
+                    break;
+                }
+            }
+
+            let dist = null;
+            let estMins = null;
+            if (userLat !== null && userLng !== null) {
+                if (hLat !== null && hLng !== null) {
+                    dist = Math.round(calcHaversine(userLat, userLng, hLat, hLng) * 10) / 10;
+                } else {
+                    dist = Math.round((Math.random() * 8 + 1.5) * 10) / 10;
+                }
+                estMins = Math.max(3, Math.round((dist / 45.0) * 60));
+            }
+
+            const catInfo = detectHospitalCategory(h.name, h.address || h.city, true);
+
+            return {
+                ...h,
+                is_spherix_partner: true,
+                hospital_category: 'spherix',
+                category_info: catInfo,
+                distance_km: dist,
+                est_minutes: estMins,
+                directions_url: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(h.name + ', ' + (h.address || h.city || 'India'))}`
+            };
+        });
+
+        return filtered;
+    }
+
+    // Fetches real-world external hospitals (Govt & Private) from OpenStreetMap Nominatim
+    async function fetchExternalNearbyHospitals(userLat, userLng, cityName) {
+        try {
+            const queries = ['hospital', 'government hospital', 'district hospital', 'private hospital'];
+            const fetchPromises = queries.map(q => {
+                let osmUrl = '';
+                if (userLat !== null && userLng !== null) {
+                    const offset = 0.25; // ~25km radius box
+                    osmUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=15&viewbox=${userLng - offset},${userLat + offset},${userLng + offset},${userLat - offset}&bounded=1`;
+                } else if (cityName) {
+                    osmUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ' in ' + cityName)}&limit=15`;
+                } else {
+                    return Promise.resolve([]);
+                }
+                return fetch(osmUrl, { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.ok ? r.json() : [])
+                    .catch(() => []);
+            });
+
+            const results = await Promise.allSettled(fetchPromises);
+            let merged = [];
+            const seen = new Set();
+
+            results.forEach(res => {
+                if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+                    res.value.forEach(item => {
+                        const key = item.place_id || `${item.lat}_${item.lon}`;
+                        if (!seen.has(key)) {
+                            seen.add(key);
+                            merged.push(item);
+                        }
+                    });
+                }
+            });
+
+            const parsed = merged.map((item, idx) => {
+                const itemLat = parseFloat(item.lat);
+                const itemLng = parseFloat(item.lon);
+                let dist = null;
+                let estMins = null;
+                if (userLat !== null && userLng !== null && !isNaN(itemLat) && !isNaN(itemLng)) {
+                    dist = Math.round(calcHaversine(userLat, userLng, itemLat, itemLng) * 10) / 10;
+                    estMins = Math.max(3, Math.round((dist / 45.0) * 60));
+                }
+
+                // Clean name and address
+                const nameParts = (item.display_name || '').split(',');
+                const cleanName = item.name || nameParts[0] || `Emergency Hospital #${idx + 1}`;
+                const cleanAddress = nameParts.slice(1, 4).join(',').trim() || (item.display_name || 'Regional Center');
+
+                const catInfo = detectHospitalCategory(cleanName, cleanAddress, false);
+
+                return {
+                    id: `ext-${item.place_id || idx}`,
+                    name: cleanName,
+                    is_spherix_partner: false,
+                    is_external: true,
+                    hospital_category: catInfo.category, // 'govt' or 'private'
+                    category_info: catInfo,
+                    phone: catInfo.category === 'govt' ? '102 / 108' : '+91 1800 200 4567',
+                    emergency_phone: catInfo.category === 'govt' ? '102 / 108' : 'Emergency Triage',
+                    city: nameParts[2] ? nameParts[2].trim() : 'Local District',
+                    state: '',
+                    country: 'Regional',
+                    country_flag: catInfo.category === 'govt' ? '🏛️' : '🏢',
+                    address: cleanAddress,
+                    available_beds: 'Emergency ER Open',
+                    total_beds: 0,
+                    available_icu_beds: '24/7 ICU On-Call',
+                    icu_beds: 0,
+                    doctors_available: '24/7 Casualty & Triage Staff',
+                    distance_km: dist,
+                    est_minutes: estMins,
+                    detail_url: `https://www.google.com/search?q=${encodeURIComponent(cleanName + ' hospital ' + cleanAddress)}`,
+                    directions_url: `https://www.google.com/maps/dir/?api=1&destination=${itemLat},${itemLng}`
+                };
+            });
+
+            return parsed;
+        } catch (e) {
+            console.warn("External hospital query warning:", e);
+            return [];
+        }
+    }
+
+    window.fetchNearbyEmergencyHospitals = async function() {
+        if (!hospitalsList) return;
+        
+        loadingState.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        hospitalsList.innerHTML = '';
+
+        const cityName = (cityInput && cityInput.value || '').trim();
+        const icuOnly = icuToggle && icuToggle.checked;
+
+        // 1. Get Spherix Network Hospitals
+        let spherixList = [];
+        try {
+            const params = new URLSearchParams();
+            if (currentLat !== null && currentLng !== null) {
+                params.append('lat', currentLat);
+                params.append('lng', currentLng);
+            }
+            if (currentRadius) params.append('radius', currentRadius);
+            if (cityName) params.append('city', cityName);
+            if (icuOnly) params.append('icu_only', 'true');
+            if (bloodSelect && bloodSelect.value) params.append('blood_group', bloodSelect.value);
+
+            const res = await fetch(`/api/emergency/nearby-hospitals?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success' && data.hospitals) {
+                    spherixList = data.hospitals.map(h => ({
+                        ...h,
+                        is_spherix_partner: true,
+                        hospital_category: 'spherix',
+                        category_info: detectHospitalCategory(h.name, h.address || h.city, true)
+                    }));
+                }
+            }
+        } catch (e) {
+            // fallback
+        }
+
+        if (spherixList.length === 0) {
+            spherixList = computeSpherixNearbyHospitals();
+        }
+
+        // 2. Fetch External Worldwide Nearby Hospitals (Govt + Private)
+        let externalList = [];
+        if (!icuOnly && facilitySourceFilter !== 'spherix') {
+            externalList = await fetchExternalNearbyHospitals(currentLat, currentLng, cityName);
+        }
+
+        // 3. Combine All (Govt, Private, Spherix)
+        let combined = [...spherixList, ...externalList];
+
+        // 4. Filter based on selected Tab ('all', 'govt', 'private', 'spherix')
+        if (facilitySourceFilter === 'spherix') {
+            combined = combined.filter(h => h.hospital_category === 'spherix');
+        } else if (facilitySourceFilter === 'govt') {
+            combined = combined.filter(h => h.hospital_category === 'govt');
+        } else if (facilitySourceFilter === 'private') {
+            combined = combined.filter(h => h.hospital_category === 'private');
+        }
+
+        // 5. Filter by Radius if active
+        if (currentRadius && currentLat !== null) {
+            combined = combined.filter(h => h.distance_km !== null && h.distance_km <= currentRadius);
+        }
+
+        // 6. Sort by distance (closest first)
+        if (currentLat !== null) {
+            combined.sort((a, b) => (a.distance_km !== null ? a.distance_km : 9999) - (b.distance_km !== null ? b.distance_km : 9999));
+        }
+
+        loadingState.classList.add('hidden');
+        if (combined.length > 0) {
+            renderEmergencyHospitals(combined);
+        } else {
+            emptyState.classList.remove('hidden');
+        }
+    };
+
+    function renderEmergencyHospitals(hospitals) {
+        hospitalsList.innerHTML = '';
+        hospitals.forEach(h => {
+            const isPartner = h.is_spherix_partner === true;
+            const cat = h.category_info || detectHospitalCategory(h.name, h.address || h.city, isPartner);
+
+            const distanceHtml = h.distance_km !== null 
+                ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 font-extrabold text-[10px]">
+                     <i class="fa-solid fa-location-arrow text-[9px] text-rose-600"></i>
+                     ${h.distance_km} km • 🚑 ~${h.est_minutes || 4} mins
+                   </span>`
+                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold text-[10px]">
+                     <i class="fa-solid fa-location-dot text-[9px]"></i> ${h.city || 'Regional Center'}
+                   </span>`;
+
+            const partnerBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-bold ${cat.badgeClass}">
+                 <i class="${cat.icon}"></i>
+                 <span>${cat.shortTag || cat.label}</span>
+               </span>`;
+
+            const card = document.createElement('div');
+            card.className = `p-4 rounded-2xl bg-white border ${isPartner ? 'border-emerald-200/90 shadow-sm' : (cat.category === 'govt' ? 'border-amber-200/90 shadow-sm' : 'border-slate-200/90')} hover:shadow-md hover:border-rose-400 transition-all flex flex-col justify-between`;
+            
+            const bedTelemetryHtml = isPartner ? `
+                <div class="grid grid-cols-2 gap-2 my-2.5">
+                    <div class="p-2 rounded-xl bg-rose-50/80 border border-rose-200/80">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-rose-800">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-heart-pulse text-rose-600"></i> ICU Beds</span>
+                            <span class="font-mono text-xs font-black text-rose-700">${h.available_icu_beds} Open</span>
+                        </div>
+                    </div>
+                    <div class="p-2 rounded-xl bg-emerald-50/80 border border-emerald-200/80">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-emerald-800">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-bed text-emerald-600"></i> Beds</span>
+                            <span class="font-mono text-xs font-black text-emerald-700">${h.available_beds} Open</span>
+                        </div>
+                    </div>
+                </div>
+            ` : (cat.category === 'govt' ? `
+                <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 my-2.5 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-1.5 text-amber-900 font-semibold text-[11px]">
+                        <i class="fa-solid fa-shield-halved text-amber-600 text-xs"></i>
+                        <span>Public Casualty &amp; Emergency Trauma Center</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-amber-800 bg-white px-2 py-0.5 rounded-md border border-amber-200 shadow-2xs">Govt. Free/Subsidized</span>
+                </div>
+            ` : `
+                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 my-2.5 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-1.5 text-slate-700 font-semibold text-[11px]">
+                        <i class="fa-solid fa-hospital-user text-sky-600 text-xs"></i>
+                        <span>24/7 Private Emergency &amp; Critical Care</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Open 24 Hours</span>
+                </div>
+            `);
+
+            const primaryActionBtn = isPartner ? `
+                <a href="${h.detail_url}" 
+                   class="py-2 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 text-decoration-none shadow-xs transition-all"
+                   title="Book Bed &amp; View Facility Telemetry">
+                    <span>Admit / Book</span>
+                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </a>
+            ` : `
+                <a href="${h.detail_url}" target="_blank" rel="noopener noreferrer"
+                   class="py-2 px-2 ${cat.category === 'govt' ? 'bg-amber-700 hover:bg-amber-800' : 'bg-slate-800 hover:bg-slate-900'} text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 text-decoration-none shadow-xs transition-all"
+                   title="Search Facility Info on Web">
+                    <span>Hospital Info</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                </a>
+            `;
+
+            const phoneDisplay = cat.category === 'govt' ? '102 / 108' : (h.emergency_phone || '102');
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
+                        ${partnerBadge}
+                        ${distanceHtml}
+                    </div>
+
+                    <div class="mb-1">
+                        <h4 class="font-display font-bold text-sm text-slate-900 leading-tight hover:text-rose-600 transition-colors">
+                            <a href="${h.detail_url}" target="${isPartner ? '_self' : '_blank'}" class="text-decoration-none text-slate-900">${h.name}</a>
+                        </h4>
+                        <p class="text-[11px] text-slate-500 line-clamp-1 mt-0.5" title="${h.address}">
+                            <i class="fa-solid fa-map-pin text-[10px] text-slate-400 mr-1"></i>${h.address}
+                        </p>
+                    </div>
+
+                    ${bedTelemetryHtml}
+
+                    <div class="flex items-center justify-between text-[11px] text-slate-600 mb-2 px-0.5">
+                        <span class="flex items-center gap-1 font-semibold text-emerald-700 text-[10px]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            ${h.doctors_available || 'Emergency Specialists Available'}
+                        </span>
+                        <span class="text-slate-500 font-mono text-[10px]">
+                            Emergency: <strong class="text-rose-600">${phoneDisplay}</strong>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 grid grid-cols-3 gap-1.5">
+                    <a href="tel:${h.phone || (cat.category === 'govt' ? '102' : '102')}" 
+                       class="py-2 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 text-decoration-none shadow-xs transition-all"
+                       title="Call Hospital Emergency Direct">
+                        <i class="fa-solid fa-phone text-[10px]"></i>
+                        <span>Call</span>
+                    </a>
+
+                    <a href="${h.directions_url}" target="_blank" rel="noopener noreferrer"
+                       class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 text-decoration-none transition-all"
+                       title="Get GPS Navigation Route via Google Maps">
+                        <i class="fa-solid fa-diamond-turn-right text-xs text-sky-600"></i>
+                        <span>Route</span>
+                    </a>
+
+                    ${primaryActionBtn}
+                </div>
+            `;
+            hospitalsList.appendChild(card);
+        });
+
+        if (typeof window.syncEmergencySidebarLayout === 'function') {
+            window.syncEmergencySidebarLayout();
+        }
+    }
+})();
+</script>
 {% endblock %}

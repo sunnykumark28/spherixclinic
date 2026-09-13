@@ -1,682 +1,1641 @@
 {% extends 'layout.html' %}
 
-{% block title %}Ayurvedic AI Diagnosis & Prakriti Analysis | Spherix Clinic{% endblock %}
+{% block title %}Vedic Clinical Intelligence • Spherix Clinic{% endblock %}
 
-{% block head %}
-<!-- Modern Fonts & Icons -->
+{% block head_extra %}
+<!-- Google Fonts & FontAwesome 6 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://unpkg.com/lucide@latest"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@400;600;800;900&family=Cinzel:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
-    body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        background-color: #fcfcfb;
-        color: #1c1917;
+    :root {
+        --vedic-emerald: #059669;
+        --vedic-emerald-dark: #047857;
+        --vedic-amber: #d97706;
+        --vedic-saffron: #f59e0b;
+        --vedic-terracotta: #c2410c;
+        --vedic-bg: #fdfbf7;
     }
 
-    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    * {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .font-vedic { font-family: 'Cinzel', serif; }
     .font-outfit { font-family: 'Outfit', sans-serif; }
-    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
 
     /* Ambient Hero Mesh Background */
-    .ayurveda-mesh-bg {
+    .ayurveda-hero-mesh {
         background: 
-            radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.10) 0px, transparent 50%),
-            radial-gradient(at 100% 0%, rgba(217, 119, 6, 0.08) 0px, transparent 50%),
-            radial-gradient(at 50% 100%, rgba(5, 150, 105, 0.06) 0px, transparent 50%),
-            #fcfcfb;
+            radial-gradient(circle at 10% 15%, rgba(5, 150, 105, 0.14) 0%, transparent 45%),
+            radial-gradient(circle at 90% 80%, rgba(217, 119, 6, 0.12) 0%, transparent 45%),
+            linear-gradient(180deg, #ffffff 0%, #fcfbf7 100%);
     }
 
-    /* Clean Card */
-    .ayurveda-card {
+    /* Disease Card */
+    .ayur-card {
         background: #ffffff;
-        border: 1px solid rgba(231, 229, 228, 0.9);
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.02);
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        border: 1.5px solid #e7e5e4;
+        border-radius: 20px;
+        transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
     }
-    .ayurveda-card:hover {
-        border-color: rgba(16, 185, 129, 0.4);
-        box-shadow: 0 20px 40px -12px rgba(16, 185, 129, 0.12);
-    }
-
-    /* Radiant Emerald Button */
-    .btn-radiant-emerald {
-        background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
-        box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.35);
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .btn-radiant-emerald:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 16px 36px -6px rgba(5, 150, 105, 0.5);
+    .ayur-card:hover {
+        border-color: #34d399;
+        box-shadow: 0 16px 36px -8px rgba(5, 150, 105, 0.15);
+        transform: translateY(-4px);
     }
 
-    /* Subtle chip active */
-    .chip-active {
-        background-color: #047857 !important;
+    /* Active Filter Pills */
+    .filter-pill.active {
+        background-color: #059669 !important;
         color: #ffffff !important;
-        border-color: #047857 !important;
+        border-color: #059669 !important;
+        box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+    }
+
+    .dosha-pill.active {
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        font-weight: 900 !important;
+        transform: scale(1.02);
+    }
+
+    /* Custom Scrollbar */
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+    /* Complete Isolation & Hidden Controls when Monograph Drawer is Open */
+    body.sidebar-drawer-open {
+        overflow: hidden !important;
+    }
+    body.sidebar-drawer-open nav.glass-nav,
+    body.sidebar-drawer-open #main-navbar,
+    body.sidebar-drawer-open header,
+    body.sidebar-drawer-open #main-footer,
+    body.sidebar-drawer-open footer,
+    body.sidebar-drawer-open #floating-actions-dock,
+    body.sidebar-drawer-open #chatbot-toggle-btn,
+    body.sidebar-drawer-open #feedback-toggle-btn,
+    body.sidebar-drawer-open #chatbot-widget,
+    body.sidebar-drawer-open #feedback-modal,
+    body.sidebar-drawer-open .floating-cart-badge {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen ayurveda-mesh-bg py-12 px-6 sm:px-12 lg:px-20 selection:bg-emerald-200 selection:text-emerald-900">
-    <div class="max-w-6xl mx-auto space-y-12">
+<div class="min-h-screen bg-[#fcfbf7] text-slate-900 pb-24">
 
-        <!-- Hero Header -->
-        <div class="text-center space-y-4 max-w-3xl mx-auto">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-wider uppercase">
-                <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-                <span>Vedic Clinical Intelligence</span>
-            </div>
-
-            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-display font-black text-stone-900 tracking-tight leading-tight">
-                Holistic <span class="text-emerald-700">Ayurvedic AI</span> Diagnosis
-            </h1>
-
-            <p class="text-sm sm:text-base text-stone-600 leading-relaxed max-w-2xl mx-auto">
-                Discover your unique constitutional balance (Prakriti), analyze active Dosha imbalances (Vikriti), and receive tailored herbal, dietary (Ahara), and yogic protocols.
-            </p>
-
-            <!-- Advisory Banner -->
-            <div class="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium text-left">
-                <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                <span>Ayurveda offers complementary therapeutic insights. Consult licensed allopathic doctors for acute emergencies.</span>
-            </div>
-        </div>
-
-        <!-- 2-COLUMN MAIN LAYOUT: Form (Left 7 cols) & Prakriti Quick-Calculator (Right 5 cols) -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <!-- ================= 1. HERO SECTION & VALUE PROPOSITIONS ================= -->
+    <section class="ayurveda-hero-mesh pt-10 pb-12 px-4 sm:px-6 lg:px-8 border-b border-stone-200">
+        <div class="max-w-6xl mx-auto space-y-6">
             
-            <!-- LEFT: AI DIAGNOSTIC FORM (7 COLS) -->
-            <div class="lg:col-span-7 space-y-6 border-2 border-slate-600 rounded-3xl p-6 sm:p-9">
-                <div class="ayurveda-card rounded-3xl p-6 sm:p-9">
-                    
-                    <div class="flex items-center gap-3 pb-4 mb-6 border-b border-stone-200">
-                        <div class="w-11 h-11 rounded-2xl bg-emerald-100/80 text-emerald-700 flex items-center justify-center text-lg">
-                            <i class="fas fa-mortar-pestle"></i>
-                        </div>
-                        <div>
-                            <h2 class="font-display font-bold text-stone-900 text-lg">Dosha & Symptom Evaluation</h2>
-                            <p class="text-xs text-stone-400 font-mono-code">Personalized Herbal & Dietary Synthesis</p>
-                        </div>
+            <!-- Top Tagline & Dataset Indicator -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black uppercase tracking-wider shadow-2xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span>Vedic Clinical Intelligence • {{ total_ayur_count|default(367) }}+ Verified Vedic Conditions</span>
+                </div>
+
+                <div class="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-stone-200 shadow-2xs text-xs font-bold text-stone-700">
+                    <i class="fas fa-om text-amber-600"></i>
+                    <span>Trilingual: <strong class="text-emerald-900">English • हिंदी • मराठी</strong></span>
+                </div>
+            </div>
+
+            <!-- Main Heading -->
+            <div class="text-center max-w-4xl mx-auto space-y-3">
+                <h1 class="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight leading-tight">
+                    Holistic <span class="text-emerald-700 font-vedic">Vedic</span> &amp; Disease Encyclopedia
+                </h1>
+                <p class="text-sm sm:text-base text-stone-600 font-medium leading-relaxed max-w-3xl mx-auto">
+                    Explore ancient Ayurvedic wisdom synthesized with modern clinical AI. Discover root-cause Dosha imbalances (Vata, Pitta, Kapha), therapeutic herbs, Ahara (dietary), and Yogic healing protocols.
+                </p>
+            </div>
+
+            <!-- Multilingual Search Omnibar -->
+            <div class="max-w-3xl mx-auto relative">
+                <div class="relative flex items-center shadow-lg rounded-2xl overflow-hidden bg-white border-2 border-emerald-600/30 focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-600/15 transition-all">
+                    <div class="pl-4 sm:pl-5 text-emerald-600 text-lg">
+                        <i class="fas fa-mortar-pestle"></i>
                     </div>
-
-                    <form id="ayurvedaForm" class="space-y-6">
-                        
-                        <!-- Quick Symptom Tags -->
-                        <div>
-                            <label class="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-2.5 font-mono-code">
-                                Quick Symptom Selector
-                            </label>
-                            <div class="flex flex-wrap gap-2" id="symptomChips">
-                                <button type="button" class="symptom-tag px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 hover:border-emerald-500 transition-all cursor-pointer" data-tag="Bloating, Gas & Indigestion">
-                                    <i class="fas fa-wind text-amber-500 mr-1"></i> Bloating & Gas
-                                </button>
-                                <button type="button" class="symptom-tag px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 hover:border-emerald-500 transition-all cursor-pointer" data-tag="Acid Reflux, Heartburn & Heat">
-                                    <i class="fas fa-fire text-rose-500 mr-1"></i> Acidity & Burning
-                                </button>
-                                <button type="button" class="symptom-tag px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 hover:border-emerald-500 transition-all cursor-pointer" data-tag="Insomnia, Restlessness & Stress">
-                                    <i class="fas fa-moon text-indigo-500 mr-1"></i> Insomnia & Stress
-                                </button>
-                                <button type="button" class="symptom-tag px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 hover:border-emerald-500 transition-all cursor-pointer" data-tag="Joint Pain, Stiffness & Dry Skin">
-                                    <i class="fas fa-bone text-sky-500 mr-1"></i> Joint Stiffness
-                                </button>
-                                <button type="button" class="symptom-tag px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 hover:border-emerald-500 transition-all cursor-pointer" data-tag="Sluggishness, Heaviness & Congestion">
-                                    <i class="fas fa-cloud text-slate-500 mr-1"></i> Sluggish Metabolism
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Symptoms Textarea -->
-                        <div>
-                            <label class="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-2 font-mono-code">
-                                Describe Your Health Concerns & Symptoms
-                            </label>
-                            <textarea id="symptomsInput" rows="3" placeholder="e.g., Feeling anxious, poor sleep, dry skin, and irregular digestion with bloating after meals..."
-                                      class="w-full px-4 py-3 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-emerald-500 text-stone-900 text-sm leading-relaxed"></textarea>
-                        </div>
-
-                        <!-- Dosha & Digestion Grid -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-2 font-mono-code">
-                                    Primary Dosha (If Known)
-                                </label>
-                                <select id="doshaInput" class="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-emerald-500 text-stone-800 text-xs font-semibold cursor-pointer">
-                                    <option value="Unknown">Unknown / Calculate via Quiz</option>
-                                    <option value="Vata">Vata (Air & Space &bull; Light, Agile)</option>
-                                    <option value="Pitta">Pitta (Fire & Water &bull; Intense, Warm)</option>
-                                    <option value="Kapha">Kapha (Earth & Water &bull; Calm, Solid)</option>
-                                    <option value="Vata-Pitta">Vata-Pitta Dual</option>
-                                    <option value="Pitta-Kapha">Pitta-Kapha Dual</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-2 font-mono-code">
-                                    Digestive Fire (Agni)
-                                </label>
-                                <select id="digestionInput" class="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-emerald-500 text-stone-800 text-xs font-semibold cursor-pointer">
-                                    <option value="Normal / Balanced">Balanced / Regular (Sama Agni)</option>
-                                    <option value="Irregular / Bloating">Irregular / Bloating (Visham Agni)</option>
-                                    <option value="Sharp / Acidic">Sharp / High Acid (Tikshna Agni)</option>
-                                    <option value="Sluggish / Heavy">Slow / Heavy (Manda Agni)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Sleep & Stress Level Grid -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-2 font-mono-code">
-                                    Sleep Quality
-                                </label>
-                                <select id="sleepInput" class="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-emerald-500 text-stone-800 text-xs font-semibold cursor-pointer">
-                                    <option value="Sound & Restful">Sound & Restful (7-8 hours)</option>
-                                    <option value="Light & Broken">Light, Broken / Insomnia</option>
-                                    <option value="Heavy & Excessive">Heavy / Difficulty Waking</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-2 font-mono-code">
-                                    Stress / Energy State
-                                </label>
-                                <select id="stressInput" class="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-emerald-500 text-stone-800 text-xs font-semibold cursor-pointer">
-                                    <option value="Moderate">Moderate / Occasional Stress</option>
-                                    <option value="High Anxiety / Restless">High Anxiety & Restless (Vata)</option>
-                                    <option value="Irritability / Burnout">Irritability & Burnout (Pitta)</option>
-                                    <option value="Low Energy / Lethargy">Lethargy & Low Drive (Kapha)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Submit Button -->
-                        <button type="submit" id="analyzeBtn" class="btn-radiant-emerald w-full py-4 rounded-2xl text-white font-display font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer shadow-lg bg-emerald-500 shadow-emerald-500/50">
-                            <i data-lucide="sparkles" class="w-4 h-4"></i>
-                            <span>Generate Ayurvedic Protocol</span>
+                    <input 
+                        type="text" 
+                        id="ayurSearchInput" 
+                        oninput="handleAyurSearchTyping(this.value);"
+                        placeholder="Search conditions, symptoms, herbs (e.g., 'Cough / खांसी', 'Acidity', 'Ashwagandha', 'Vata')..." 
+                        class="w-full py-4 pl-3 pr-24 sm:pr-32 text-sm sm:text-base font-semibold text-stone-800 placeholder-stone-400 bg-transparent border-0 focus:outline-none"
+                    >
+                    <div class="absolute right-2 flex items-center gap-1.5">
+                        <button type="button" onclick="clearAyurSearch();" id="clearAyurSearchBtn" class="text-stone-400 hover:text-stone-600 p-2 text-sm cursor-pointer hidden">
+                            <i class="fas fa-xmark"></i>
                         </button>
-                    </form>
+                        <button type="button" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-sm transition-colors flex items-center gap-1.5">
+                            <i class="fas fa-magnifying-glass text-xs"></i>
+                            <span class="hidden sm:inline">Search</span>
+                        </button>
+                    </div>
+                </div>
 
+                <!-- Quick Keywords Bar (Multilingual) -->
+                <div class="flex items-center flex-wrap gap-2 pt-3 justify-center text-xs font-semibold text-stone-600">
+                    <span class="text-stone-400 text-[11px] font-bold uppercase tracking-wider">Top Conditions:</span>
+                    <button type="button" onclick="applyQuickAyurSearch('Cough');" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-colors cursor-pointer">
+                        Cough (खांसी)
+                    </button>
+                    <button type="button" onclick="applyQuickAyurSearch('Acidity');" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-colors cursor-pointer">
+                        Acidity (अम्लपित्त)
+                    </button>
+                    <button type="button" onclick="applyQuickAyurSearch('Arthritis');" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-colors cursor-pointer">
+                        Arthritis (संधिवात)
+                    </button>
+                    <button type="button" onclick="applyQuickAyurSearch('Anxiety');" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-colors cursor-pointer">
+                        Anxiety (चिंता)
+                    </button>
+                    <button type="button" onclick="applyQuickAyurSearch('Diabetes');" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-colors cursor-pointer">
+                        Diabetes (मधुमेह)
+                    </button>
+                    <button type="button" onclick="applyQuickAyurSearch('Ashwagandha');" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer">
+                        🌿 Ashwagandha
+                    </button>
                 </div>
             </div>
 
-            <!-- RIGHT: PRAKRITI DOSHA QUIZ (5 COLS) -->
-            <div class="lg:col-span-5 space-y-6">
-                
-                <!-- Quick Dosha Assessment Tool -->
-                <div class="ayurveda-card rounded-3xl p-6 sm:p-7 bg-stone-900 text-white border-stone-800">
-                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-stone-800">
-                        <div class="flex items-center gap-2.5">
-                            <i data-lucide="compass" class="w-5 h-5 text-emerald-400"></i>
-                            <h3 class="font-display font-bold text-base">Quick Prakriti Quiz</h3>
-                        </div>
-                        <span class="text-[10px] uppercase font-mono-code bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                            1-Min Self-Test
-                        </span>
-                    </div>
-
-                    <p class="text-xs text-stone-300 mb-4 leading-relaxed">
-                        Answer 3 quick traits to auto-identify your dominant Ayurvedic constitution:
-                    </p>
-
-                    <div class="space-y-3.5 text-xs text-stone-200" id="doshaQuiz">
-                        
-                        <!-- Question 1: Body Frame -->
-                        <div class="space-y-1.5">
-                            <span class="font-bold text-stone-300">1. Body Structure & Weight Tendency:</span>
-                            <div class="grid grid-cols-3 gap-1.5">
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="frame" data-val="Vata">
-                                    Slender / Hard to gain
-                                </button>
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="frame" data-val="Pitta">
-                                    Medium / Athletic
-                                </button>
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="frame" data-val="Kapha">
-                                    Broad / Gains easily
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Question 2: Climate Reaction -->
-                        <div class="space-y-1.5">
-                            <span class="font-bold text-stone-300">2. Temperature & Weather Preference:</span>
-                            <div class="grid grid-cols-3 gap-1.5">
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="weather" data-val="Vata">
-                                    Dislikes Cold & Wind
-                                </button>
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="weather" data-val="Pitta">
-                                    Dislikes Heat & Sun
-                                </button>
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="weather" data-val="Kapha">
-                                    Dislikes Damp / Cold
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Question 3: Mind & Stress Reaction -->
-                        <div class="space-y-1.5">
-                            <span class="font-bold text-stone-300">3. Mind & Stress Reaction:</span>
-                            <div class="grid grid-cols-3 gap-1.5">
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="mind" data-val="Vata">
-                                    Anxious / Worry
-                                </button>
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="mind" data-val="Pitta">
-                                    Irritable / Critical
-                                </button>
-                                <button type="button" class="quiz-btn p-2 rounded-xl bg-stone-800 hover:bg-emerald-950 border border-stone-700 text-center font-medium transition-all cursor-pointer" data-q="mind" data-val="Kapha">
-                                    Withdrawn / Calm
-                                </button>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- Calculated Result Pill -->
-                    <div id="quizResultBox" class="mt-4 p-3.5 rounded-2xl bg-emerald-900/40 border border-emerald-500/30 text-xs hidden">
-                        <div class="flex items-center justify-between">
-                            <span class="font-bold text-emerald-300" id="quizDoshaTitle">Estimated: Vata Dominant</span>
-                            <button type="button" id="applyQuizDoshaBtn" class="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-stone-900 rounded-lg font-bold text-[11px] transition-colors cursor-pointer">
-                                Apply to Form &rarr;
-                            </button>
-                        </div>
-                    </div>
+            <!-- View Navigation Switcher (Tabs) -->
+            <div class="flex justify-center pt-3">
+                <div class="inline-flex p-1.5 rounded-2xl bg-stone-200/70 border border-stone-300">
+                    <button type="button" onclick="switchAyurMainTab('encyclopedia', this);" id="tabBtnEncyclopedia" class="px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer bg-white text-emerald-900 shadow-xs flex items-center gap-2">
+                        <i class="fas fa-book-journal-whills text-emerald-600"></i>
+                        <span>367+ Vedic Disease Encyclopedia</span>
+                    </button>
+                    <button type="button" onclick="switchAyurMainTab('calculator', this);" id="tabBtnCalculator" class="px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-stone-600 hover:text-stone-900 flex items-center gap-2">
+                        <i class="fas fa-sparkles text-amber-500"></i>
+                        <span>Prakriti &amp; Dosha AI Scanner</span>
+                    </button>
                 </div>
-
-                <!-- Daily Ayurvedic Routine (Dinacharya) Card -->
-                <div class="ayurveda-card rounded-3xl p-6">
-                    <h3 class="font-display font-bold text-stone-900 text-sm mb-3 flex items-center gap-2">
-                        <i data-lucide="sun" class="w-4 h-4 text-amber-500"></i>
-                        <span>Essential Daily Dinacharya Rituals</span>
-                    </h3>
-                    <ul class="space-y-2 text-xs text-stone-600">
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0"></i>
-                            <span><strong>Ushapan:</strong> Drink warm water upon waking to stimulate Agni.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0"></i>
-                            <span><strong>Gandusha:</strong> Oil pulling with sesame or coconut oil for oral health.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0"></i>
-                            <span><strong>Abhyanga:</strong> Warm herb-infused oil massage before showering.</span>
-                        </li>
-                    </ul>
-                </div>
-
             </div>
+
         </div>
+    </section>
 
-        <!-- ================= DYNAMIC RESULTS SECTION ================= -->
-        <div id="resultsArea" class="hidden space-y-6 border-2 border-slate-300 rounded-3xl p-6 sm:p-9">
+    <!-- ================= 2. ENCYCLOPEDIA VIEW (TAB 1) ================= -->
+    <div id="encyclopediaTabView" class="space-y-8">
+        
+        <!-- Dosha Filter Buttons & Category Bar -->
+        <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
             
-            <div class="flex items-center justify-between pb-3 border-b border-stone-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg font-bold">
-                        <i class="fas fa-leaf"></i>
-                    </div>
+            <!-- 1. Dosha Selector Bar -->
+            <div class="bg-white p-4 rounded-2xl border border-stone-200 shadow-2xs space-y-3 mb-6">
+                <div class="text-[11px] font-black uppercase tracking-wider text-stone-400">Filter by Ayurvedic Dosha Imbalance</div>
+                <div class="flex items-center flex-wrap gap-2">
+                    <button type="button" onclick="filterAyurDosha('all', this);" class="dosha-pill active px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer">
+                        All Doshas ({{ total_ayur_count|default(367) }})
+                    </button>
+                    <button type="button" onclick="filterAyurDosha('Vata', this);" class="dosha-pill px-3.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                        <i class="fas fa-wind text-indigo-500"></i> Vata (Air/Space)
+                    </button>
+                    <button type="button" onclick="filterAyurDosha('Pitta', this);" class="dosha-pill px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                        <i class="fas fa-fire-flame-curved text-amber-500"></i> Pitta (Fire/Water)
+                    </button>
+                    <button type="button" onclick="filterAyurDosha('Kapha', this);" class="dosha-pill px-3.5 py-1.5 rounded-xl bg-teal-50 text-teal-900 border border-teal-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                        <i class="fas fa-water text-teal-500"></i> Kapha (Earth/Water)
+                    </button>
+                    <button type="button" onclick="filterAyurDosha('Vata, Pitta', this);" class="dosha-pill px-3.5 py-1.5 rounded-xl bg-stone-100 text-stone-800 border border-stone-200 text-xs font-bold transition-all cursor-pointer">
+                        Vata-Pitta Dual
+                    </button>
+                    <button type="button" onclick="filterAyurDosha('Pitta, Kapha', this);" class="dosha-pill px-3.5 py-1.5 rounded-xl bg-stone-100 text-stone-800 border border-stone-200 text-xs font-bold transition-all cursor-pointer">
+                        Pitta-Kapha Dual
+                    </button>
+                    <button type="button" onclick="filterAyurDosha('Vata, Kapha', this);" class="dosha-pill px-3.5 py-1.5 rounded-xl bg-stone-100 text-stone-800 border border-stone-200 text-xs font-bold transition-all cursor-pointer">
+                        Vata-Kapha Dual
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Clinical Category Ribbons -->
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-black text-stone-900 flex items-center gap-2">
+                    <i class="fas fa-leaf text-emerald-600"></i> Clinical Ayurvedic Domains
+                </h2>
+                <span class="text-xs text-stone-500 font-semibold" id="ayurResultsCountLabel">Showing top verified conditions</span>
+            </div>
+
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scroll no-scrollbar">
+                <button type="button" onclick="filterAyurCategory('all', this);" class="filter-pill active px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    All Categories
+                </button>
+                <button type="button" onclick="filterAyurCategory('Digestive & Metabolism', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Digestive &amp; Agni
+                </button>
+                <button type="button" onclick="filterAyurCategory('Respiratory & Immunity', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Respiratory &amp; Prana
+                </button>
+                <button type="button" onclick="filterAyurCategory('Joints & Musculoskeletal', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Joints &amp; Sandhivata
+                </button>
+                <button type="button" onclick="filterAyurCategory('Mental Health & Neurology', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Mental &amp; Manas
+                </button>
+                <button type="button" onclick="filterAyurCategory('Endocrine & Metabolic', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Diabetes &amp; Metabolism
+                </button>
+                <button type="button" onclick="filterAyurCategory('Skin & Hair Health', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Skin &amp; Twak
+                </button>
+                <button type="button" onclick="filterAyurCategory('Cardiovascular Health', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Heart &amp; Hridaya
+                </button>
+                <button type="button" onclick="filterAyurCategory('Renal & Urinary', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Renal &amp; Mutra
+                </button>
+                <button type="button" onclick="filterAyurCategory('Fevers & Viral Care', this);" class="filter-pill px-4 py-2 rounded-xl bg-stone-100 text-stone-700 text-xs font-extrabold border border-stone-200 whitespace-nowrap cursor-pointer transition-all">
+                    Fevers &amp; Jwara
+                </button>
+            </div>
+        </section>
+
+        <!-- Diseases Grid -->
+        <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="ayurDiseasesGrid">
+                {% for dis in featured_conditions %}
+                <div class="ayur-card p-6 cursor-pointer group" onclick="openAyurMonographModal('{{ dis.id }}');">
                     <div>
-                        <h2 class="text-2xl font-display font-black text-stone-900">Personalized Ayurvedic Protocol</h2>
-                        <p class="text-xs text-stone-500" id="resultSourceBadge">Evidence-Based Vedic Synthesis</p>
+                        <!-- Top Badges -->
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <span class="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-200">
+                                {{ dis.category }}
+                            </span>
+                            <span class="px-2.5 py-0.5 rounded-md {% if 'Vata' in dis.doshas %}bg-indigo-50 text-indigo-800 border border-indigo-200{% elif 'Pitta' in dis.doshas %}bg-amber-50 text-amber-800 border border-amber-200{% else %}bg-teal-50 text-teal-800 border border-teal-200{% endif %} text-[10px] font-black">
+                                {{ dis.doshas }}
+                            </span>
+                        </div>
+
+                        <!-- Trilingual Titles -->
+                        <h3 class="text-lg font-black text-stone-900 group-hover:text-emerald-700 transition-colors mb-1">
+                            {{ dis.name }}
+                        </h3>
+                        {% if dis.hindi_name or dis.marathi_name %}
+                        <div class="flex items-center gap-2 text-xs font-bold text-stone-500 mb-3">
+                            {% if dis.hindi_name %}<span class="text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded">{{ dis.hindi_name }}</span>{% endif %}
+                            {% if dis.marathi_name %}<span class="text-stone-600 bg-stone-100 px-2 py-0.5 rounded">{{ dis.marathi_name }}</span>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Symptoms snippet -->
+                        <div class="text-xs text-stone-600 font-medium mb-3 line-clamp-2 leading-relaxed">
+                            <span class="font-bold text-stone-800">Symptoms:</span> {{ dis.symptoms }}
+                        </div>
+
+                        <!-- Key Herbs & Yoga Chips -->
+                        <div class="space-y-2 pt-2 border-t border-stone-100">
+                            <div class="flex items-center flex-wrap gap-1.5">
+                                <span class="text-[10px] font-black text-emerald-800 uppercase">Herbs:</span>
+                                {% for h in dis.herb_tags[:3] %}
+                                <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 text-[10px] font-bold border border-emerald-200">
+                                    {{ h }}
+                                </span>
+                                {% endfor %}
+                            </div>
+
+                            {% if dis.yoga_tags %}
+                            <div class="flex items-center flex-wrap gap-1.5">
+                                <span class="text-[10px] font-black text-amber-800 uppercase">Yoga:</span>
+                                {% for y in dis.yoga_tags[:2] %}
+                                <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-900 text-[10px] font-semibold border border-amber-200">
+                                    {{ y }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-emerald-700 group-hover:text-emerald-800">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fas fa-scroll"></i> View Vedic Monograph
+                        </span>
+                        <i class="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
                     </div>
                 </div>
-                <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-white border border-stone-200 hover:border-emerald-500 text-stone-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
-                    <i data-lucide="printer" class="w-4 h-4 text-emerald-600"></i>
-                    <span>Print Protocol</span>
+                {% endfor %}
+            </div>
+
+            <!-- Loading Spinner & Empty State -->
+            <div id="ayurLoadingSpinner" class="hidden text-center py-12">
+                <div class="w-10 h-10 border-4 border-emerald-200 border-t-emerald-700 rounded-full animate-spin mx-auto mb-3"></div>
+                <div class="text-xs font-bold text-stone-500">Searching AyurGenixAI Vedic Dataset...</div>
+            </div>
+
+            <div id="ayurEmptyState" class="hidden text-center py-16 bg-white rounded-3xl border border-stone-200 p-8">
+                <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center text-2xl mx-auto mb-3">
+                    <i class="fas fa-seedling"></i>
+                </div>
+                <h4 class="text-base font-black text-stone-900 mb-1">No Ayurvedic conditions found</h4>
+                <p class="text-xs text-stone-500 max-w-sm mx-auto mb-4">Try searching in English, Hindi (खांसी), Marathi, or selecting a broader Dosha.</p>
+                <button type="button" onclick="clearAyurSearch();" class="px-4 py-2 rounded-xl bg-emerald-700 text-white font-bold text-xs">
+                    Reset Search
                 </button>
             </div>
 
-            <!-- 1. Imbalance & Dosha Matrix -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Imbalance Overview -->
-                <div class="md:col-span-2 ayurveda-card rounded-3xl p-6 sm:p-8">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                                Constitutional Assessment
-                            </span>
-                            <h3 class="text-2xl font-display font-black text-stone-900 mt-1" id="resPrimaryImbalance">
-                                Vata Aggravation
-                            </h3>
-                        </div>
-                        <span class="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold font-mono-code" id="resSeverity">
-                            Moderate
-                        </span>
-                    </div>
-                    <p class="text-xs sm:text-sm text-stone-700 leading-relaxed" id="resSummary">
-                        Clinical summary loading...
-                    </p>
-                </div>
-
-                <!-- Agni & Metabolic State -->
-                <div class="ayurveda-card rounded-3xl p-6 bg-stone-900 text-white border-stone-800 flex flex-col justify-between">
-                    <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono-code block mb-1">
-                            Metabolic Fire (Agni)
-                        </span>
-                        <h4 class="font-display font-bold text-base text-white mb-2" id="resAgni">
-                            Visham Agni (Irregular)
-                        </h4>
-                        <p class="text-xs text-stone-300 leading-relaxed" id="resAgniDesc">
-                            Digestion fluctuates with air and dryness. Focus on warm, grounding spices like ginger and cumin.
-                        </p>
-                    </div>
-                    <div class="pt-4 border-t border-stone-800 text-[11px] text-emerald-400 flex items-center gap-1.5">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                        <span>Root-Cause (Hetu) Harmonization</span>
-                    </div>
+            <!-- Load More Button -->
+            <div class="text-center pt-8" id="loadMoreAyurBox">
+                <button type="button" onclick="loadMoreAyurDiseases();" id="loadMoreAyurBtn" class="px-6 py-3 rounded-2xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs transition-all cursor-pointer inline-flex items-center gap-2">
+                    <span>Load More Vedic Conditions</span>
+                    <i class="fas fa-chevron-down text-[10px]"></i>
+                </button>
+                <div class="text-[11px] text-stone-400 font-semibold mt-2" id="ayurProgressLabel">
+                    Showing top verified conditions • Powered by AyurGenixAI
                 </div>
             </div>
+        </section>
 
-            <!-- 2. Dietary (Ahara) & Lifestyle (Vihara) Protocols -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Dietary Guidelines (Ahara) -->
-                <div class="ayurveda-card rounded-3xl p-6 sm:p-7">
-                    <h4 class="font-display font-bold text-stone-900 text-base mb-4 flex items-center gap-2 text-emerald-800">
-                        <i data-lucide="utensils" class="w-4 h-4 text-emerald-600"></i>
-                        <span>Dietary Regimen (Ahara)</span>
-                    </h4>
-                    <p class="text-xs text-stone-600 font-semibold mb-3 font-mono-code" id="resRasaFocus">
-                        Taste Focus: Sweet, Sour & Salty
-                    </p>
+    </div>
 
-                    <div class="space-y-4 text-xs">
-                        <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100">
-                            <span class="font-bold text-emerald-900 uppercase text-[10px] tracking-wider block mb-1.5">Foods to Favor:</span>
-                            <ul class="space-y-1.5 text-stone-700" id="resFoodsFavor">
-                                <li>Warm cooked grains, ghee, steamed squash, sweet potatoes</li>
-                            </ul>
-                        </div>
+    <!-- ================= 3. PRAKRITI & DOSHA AI SCANNER (TAB 2) ================= -->
+    <div id="calculatorTabView" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8 hidden">
+        
+        <div class="bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden p-6 sm:p-10">
+            <div class="max-w-3xl space-y-3 mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-bold uppercase tracking-wider border border-amber-200">
+                    <i class="fas fa-sparkles text-amber-500"></i> Individualized Vedic Synthesis
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black text-stone-900">Ayurvedic AI Symptom &amp; Prakriti Analyzer</h2>
+                <p class="text-xs sm:text-sm text-stone-600 font-medium leading-relaxed">
+                    Provide your current health symptoms and constitutional traits. Our neural engine correlates your profile with the **AyurGenixAI dataset** and **Groq AI** to generate a bespoke Vedic healing protocol.
+                </p>
+            </div>
 
-                        <div class="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-100">
-                            <span class="font-bold text-rose-900 uppercase text-[10px] tracking-wider block mb-1.5">Foods to Avoid / Minimize:</span>
-                            <ul class="space-y-1.5 text-stone-700" id="resFoodsAvoid">
-                                <li>Cold raw salads, iced drinks, processed dry crackers</li>
-                            </ul>
-                        </div>
-                    </div>
+            <form id="ayurAnalysisForm" onsubmit="handleAyurAnalysisSubmit(event);" class="space-y-6">
+                
+                <!-- Symptoms Input -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-black uppercase tracking-wider text-stone-700">
+                        Primary Symptoms &amp; Concerns *
+                    </label>
+                    <textarea 
+                        id="formSymptomsInput" 
+                        rows="3" 
+                        required 
+                        placeholder="Describe your symptoms in detail (e.g., 'Chronic dry cough with sore throat and fatigue', 'Hyperacidity after spicy meals', 'Joint stiffness in morning')..."
+                        class="w-full p-4 bg-stone-50 border border-stone-300 rounded-2xl text-xs sm:text-sm font-medium text-stone-800 focus:outline-none focus:border-emerald-600 focus:bg-white resize-none shadow-2xs"
+                    ></textarea>
                 </div>
 
-                <!-- Lifestyle, Yoga & Pranayama (Vihara) -->
-                <div class="ayurveda-card rounded-3xl p-6 sm:p-7">
-                    <h4 class="font-display font-bold text-stone-900 text-base mb-4 flex items-center gap-2 text-indigo-800">
-                        <i data-lucide="activity" class="w-4 h-4 text-indigo-600"></i>
-                        <span>Lifestyle, Yoga & Pranayama (Vihara)</span>
-                    </h4>
+                <!-- 4 Interactive Constitutional Attributes -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <div class="space-y-1.5">
+                        <label class="block text-[11px] font-bold text-stone-600">Dominant Dosha (If known)</label>
+                        <select id="formDoshaSelect" class="w-full p-3 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold text-stone-800 focus:outline-none focus:border-emerald-600">
+                            <option value="Unknown" selected>Unknown / Unsure</option>
+                            <option value="Vata">Vata (Air &amp; Space)</option>
+                            <option value="Pitta">Pitta (Fire &amp; Water)</option>
+                            <option value="Kapha">Kapha (Earth &amp; Water)</option>
+                            <option value="Vata-Pitta">Vata-Pitta Dual</option>
+                            <option value="Pitta-Kapha">Pitta-Kapha Dual</option>
+                        </select>
+                    </div>
 
-                    <div class="space-y-3.5 text-xs text-stone-700">
-                        <div class="p-3.5 rounded-2xl bg-stone-50 border border-stone-200">
-                            <span class="font-bold text-stone-900 block mb-1">Recommended Asanas:</span>
-                            <div class="flex flex-wrap gap-1.5" id="resAsanas">
-                                <span class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-stone-800 font-semibold">Balasana (Child's Pose)</span>
+                    <div class="space-y-1.5">
+                        <label class="block text-[11px] font-bold text-stone-600">Digestion &amp; Agni</label>
+                        <select id="formDigestionSelect" class="w-full p-3 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold text-stone-800 focus:outline-none focus:border-emerald-600">
+                            <option value="Vishama (Variable/Gas)">Vishama (Variable / Gas &amp; Bloating)</option>
+                            <option value="Tikshna (Intense/Acidity)">Tikshna (Intense / Acidic / Quick Hunger)</option>
+                            <option value="Manda (Sluggish/Heavy)">Manda (Sluggish / Heavy / Slow)</option>
+                            <option value="Sama (Balanced)" selected>Sama (Balanced &amp; Regular)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-[11px] font-bold text-stone-600">Sleep Quality</label>
+                        <select id="formSleepSelect" class="w-full p-3 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold text-stone-800 focus:outline-none focus:border-emerald-600">
+                            <option value="Light & Broken (Vata)">Light &amp; Broken (Difficulty Falling Asleep)</option>
+                            <option value="Moderate & Dream-Filled (Pitta)">Moderate &amp; Dream-Filled</option>
+                            <option value="Deep & Heavy (Kapha)">Deep &amp; Heavy (Excessive Sleep)</option>
+                            <option value="Normal 7-8 Hours" selected>Normal 7-8 Hours</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-[11px] font-bold text-stone-600">Stress &amp; Mental Energy</label>
+                        <select id="formStressSelect" class="w-full p-3 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold text-stone-800 focus:outline-none focus:border-emerald-600">
+                            <option value="Anxious & Restless (Vata)">Anxious &amp; Restless</option>
+                            <option value="Irritable & Impatient (Pitta)">Irritable &amp; Intense</option>
+                            <option value="Calm & Lethargic (Kapha)">Calm but Lethargic</option>
+                            <option value="Balanced & Calm" selected>Balanced &amp; Relaxed</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="analyzeSubmitBtn" class="px-8 py-4 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2">
+                    <i class="fas fa-brain-circuit"></i>
+                    <span>Generate AyurGenix AI Diagnosis</span>
+                </button>
+            </form>
+
+            <!-- Diagnostic Results Container -->
+            <div id="analysisResultContainer" class="mt-10 pt-8 border-t border-stone-200 space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-black text-stone-900 flex items-center gap-2">
+                        <i class="fas fa-scroll-old text-emerald-700"></i> Individualized Ayurvedic Clinical Synthesis
+                    </h3>
+                    <span id="analysisSourceBadge" class="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                        Groq AI + AyurGenixAI
+                    </span>
+                </div>
+
+                <!-- Summary Card -->
+                <div class="p-6 bg-gradient-to-br from-emerald-50/80 to-amber-50/80 rounded-3xl border border-emerald-200 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <div class="text-[10px] font-black uppercase tracking-wider text-emerald-800">Primary Imbalance Detected</div>
+                            <div id="resPrimaryImbalance" class="text-2xl font-black text-stone-900 font-vedic">Vata-Pitta Imbalance</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 rounded-xl bg-white text-stone-800 text-xs font-black border border-stone-200" id="resSeverity">
+                                Moderate Severity
+                            </span>
+                        </div>
+                    </div>
+                    <p id="resClinicalSummary" class="text-xs sm:text-sm text-stone-700 font-medium leading-relaxed"></p>
+                </div>
+
+                <!-- 3 Pillars Grid (Herbs, Diet, Yoga) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <!-- 1. Formulations -->
+                    <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-2xs space-y-3">
+                        <div class="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-pills text-emerald-600"></i> Classical Herbal Formulations
+                        </div>
+                        <ul id="resHerbsList" class="space-y-2 text-xs text-stone-700 font-medium list-none pl-0"></ul>
+                    </div>
+
+                    <!-- 2. Diet & Ahara -->
+                    <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-2xs space-y-3">
+                        <div class="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-bowl-food text-amber-600"></i> Ahara (Dietary Guidance)
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div>
+                                <span class="font-bold text-emerald-800">Foods to Favor:</span>
+                                <ul id="resFoodsFavor" class="list-disc pl-4 space-y-1 text-stone-600 font-medium mt-1"></ul>
+                            </div>
+                            <div class="pt-2">
+                                <span class="font-bold text-rose-800">Foods to Avoid:</span>
+                                <ul id="resFoodsAvoid" class="list-disc pl-4 space-y-1 text-stone-600 font-medium mt-1"></ul>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100">
-                            <span class="font-bold text-indigo-900 block mb-1">Pranayama (Breathwork):</span>
-                            <p id="resPranayama">Nadi Shodhana (Alternate Nostril Breathing) 10 minutes daily.</p>
+                    <!-- 3. Yoga & Dinacharya -->
+                    <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-2xs space-y-3">
+                        <div class="text-xs font-black text-teal-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-spa text-teal-600"></i> Yoga, Asana &amp; Pranayama
                         </div>
-
-                        <div class="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100">
-                            <span class="font-bold text-amber-900 block mb-1">Dinacharya Habit:</span>
-                            <p id="resDinacharya">Maintain regular meal and sleep schedules.</p>
+                        <div class="space-y-2 text-xs text-stone-700 font-medium">
+                            <div>
+                                <span class="font-bold text-stone-900">Recommended Asanas:</span>
+                                <div id="resAsanasList" class="flex flex-wrap gap-1.5 mt-1.5"></div>
+                            </div>
+                            <div class="pt-2">
+                                <span class="font-bold text-stone-900">Pranayama Breathing:</span>
+                                <p id="resPranayama" class="text-stone-600 mt-1"></p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- 3. Herbal Formulations (Aushadhi) with Pharmacy Links -->
-            <div class="ayurveda-card rounded-3xl p-6 sm:p-8">
-                <div class="flex items-center justify-between pb-3 mb-6 border-b border-stone-200">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                            <i data-lucide="pill" class="w-5 h-5"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-display font-bold text-stone-900 text-base">Recommended Herbal Formulations (Aushadhi)</h3>
-                            <p class="text-[11px] text-stone-400">Classical single herbs and synergistic rasayanas</p>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('medical_shop') }}" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1">
-                        <span>Herbal Pharmacy</span>
-                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                    </a>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="resHerbsContainer">
-                    <!-- Dynamic Herb Cards -->
                 </div>
             </div>
 
         </div>
 
-        <!-- ================= CLASSICAL HERBS DIRECTORY ================= -->
-        <div class="space-y-6 pt-6 border-t border-stone-200">
-            <div class="text-center max-w-2xl mx-auto space-y-2">
-                <h3 class="text-2xl font-display font-black text-stone-900">Classical Ayurvedic Herbarium</h3>
-                <p class="text-xs text-stone-500">Explore time-honored Ayurvedic botanicals and their therapeutic actions.</p>
+    </div>
+
+</div>
+
+<!-- ================= 4. SLIDE-OVER & FULLSCREEN VEDIC CLINICAL MONOGRAPH ================= -->
+<div id="ayurMonographModal" class="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 flex justify-end opacity-0 pointer-events-none hidden">
+    <!-- Backdrop Click Layer -->
+    <div class="absolute inset-0 bg-transparent cursor-pointer" onclick="closeAyurMonographModal();" aria-label="Close monograph modal"></div>
+
+    <!-- Drawer / Workstation Content -->
+    <div id="ayurDrawerContent" class="relative z-10 w-full sm:w-[94vw] md:w-[90vw] lg:w-[82vw] xl:w-[75vw] max-w-6xl h-screen bg-[#fcfbf7] shadow-2xl flex flex-col transform transition-all duration-300 ease-out translate-x-full overflow-hidden border-l border-stone-300">
+        
+        <!-- Drawer Top Bar -->
+        <div class="p-4 sm:p-5 border-b border-stone-200 flex items-center justify-between bg-white shrink-0 shadow-2xs z-30">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl shrink-0 border border-emerald-200 shadow-2xs">
+                    <i class="fas fa-om"></i>
+                </div>
+                <div>
+                    <div class="flex items-center flex-wrap gap-2 mb-0.5">
+                        <span id="mAyurCategory" class="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider">Digestive &amp; Agni</span>
+                        <span id="mAyurDosha" class="px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-900 text-[10px] font-bold border border-amber-200">Vata-Pitta</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 text-[10px] font-bold">
+                            <i class="fas fa-microchip text-emerald-700"></i> Groq AI + AyurGenixAI
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <h2 id="mAyurName" class="text-xl sm:text-2xl font-black text-stone-900 leading-tight">Cough</h2>
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-stone-500">
+                            <span id="mAyurHindi" class="text-amber-800 bg-amber-50 px-2 py-0.5 rounded">खांसी</span>
+                            <span id="mAyurMarathi" class="text-stone-600 bg-stone-100 px-2 py-0.5 rounded">खोकला</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <!-- Ashwagandha -->
-                <div class="ayurveda-card rounded-2xl p-5 hover:border-emerald-500 transition-all">
-                    <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mb-3">
-                        <i class="fas fa-seedling text-sm"></i>
+            <div class="flex items-center gap-2">
+                <!-- Fullscreen Toggle Button -->
+                <button 
+                    type="button" 
+                    id="ayurFullscreenToggleBtn"
+                    onclick="toggleAyurMonographFullscreen();" 
+                    class="text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer" 
+                    title="Toggle Fullscreen View"
+                >
+                    <i class="fas fa-expand" id="ayurFullscreenIcon"></i>
+                    <span id="ayurFullscreenText" class="hidden sm:inline">Full Screen</span>
+                </button>
+
+                <!-- Copy Button -->
+                <button 
+                    type="button" 
+                    onclick="copyAyurMonographText();" 
+                    class="text-stone-600 hover:text-emerald-700 bg-white hover:bg-stone-100 border border-stone-200 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer" 
+                    title="Copy Monograph"
+                >
+                    <i class="fas fa-copy"></i>
+                    <span class="hidden md:inline">Copy</span>
+                </button>
+
+                <!-- Close Button -->
+                <button 
+                    type="button" 
+                    onclick="closeAyurMonographModal();" 
+                    class="text-stone-500 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 text-xs font-bold cursor-pointer px-3 py-2 rounded-xl transition-all shadow-2xs flex items-center gap-1.5" 
+                    title="Close Monograph (Esc)"
+                >
+                    <i class="fas fa-xmark text-sm"></i>
+                    <span>Close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sticky 7-Section Navigation Tabs -->
+        <div class="sticky top-0 z-20 bg-stone-100/95 backdrop-blur-md px-4 sm:px-6 py-2.5 border-b border-stone-200 flex items-center gap-2 overflow-x-auto custom-scroll shrink-0">
+            <button type="button" onclick="jumpToAyurSection('sec-intro', this);" class="ayur-sec-tab active px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-800 text-white shadow-xs transition-all whitespace-nowrap cursor-pointer">
+                🌿 Introduction
+            </button>
+            <button type="button" onclick="jumpToAyurSection('sec-benefits', this);" class="ayur-sec-tab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 shadow-2xs transition-all whitespace-nowrap cursor-pointer">
+                ✨ Benefits
+            </button>
+            <button type="button" onclick="jumpToAyurSection('sec-precautions', this);" class="ayur-sec-tab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 shadow-2xs transition-all whitespace-nowrap cursor-pointer">
+                ⚠️ Precautions
+            </button>
+            <button type="button" onclick="jumpToAyurSection('sec-dosage', this);" class="ayur-sec-tab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 shadow-2xs transition-all whitespace-nowrap cursor-pointer">
+                💊 Recommended Dosage
+            </button>
+            <button type="button" onclick="jumpToAyurSection('sec-how-to-use', this);" class="ayur-sec-tab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 shadow-2xs transition-all whitespace-nowrap cursor-pointer">
+                🍵 How to Use
+            </button>
+            <button type="button" onclick="jumpToAyurSection('sec-faqs', this);" class="ayur-sec-tab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 shadow-2xs transition-all whitespace-nowrap cursor-pointer">
+                ❓ FAQs
+            </button>
+            <button type="button" onclick="jumpToAyurSection('sec-references', this);" class="ayur-sec-tab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 shadow-2xs transition-all whitespace-nowrap cursor-pointer">
+                📜 References
+            </button>
+        </div>
+
+        <!-- Drawer Body (Scrollable) -->
+        <div id="ayurDrawerScrollContainer" class="flex-1 overflow-y-auto p-4 sm:p-7 space-y-8 custom-scroll bg-[#fdfbf7]">
+            
+            <!-- Loading Skeleton Indicator -->
+            <div id="mAyurLoadingSkeleton" class="space-y-4 py-8">
+                <div class="flex items-center gap-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-900 font-bold text-xs animate-pulse">
+                    <div class="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Synthesizing comprehensive Vedic monograph via Groq AI &amp; AyurGenixAI Dataset...</span>
+                </div>
+                <div class="h-28 bg-stone-200/70 rounded-3xl animate-pulse"></div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="h-20 bg-stone-200/60 rounded-2xl animate-pulse"></div>
+                    <div class="h-20 bg-stone-200/60 rounded-2xl animate-pulse"></div>
+                    <div class="h-20 bg-stone-200/60 rounded-2xl animate-pulse"></div>
+                    <div class="h-20 bg-stone-200/60 rounded-2xl animate-pulse"></div>
+                </div>
+                <div class="h-44 bg-stone-200/70 rounded-3xl animate-pulse"></div>
+            </div>
+
+            <!-- Monograph Content Sections Container -->
+            <div id="mAyurContentContainer" class="space-y-8 hidden">
+
+                <!-- Quick Indicators Strip -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-2xs text-center">
+                        <div class="text-[10px] text-stone-400 font-bold uppercase">Severity</div>
+                        <div id="mAyurSeverity" class="text-xs font-black text-stone-800 mt-1">Mild to Moderate</div>
                     </div>
-                    <h4 class="font-bold text-stone-900 text-sm">Ashwagandha</h4>
-                    <span class="text-[10px] font-mono-code text-emerald-700 font-bold block mb-1">Withania somnifera</span>
-                    <p class="text-xs text-stone-600 leading-relaxed">Supreme adaptogen that calms Vata, strengthens the nervous system, and improves vitality (Ojas).</p>
+                    <div class="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-2xs text-center">
+                        <div class="text-[10px] text-stone-400 font-bold uppercase">Duration</div>
+                        <div id="mAyurDuration" class="text-xs font-black text-emerald-800 mt-1">1-2 weeks</div>
+                    </div>
+                    <div class="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-2xs text-center">
+                        <div class="text-[10px] text-stone-400 font-bold uppercase">Season Variation</div>
+                        <div id="mAyurSeason" class="text-xs font-black text-amber-800 mt-1">Winter / Monsoon</div>
+                    </div>
+                    <div class="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-2xs text-center">
+                        <div class="text-[10px] text-stone-400 font-bold uppercase">Prognosis</div>
+                        <div id="mAyurPrognosis" class="text-xs font-black text-teal-800 mt-1">Curable with Care</div>
+                    </div>
                 </div>
 
-                <!-- Triphala -->
-                <div class="ayurveda-card rounded-2xl p-5 hover:border-emerald-500 transition-all">
-                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
-                        <i class="fas fa-mortar-pestle text-sm"></i>
+                <!-- 1. SECTION: INTRODUCTION -->
+                <section id="sec-intro" class="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div class="flex items-center gap-2.5 text-base font-black text-emerald-950">
+                            <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center text-sm border border-emerald-200">
+                                <i class="fas fa-book-open"></i>
+                            </span>
+                            <span>1. Introduction &amp; Pathophysiology</span>
+                        </div>
+                        <span id="mIntroSanskrit" class="text-xs font-black text-amber-900 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl">
+                            संस्कृत: कास (Kasa)
+                        </span>
                     </div>
-                    <h4 class="font-bold text-stone-900 text-sm">Triphala</h4>
-                    <span class="text-[10px] font-mono-code text-emerald-700 font-bold block mb-1">Three Sacred Fruits</span>
-                    <p class="text-xs text-stone-600 leading-relaxed">Tridoshic digestive tonic that gently cleanses the colon, aids nutrient assimilation, and detoxifies.</p>
-                </div>
 
-                <!-- Brahmi -->
-                <div class="ayurveda-card rounded-2xl p-5 hover:border-emerald-500 transition-all">
-                    <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center mb-3">
-                        <i class="fas fa-brain text-sm"></i>
+                    <div id="mIntroOverview" class="text-xs sm:text-sm text-stone-700 font-medium leading-relaxed space-y-2.5">
+                        <!-- Overview paragraph injected here -->
                     </div>
-                    <h4 class="font-bold text-stone-900 text-sm">Brahmi (Gotu Kola)</h4>
-                    <span class="text-[10px] font-mono-code text-emerald-700 font-bold block mb-1">Bacopa monnieri</span>
-                    <p class="text-xs text-stone-600 leading-relaxed">Medhya Rasayana for cognitive focus, memory clarity, and soothing aggravated Pitta in the head.</p>
-                </div>
 
-                <!-- Tulsi -->
-                <div class="ayurveda-card rounded-2xl p-5 hover:border-emerald-500 transition-all">
-                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
-                        <i class="fas fa-leaf text-sm"></i>
+                    <!-- Dosha Imbalance Card -->
+                    <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-1.5">
+                        <div class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                            <i class="fas fa-fire-flame-curved text-amber-600"></i> Dosha Imbalance Analysis (Samprapti):
+                        </div>
+                        <div id="mIntroDosha" class="text-xs text-amber-900 font-semibold leading-relaxed"></div>
                     </div>
-                    <h4 class="font-bold text-stone-900 text-sm">Holy Basil (Tulsi)</h4>
-                    <span class="text-[10px] font-mono-code text-emerald-700 font-bold block mb-1">Ocimum sanctum</span>
-                    <p class="text-xs text-stone-600 leading-relaxed">Sacred respiratory tonic that clears Kapha mucus, builds immune resilience, and lifts mental fog.</p>
-                </div>
+
+                    <!-- Key Cardinal Symptoms -->
+                    <div class="space-y-2 pt-2">
+                        <div class="text-xs font-black text-stone-800 uppercase tracking-wider">
+                            Cardinal Presenting Symptoms:
+                        </div>
+                        <div id="mIntroSymptoms" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </section>
+
+                <!-- 2. SECTION: BENEFITS -->
+                <section id="sec-benefits" class="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div class="flex items-center gap-2.5 text-base font-black text-emerald-950">
+                            <span class="w-8 h-8 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center text-sm border border-teal-200">
+                                <i class="fas fa-sparkles"></i>
+                            </span>
+                            <span>2. Clinical &amp; Therapeutic Benefits</span>
+                        </div>
+                        <span class="text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-lg">
+                            Rasayana &amp; Healing
+                        </span>
+                    </div>
+
+                    <div id="mBenefitsSummary" class="text-xs sm:text-sm text-stone-700 font-semibold bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 leading-relaxed">
+                        <!-- Summary injected here -->
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="text-xs font-black text-stone-800 uppercase tracking-wider">
+                            Targeted Therapeutic Outcomes:
+                        </div>
+                        <ul id="mBenefitsList" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-stone-700 font-medium">
+                            <!-- Benefits injected here -->
+                        </ul>
+                    </div>
+
+                    <!-- Dhatu Actions -->
+                    <div class="p-4 bg-teal-50/70 rounded-2xl border border-teal-200 space-y-1">
+                        <div class="text-xs font-black text-teal-950 flex items-center gap-1.5">
+                            <i class="fas fa-dna text-teal-700"></i> Dhatu Poshana &amp; Tissue Actions:
+                        </div>
+                        <div id="mBenefitsDhatu" class="text-xs text-teal-900 font-medium leading-relaxed"></div>
+                    </div>
+                </section>
+
+                <!-- 3. SECTION: PRECAUTIONS -->
+                <section id="sec-precautions" class="bg-white p-6 sm:p-7 rounded-3xl border border-rose-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div class="flex items-center gap-2.5 text-base font-black text-rose-950">
+                            <span class="w-8 h-8 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center text-sm border border-rose-200">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </span>
+                            <span>3. Precautions, Contraindications &amp; Apathya</span>
+                        </div>
+                        <span class="text-xs font-bold text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-lg">
+                            Safety First
+                        </span>
+                    </div>
+
+                    <!-- Contraindications -->
+                    <div class="space-y-2">
+                        <div class="text-xs font-black text-rose-900 uppercase tracking-wider">
+                            Contraindications &amp; Warnings:
+                        </div>
+                        <ul id="mPrecautionsContra" class="space-y-1.5 text-xs text-stone-700 font-medium">
+                            <!-- Contraindications injected here -->
+                        </ul>
+                    </div>
+
+                    <!-- Special Populations -->
+                    <div class="p-4 bg-rose-50/50 rounded-2xl border border-rose-100 space-y-1">
+                        <div class="text-xs font-black text-rose-950 flex items-center gap-1.5">
+                            <i class="fas fa-person-breastfeeding text-rose-600"></i> Special Populations (Pregnancy, Lactation, Elderly):
+                        </div>
+                        <div id="mPrecautionsSpecial" class="text-xs text-stone-700 font-medium leading-relaxed"></div>
+                    </div>
+
+                    <!-- Apathya (Foods to Avoid) -->
+                    <div class="p-4 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-2">
+                        <div class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                            <i class="fas fa-ban text-amber-600"></i> Apathya (Incompatible Foods &amp; Habits to Avoid):
+                        </div>
+                        <ul id="mPrecautionsApathya" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-amber-950 font-medium">
+                            <!-- Apathya injected here -->
+                        </ul>
+                    </div>
+
+                    <!-- Drug Interactions -->
+                    <div class="p-3.5 bg-stone-100 rounded-xl text-xs text-stone-700 font-medium flex items-center gap-2">
+                        <i class="fas fa-clock text-stone-500"></i>
+                        <div><strong class="text-stone-900">Herb-Drug Interval:</strong> <span id="mPrecautionsInteractions"></span></div>
+                    </div>
+                </section>
+
+                <!-- 4. SECTION: RECOMMENDED DOSAGE -->
+                <section id="sec-dosage" class="bg-white p-6 sm:p-7 rounded-3xl border border-emerald-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div class="flex items-center gap-2.5 text-base font-black text-emerald-950">
+                            <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center text-sm border border-emerald-200">
+                                <i class="fas fa-pills"></i>
+                            </span>
+                            <span>4. Recommended Dosage &amp; Anupana</span>
+                        </div>
+                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
+                            Standard Matra
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Standard Dosage -->
+                        <div class="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-1.5">
+                            <div class="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                                <i class="fas fa-scale-balanced text-emerald-700"></i> Standard Formulation Dosage:
+                            </div>
+                            <div id="mDosageStandard" class="text-xs text-emerald-900 font-bold leading-relaxed"></div>
+                        </div>
+
+                        <!-- Timing of Intake -->
+                        <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-1.5">
+                            <div class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                                <i class="fas fa-clock text-amber-700"></i> Administration Timing (Kala):
+                            </div>
+                            <div id="mDosageTiming" class="text-xs text-amber-900 font-semibold leading-relaxed"></div>
+                        </div>
+                    </div>
+
+                    <!-- Anupana Vehicle -->
+                    <div class="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-1.5">
+                        <div class="text-xs font-black text-stone-900 flex items-center gap-1.5">
+                            <i class="fas fa-droplet text-blue-600"></i> Recommended Anupana (Carrier Vehicle):
+                        </div>
+                        <div id="mDosageAnupana" class="text-xs text-stone-700 font-medium leading-relaxed"></div>
+                    </div>
+
+                    <!-- Duration -->
+                    <div class="p-3 bg-emerald-50/40 rounded-xl text-xs text-emerald-950 font-medium flex items-center justify-between">
+                        <span><strong class="text-emerald-950">Recommended Treatment Course:</strong> <span id="mDosageDuration"></span></span>
+                        <span class="px-2 py-0.5 rounded bg-white text-emerald-900 border border-emerald-200 text-[10px] font-bold">Vaidya Monitored</span>
+                    </div>
+                </section>
+
+                <!-- 5. SECTION: HOW TO USE -->
+                <section id="sec-how-to-use" class="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div class="flex items-center gap-2.5 text-base font-black text-emerald-950">
+                            <span class="w-8 h-8 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center text-sm border border-teal-200">
+                                <i class="fas fa-mortar-pestle"></i>
+                            </span>
+                            <span>5. How to Use &amp; Dinacharya Regimen</span>
+                        </div>
+                        <span class="text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-lg">
+                            Ahara &amp; Vihara
+                        </span>
+                    </div>
+
+                    <!-- Preparation Steps -->
+                    <div class="space-y-2">
+                        <div class="text-xs font-black text-stone-800 uppercase tracking-wider">
+                            Preparation &amp; Consumption Steps:
+                        </div>
+                        <ul id="mHowToUsePrep" class="space-y-2 text-xs text-stone-700 font-medium">
+                            <!-- Prep steps injected here -->
+                        </ul>
+                    </div>
+
+                    <!-- Dinacharya -->
+                    <div class="p-4 bg-teal-50/60 rounded-2xl border border-teal-200 space-y-1.5">
+                        <div class="text-xs font-black text-teal-950 flex items-center gap-1.5">
+                            <i class="fas fa-sun text-amber-600"></i> Daily Routine (Dinacharya) Synergy:
+                        </div>
+                        <div id="mHowToUseDinacharya" class="text-xs text-teal-900 font-medium leading-relaxed"></div>
+                    </div>
+
+                    <!-- Pathya Healing Diet -->
+                    <div class="space-y-2">
+                        <div class="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-bowl-rice text-emerald-600"></i> Pathya (Foods &amp; Spices to Favor):
+                        </div>
+                        <ul id="mHowToUseDiet" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-stone-700 font-medium">
+                            <!-- Pathya items injected here -->
+                        </ul>
+                    </div>
+
+                    <!-- Yoga & Pranayama -->
+                    <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
+                        <div class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                            <i class="fas fa-spa text-amber-700"></i> Prescribed Yogic Therapy &amp; Pranayama:
+                        </div>
+                        <ul id="mHowToUseYoga" class="space-y-1 text-xs text-amber-950 font-medium">
+                            <!-- Yoga items injected here -->
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- 6. SECTION: FAQS -->
+                <section id="sec-faqs" class="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div class="flex items-center gap-2.5 text-base font-black text-emerald-950">
+                            <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-800 flex items-center justify-center text-sm border border-indigo-200">
+                                <i class="fas fa-circle-question"></i>
+                            </span>
+                            <span>6. Frequently Asked Questions (FAQs)</span>
+                        </div>
+                        <span class="text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-lg">
+                            Clinical Inquiries
+                        </span>
+                    </div>
+
+                    <div id="mFaqsContainer" class="space-y-3">
+                        <!-- FAQs accordion injected here -->
+                    </div>
+                </section>
+
+                <!-- 7. SECTION: REFERENCES -->
+                <section id="sec-references" class="bg-white p-6 sm:p-7 rounded-3xl border border-stone-200 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div class="flex items-center gap-2.5 text-base font-black text-emerald-950">
+                            <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center text-sm border border-amber-200">
+                                <i class="fas fa-scroll"></i>
+                            </span>
+                            <span>7. Classical Ayurvedic References &amp; Modern Citations</span>
+                        </div>
+                        <span class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-lg">
+                            Samhita &amp; AYUSH
+                        </span>
+                    </div>
+
+                    <div id="mReferencesContainer" class="space-y-3">
+                        <!-- References injected here -->
+                    </div>
+                </section>
+
+            </div>
+
+        </div>
+
+        <!-- Drawer Bottom Actions Dock -->
+        <div class="p-4 sm:p-5 border-t border-stone-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 shadow-lg z-30">
+            <div class="flex items-center gap-2 text-xs text-stone-500 font-medium">
+                <i class="fas fa-shield-halved text-emerald-600"></i>
+                <span>AyurGenix AI Clinical Decision Support • Consult Vaidya for Prescription</span>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <a href="{{ url_for('doctors_list') }}" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs flex items-center justify-center gap-1.5 text-decoration-none transition-colors">
+                    <i class="fas fa-user-doctor text-emerald-700"></i> Consult Vaidya
+                </a>
+                <a href="{{ url_for('medical_shop') }}" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 text-decoration-none shadow-sm transition-colors">
+                    <i class="fas fa-pills"></i> Order Ayurvedic Meds &rarr;
+                </a>
             </div>
         </div>
 
     </div>
 </div>
 
+<!-- Copy Toast Notification -->
+<div id="ayurCopyToast" class="fixed bottom-6 right-6 z-[10000] bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+    <i class="fas fa-circle-check text-emerald-400"></i>
+    <span>Vedic Monograph copied to clipboard!</span>
+</div>
+
+<!-- ================= JAVASCRIPT STATE CONTROLLER ================= -->
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
+    let currentAyurQuery = '';
+    let currentAyurDosha = 'all';
+    let currentAyurCategory = 'all';
+    let currentAyurPage = 1;
+    let totalAyurPages = 1;
+    let ayurDebounceTimer = null;
+    let activeAyurConditionData = null;
+    let isAyurFullscreen = false;
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    const ayurvedaForm = document.getElementById('ayurvedaForm');
-    const symptomsInput = document.getElementById('symptomsInput');
-    const doshaInput = document.getElementById('doshaInput');
-    const digestionInput = document.getElementById('digestionInput');
-    const sleepInput = document.getElementById('sleepInput');
-    const stressInput = document.getElementById('stressInput');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const resultsArea = document.getElementById('resultsArea');
-    const symptomTags = document.querySelectorAll('.symptom-tag');
+    // Tab Switcher
+    function switchAyurMainTab(tabId, elem) {
+        const encView = document.getElementById('encyclopediaTabView');
+        const calcView = document.getElementById('calculatorTabView');
+        const btnEnc = document.getElementById('tabBtnEncyclopedia');
+        const btnCalc = document.getElementById('tabBtnCalculator');
 
-    // Quick Tag Toggle
-    symptomTags.forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.classList.toggle('chip-active');
-            const tag = btn.dataset.tag;
-            let current = symptomsInput.value.trim();
-            if (current.includes(tag)) {
-                symptomsInput.value = current.replace(tag, '').replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '').trim();
-            } else {
-                symptomsInput.value = current ? `${current}, ${tag}` : tag;
+        if (tabId === 'encyclopedia') {
+            if (encView) encView.classList.remove('hidden');
+            if (calcView) calcView.classList.add('hidden');
+            if (btnEnc) {
+                btnEnc.className = 'px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer bg-white text-emerald-900 shadow-xs flex items-center gap-2';
             }
-        });
-    });
+            if (btnCalc) {
+                btnCalc.className = 'px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-stone-600 hover:text-stone-900 flex items-center gap-2';
+            }
+        } else {
+            if (encView) encView.classList.add('hidden');
+            if (calcView) calcView.classList.remove('hidden');
+            if (btnCalc) {
+                btnCalc.className = 'px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer bg-white text-emerald-900 shadow-xs flex items-center gap-2';
+            }
+            if (btnEnc) {
+                btnEnc.className = 'px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-stone-600 hover:text-stone-900 flex items-center gap-2';
+            }
+        }
+    }
 
-    // Prakriti Quiz Logic
-    const quizButtons = document.querySelectorAll('.quiz-btn');
-    const quizResultBox = document.getElementById('quizResultBox');
-    const quizDoshaTitle = document.getElementById('quizDoshaTitle');
-    const applyQuizDoshaBtn = document.getElementById('applyQuizDoshaBtn');
+    // Render AyurGenix Disease Card HTML
+    function renderAyurCardHTML(dis) {
+        const herbsPills = (dis.herb_tags || []).slice(0, 3).map(h => `
+            <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 text-[10px] font-bold border border-emerald-200">
+                ${escapeHtml(h)}
+            </span>
+        `).join('');
 
-    let quizAnswers = { frame: null, weather: null, mind: null };
+        const yogaPills = (dis.yoga_tags || []).slice(0, 2).map(y => `
+            <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-900 text-[10px] font-semibold border border-amber-200">
+                ${escapeHtml(y)}
+            </span>
+        `).join('');
 
-    quizButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const q = btn.dataset.q;
-            const val = btn.dataset.val;
-            
-            // Highlight clicked button in question group
-            document.querySelectorAll(`.quiz-btn[data-q="${q}"]`).forEach(b => {
-                b.classList.remove('bg-emerald-600', 'text-white', 'border-emerald-400');
-                b.classList.add('bg-stone-800', 'text-stone-200');
+        const doshaClass = (dis.doshas || '').includes('Vata') ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 
+                           ((dis.doshas || '').includes('Pitta') ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-teal-50 text-teal-800 border-teal-200');
+
+        return `
+            <div class="ayur-card p-6 cursor-pointer group" onclick="openAyurMonographModal('${escapeHtml(dis.id)}');">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-200">
+                            ${escapeHtml(dis.category)}
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-md ${doshaClass} text-[10px] font-black border">
+                            ${escapeHtml(dis.doshas)}
+                        </span>
+                    </div>
+
+                    <h3 class="text-lg font-black text-stone-900 group-hover:text-emerald-700 transition-colors mb-1">
+                        ${escapeHtml(dis.name)}
+                    </h3>
+
+                    ${(dis.hindi_name || dis.marathi_name) ? `
+                        <div class="flex items-center gap-2 text-xs font-bold text-stone-500 mb-3">
+                            ${dis.hindi_name ? `<span class="text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded">${escapeHtml(dis.hindi_name)}</span>` : ''}
+                            ${dis.marathi_name ? `<span class="text-stone-600 bg-stone-100 px-2 py-0.5 rounded">${escapeHtml(dis.marathi_name)}</span>` : ''}
+                        </div>
+                    ` : ''}
+
+                    <div class="text-xs text-stone-600 font-medium mb-3 line-clamp-2 leading-relaxed">
+                        <span class="font-bold text-stone-800">Symptoms:</span> ${escapeHtml(dis.symptoms)}
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-stone-100">
+                        <div class="flex items-center flex-wrap gap-1.5">
+                            <span class="text-[10px] font-black text-emerald-800 uppercase">Herbs:</span>
+                            ${herbsPills}
+                        </div>
+                        ${yogaPills ? `
+                            <div class="flex items-center flex-wrap gap-1.5">
+                                <span class="text-[10px] font-black text-amber-800 uppercase">Yoga:</span>
+                                ${yogaPills}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-emerald-700 group-hover:text-emerald-800">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fas fa-scroll"></i> View Vedic Monograph
+                    </span>
+                    <i class="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+        `;
+    }
+
+    // Fetch AyurGenix Diseases
+    function fetchAyurDiseases(append = false) {
+        const grid = document.getElementById('ayurDiseasesGrid');
+        const spinner = document.getElementById('ayurLoadingSpinner');
+        const emptyState = document.getElementById('ayurEmptyState');
+        const loadMoreBox = document.getElementById('loadMoreAyurBox');
+        const loadMoreBtn = document.getElementById('loadMoreAyurBtn');
+        const countLabel = document.getElementById('ayurResultsCountLabel');
+        const progressLabel = document.getElementById('ayurProgressLabel');
+
+        if (!append) {
+            if (spinner) spinner.classList.remove('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
+            if (grid) grid.innerHTML = '';
+        } else {
+            if (loadMoreBtn) {
+                loadMoreBtn.innerHTML = '<div class="w-4 h-4 border-2 border-stone-400 border-t-emerald-700 rounded-full animate-spin"></div><span>Loading...</span>';
+            }
+        }
+
+        const url = `/api/ayurveda/search?q=${encodeURIComponent(currentAyurQuery)}&dosha=${encodeURIComponent(currentAyurDosha)}&category=${encodeURIComponent(currentAyurCategory)}&page=${currentAyurPage}&limit=24`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (spinner) spinner.classList.add('hidden');
+                if (loadMoreBtn) {
+                    loadMoreBtn.innerHTML = '<span>Load More Vedic Conditions</span><i class="fas fa-chevron-down text-[10px]"></i>';
+                }
+
+                if (data && data.results) {
+                    const items = data.results;
+                    totalAyurPages = data.total_pages || 1;
+                    const totalCount = data.total || 0;
+
+                    if (items.length === 0 && !append) {
+                        if (emptyState) emptyState.classList.remove('hidden');
+                        if (loadMoreBox) loadMoreBox.classList.add('hidden');
+                        if (countLabel) countLabel.innerText = `No conditions found`;
+                        return;
+                    }
+
+                    const html = items.map(renderAyurCardHTML).join('');
+                    if (append && grid) {
+                        grid.insertAdjacentHTML('beforeend', html);
+                    } else if (grid) {
+                        grid.innerHTML = html;
+                    }
+
+                    const currentlyShown = grid ? grid.querySelectorAll('.ayur-card').length : items.length;
+                    if (countLabel) {
+                        countLabel.innerText = `Found ${totalCount} Ayurvedic conditions • Showing ${currentlyShown}`;
+                    }
+                    if (progressLabel) {
+                        progressLabel.innerText = `Showing ${currentlyShown} of ${totalCount} conditions (Page ${currentAyurPage} of ${totalAyurPages})`;
+                    }
+
+                    if (loadMoreBox) {
+                        if (currentAyurPage < totalAyurPages) {
+                            loadMoreBox.classList.remove('hidden');
+                        } else {
+                            loadMoreBox.classList.add('hidden');
+                        }
+                    }
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch Ayurvedic catalog:", err);
+                if (spinner) spinner.classList.add('hidden');
             });
-            btn.classList.remove('bg-stone-800', 'text-stone-200');
-            btn.classList.add('bg-emerald-600', 'text-white', 'border-emerald-400');
+    }
 
-            quizAnswers[q] = val;
+    function loadMoreAyurDiseases() {
+        if (currentAyurPage < totalAyurPages) {
+            currentAyurPage++;
+            fetchAyurDiseases(true);
+        }
+    }
 
-            // Check if all 3 answered
-            if (quizAnswers.frame && quizAnswers.weather && quizAnswers.mind) {
-                const counts = { Vata: 0, Pitta: 0, Kapha: 0 };
-                Object.values(quizAnswers).forEach(d => { if (d) counts[d]++; });
-                
-                let dominant = 'Vata';
-                let max = 0;
-                for (const [k, v] of Object.entries(counts)) {
-                    if (v > max) { max = v; dominant = k; }
-                }
+    function filterAyurDosha(dosha, elem) {
+        currentAyurDosha = dosha || 'all';
+        currentAyurPage = 1;
 
-                quizDoshaTitle.textContent = `Dominant Constitution: ${dominant}`;
-                quizResultBox.classList.remove('hidden');
+        const pills = document.querySelectorAll('.dosha-pill');
+        pills.forEach(p => p.classList.remove('active', 'bg-slate-900', 'text-white'));
+        if (elem) elem.classList.add('active', 'bg-slate-900', 'text-white');
 
-                if (applyQuizDoshaBtn) {
-                    applyQuizDoshaBtn.onclick = () => {
-                        doshaInput.value = dominant;
-                        doshaInput.classList.add('ring-2', 'ring-emerald-500');
-                        setTimeout(() => doshaInput.classList.remove('ring-2', 'ring-emerald-500'), 1500);
-                    };
-                }
+        fetchAyurDiseases(false);
+    }
+
+    function filterAyurCategory(cat, elem) {
+        currentAyurCategory = cat || 'all';
+        currentAyurPage = 1;
+
+        const pills = document.querySelectorAll('.filter-pill');
+        pills.forEach(p => p.classList.remove('active'));
+        if (elem) elem.classList.add('active');
+
+        fetchAyurDiseases(false);
+    }
+
+    function handleAyurSearchTyping(val) {
+        currentAyurQuery = (val || '').trim();
+        currentAyurPage = 1;
+
+        const clearBtn = document.getElementById('clearAyurSearchBtn');
+        if (clearBtn) {
+            if (currentAyurQuery) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        if (ayurDebounceTimer) clearTimeout(ayurDebounceTimer);
+        ayurDebounceTimer = setTimeout(() => {
+            fetchAyurDiseases(false);
+        }, 200);
+    }
+
+    function clearAyurSearch() {
+        const input = document.getElementById('ayurSearchInput');
+        if (input) input.value = '';
+        currentAyurQuery = '';
+        const clearBtn = document.getElementById('clearAyurSearchBtn');
+        if (clearBtn) clearBtn.classList.add('hidden');
+        currentAyurPage = 1;
+        fetchAyurDiseases(false);
+    }
+
+    function applyQuickAyurSearch(term) {
+        const input = document.getElementById('ayurSearchInput');
+        if (input) input.value = term;
+        handleAyurSearchTyping(term);
+    }
+
+    // Monograph Slide-Over Drawer & Fullscreen Controller
+    function openAyurMonographModal(diseaseId) {
+        const modal = document.getElementById('ayurMonographModal');
+        const drawer = document.getElementById('ayurDrawerContent');
+        const skeleton = document.getElementById('mAyurLoadingSkeleton');
+        const content = document.getElementById('mAyurContentContainer');
+
+        if (!modal) return;
+
+        // Reset scroll position and show skeleton
+        const scrollContainer = document.getElementById('ayurDrawerScrollContainer');
+        if (scrollContainer) scrollContainer.scrollTop = 0;
+        if (skeleton) skeleton.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
+
+        // Enable background isolation
+        document.body.classList.add('sidebar-drawer-open');
+
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100', 'pointer-events-auto');
+            if (drawer) {
+                drawer.classList.remove('translate-x-full');
+                drawer.classList.add('translate-x-0');
             }
         });
-    });
 
-    // Form Submission for AI Diagnosis
-    ayurvedaForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+        fetch(`/api/ayurveda/disease/${encodeURIComponent(diseaseId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.condition) {
+                    activeAyurConditionData = data;
+                    renderAyurMonographDetails(data.condition, data.monograph || {});
+                    if (skeleton) skeleton.classList.add('hidden');
+                    if (content) content.classList.remove('hidden');
+                }
+            })
+            .catch(err => {
+                console.error("Error loading Vedic monograph:", err);
+                if (skeleton) skeleton.classList.add('hidden');
+                if (content) content.classList.remove('hidden');
+            });
+    }
+
+    function renderAyurMonographDetails(dis, mono) {
+        // Header info
+        document.getElementById('mAyurName').innerText = dis.name || 'Condition';
+        document.getElementById('mAyurCategory').innerText = dis.category || 'General Ayurveda';
+        document.getElementById('mAyurDosha').innerText = dis.doshas || 'Tridoshic';
+        document.getElementById('mAyurHindi').innerText = dis.hindi_name || dis.name;
+        document.getElementById('mAyurMarathi').innerText = dis.marathi_name || dis.name;
+
+        // Quick indicators
+        document.getElementById('mAyurSeverity').innerText = dis.severity || 'Mild to Moderate';
+        document.getElementById('mAyurDuration').innerText = dis.duration_of_treatment || '1-2 Weeks';
+        document.getElementById('mAyurSeason').innerText = dis.seasonal_variation || 'All Seasons';
+        document.getElementById('mAyurPrognosis').innerText = dis.prognosis || 'Curable with Proper Ahara & Herbs';
+
+        // 1. Introduction
+        const intro = mono.introduction || {};
+        document.getElementById('mIntroSanskrit').innerText = intro.sanskrit_name || `संस्कृत: ${dis.hindi_name || dis.name}`;
         
-        const payload = {
-            symptoms: symptomsInput.value.trim(),
-            dosha: doshaInput.value,
-            digestion: digestionInput.value,
-            sleep_pattern: sleepInput.value,
-            stress_level: stressInput.value
-        };
+        const overviewHtml = typeof intro.overview === 'string' 
+            ? `<p>${escapeHtml(intro.overview)}</p>` 
+            : Array.isArray(intro.overview) 
+                ? intro.overview.map(p => `<p>${escapeHtml(p)}</p>`).join('') 
+                : `<p>${escapeHtml(dis.symptoms || '')}</p>`;
+        document.getElementById('mIntroOverview').innerHTML = overviewHtml;
+        document.getElementById('mIntroDosha').innerText = intro.dosha_imbalance || `Primary dosha imbalance observed: ${dis.doshas}. Imbalances cause obstruction in Srotas (micro-channels) and impaired metabolic Agni.`;
 
-        analyzeBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Synthesizing Ayurvedic Analysis...';
-        analyzeBtn.disabled = true;
+        const symptomsList = (intro.key_symptoms && intro.key_symptoms.length > 0) 
+            ? intro.key_symptoms 
+            : (dis.symptoms ? dis.symptoms.split(/[,;]+/) : []);
+        document.getElementById('mIntroSymptoms').innerHTML = symptomsList.map(s => `
+            <span class="px-2.5 py-1 rounded-xl bg-stone-100 text-stone-800 text-xs font-bold border border-stone-200">
+                ${escapeHtml(s.trim())}
+            </span>
+        `).join('');
 
-        try {
-            const response = await fetch('/api/ayurveda/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+        // 2. Benefits
+        const ben = mono.benefits || {};
+        document.getElementById('mBenefitsSummary').innerText = ben.summary || `Therapeutic formulations with ${dis.ayurvedic_herbs || 'Ayurvedic botanicals'} target root dosha imbalances, eliminate cellular toxins (Ama), and rejuvenate natural vitality.`;
+        
+        const benList = ben.therapeutic_benefits || [
+            `Restores natural ${dis.doshas} balance and alleviates discomfort`,
+            `Enhances digestive fire (Deepana & Pachana) and nutrient assimilation`,
+            `Clears metabolic toxins (Ama) from bodily micro-channels (Srotas)`,
+            `Boosts natural immune resilience (Ojas) and promotes long-term vitality`
+        ];
+        document.getElementById('mBenefitsList').innerHTML = benList.map(b => `
+            <li class="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100">
+                <i class="fas fa-circle-check text-emerald-600 mt-0.5 shrink-0 text-xs"></i>
+                <span class="text-stone-800">${escapeHtml(b)}</span>
+            </li>
+        `).join('');
+        document.getElementById('mBenefitsDhatu').innerText = ben.dhatu_actions || 'Acts predominantly on Rasa and Rakta Dhatus to promote cellular nourishment (Dhatu Poshana) and longevity.';
 
-            const data = await response.json();
-            if (data.success && data.analysis) {
-                renderAyurvedicProtocol(data.analysis, data.source);
-            } else {
-                alert(data.error || 'Failed to complete analysis.');
+        // 3. Precautions
+        const prec = mono.precautions || {};
+        const contraList = prec.contraindications || [
+            "Avoid intake during acute high fevers without prior clinical consultation",
+            "Do not consume heavy unctuous meals immediately after herbal medicines",
+            "Discontinue and consult an Ayurvedic physician if gastric irritation occurs"
+        ];
+        document.getElementById('mPrecautionsContra').innerHTML = contraList.map(c => `
+            <li class="flex items-start gap-2 p-2 rounded-lg bg-rose-50/50 border border-rose-100">
+                <i class="fas fa-circle-exclamation text-rose-600 mt-0.5 shrink-0 text-xs"></i>
+                <span class="text-rose-950 font-medium">${escapeHtml(c)}</span>
+            </li>
+        `).join('');
+        document.getElementById('mPrecautionsSpecial').innerText = prec.special_populations || 'Pregnant and lactating mothers, as well as children and senior citizens, should use modified dosages under the direct supervision of an Ayurvedic Vaidya.';
+        
+        const apathyaList = prec.apathya_foods_to_avoid || [
+            "Excessively cold, refrigerated, or frozen foods",
+            "Deep-fried, ultra-processed, and stale (Paryushita) meals",
+            "Incompatible food combinations (Viruddha Ahara like milk with citrus)",
+            "Irregular meal timings and late-night snacking"
+        ];
+        document.getElementById('mPrecautionsApathya').innerHTML = apathyaList.map(a => `
+            <li class="flex items-center gap-1.5 p-1.5 rounded-lg bg-white border border-amber-200">
+                <i class="fas fa-xmark text-amber-600 text-xs"></i>
+                <span>${escapeHtml(a)}</span>
+            </li>
+        `).join('');
+        document.getElementById('mPrecautionsInteractions').innerText = prec.drug_interactions || 'Maintain an interval of at least 60 to 90 minutes between Ayurvedic herbal remedies and allopathic prescription drugs.';
+
+        // 4. Recommended Dosage
+        const dosage = mono.recommended_dosage || {};
+        document.getElementById('mDosageStandard').innerText = dosage.standard_dosage || (dis.formulation ? `Formulation: ${dis.formulation}` : 'Churna: 3-5 grams twice daily; Vati: 1-2 tablets (250-500mg) twice daily.');
+        document.getElementById('mDosageTiming').innerText = dosage.timing_of_intake || 'Pragbhakta (30 minutes before food) or Adhobhakta (30 minutes after food) based on digestive tolerance.';
+        document.getElementById('mDosageAnupana').innerText = dosage.anupana || 'Warm boiled water (Ushnodaka), raw organic honey (Madhu), warm Cow’s milk, or Desi Cow’s Ghee depending on dominant dosha.';
+        document.getElementById('mDosageDuration').innerText = dosage.treatment_duration || dis.duration_of_treatment || '2 to 4 weeks, with periodic follow-up evaluation.';
+
+        // 5. How to Use
+        const how = mono.how_to_use || {};
+        const prepList = how.preparation_methods || [
+            "For Kwath (Decoction): Boil coarse herb mix in water until reduced to 1/4th; filter and drink warm.",
+            "For Churna (Powder): Mix recommended dose with specified Anupana (warm water or honey) into a paste before swallowing."
+        ];
+        document.getElementById('mHowToUsePrep').innerHTML = prepList.map((p, idx) => `
+            <li class="flex items-start gap-2.5 p-2.5 rounded-xl bg-stone-50 border border-stone-200">
+                <span class="w-5 h-5 rounded-full bg-emerald-700 text-white text-[10px] font-black flex items-center justify-center shrink-0">${idx + 1}</span>
+                <span class="text-stone-800">${escapeHtml(p)}</span>
+            </li>
+        `).join('');
+        document.getElementById('mHowToUseDinacharya').innerText = how.daily_routine_dinacharya || 'Wake up during Brahma Muhurta, practice gentle oral hygiene, hydrate with warm water, and maintain regular sleep cycles.';
+        
+        const dietList = how.pathya_healing_diet || [
+            dis.diet_recommendations || "Light, freshly cooked meals with mild digestive spices",
+            "Mung dal khichdi prepared with cumin, ginger, and turmeric",
+            "Seasonal cooked vegetables and herbal infusions"
+        ];
+        document.getElementById('mHowToUseDiet').innerHTML = dietList.map(d => `
+            <li class="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-50/50 border border-emerald-100">
+                <i class="fas fa-leaf text-emerald-600 text-xs shrink-0"></i>
+                <span class="text-emerald-950 font-semibold">${escapeHtml(d)}</span>
+            </li>
+        `).join('');
+
+        const yogaList = how.yoga_and_pranayama || [
+            dis.yoga_therapy || "Anulom Vilom (Alternate Nostril Breathing) - 10 minutes daily",
+            "Bhramari Pranayama for mental tranquility",
+            "Gentle Surya Namaskar according to physical capacity"
+        ];
+        document.getElementById('mHowToUseYoga').innerHTML = yogaList.map(y => `
+            <li class="flex items-center gap-2">
+                <i class="fas fa-spa text-amber-600 text-xs shrink-0"></i>
+                <span class="text-amber-950 font-medium">${escapeHtml(y)}</span>
+            </li>
+        `).join('');
+
+        // 6. FAQs
+        const faqs = mono.faqs || [
+            {
+                question: `How does Ayurveda address the root cause of ${dis.name}?`,
+                answer: `Rather than simply suppressing symptoms, Ayurveda identifies the specific Dosha imbalance (${dis.doshas}) and metabolic toxin accumulation (Ama). By restoring digestive fire (Agni) with ${dis.ayurvedic_herbs || 'herbal remedies'}, bodily equilibrium is systematically re-established.`
+            },
+            {
+                question: "Can I take these Ayurvedic formulations along with allopathic medicines?",
+                answer: "Yes, in most instances Ayurvedic formulations can safely complement conventional medications. However, always maintain a 60-90 minute buffer between medicines to avoid conflicting absorption pathways."
+            },
+            {
+                question: "How soon can I expect noticeable relief?",
+                answer: `For acute conditions, relief is often experienced within 3 to 7 days. For deep-seated chronic issues, a therapeutic cycle of ${dis.duration_of_treatment || '2-4 weeks'} is recommended for complete Rasayana renewal.`
             }
-        } catch (err) {
-            console.error(err);
-            alert('Service connection error. Please try again.');
-        } finally {
-            analyzeBtn.innerHTML = '<i class="fas fa-sparkles me-2"></i> Generate Ayurvedic Protocol';
-            analyzeBtn.disabled = false;
+        ];
+        document.getElementById('mFaqsContainer').innerHTML = faqs.map((f, idx) => `
+            <details class="group bg-stone-50 rounded-2xl border border-stone-200 overflow-hidden" ${idx === 0 ? 'open' : ''}>
+                <summary class="p-4 text-xs sm:text-sm font-bold text-stone-900 cursor-pointer flex items-center justify-between list-none hover:bg-stone-100 transition-colors">
+                    <span class="flex items-center gap-2">
+                        <i class="fas fa-circle-question text-indigo-600"></i>
+                        <span>${escapeHtml(f.question)}</span>
+                    </span>
+                    <i class="fas fa-chevron-down text-stone-400 group-open:rotate-180 transition-transform text-xs"></i>
+                </summary>
+                <div class="p-4 pt-1 text-xs text-stone-700 font-medium leading-relaxed border-t border-stone-100 bg-white">
+                    ${escapeHtml(f.answer)}
+                </div>
+            </details>
+        `).join('');
+
+        // 7. References
+        const refs = mono.references || [
+            {
+                source: "Charaka Samhita (Chikitsa Sthana)",
+                citation: `Classical treatise detailing etiology, pathology (Nidana), and therapeutics of ${dis.name} and herbs like ${dis.ayurvedic_herbs}.`
+            },
+            {
+                source: "Sushruta Samhita & Ashtanga Hridaya",
+                citation: `Foundational Ayurvedic scriptures on holistic medicine and ${dis.doshas} balance.`
+            },
+            {
+                source: "Ayurvedic Pharmacopoeia of India (API) & CCRAS",
+                citation: "Official Ministry of AYUSH monographs detailing botanical standardization and safety assays."
+            }
+        ];
+        document.getElementById('mReferencesContainer').innerHTML = refs.map(r => `
+            <div class="p-3.5 bg-stone-50 rounded-2xl border border-stone-200 space-y-1">
+                <div class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                    <i class="fas fa-scroll text-amber-700"></i>
+                    <span>${escapeHtml(r.source || 'Classical Treatise')}</span>
+                </div>
+                <div class="text-xs text-stone-600 font-medium leading-relaxed">
+                    ${escapeHtml(r.citation || '')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Jump to section and highlight tab
+    function jumpToAyurSection(secId, tabElem) {
+        const sec = document.getElementById(secId);
+        if (sec) {
+            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        const tabs = document.querySelectorAll('.ayur-sec-tab');
+        tabs.forEach(t => {
+            t.className = 'ayur-sec-tab px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 shadow-2xs transition-all whitespace-nowrap cursor-pointer';
+        });
+        if (tabElem) {
+            tabElem.className = 'ayur-sec-tab active px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-800 text-white shadow-xs transition-all whitespace-nowrap cursor-pointer';
+        }
+    }
+
+    // Toggle Fullscreen View
+    function toggleAyurMonographFullscreen() {
+        const drawer = document.getElementById('ayurDrawerContent');
+        const icon = document.getElementById('ayurFullscreenIcon');
+        const text = document.getElementById('ayurFullscreenText');
+        if (!drawer) return;
+
+        isAyurFullscreen = !isAyurFullscreen;
+
+        if (isAyurFullscreen) {
+            drawer.classList.remove('sm:w-[94vw]', 'md:w-[90vw]', 'lg:w-[82vw]', 'xl:w-[75vw]', 'max-w-6xl');
+            drawer.classList.add('w-screen', '!max-w-full', '!rounded-none');
+            if (icon) icon.className = 'fas fa-compress';
+            if (text) text.innerText = 'Exit Full Screen';
+        } else {
+            drawer.classList.remove('w-screen', '!max-w-full', '!rounded-none');
+            drawer.classList.add('sm:w-[94vw]', 'md:w-[90vw]', 'lg:w-[82vw]', 'xl:w-[75vw]', 'max-w-6xl');
+            if (icon) icon.className = 'fas fa-expand';
+            if (text) text.innerText = 'Full Screen';
+        }
+    }
+
+    // Copy Monograph to Clipboard
+    function copyAyurMonographText() {
+        if (!activeAyurConditionData) return;
+        const dis = activeAyurConditionData.condition || {};
+        const mono = activeAyurConditionData.monograph || {};
+
+        const introText = typeof mono.introduction?.overview === 'string' ? mono.introduction.overview : (dis.symptoms || '');
+        const benText = (mono.benefits?.therapeutic_benefits || []).join('\n- ');
+        const precText = (mono.precautions?.contraindications || []).join('\n- ');
+        const dosageText = mono.recommended_dosage?.standard_dosage || dis.formulation || '';
+        const howText = (mono.how_to_use?.preparation_methods || []).join('\n- ');
+
+        const text = `
+VEDIC CLINICAL MONOGRAPH: ${dis.name} (${dis.hindi_name || ''} / ${dis.marathi_name || ''})
+Primary Dosha: ${dis.doshas} | Category: ${dis.category}
+
+1. INTRODUCTION:
+${introText}
+
+2. BENEFITS:
+- ${benText}
+
+3. PRECAUTIONS:
+- ${precText}
+
+4. RECOMMENDED DOSAGE:
+${dosageText}
+Timing: ${mono.recommended_dosage?.timing_of_intake || ''}
+Anupana: ${mono.recommended_dosage?.anupana || ''}
+
+5. HOW TO USE:
+- ${howText}
+
+Synthesized by Spherix Clinic AyurGenixAI & Groq Clinical Intelligence.
+        `.trim();
+
+        navigator.clipboard.writeText(text).then(() => {
+            const toast = document.getElementById('ayurCopyToast');
+            if (toast) {
+                toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+                toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                    toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+                }, 2800);
+            }
+        }).catch(err => {
+            console.error("Failed to copy monograph:", err);
+        });
+    }
+
+    function closeAyurMonographModal() {
+        const modal = document.getElementById('ayurMonographModal');
+        const drawer = document.getElementById('ayurDrawerContent');
+        if (drawer) {
+            drawer.classList.remove('translate-x-0');
+            drawer.classList.add('translate-x-full');
+        }
+        if (modal) {
+            modal.classList.remove('opacity-100', 'pointer-events-auto');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+        setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+            document.body.classList.remove('sidebar-drawer-open');
+        }, 300);
+    }
+
+    // AI Analysis Submission
+    function handleAyurAnalysisSubmit(e) {
+        e.preventDefault();
+        const symptoms = document.getElementById('formSymptomsInput').value.trim();
+        const dosha = document.getElementById('formDoshaSelect').value;
+        const digestion = document.getElementById('formDigestionSelect').value;
+        const sleep = document.getElementById('formSleepSelect').value;
+        const stress = document.getElementById('formStressSelect').value;
+
+        const btn = document.getElementById('analyzeSubmitBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Synthesizing Vedic AI Protocol...</span>';
+        }
+
+        fetch('/api/ayurveda/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                symptoms: symptoms,
+                dosha: dosha,
+                digestion: digestion,
+                sleep_pattern: sleep,
+                stress_level: stress
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-brain-circuit"></i><span>Generate AyurGenix AI Diagnosis</span>';
+            }
+
+            if (data && data.success && data.analysis) {
+                const ana = data.analysis;
+                const container = document.getElementById('analysisResultContainer');
+                if (container) container.classList.remove('hidden');
+
+                document.getElementById('resPrimaryImbalance').innerText = ana.primary_imbalance || 'Dosha Imbalance';
+                document.getElementById('resSeverity').innerText = `${ana.imbalance_severity || 'Moderate'} Imbalance`;
+                document.getElementById('resClinicalSummary').innerText = ana.clinical_summary || '';
+
+                // Herbs list
+                const herbsList = document.getElementById('resHerbsList');
+                if (herbsList) {
+                    herbsList.innerHTML = (ana.herbal_formulations || []).map(h => `
+                        <li class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                            <div class="font-black text-emerald-950">${escapeHtml(h.herb)} (${escapeHtml(h.form || '')})</div>
+                            <div class="text-[11px] text-emerald-800 font-semibold mt-0.5">Dosage: ${escapeHtml(h.dosage || '')}</div>
+                            <div class="text-[10px] text-stone-600 mt-0.5">${escapeHtml(h.benefit || '')}</div>
+                        </li>
+                    `).join('');
+                }
+
+                // Diet foods favor
+                const favList = document.getElementById('resFoodsFavor');
+                if (favList && ana.dietary_guidelines) {
+                    favList.innerHTML = (ana.dietary_guidelines.foods_to_favor || []).map(f => `<li>${escapeHtml(f)}</li>`).join('');
+                }
+
+                // Diet foods avoid
+                const avoidList = document.getElementById('resFoodsAvoid');
+                if (avoidList && ana.dietary_guidelines) {
+                    avoidList.innerHTML = (ana.dietary_guidelines.foods_to_avoid || []).map(f => `<li>${escapeHtml(f)}</li>`).join('');
+                }
+
+                // Asanas list
+                const asanaContainer = document.getElementById('resAsanasList');
+                if (asanaContainer && ana.lifestyle_yoga) {
+                    asanaContainer.innerHTML = (ana.lifestyle_yoga.recommended_asanas || []).map(a => `
+                        <span class="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-900 text-xs font-bold border border-teal-200">
+                            ${escapeHtml(a)}
+                        </span>
+                    `).join('');
+                }
+
+                // Pranayama
+                const prana = document.getElementById('resPranayama');
+                if (prana && ana.lifestyle_yoga) {
+                    prana.innerText = ana.lifestyle_yoga.pranayama || 'Nadi Shodhana & Anulom Vilom (10 mins daily)';
+                }
+
+                // Scroll smoothly to results
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        })
+        .catch(err => {
+            console.error("AI Analysis error:", err);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-brain-circuit"></i><span>Generate AyurGenix AI Diagnosis</span>';
+            }
+        });
+    }
+
+    // Keyboard Escape Key Handler
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            closeAyurMonographModal();
         }
     });
-
-    function renderAyurvedicProtocol(analysis, source) {
-        document.getElementById('resPrimaryImbalance').textContent = analysis.primary_imbalance || 'Vata-Pitta Imbalance';
-        document.getElementById('resSeverity').textContent = `${analysis.imbalance_severity || 'Moderate'} Imbalance`;
-        document.getElementById('resSummary').textContent = analysis.clinical_summary || 'Constitutional evaluation complete.';
-        document.getElementById('resAgni').textContent = analysis.agni_evaluation || 'Balanced Agni';
-        document.getElementById('resRasaFocus').textContent = `Taste Focus: ${analysis.dietary_guidelines?.rasa_focus || 'Nourishing & Balancing'}`;
-
-        // Foods to Favor
-        const foodsFavorList = document.getElementById('resFoodsFavor');
-        foodsFavorList.innerHTML = '';
-        (analysis.dietary_guidelines?.foods_to_favor || []).forEach(f => {
-            foodsFavorList.innerHTML += `<li class="flex items-start gap-1.5"><i class="fas fa-check text-emerald-600 mt-1 shrink-0"></i><span>${f}</span></li>`;
-        });
-
-        // Foods to Avoid
-        const foodsAvoidList = document.getElementById('resFoodsAvoid');
-        foodsAvoidList.innerHTML = '';
-        (analysis.dietary_guidelines?.foods_to_avoid || []).forEach(f => {
-            foodsAvoidList.innerHTML += `<li class="flex items-start gap-1.5"><i class="fas fa-times text-rose-500 mt-1 shrink-0"></i><span>${f}</span></li>`;
-        });
-
-        // Asanas
-        const asanasContainer = document.getElementById('resAsanas');
-        asanasContainer.innerHTML = '';
-        (analysis.lifestyle_yoga?.recommended_asanas || []).forEach(a => {
-            asanasContainer.innerHTML += `<span class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-stone-800 font-semibold">${a}</span>`;
-        });
-
-        document.getElementById('resPranayama').textContent = analysis.lifestyle_yoga?.pranayama || 'Nadi Shodhana Pranayama';
-        document.getElementById('resDinacharya').textContent = analysis.lifestyle_yoga?.daily_routine_dinacharya || 'Follow consistent daily circadian timings.';
-
-        // Herbs
-        const herbsContainer = document.getElementById('resHerbsContainer');
-        herbsContainer.innerHTML = '';
-        (analysis.herbal_formulations || []).forEach(h => {
-            herbsContainer.innerHTML += `
-                <div class="p-4 rounded-2xl bg-stone-50 border border-stone-200 flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-start justify-between gap-2 mb-1.5">
-                            <h5 class="font-bold text-stone-900 text-sm">${h.herb}</h5>
-                            <span class="text-[10px] font-mono-code bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">${h.form || 'Herbal'}</span>
-                        </div>
-                        <p class="text-xs text-stone-600 mb-2 leading-relaxed">${h.benefit}</p>
-                    </div>
-                    <div class="pt-2 border-t border-stone-200 text-[11px] text-stone-500 font-medium flex items-center justify-between">
-                        <span><strong>Dose:</strong> ${h.dosage}</span>
-                        <a href="/medical-shop" class="text-emerald-700 font-bold hover:underline">Shop &rarr;</a>
-                    </div>
-                </div>`;
-        });
-
-        resultsArea.classList.remove('hidden');
-        resultsArea.scrollIntoView({ behavior: 'smooth' });
-    }
-});
 </script>
 {% endblock %}

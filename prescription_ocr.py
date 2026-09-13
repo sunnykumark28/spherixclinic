@@ -10,7 +10,7 @@ load_dotenv()
 
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 GROQ_API_BASE = os.getenv('GROQ_API_BASE', 'https://api.groq.com/openai/v1')
-GROQ_API_MODEL = os.getenv('GROQ_API_MODEL', 'llama3-8b-8192')
+GROQ_API_MODEL = os.getenv('GROQ_API_MODEL', 'llama-3.3-70b-versatile')
 GOOGLE_VISION_API_KEY = os.getenv('GOOGLE_VISION_API_KEY')
 
 def extract_text_from_image(image_path: str) -> str:
@@ -25,25 +25,30 @@ def extract_text_from_image(image_path: str) -> str:
     # Try Google Cloud Vision API first
     if GOOGLE_VISION_API_KEY and GOOGLE_VISION_API_KEY != 'none':
         try:
-            from google.cloud import vision
-            
             with open(image_path, 'rb') as image_file:
-                content = image_file.read()
+                content_b64 = base64.b64encode(image_file.read()).decode('utf-8')
                 
-            client = vision.ImageAnnotatorClient(
-            client_options={"api_key": GOOGLE_VISION_API_KEY}
-            )
-            request_dict = {
-                "image": {"content": content},
-                "features": [
-                    {"type_": vision.Feature.Type.TEXT_DETECTION},
-                ],
+            vision_url = f"https://vision.googleapis.com/v1/images:annotate?key={GOOGLE_VISION_API_KEY}"
+            payload = {
+                "requests": [
+                    {
+                        "image": {"content": content_b64},
+                        "features": [{"type": "TEXT_DETECTION"}]
+                    }
+                ]
             }
-            response = client.annotate_image(request=request_dict)
-            if response.text_annotations:
-                text = response.text_annotations[0].description
-                print("✅ Successfully extracted text using Google Cloud Vision API.")
-                return text
+            resp = requests.post(vision_url, json=payload, timeout=20)
+            if resp.ok:
+                resp_json = resp.json()
+                responses = resp_json.get('responses', [])
+                if responses and 'fullTextAnnotation' in responses[0]:
+                    text = responses[0]['fullTextAnnotation']['text']
+                    print("✅ Successfully extracted text using Google Cloud Vision API.")
+                    return text
+                elif responses and 'textAnnotations' in responses[0] and responses[0]['textAnnotations']:
+                    text = responses[0]['textAnnotations'][0]['description']
+                    print("✅ Successfully extracted text using Google Cloud Vision API.")
+                    return text
         except Exception as e:
             print(f"⚠️ Google Cloud Vision OCR failed: {e}. Trying fallback...")
             
@@ -64,8 +69,10 @@ def extract_text_from_image(image_path: str) -> str:
             }
             
             models_to_try = [
-                "qwen/qwen3.6-27b",
-                "meta-llama/llama-4-scout-17b-16e-instruct"
+                "meta-llama/llama-4-scout-17b-16e-instruct",
+                "llama-3.2-11b-vision-preview",
+                "llama-3.2-90b-vision-preview",
+                "qwen/qwen3.6-27b"
             ]
             
             for model in models_to_try:

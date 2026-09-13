@@ -117,13 +117,18 @@
       background: rgba(15, 23, 42, 0.6);
     }
 
+    .sidebar-brand .sidebar-logo-box {
+      background: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+
     .sidebar-brand img {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
       object-fit: cover;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      display: block;
     }
 
     .sidebar-menu {
@@ -571,21 +576,21 @@
       border-color: #94a3b8 !important;
     }
 
-    /* Global Tab Overrides */
+    /* Global Tab Overrides: Dark Blue & Animated Underline */
     .nav-tabs {
       border-bottom: 2px solid #e2e8f0 !important;
-      gap: 6px;
+      gap: 8px;
     }
 
     .nav-tabs .nav-link {
       border: none !important;
       background: transparent !important;
-      color: #64748b !important;
+      color: #1e3a8a !important; /* Dark Blue */
       font-weight: 700 !important;
       font-size: 0.88rem !important;
-      padding: 10px 16px !important;
+      padding: 10px 18px !important;
       position: relative !important;
-      transition: all 0.2s ease !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
       border-radius: 0 !important;
     }
 
@@ -593,24 +598,36 @@
       content: '';
       position: absolute;
       bottom: -2px;
-      left: 0;
+      left: 50%;
+      transform: translateX(-50%);
       width: 0;
       height: 3px;
       border-radius: 99px;
-      background: #0284c7;
-      transition: width 0.25s ease;
+      background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.35);
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+      opacity: 0;
     }
 
     .nav-tabs .nav-link:hover {
-      color: #0284c7 !important;
+      color: #0f172a !important;
+    }
+
+    .nav-tabs .nav-link:hover::after {
+      width: 75%;
+      opacity: 0.85;
     }
 
     .nav-tabs .nav-link.active {
-      color: #0284c7 !important;
+      color: #1e3a8a !important;
+      font-weight: 800 !important;
     }
 
     .nav-tabs .nav-link.active::after {
       width: 100%;
+      opacity: 1;
+      background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+      box-shadow: 0 2px 10px rgba(30, 58, 138, 0.5);
     }
 
     @media (max-width: 991px) {
@@ -665,7 +682,9 @@
       
       <!-- Brand Header -->
       <a href="{{ url_for('home') }}" class="sidebar-brand">
-        <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" alt="Spherix Clinic" />
+        <div class="sidebar-logo-box bg-white p-1.5 rounded-xl shadow-md flex items-center justify-center flex-shrink-0" style="background-color: #ffffff; padding: 4px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+          <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" alt="Spherix Clinic" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover;" />
+        </div>
         <div class="d-flex flex-column">
           <span class="font-display font-bold">Spherix Clinic</span>
           <span class="text-[10px] text-sky-400 font-mono font-bold uppercase tracking-wider" style="font-size: 10px; color: #38bdf8;">{{ current_role|capitalize }} Workspace</span>
@@ -913,11 +932,13 @@
 
       <!-- User Profile Footer -->
       <div class="sidebar-footer">
-        <div class="user-avatar">
+        <div class="user-avatar" style="overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #ffffff !important; color: #0284c7; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); padding: 2px;">
           {% if current_user.is_doctor %}
           <img src="{{ url_for('get_doctor_image', doc_id=current_user.id) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
-          {% elif current_user.is_doctor %}
-          {{ current_user.first_name[0] }}
+          {% elif current_user.logo_url %}
+          <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital Avatar" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+          {% elif current_user.profile_picture_url %}
+          <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
           {% else %}
           {{ current_user.name[0] if current_user.name else 'U' }}
           {% endif %}
@@ -930,7 +951,14 @@
             {{ current_user.name }}
             {% endif %}
           </div>
-          <div class="user-role">{{ current_role }}</div>
+          <div class="user-role d-flex align-items-center justify-content-between">
+            <span>{{ current_role }}</span>
+            {% if current_user.license_number or current_user.license_no %}
+            <span style="font-size: 8px; color: #7dd3fc; font-family: monospace; font-weight: 700; background: rgba(2, 132, 199, 0.2); padding: 1px 4px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">
+              {{ (current_user.license_number or current_user.license_no)|truncate(14, True, '..') }}
+            </span>
+            {% endif %}
+          </div>
           {% if current_role == 'staff' and current_user.hospital_name %}
           <div style="font-size: 10px; color: #38bdf8; font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px;" title="{{ current_user.hospital_name }}">
             <i class="fas fa-hospital me-1"></i>{{ current_user.hospital_name }}
@@ -965,13 +993,6 @@
         </div>
 
         <div class="header-actions">
-          <!-- Global Command Search -->
-          <form class="header-search-form d-none d-lg-block" onsubmit="event.preventDefault();">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" class="form-control" placeholder="Search records, appointments...">
-            <span class="search-shortcut">⌘K</span>
-          </form>
-
           <!-- Notification Bell Button -->
           <div style="position: relative;">
             <button class="header-icon-btn position-relative" type="button" onclick="toggleNotificationsPanel(event)" id="notificationBellBtn" title="Notifications">
@@ -1031,10 +1052,31 @@
 
           <!-- User Profile Dropdown -->
           <div class="dropdown">
-            <button class="header-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-user"></i>
+            <button class="header-icon-btn p-0 d-flex align-items-center justify-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="overflow: hidden; width: 38px; height: 38px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" title="{{ current_user.name }}">
+              {% if current_user.is_doctor %}
+              <img src="{{ url_for('get_doctor_image', doc_id=current_user.id) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+              {% elif current_user.logo_url %}
+              <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+              {% elif current_user.profile_picture_url %}
+              <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+              <span class="font-bold text-sky-600 text-xs">{{ current_user.name[0] if current_user.name else 'U' }}</span>
+              {% endif %}
             </button>
-            <ul class="dropdown-menu dropdown-menu-end mt-2 shadow-lg border border-slate-200 rounded-3 p-2">
+            <ul class="dropdown-menu dropdown-menu-end mt-2 shadow-lg border border-slate-200 rounded-3 p-2" style="min-width: 240px;">
+              <li class="px-3 py-2 border-bottom mb-1">
+                <div class="fw-bold text-slate-800 text-xs text-truncate">
+                  {% if current_user.is_doctor %}Dr. {{ current_user.first_name }} {{ current_user.last_name }}{% else %}{{ current_user.name }}{% endif %}
+                </div>
+                <div class="d-flex align-items-center justify-content-between mt-1">
+                  <span class="text-[10px] text-sky-600 font-mono font-semibold text-uppercase">{{ current_role }}</span>
+                  {% if current_user.license_number or current_user.license_no %}
+                  <span class="text-[9px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded font-mono font-bold border border-sky-200" title="Verified License / Registration ID">
+                    <i class="fas fa-shield-alt me-0.5 text-sky-600"></i>{{ current_user.license_number or current_user.license_no }}
+                  </span>
+                  {% endif %}
+                </div>
+              </li>
               {% if current_role == 'doctor' %}
               <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('doctor_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Account Settings</a></li>
               {% elif current_role == 'hospital' %}
@@ -1316,78 +1358,118 @@
   </script>
 
   <!-- ============================================== -->
-  <!-- UNIVERSAL IMAGE CROPPING MODAL                 -->
+  <!-- UNIVERSAL IMAGE CROPPING & FIX SIZE MODAL      -->
   <!-- ============================================== -->
   <div class="modal fade" id="universalCropModal" tabindex="-1" aria-labelledby="universalCropModalLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 99999;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden" style="background: #0f172a; color: #ffffff;">
+      <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden" style="background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0 !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;">
         
-        <div class="modal-header px-4 py-3 border-bottom border-slate-800" style="background: #090d16;">
+        <div class="modal-header px-4 py-3 border-bottom" style="background: #f8fafc; border-color: #e2e8f0 !important;">
           <div class="d-flex align-items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 d-flex align-items-center justify-content-center text-sm border border-sky-500/30" style="width: 34px; height: 34px;">
-              <i class="fas fa-crop-alt"></i>
+            <div class="rounded-xl d-flex align-items-center justify-content-center text-sm" style="width: 38px; height: 38px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd;">
+              <i class="fas fa-crop-alt fs-6"></i>
             </div>
             <div>
-              <h6 class="modal-title font-black mb-0 text-sm text-white" id="universalCropModalLabel">Position &amp; Crop Profile Photo</h6>
-              <span class="text-slate-400 text-xs">Adjust and zoom inside the circular boundary</span>
+              <h6 class="modal-title font-black mb-0 text-sm text-slate-900" id="universalCropModalLabel">Crop &amp; Fix Size Profile Image</h6>
+              <span class="text-slate-500 text-xs">Adjust frame, scale, rotate and select standard output resolution</span>
             </div>
           </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="closeUniversalCropper();"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeUniversalCropper();"></button>
         </div>
 
-        <div class="modal-body p-4" style="background: #090d16;">
-          <div class="row g-3 align-items-center">
+        <div class="modal-body p-4" style="background: #ffffff;">
+          <div class="row g-4 align-items-center">
             
             <!-- Cropper Canvas Viewport -->
-            <div class="col-lg-8">
-              <div class="rounded-3 overflow-hidden d-flex align-items-center justify-content-center" style="max-height: 380px; min-height: 280px; background: #020617; border: 1px solid #1e293b;">
+            <div class="col-lg-7">
+              <div class="rounded-3 overflow-hidden d-flex align-items-center justify-content-center position-relative" style="max-height: 380px; min-height: 300px; background: #0f172a; border: 1px solid #cbd5e1;">
                 <img id="universalImageToCrop" src="" alt="Source image for cropping" style="max-width: 100%; display: block;">
               </div>
             </div>
 
-            <!-- Live Circular Preview & Control Toolbar -->
-            <div class="col-lg-4">
-              <div class="p-3 rounded-3 text-center" style="background: #0f172a; border: 1px solid #1e293b;">
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider d-block mb-2">Avatar / ID Card Preview</span>
+            <!-- Live Previews & Control Toolbar -->
+            <div class="col-lg-5">
+              <div class="p-3.5 rounded-3 text-center" style="background: #f8fafc; border: 1px solid #e2e8f0;">
                 
-                <!-- Circular Preview Ring -->
-                <div class="mx-auto mb-3" style="width: 110px; height: 110px; border-radius: 50%; overflow: hidden; border: 3px solid #0284c7; box-shadow: 0 0 16px rgba(2, 132, 199, 0.4);">
-                  <div class="universal-crop-preview-box" style="width: 100%; height: 100%; overflow: hidden;"></div>
+                <!-- Dual Preview Section (Circle Avatar + Square Badge) -->
+                <div class="d-flex align-items-center justify-content-center gap-3 mb-2.5">
+                  <div>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider d-block mb-1">Avatar</span>
+                    <div style="width: 86px; height: 86px; border-radius: 50%; overflow: hidden; border: 3px solid #0284c7; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); background: #ffffff;">
+                      <div class="universal-crop-preview-box" style="width: 100%; height: 100%; overflow: hidden;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider d-block mb-1">Badge ID</span>
+                    <div style="width: 86px; height: 86px; border-radius: 12px; overflow: hidden; border: 2px solid #64748b; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15); background: #ffffff;">
+                      <div class="universal-crop-preview-box" style="width: 100%; height: 100%; overflow: hidden;"></div>
+                    </div>
+                  </div>
                 </div>
                 
-                <span class="text-xs text-slate-400 d-block mb-3">Drag to reposition &bull; Scroll to zoom</span>
+                <span class="text-[11px] text-slate-500 d-block mb-2">Drag image to position &bull; Scroll to zoom</span>
+
+                <!-- Fixed Size Presets Model Selection -->
+                <div class="mb-2.5 text-start">
+                  <label class="text-[11px] font-bold text-slate-700 d-block mb-1"><i class="fas fa-expand me-1 text-sky-600"></i>Fixed Output Size:</label>
+                  <div class="d-flex justify-content-center gap-1">
+                    <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 text-[11px] fw-bold active universal-size-btn" onclick="setUniversalCropSize(500, 500, '500 × 500 px (HD)', this);">500×500 HD</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-size-btn" onclick="setUniversalCropSize(300, 300, '300 × 300 px (Standard)', this);">300×300</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-size-btn" onclick="setUniversalCropSize(200, 200, '200 × 200 px (Compact)', this);">200×200</button>
+                  </div>
+                </div>
+
+                <!-- Aspect Ratio Selector -->
+                <div class="mb-2.5 text-start">
+                  <label class="text-[11px] font-bold text-slate-700 d-block mb-1"><i class="fas fa-shapes me-1 text-sky-600"></i>Aspect Ratio:</label>
+                  <div class="d-flex justify-content-center gap-1">
+                    <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 text-[11px] fw-bold active universal-ratio-btn" onclick="setUniversalCropRatio(1, this);">1:1 Square</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-ratio-btn" onclick="setUniversalCropRatio(4/3, this);">4:3 Card</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-ratio-btn" onclick="setUniversalCropRatio(NaN, this);">Free</button>
+                  </div>
+                </div>
 
                 <!-- Toolbar Controls -->
                 <div class="d-flex justify-content-center flex-wrap gap-1.5 mb-2">
-                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.zoom(0.1);" title="Zoom In">
-                    <i class="fas fa-search-plus"></i>
+                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.zoom(0.1);" title="Zoom In">
+                    <i class="fas fa-search-plus text-slate-600"></i>
                   </button>
-                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.zoom(-0.1);" title="Zoom Out">
-                    <i class="fas fa-search-minus"></i>
+                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.zoom(-0.1);" title="Zoom Out">
+                    <i class="fas fa-search-minus text-slate-600"></i>
                   </button>
-                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.rotate(-90);" title="Rotate Left">
-                    <i class="fas fa-undo"></i>
+                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.rotate(-90);" title="Rotate Left">
+                    <i class="fas fa-undo text-slate-600"></i>
                   </button>
-                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.rotate(90);" title="Rotate Right">
-                    <i class="fas fa-redo"></i>
+                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.rotate(90);" title="Rotate Right">
+                    <i class="fas fa-redo text-slate-600"></i>
                   </button>
-                  <button type="button" class="btn btn-sm btn-dark rounded-2 px-2.5 py-1 text-xs border border-slate-700" onclick="if(window._universalCropper) window._universalCropper.reset();" title="Reset">
-                    <i class="fas fa-sync-alt"></i>
+                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="toggleUniversalCropFlip();" title="Flip Horizontal">
+                    <i class="fas fa-arrows-alt-h text-slate-600"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.reset();" title="Reset Frame">
+                    <i class="fas fa-sync-alt text-slate-600"></i>
                   </button>
                 </div>
+                
+                <div class="p-1.5 rounded-2 bg-sky-50 border border-sky-200 mt-2">
+                  <span class="text-[11px] text-sky-800 font-mono font-bold d-block">
+                    <i class="fas fa-check-circle text-sky-600 me-1"></i>Output: <span id="cropOutputResolutionLabel">500 &times; 500 px (HD)</span>
+                  </span>
+                </div>
+
               </div>
             </div>
 
           </div>
         </div>
 
-        <div class="modal-footer px-4 py-3 border-top border-slate-800 d-flex justify-content-between" style="background: #090d16;">
-          <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3 font-bold text-xs" data-bs-dismiss="modal" onclick="closeUniversalCropper();">
+        <div class="modal-footer px-4 py-3 border-top d-flex justify-content-between" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4 font-bold text-xs" data-bs-dismiss="modal" onclick="closeUniversalCropper();">
             Cancel
           </button>
-          <button type="button" id="universalApplyCropBtn" class="btn btn-sm btn-primary rounded-pill px-4 py-2 font-bold text-xs d-inline-flex align-items-center gap-1.5 shadow-md">
+          <button type="button" id="universalApplyCropBtn" class="btn btn-sm btn-primary rounded-pill px-4 py-2 font-bold text-xs d-inline-flex align-items-center gap-1.5 shadow-sm">
             <i class="fas fa-check"></i>
-            <span>Apply Crop &amp; Save</span>
+            <span>Set Size &amp; Crop Image</span>
           </button>
         </div>
 
@@ -1398,11 +1480,53 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
-  <!-- Universal Image Cropper Engine -->
+  <!-- Universal Image Cropper & Fixed Size Engine -->
   <script>
     window._universalCropper = null;
     window._universalCropCallback = null;
     window._universalAutoSubmitFormId = null;
+    window._universalFlipX = 1;
+    window._universalTargetWidth = 500;
+    window._universalTargetHeight = 500;
+    window._universalAspectRatio = 1;
+
+    function setUniversalCropSize(w, h, label, btnEl) {
+      window._universalTargetWidth = w;
+      window._universalTargetHeight = h;
+      const resLabel = document.getElementById('cropOutputResolutionLabel');
+      if (resLabel) {
+        resLabel.innerHTML = label || `${w} &times; ${h} px`;
+      }
+      if (btnEl && btnEl.parentElement) {
+        btnEl.parentElement.querySelectorAll('.universal-size-btn').forEach(b => {
+          b.classList.remove('btn-primary', 'text-white', 'active', 'shadow-sm');
+          b.classList.add('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
+        });
+        btnEl.classList.remove('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
+        btnEl.classList.add('btn-primary', 'text-white', 'active', 'shadow-sm');
+      }
+    }
+
+    function setUniversalCropRatio(ratio, btnEl) {
+      window._universalAspectRatio = ratio;
+      if (window._universalCropper) {
+        window._universalCropper.setAspectRatio(ratio);
+      }
+      if (btnEl && btnEl.parentElement) {
+        btnEl.parentElement.querySelectorAll('.universal-ratio-btn').forEach(b => {
+          b.classList.remove('btn-primary', 'text-white', 'active', 'shadow-sm');
+          b.classList.add('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
+        });
+        btnEl.classList.remove('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
+        btnEl.classList.add('btn-primary', 'text-white', 'active', 'shadow-sm');
+      }
+    }
+
+    function toggleUniversalCropFlip() {
+      if (!window._universalCropper) return;
+      window._universalFlipX = window._universalFlipX === 1 ? -1 : 1;
+      window._universalCropper.scaleX(window._universalFlipX);
+    }
 
     function openUniversalCropper(file, options) {
       options = options || {};
@@ -1412,12 +1536,16 @@
 
       window._universalCropCallback = options.onCrop || null;
       window._universalAutoSubmitFormId = options.autoSubmitFormId || null;
+      window._universalFlipX = 1;
+      window._universalTargetWidth = options.targetWidth || 500;
+      window._universalTargetHeight = options.targetHeight || 500;
+      window._universalAspectRatio = options.aspectRatio !== undefined ? options.aspectRatio : 1;
 
       const reader = new FileReader();
       reader.onload = function (e) {
         imgEl.src = e.target.result;
 
-        // Show modal safely across any Bootstrap version or fallback
+        // Show modal safely across Bootstrap versions or fallback
         if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
           bootstrap.Modal.getOrCreateInstance(modalEl).show();
         } else {
@@ -1433,7 +1561,7 @@
           }
           if (typeof Cropper !== 'undefined') {
             window._universalCropper = new Cropper(imgEl, {
-              aspectRatio: options.aspectRatio || 1,
+              aspectRatio: window._universalAspectRatio,
               viewMode: 1,
               dragMode: 'move',
               autoCropArea: 0.9,
@@ -1475,15 +1603,22 @@
         applyBtn.addEventListener('click', () => {
           if (!window._universalCropper) return;
 
+          let targetW = window._universalTargetWidth || 500;
+          let targetH = window._universalTargetHeight || 500;
+
+          if (window._universalAspectRatio && !isNaN(window._universalAspectRatio) && window._universalAspectRatio !== 1) {
+            targetH = Math.round(targetW / window._universalAspectRatio);
+          }
+
           const canvas = window._universalCropper.getCroppedCanvas({
-            width: 400,
-            height: 400,
+            width: targetW,
+            height: targetH,
             imageSmoothingEnabled: true,
             imageSmoothingQuality: 'high'
           });
 
           if (canvas) {
-            const base64Data = canvas.toDataURL('image/jpeg', 0.92);
+            const base64Data = canvas.toDataURL('image/jpeg', 0.95);
 
             if (typeof window._universalCropCallback === 'function') {
               window._universalCropCallback(base64Data, canvas);
@@ -1512,9 +1647,7 @@
 
             const hiddenTargetId = target.getAttribute('data-crop-target');
             const previewTargetId = target.getAttribute('data-preview-target');
-            const autoSubmit = target.getAttribute('data-auto-submit') === 'true';
             const formId = target.form ? target.form.id : null;
-
             openUniversalCropper(file, {
               onCrop: (base64) => {
                 if (hiddenTargetId) {
@@ -1527,7 +1660,9 @@
                     previewImg.src = base64;
                     previewImg.classList.remove('d-none');
                   }
-                  const placeholder = document.getElementById(previewTargetId + 'Placeholder');
+                  const placeholder = document.getElementById(previewTargetId + 'Placeholder') || 
+                                      document.getElementById(previewTargetId.replace('Img', 'Placeholder')) ||
+                                      document.getElementById(previewTargetId + 'PlaceholderOD');
                   if (placeholder) placeholder.classList.add('d-none');
                 }
               },

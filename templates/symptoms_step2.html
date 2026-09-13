@@ -1,1056 +1,1838 @@
 {% extends 'layout.html' %}
 
-{% block title %}AI Symptoms Analyzer - Step 2: Clinical Details{% endblock %}
+{% block title %}AI Symptoms Analyzer - Step 2: Clinical Details | Spherix Clinic{% endblock %}
 
-{% block head %}
-<!-- Google Font & Icons -->
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-    /* Neumorphism Style consistent with Step 1 */
-    :root {
-        --neumorph-bg: #e0e5ec;
-        --primary-color: #0891b2;
-        /* Cyan for accents */
-        --text-color: #556270;
-        --text-color-dark: #3d4752;
-        --shadow-light: #ffffff;
-        --shadow-dark: #a3b1c6;
-    }
-
-    body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        background-color: var(--neumorph-bg);
-        color: var(--text-color);
-    }
-
-    /* Main card style */
-    .neumorph-card {
-        background: var(--neumorph-bg);
-        border-radius: 40px;
-        box-shadow: 20px 20px 60px var(--shadow-dark), -20px -20px 60px var(--shadow-light);
-    }
-
-    /* Inset style for text inputs, textareas, selects */
-    .form-input-neumorph {
-        background: var(--neumorph-bg);
-        border: none;
-        border-radius: 20px;
-        box-shadow: inset 8px 8px 15px var(--shadow-dark), inset -8px -8px 15px var(--shadow-light);
-        color: var(--text-color-dark);
-        transition: all 0.3s ease;
-    }
-
-    .form-input-neumorph:focus {
-        box-shadow: inset 6px 6px 10px var(--shadow-dark), inset -6px -6px 10px var(--shadow-light);
-        outline: none;
-    }
-
-    /* Extruded style for buttons */
-    .btn-neumorph {
-        background: var(--neumorph-bg);
-        border: none;
-        border-radius: 20px;
-        box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
-        color: var(--text-color-dark);
-        font-weight: bold;
-        transition: all 0.2s ease-in-out;
-    }
-
-    .btn-neumorph:hover {
-        box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-        color: var(--primary-color);
-    }
-
-    .btn-neumorph:active,
-    .btn-neumorph.active {
-        box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
-        color: var(--primary-color);
-    }
-
-    /* Special style for primary action button */
-    .btn-neumorph-primary {
-        color: var(--primary-color);
-        font-weight: 800;
-    }
-
-    .btn-neumorph-primary:hover {
-        color: #067d99;
-    }
-
-    /* Progress Bar */
-    .progress-track {
-        height: 8px;
-        background-color: var(--neumorph-bg);
-        border-radius: 10px;
-        box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
-        overflow: hidden;
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: var(--primary-color);
-        border-radius: 10px;
-    }
-
-    /* Stepper icons */
-    .stepper-icon {
-        background: var(--neumorph-bg);
-        box-shadow: 8px 8px 15px var(--shadow-dark), -8px -8px 15px var(--shadow-light);
-    }
-
-    .stepper-icon-inset {
-        background: var(--neumorph-bg);
-        box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
-    }
-</style>
+{% block head_extra %}
+<!-- Premium Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen w-full flex items-center justify-center p-4 lg:p-8 ">
-    <div class="w-full max-w-8xl flex flex-col lg:flex-row gap-8 items-start">
+<style>
+    body {
+        background-color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: #0f172a;
+    }
 
-        <!-- LEFT: MAIN ANALYSIS INTERFACE -->
-        <div
-            class="w-full lg:w-9/12 neumorph-card p-6 md:p-12 border border-amber-400 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
 
-            <!-- FORM CONTENT -->
-            <div class="w-full">
+    /* Ultra-clean white card styling */
+    .white-glass-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
 
-                <!-- Progress Stepper -->
-                <div class="flex items-center gap-4 mb-10">
-                    <div
-                        class="w-12 h-12 rounded-2xl flex items-center justify-center text-cyan-600 stepper-icon-inset">
-                        <i class="fas fa-check text-lg"></i>
-                    </div>
-                    <div class="flex-1 progress-track">
-                        <div class="progress-fill w-full"></div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-cyan-600 stepper-icon">
-                            <i class="fas fa-notes-medical text-lg"></i>
+    /* Ambient Subtle Background Grid */
+    .hero-mesh-bg {
+        background-color: #ffffff;
+        background-image: 
+            radial-gradient(circle at 15% 20%, rgba(224, 242, 254, 0.7) 0%, transparent 45%),
+            radial-gradient(circle at 85% 15%, rgba(238, 242, 255, 0.7) 0%, transparent 40%),
+            radial-gradient(circle at 50% 80%, rgba(240, 253, 250, 0.6) 0%, transparent 50%),
+            linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Form control polish */
+    .input-field {
+        background-color: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        color: #0f172a;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .input-field:focus {
+        background-color: #ffffff;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .input-field:hover:not(:focus) {
+        border-color: #cbd5e1;
+        background-color: #ffffff;
+    }
+
+    /* Accordion Dropdown Section Architecture */
+    .part-accordion-card {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 1.25rem;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .part-accordion-card.open {
+        border-color: #3b82f6;
+        box-shadow: 0 12px 28px -6px rgba(37, 99, 235, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    }
+
+    .part-accordion-header {
+        background: #ffffff;
+        padding: 1.25rem 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+        transition: background 0.2s ease;
+    }
+
+    .part-accordion-card.open .part-accordion-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .part-accordion-header:hover {
+        background: #f8fafc;
+    }
+
+    .part-chevron {
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .part-accordion-card.open .part-chevron {
+        transform: rotate(180deg);
+        color: #2563eb;
+    }
+
+    .part-accordion-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
+        padding: 0 1.5rem;
+    }
+
+    .part-accordion-card.open .part-accordion-body {
+        max-height: 3500px;
+        padding: 1.75rem 1.5rem;
+    }
+
+    /* Body part buttons */
+    .body-part-btn {
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .body-part-btn:hover {
+        background: #ffffff;
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px -3px rgba(37, 99, 235, 0.1);
+    }
+
+    .body-part-btn.active {
+        background: #eff6ff;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        color: #1d4ed8;
+    }
+
+    /* Symptom chips */
+    .symptom-chip {
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .symptom-chip:hover {
+        background: #ffffff;
+        border-color: #94a3b8;
+        transform: scale(1.02);
+    }
+
+    .symptom-chip.active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    .symptom-chip.active i {
+        color: #ffffff !important;
+    }
+
+    /* Preset Quick Scenario Cards */
+    .preset-chip {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.85rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .preset-chip:hover {
+        background: #eff6ff;
+        border-color: #93c5fd;
+        color: #1d4ed8;
+        transform: translateY(-1px);
+    }
+
+    /* Voice recording pulse */
+    .mic-recording {
+        background-color: #ef4444 !important;
+        color: white !important;
+        animation: micPulse 1.5s infinite;
+    }
+
+    @keyframes micPulse {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    /* Pain Slider Styling */
+    .pain-range-slider {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: linear-gradient(to right, #10b981 0%, #eab308 40%, #f97316 70%, #ef4444 100%);
+        outline: none;
+    }
+
+    .pain-range-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 3px solid #2563eb;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        transition: transform 0.15s ease;
+    }
+
+    .pain-range-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+
+    /* Step indicator animated pulse */
+    .pulse-dot {
+        animation: pulseScale 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseScale {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.6; }
+    }
+</style>
+
+<div class="hero-mesh-bg min-h-screen py-10 lg:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+
+    <!-- Top Navigation Ribbon -->
+    <div class="max-w-7xl mx-auto mb-8">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <a href="{{ url_for('symptoms') }}" class="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors">
+                <i class="fas fa-arrow-left text-[11px]"></i>
+                <span>Back to Step 1 (Patient Profile)</span>
+            </a>
+            <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-xs">
+                <span class="w-2 h-2 rounded-full bg-blue-600 pulse-dot"></span>
+                <span>Clinical Triage Engine &bull; Precision Step 2 Intake</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto relative z-10">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- LEFT: MAIN CLINICAL FORM (PART-BY-PART DROPDOWNS) -->
+            <div class="lg:col-span-8 white-glass-card rounded-[2rem] p-6 sm:p-10">
+
+                <!-- Stepper Progress Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 mb-6 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2.5 mb-2">
+                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-extrabold uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-check text-[10px]"></i> Step 1 Done
+                            </span>
+                            <span class="text-xs font-bold text-slate-400">&bull;</span>
+                            <span class="text-xs font-bold text-blue-600 uppercase tracking-widest font-mono-code">Step 2: Clinical Details</span>
                         </div>
-                        <div class="hidden sm:block">
-                            <span class="block text-[11px] font-black text-cyan-600 uppercase tracking-widest">Step 2 of
-                                2</span>
-                            <span class="block text-sm font-bold text-slate-800">Clinical Details</span>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-['Space_Grotesk']">
+                            Precision <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Symptom Diagnostic Intake</span>
+                        </h1>
+                        <p class="text-slate-500 text-xs sm:text-sm mt-1">
+                            Use the dropdown sections below to provide structured, high-accuracy clinical context for the AI.
+                        </p>
+                    </div>
+
+                    <!-- Live Quality & Accuracy Potential Meter -->
+                    <div class="w-full sm:w-60 shrink-0 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                        <div class="flex justify-between items-center text-[10px] font-extrabold font-mono-code text-slate-600 mb-1.5 uppercase tracking-wider">
+                            <span>Diagnostic Accuracy</span>
+                            <span class="text-blue-600 font-bold" id="diagnosticScoreText">85% High</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden p-0.5">
+                            <div id="diagnosticScoreBar" class="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 rounded-full transition-all duration-300" style="width: 85%;"></div>
                         </div>
                     </div>
                 </div>
 
-                <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-3">
-                    Symptom Analysis
-                </h1>
-                <p class="text-slate-500 border-l-4 border-cyan-500 pl-4 py-1 text-sm md:text-base mb-10">
-                    Describe your condition in detail. You may optionally capture an image for visual analysis.
-                </p>
+                <!-- Red Flag Symptom Sentinel Alert Banner (Hidden by default, shown if acute emergency keywords detected) -->
+                <div id="redFlagSentinel" class="hidden mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fas fa-bell-exclamation text-base"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-extrabold text-amber-900 uppercase font-mono-code">High-Priority Clinical Marker Detected</h4>
+                            <p class="text-xs text-amber-800 mt-0.5" id="redFlagSentinelText">
+                                Your reported symptoms contain critical markers. You can proceed with AI analysis, but immediate clinical evaluation or emergency services may be recommended.
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- FLASH MESSAGES -->
+                <!-- Flash Messages -->
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 <div class="mb-6 space-y-2">
                     {% for category, message in messages %}
-                    <div
-                        class="p-4 rounded-xl text-sm font-bold border {{ 'border-red-200 bg-red-100 text-red-700' if category == 'error' else 'border-green-200 bg-green-100 text-green-700' }}">
-                        {{ message }}</div>
+                    <div class="p-4 rounded-2xl text-xs font-semibold flex items-center gap-3 border {{ 'border-rose-200 bg-rose-50 text-rose-800' if category == 'error' else 'border-emerald-200 bg-emerald-50 text-emerald-800' }}">
+                        <i class="fas {{ 'fa-circle-exclamation text-rose-600' if category == 'error' else 'fa-circle-check text-emerald-600' }} text-sm"></i>
+                        <span>{{ message }}</span>
+                    </div>
                     {% endfor %}
                 </div>
                 {% endif %}
                 {% endwith %}
 
-                <!-- ACTUAL FORM -->
-                <form method="POST" action="{{ url_for('symptoms_step2') }}" enctype="multipart/form-data" class="space-y-10" id="symptomsForm">
+                <!-- Form with Dropdown Parts -->
+                <form method="POST" action="{{ url_for('symptoms_step2') }}" enctype="multipart/form-data" class="space-y-5" id="symptomsForm">
                     <input type="hidden" name="camera_image_data" id="camera_image_data">
-                    <input type="hidden" name="body_part" id="selected_body_part">
+                    <input type="hidden" name="body_part" id="selected_body_part" value="{{ session.get('body_part', '') }}">
                     <input type="hidden" name="selected_symptoms" id="selected_symptoms">
 
-                    <!-- SECTION 1: SELECT BODY PARTS & SYMPTOMS -->
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div
-                                class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-white font-bold">
-                                1</div>
-                            <div>
-                                <label class="text-xs font-bold text-cyan-600 uppercase tracking-widest">Step 1: Select
-                                    Body Parts</label>
-                                <p class="text-sm text-slate-500">Choose affected areas and symptoms</p>
-                            </div>
-                        </div>
-
-                        <!-- Body Parts Grid -->
-                        <div class="space-y-3">
-                            <label
-                                class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Affected
-                                Body Areas</label>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="bodyPartsGrid ">
-                                <button type="button"
-                                    class="border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg body-part-btn btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer"
-                                    data-body="Head">
-                                    <i class="fas fa-head-side-virus text-2xl text-sky-400"></i>
-                                    <span class="text-sm font-semibold">Head & Neck</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg body-part-btn btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer"
-                                    data-body="Chest">
-                                    <i class="fas fa-heart text-2xl text-red-400"></i>
-                                    <span class="text-sm font-semibold">Chest</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg body-part-btn btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer"
-                                    data-body="Abdomen">
-                                    <i class="fas fa-child text-2xl text-orange-400"></i>
-                                    <span class="text-sm font-semibold">Abdomen</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg body-part-btn btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer"
-                                    data-body="Back">
-                                    <i class="fas fa-spine text-2xl text-purple-400"></i>
-                                    <span class="text-sm font-semibold">Back</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg body-part-btn btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer"
-                                    data-body="Arms">
-                                    <i class="fas fa-hands text-2xl text-indigo-400"></i>
-                                    <span class="text-sm font-semibold">Arms & Hands</span>
-                                </button>
-                                <button type="button"
-                                    class=" border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg body-part-btn btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer"
-                                    data-body="Legs">
-                                    <i class="fas fa-person-hiking text-2xl text-green-400"></i>
-                                    <span class="text-sm font-semibold">Legs & Feet</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Common Symptoms Chips -->
-                        <div class="space-y-3 mt-6">
-                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Common
-                                Symptoms</label>
-                            <div class="flex flex-wrap gap-2.5" id="symptomsChips">
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-sky-50 hover:border-sky-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Headache">
-                                    <i class="fas fa-head-side-virus text-sky-500"></i>
-                                    <span>Headache</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-amber-50 hover:border-amber-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Fever">
-                                    <i class="fas fa-thermometer text-amber-500"></i>
-                                    <span>Fever</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-emerald-50 hover:border-emerald-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Cough">
-                                    <i class="fas fa-lungs text-emerald-500"></i>
-                                    <span>Cough</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-rose-50 hover:border-rose-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Chest Pain">
-                                    <i class="fas fa-heart text-rose-500"></i>
-                                    <span>Chest Pain</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-orange-50 hover:border-orange-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Stomach Pain">
-                                    <i class="fas fa-child text-orange-500"></i>
-                                    <span>Stomach Pain</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-purple-50 hover:border-purple-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Back Pain">
-                                    <i class="fas fa-spine text-purple-500"></i>
-                                    <span>Back Pain</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-indigo-50 hover:border-indigo-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Fatigue">
-                                    <i class="fas fa-battery-quarter text-indigo-500"></i>
-                                    <span>Fatigue</span>
-                                </button>
-                                <button type="button"
-                                    class="border border-slate-300 rounded-full px-4 py-2.5 bg-white/70 hover:bg-teal-50 hover:border-teal-500 shadow-sm symptom-chip btn-neumorph text-slate-700 text-sm font-semibold cursor-pointer transition-all flex items-center gap-2"
-                                    data-symptom="Nausea">
-                                    <i class="fas fa-face-dizzy text-teal-500"></i>
-                                    <span>Nausea</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Selected Summary -->
-                        <div
-                            class="p-4 form-input-neumorph flex justify-between items-center border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">
-                            <p class="text-sm text-slate-600"><span class="font-bold text-cyan-600">Selected:</span>
-                                <span id="selectionSummary">None yet</span></p>
-                            <button type="button" id="clearSelectionBtn"
-                                class="text-xs text-red-400 hover:text-red-700 transition-colors hidden">
-                                <i class="fas fa-times-circle mr-1"></i>Clear All
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- SECTION 2: DETAILED DESCRIPTION -->
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div
-                                class="w-10 h-10 rounded-full bg-cyan-500/50 flex items-center justify-center text-white font-bold">
-                                2</div>
-                            <div>
-                                <label class="text-xs font-bold text-cyan-600 uppercase tracking-widest">Step 2:
-                                    Describe in Detail</label>
-                                <p class="text-sm text-slate-500">Provide additional information about your symptoms</p>
-                            </div>
-                        </div>
-
-                        <div class="space-y-3">
-                            <textarea name="symptoms" id="symptoms" rows="6"
-                                placeholder="E.g., I have had a severe headache and mild fever for the past 2 days. It started suddenly after exposure to cold. I also have a runny nose and mild cough..."
-                                class="w-full form-input-neumorph p-6 text-base resize-none border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">{{ session.get('raw_symptoms') or session.get('symptoms', '') }}</textarea>
-                            <p class="text-xs text-yellow-500">Be as detailed as possible to get accurate analysis</p>
-                        </div>
-
-                        <!-- Symptom Duration & Severity -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                            <!-- Symptom Duration -->
-                            <div class="space-y-3">
-                                <label
-                                    class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Symptom
-                                    Duration</label>
-                                <div
-                                    class="relative group border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg add this types of border with shadow in all border">
-                                    <i
-                                        class="fas fa-clock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors "></i>
-                                    <input type="text" name="duration" value="{{ session.get('symptom_duration', '') }}" placeholder="e.g., 3 days, 1 week"
-                                        class="w-full form-input-neumorph pl-12">
+                    <!-- ================= PART 1 DROPDOWN: ANATOMICAL REGION & TARGETED CLINICAL SIGNS ================= -->
+                    <div class="part-accordion-card open" id="accordionPart1">
+                        
+                        <!-- Header Trigger -->
+                        <div class="part-accordion-header" onclick="toggleAccordion('accordionPart1')">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-black text-xs font-mono-code shrink-0">
+                                    01
                                 </div>
-                            </div>
-
-                            <!-- Symptom Severity -->
-                            <div class="space-y-3">
-                                <label
-                                    class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Symptom
-                                    Severity</label>
-                                <div
-                                    class="relative group border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg add this types of border with shadow in all border">
-                                    <i
-                                        class="fas fa-triangle-exclamation absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors"></i>
-                                    {% set curr_sev = session.get('symptom_severity', '') %}
-                                    <select name="severity"
-                                        class="w-full form-input-neumorph pl-12 appearance-none cursor-pointer">
-                                        <option value="" disabled {% if not curr_sev %}selected{% endif %}>Select severity level</option>
-                                        <option value="Mild" {% if curr_sev == 'Mild' %}selected{% endif %}>Mild (Noticeable but not disruptive)</option>
-                                        <option value="Moderate" {% if curr_sev == 'Moderate' %}selected{% endif %}>Moderate (Disrupts daily activities)</option>
-                                        <option value="Severe" {% if curr_sev == 'Severe' %}selected{% endif %}>Severe (Significantly disruptive)</option>
-                                        <option value="Very Severe" {% if curr_sev == 'Very Severe' %}selected{% endif %}>Very Severe (Unbearable)</option>
-                                    </select>
-                                    <i
-                                        class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Aggravating & Relieving Factors -->
-                        <div class="space-y-3 pt-4">
-                            <label
-                                class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Modifying
-                                Factors</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Aggravating Factors -->
-                                <div class="relative group mt-2 ">
-                                    <i
-                                        class="fas fa-arrow-trend-up absolute left-4 top-5 text-slate-400 group-focus-within:text-cyan-600 transition-colors"></i>
-                                    <textarea name="worse_factors" rows="3"
-                                        placeholder="What makes the symptoms worse? (e.g., movement, eating, cold weather)"
-                                        class="w-full form-input-neumorph pl-12 resize-none border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">{{ session.get('worse_factors', '') }}</textarea>
-                                </div>
-
-                                <!-- Relieving Factors -->
-                                <div class="relative group mt-2">
-                                    <i
-                                        class="fas fa-arrow-trend-down absolute left-4 top-5 text-slate-400 group-focus-within:text-cyan-600 transition-colors"></i>
-                                    <textarea name="better_factors" rows="3"
-                                        placeholder="What makes the symptoms better? (e.g., rest, heat, specific foods)"
-                                        class="w-full form-input-neumorph pl-12 resize-none border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">{{ session.get('better_factors', '') }}</textarea>
-                                </div>
-                            </div>
-                            <p class="text-xs text-yellow-500 ml-1">This helps the AI understand the nature of your
-                                symptoms.</p>
-                        </div>
-
-                        <!-- Medications & Allergies -->
-                        <div class="space-y-3 pt-4">
-                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Current
-                                Medications & Known Allergies</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Current Medications -->
-                                <div class="relative group mt-2">
-                                    <i
-                                        class="fas fa-pills absolute left-4 top-5 text-slate-400 group-focus-within:text-cyan-600 transition-colors"></i>
-                                    <textarea name="current_medicines" rows="3"
-                                        placeholder="List any medications you are currently taking (e.g., Ibuprofen 200mg, Metformin 500mg)."
-                                        class="w-full form-input-neumorph pl-12 resize-none border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">{{ session.get('current_medicines', '') }}</textarea>
-                                </div>
-
-                                <!-- Known Allergies -->
-                                <div class="relative group mt-2">
-                                    <i
-                                        class="fas fa-allergies absolute left-4 top-5 text-slate-400 group-focus-within:text-cyan-600 transition-colors"></i>
-                                    <textarea name="allergies" rows="3"
-                                        placeholder="List any known allergies (e.g., Penicillin, Peanuts, Pollen)."
-                                        class="w-full form-input-neumorph pl-12 resize-none border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">{{ session.get('allergies', '') }}</textarea>
-                                </div>
-                            </div>
-                            <p class="text-xs text-yellow-500 ml-1">This information helps the AI provide safer
-                                recommendations.</p>
-                        </div>
-
-                    </div>
-
-                    <!-- SECTION 3: IMAGE/CAMERA UPLOAD -->
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div
-                                class="w-10 h-10 rounded-full bg-cyan-500/30 flex items-center justify-center text-white font-bold">
-                                3</div>
-                            <div>
-                                <label class="text-xs font-bold text-cyan-600 uppercase tracking-widest">Step 3: Visual
-                                    Evidence (Optional)</label>
-                                <p class="text-sm text-slate-500">Upload an image or use your camera</p>
-                            </div>
-                        </div>
-
-                        <!-- Previous Uploaded Image Retention Card -->
-                        {% if session.get('symptom_image_path') %}
-                        <div id="attached-image-banner" class="p-4 rounded-2xl bg-sky-50/80 border-2 border-sky-300 shadow-md flex items-center justify-between gap-4">
-                            <div class="flex items-center gap-3">
-                                <img src="{{ session.get('symptom_image_path') }}" alt="Attached Symptom Capture" class="w-16 h-16 object-cover rounded-xl border border-sky-400 shadow-sm">
                                 <div>
-                                    <div class="flex items-center gap-1.5 text-xs font-bold text-sky-900">
-                                        <i class="fas fa-check-circle text-emerald-600"></i>
-                                        <span>Attached Symptom Photo Active</span>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-bold text-slate-800">Part 1: Anatomical Region &amp; Symptoms</h3>
+                                        <span id="badgePart1" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 font-mono-code">IN PROGRESS</span>
                                     </div>
-                                    <p class="text-[11px] text-slate-600 mt-0.5">This image will be retained for Google Cloud Vision & Multimodal analysis.</p>
+                                    <p class="text-xs text-slate-400 mt-0.5">Select affected body system, location, and quick symptoms</p>
                                 </div>
                             </div>
-                            <button type="button" onclick="removePreviousImage()" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0">
-                                <i class="fas fa-trash-alt"></i>
-                                <span>Remove Image</span>
-                            </button>
-                        </div>
-                        <input type="hidden" name="remove_image" id="remove_image_input" value="0">
-                        {% endif %}
-
-                        <!-- Camera Preview -->
-                        <div id="camera-container"
-                            class="hidden w-full rounded-2xl overflow-hidden relative bg-black form-input-neumorph p-1 border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg add this types of border with shadow in all border">
-                            <video id="video" autoplay playsinline class="w-full object-cover max-h-[400px]"></video>
-                            <button type="button" id="capture-btn"
-                                class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-full p-4 shadow-lg transition-colors ">
-                                <i class="fas fa-camera text-xl"></i>
-                            </button>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold text-slate-400 font-mono-code hidden sm:inline-block" id="part1SummaryTag">Not Selected</span>
+                                <i class="fas fa-chevron-down part-chevron text-slate-400 text-xs"></i>
+                            </div>
                         </div>
 
-                        <!-- Canvas Preview (After Capture) -->
-                        <div id="canvas-container"
-                            class="hidden w-full rounded-2xl overflow-hidden relative bg-black form-input-neumorph p-1">
-                            <canvas id="canvas" class="w-full max-h-[400px] object-cover"></canvas>
-                            <button type="button" id="retake-btn"
-                                class="absolute top-4 right-4 bg-slate-800/80 hover:bg-slate-900 text-white rounded-lg px-4 py-2 text-sm font-bold backdrop-blur-sm transition-colors ">
-                                <i class="fas fa-redo mr-2"></i>Retake
-                            </button>
+                        <!-- Dropdown Content Body -->
+                        <div class="part-accordion-body">
+                            <div class="space-y-6">
+                                
+                                <!-- 1-Click Fast Scenario Presets -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-bolt text-amber-500"></i>
+                                            <span>Quick Patient Scenario Templates</span>
+                                        </label>
+                                        <span class="text-[11px] text-slate-400">1-click fill &amp; customize</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" onclick="loadScenarioPreset('migraine')" class="preset-chip">
+                                            <span>🧠 Migraine / Throbbing Headache</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('flu')" class="preset-chip">
+                                            <span>🤒 Viral Flu &amp; High Fever</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('reflux')" class="preset-chip">
+                                            <span>🔥 Heartburn &amp; Acid Reflux</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('backpain')" class="preset-chip">
+                                            <span>🦴 Lower Back Strain</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('allergy')" class="preset-chip">
+                                            <span>🌿 Skin Rash &amp; Allergy</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown Selector + Visual Region Picker -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label for="bodyPartDropdown" class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-street-view text-blue-500"></i>
+                                            <span>Primary Affected Anatomical Area <span class="text-rose-500">*</span></span>
+                                        </label>
+                                        <span class="text-[11px] text-slate-400">Select area below</span>
+                                    </div>
+
+                                    <!-- Direct Body Part Dropdown Selector -->
+                                    <div class="relative mb-3">
+                                        <select id="bodyPartDropdown" class="input-field w-full py-3 pl-4 pr-10 rounded-xl text-sm font-semibold appearance-none cursor-pointer">
+                                            <option value="">-- Choose Affected Body Area --</option>
+                                            <option value="Head" {% if session.get('body_part') == 'Head' %}selected{% endif %}>Head, Brain &amp; Neck (Headache, Migraine, Vertigo, Sinus)</option>
+                                            <option value="Chest" {% if session.get('body_part') == 'Chest' %}selected{% endif %}>Chest, Heart &amp; Lungs (Chest Pain, Cough, Shortness of Breath)</option>
+                                            <option value="Abdomen" {% if session.get('body_part') == 'Abdomen' %}selected{% endif %}>Abdomen, Gut &amp; Digestion (Stomach ache, Nausea, Cramps)</option>
+                                            <option value="Back" {% if session.get('body_part') == 'Back' %}selected{% endif %}>Back, Spine &amp; Shoulders (Lumbar pain, Sciatica, Stiffness)</option>
+                                            <option value="Arms" {% if session.get('body_part') == 'Arms' %}selected{% endif %}>Arms, Shoulders &amp; Hands (Joint pain, Numbness, Weakness)</option>
+                                            <option value="Legs" {% if session.get('body_part') == 'Legs' %}selected{% endif %}>Legs, Knees &amp; Feet (Swelling, Cramps, Sprains)</option>
+                                            <option value="Skin" {% if session.get('body_part') == 'Skin' %}selected{% endif %}>Skin &amp; General (Rash, Hives, Fever, Fatigue)</option>
+                                        </select>
+                                        <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                    </div>
+
+                                    <!-- Body Part Interactive Grid Buttons -->
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" id="bodyPartsGrid">
+                                        <button type="button" class="body-part-btn p-3 rounded-xl text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Head">
+                                            <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-head-side-virus"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Head &amp; Neck</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-xl text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Chest">
+                                            <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-heart"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Chest &amp; Heart</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-xl text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Abdomen">
+                                            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-child"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Abdomen &amp; Gut</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-xl text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Back">
+                                            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-spine"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Back &amp; Spine</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-xl text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Arms">
+                                            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-hands"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Arms &amp; Hands</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-xl text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Legs">
+                                            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-person-hiking"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Legs &amp; Feet</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Anatomy-Specific Dynamic Guided Questions (Shown automatically based on selected area) -->
+                                <div id="anatomyProbingBox" class="hidden p-4 rounded-xl bg-blue-50/70 border border-blue-200">
+                                    <h4 class="text-xs font-bold text-blue-950 uppercase font-mono-code mb-2 flex items-center gap-1.5">
+                                        <i class="fas fa-stethoscope text-blue-600"></i>
+                                        <span id="probingTitle">Targeted Clinical Indicators</span>
+                                    </h4>
+                                    <div class="flex flex-wrap gap-1.5" id="probingOptions">
+                                        <!-- Injected dynamically based on body part -->
+                                    </div>
+                                </div>
+
+                                <!-- Specific Sub-Location -->
+                                <div>
+                                    <label for="body_part_detail" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                        <i class="fas fa-location-crosshairs text-sky-500"></i>
+                                        <span>Precise Anatomical Sub-Location (Optional)</span>
+                                    </label>
+                                    <input type="text" id="body_part_detail" name="body_part_detail" value="{{ session.get('body_part_detail', '') }}"
+                                        placeholder="e.g. Left temple and forehead, Right lower abdomen, Mid-lumbar area"
+                                        class="input-field w-full py-2.5 px-4 rounded-xl text-xs font-semibold placeholder:text-slate-400">
+                                </div>
+
+                                <!-- Universal Symptoms Selector & Chips -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-tags text-indigo-500"></i>
+                                            <span>Quick Associated Symptoms</span>
+                                        </label>
+                                        <span class="text-[11px] text-slate-400">Multi-select chips</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2" id="symptomsChips">
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Headache">
+                                            <i class="fas fa-head-side-virus text-sky-500"></i>
+                                            <span>Headache</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Fever">
+                                            <i class="fas fa-thermometer text-amber-500"></i>
+                                            <span>Fever</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Cough">
+                                            <i class="fas fa-lungs text-emerald-500"></i>
+                                            <span>Cough</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Chest Pain">
+                                            <i class="fas fa-heart text-rose-500"></i>
+                                            <span>Chest Pain</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Shortness of Breath">
+                                            <i class="fas fa-wind text-teal-500"></i>
+                                            <span>Shortness of Breath</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Stomach Pain">
+                                            <i class="fas fa-child text-orange-500"></i>
+                                            <span>Stomach Pain</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Nausea & Vomiting">
+                                            <i class="fas fa-face-dizzy text-teal-500"></i>
+                                            <span>Nausea &amp; Vomiting</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Back Pain">
+                                            <i class="fas fa-spine text-purple-500"></i>
+                                            <span>Back Pain</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Fatigue">
+                                            <i class="fas fa-battery-quarter text-indigo-500"></i>
+                                            <span>Fatigue</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Dizziness">
+                                            <i class="fas fa-arrows-spin text-sky-500"></i>
+                                            <span>Dizziness</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Skin Rash">
+                                            <i class="fas fa-allergies text-rose-500"></i>
+                                            <span>Skin Rash</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Joint Swelling">
+                                            <i class="fas fa-bone text-amber-600"></i>
+                                            <span>Joint Swelling</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Active Markers Summary -->
+                                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="font-extrabold text-blue-700 font-mono-code uppercase">Active Markers:</span>
+                                        <span id="selectionSummary" class="text-slate-600 font-semibold">None selected</span>
+                                    </div>
+                                    <button type="button" id="clearSelectionBtn"
+                                        class="text-xs font-bold text-rose-600 hover:text-rose-700 transition-colors hidden cursor-pointer flex items-center gap-1 bg-transparent border-0 p-0">
+                                        <i class="fas fa-times-circle"></i>
+                                        <span>Clear</span>
+                                    </button>
+                                </div>
+
+                                <!-- Advance Button to Part 2 -->
+                                <div class="flex justify-end pt-2">
+                                    <button type="button" onclick="goToNextPart('accordionPart1', 'accordionPart2')" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer">
+                                        <span>Next: Clinical Details &amp; Severity Scale</span>
+                                        <i class="fas fa-arrow-down text-[10px]"></i>
+                                    </button>
+                                </div>
+
+                            </div>
                         </div>
 
-                        <!-- Camera/Upload Buttons -->
-                        <div class="grid grid-cols-2 gap-3">
-                            <button type="button" id="start-camera-btn"
-                                class="btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">
-                                <i class="fas fa-camera text-2xl text-sky-400"></i>
-                                <span class="text-sm font-semibold">Open Camera</span>
-                            </button>
-                            <label class="btn-neumorph p-5 text-center flex flex-col items-center gap-3 cursor-pointer border-2 border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">
-                                <i class="fas fa-image text-2xl text-indigo-400"></i>
-                                <span class="text-sm font-semibold">Upload New Image</span>
-                                <input type="file" id="image-upload" name="symptom_image" accept="image/*" class="hidden">
-                            </label>
-                        </div>
                     </div>
 
-                    <!-- FORM ACTION BUTTONS (Inside Form) -->
-                    <div class="pt-8 mt-8 border-t border-slate-300 flex flex-col sm:flex-row gap-4">
+                    <!-- ================= PART 2 DROPDOWN: CLINICAL DETAILS, PAIN SCALE & TIMELINE ================= -->
+                    <div class="part-accordion-card" id="accordionPart2">
+                        
+                        <!-- Header Trigger -->
+                        <div class="part-accordion-header" onclick="toggleAccordion('accordionPart2')">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-black text-xs font-mono-code shrink-0">
+                                    02
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-bold text-slate-800">Part 2: Clinical Description &amp; Severity Scale</h3>
+                                        <span id="badgePart2" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 font-mono-code">PENDING</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-0.5">Describe pain sensations, timeline, duration, triggers &amp; relief factors</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold text-slate-400 font-mono-code hidden sm:inline-block" id="part2SummaryTag">Standard</span>
+                                <i class="fas fa-chevron-down part-chevron text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Content Body -->
+                        <div class="part-accordion-body">
+                            <div class="space-y-6">
+                                
+                                <!-- Detailed Symptoms Narrative Textarea with Voice Dictation -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <label for="symptoms" class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-align-left text-blue-500"></i>
+                                            <span>Detailed Clinical Narrative <span class="text-rose-500">*</span></span>
+                                        </label>
+                                        <div class="flex items-center gap-3">
+                                            <button type="button" id="voiceDictateBtn" onclick="toggleVoiceDictation()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 cursor-pointer transition-all">
+                                                <i class="fas fa-microphone" id="voiceMicIcon"></i>
+                                                <span id="voiceMicText">Voice Dictation</span>
+                                            </button>
+                                            <button type="button" onclick="autoGenerateNarrative()" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 underline cursor-pointer bg-transparent border-0 p-0">
+                                                Auto-Draft
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <textarea name="symptoms" id="symptoms" rows="4"
+                                        placeholder="Describe how the symptom feels (e.g. throbbing headache since 2 days, accompanied by nausea, sharp pain on left chest while taking deep breaths)..."
+                                        class="input-field w-full p-4 rounded-xl text-xs sm:text-sm font-normal placeholder:text-slate-400 resize-none">{{ session.get('raw_symptoms') or session.get('symptoms', '') }}</textarea>
+                                </div>
+
+                                <!-- Interactive 0-10 Pain & Severity Scale (Wong-Baker) -->
+                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-gauge-high text-amber-500"></i>
+                                            <span>Pain / Distress Intensity Scale (0 - 10)</span>
+                                        </label>
+                                        <span class="text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-blue-100 text-blue-800" id="painValueBadge">Level 4: Moderate</span>
+                                    </div>
+                                    <input type="range" id="painSlider" min="0" max="10" value="4" class="pain-range-slider mb-2" oninput="handlePainSlider(this.value)">
+                                    <div class="flex justify-between text-[10px] font-bold text-slate-500 font-mono-code">
+                                        <span>0 (None)</span>
+                                        <span>2 (Mild)</span>
+                                        <span>5 (Moderate)</span>
+                                        <span>8 (Severe)</span>
+                                        <span>10 (Worst / Emergency)</span>
+                                    </div>
+                                </div>
+
+                                <!-- Duration & Severity Dropdowns -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    
+                                    <!-- Duration Dropdown -->
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-clock text-teal-500"></i>
+                                            <span>Duration / Timeline</span>
+                                        </label>
+                                        <div class="relative">
+                                            <select name="duration_select" id="durationSelect" onchange="syncDuration(this.value)"
+                                                class="input-field w-full py-2.5 pl-3 pr-8 rounded-xl text-xs font-semibold appearance-none cursor-pointer mb-1.5">
+                                                <option value="">-- Choose Duration Window --</option>
+                                                <option value="Less than 24 hours">Less than 24 hours (Acute / Sudden onset)</option>
+                                                <option value="1 to 3 days">1 to 3 days</option>
+                                                <option value="4 to 7 days">4 to 7 days (Approx. 1 week)</option>
+                                                <option value="1 to 2 weeks">1 to 2 weeks</option>
+                                                <option value="More than 1 month">More than 1 month (Chronic / Persistent)</option>
+                                                <option value="custom">Custom timeline...</option>
+                                            </select>
+                                            <i class="fas fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
+                                        </div>
+                                        <input type="text" name="duration" id="durationInput" value="{{ session.get('symptom_duration', '') }}" placeholder="e.g. 3 days, 1 week, since yesterday"
+                                            class="input-field w-full py-2 px-3 rounded-xl text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+
+                                    <!-- Severity Dropdown -->
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-triangle-exclamation text-amber-500"></i>
+                                            <span>Severity Level</span>
+                                        </label>
+                                        <div class="relative">
+                                            {% set curr_sev = session.get('symptom_severity', '') %}
+                                            <select name="severity" id="severitySelect"
+                                                class="input-field w-full py-2.5 pl-3 pr-8 rounded-xl text-xs font-semibold appearance-none cursor-pointer">
+                                                <option value="" disabled {% if not curr_sev %}selected{% endif %}>-- Select Severity --</option>
+                                                <option value="Mild" {% if curr_sev == 'Mild' %}selected{% endif %}>Mild (Noticeable but does not restrict normal routine)</option>
+                                                <option value="Moderate" {% if curr_sev == 'Moderate' %}selected{% endif %}>Moderate (Disrupts daily activities or sleep)</option>
+                                                <option value="Severe" {% if curr_sev == 'Severe' %}selected{% endif %}>Severe (Debilitating / Requires immediate care)</option>
+                                                <option value="Very Severe" {% if curr_sev == 'Very Severe' %}selected{% endif %}>Very Severe / Emergency (Critical pain or distress)</option>
+                                            </select>
+                                            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Modifying Factors Dropdowns / Text -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-arrow-trend-up text-rose-500"></i>
+                                            <span>Aggravating Triggers (What makes it worse?)</span>
+                                        </label>
+                                        <input type="text" name="worse_factors" id="worseFactorsInput" value="{{ session.get('worse_factors', '') }}"
+                                            placeholder="e.g. Walking, bending, bright light, fatty foods, exertion"
+                                            class="input-field w-full py-2.5 px-3 rounded-xl text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-arrow-trend-down text-emerald-500"></i>
+                                            <span>Relieving Factors (What makes it better?)</span>
+                                        </label>
+                                        <input type="text" name="better_factors" id="betterFactorsInput" value="{{ session.get('better_factors', '') }}"
+                                            placeholder="e.g. Lying down, rest, cold compress, paracetamol, drinking water"
+                                            class="input-field w-full py-2.5 px-3 rounded-xl text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+                                </div>
+
+                                <!-- Medications & Known Allergies -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-pills text-sky-500"></i>
+                                            <span>Current Active Medications</span>
+                                        </label>
+                                        <input type="text" name="current_medicines" value="{{ session.get('current_medicines', '') }}"
+                                            placeholder="e.g. Paracetamol 500mg, Metformin, Vitamin D, None"
+                                            class="input-field w-full py-2.5 px-3 rounded-xl text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-allergies text-purple-500"></i>
+                                            <span>Known Drug or Food Allergies</span>
+                                        </label>
+                                        <input type="text" name="allergies" value="{{ session.get('allergies', '') }}"
+                                            placeholder="e.g. Penicillin, Sulfa drugs, Peanuts, Pollen, None"
+                                            class="input-field w-full py-2.5 px-3 rounded-xl text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+                                </div>
+
+                                <!-- Advance Button to Part 3 -->
+                                <div class="flex items-center justify-between pt-2">
+                                    <button type="button" onclick="goToNextPart('accordionPart2', 'accordionPart1')" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fas fa-arrow-up text-[10px]"></i>
+                                        <span>Back to Part 1</span>
+                                    </button>
+                                    <button type="button" onclick="goToNextPart('accordionPart2', 'accordionPart3')" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer">
+                                        <span>Next: Visual Evidence (Optional)</span>
+                                        <i class="fas fa-arrow-down text-[10px]"></i>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ================= PART 3 DROPDOWN: VISUAL EVIDENCE (OPTIONAL) ================= -->
+                    <div class="part-accordion-card" id="accordionPart3">
+                        
+                        <!-- Header Trigger -->
+                        <div class="part-accordion-header" onclick="toggleAccordion('accordionPart3')">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 border border-teal-200 flex items-center justify-center font-black text-xs font-mono-code shrink-0">
+                                    03
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-bold text-slate-800">Part 3: Visual Evidence &amp; Camera Capture</h3>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 font-mono-code">OPTIONAL</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-0.5">Attach skin rash, eye redness, swelling, or throat photo for AI vision scan</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold text-slate-400 font-mono-code hidden sm:inline-block" id="part3SummaryTag">No Photo</span>
+                                <i class="fas fa-chevron-down part-chevron text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Content Body -->
+                        <div class="part-accordion-body">
+                            <div class="space-y-5">
+                                
+                                <!-- Previous Upload Banner -->
+                                {% if session.get('symptom_image_path') %}
+                                <div id="attached-image-banner" class="p-3.5 rounded-xl bg-sky-50 border border-sky-200 shadow-2xs flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <img src="{{ session.get('symptom_image_path') }}" alt="Attached Symptom Capture" class="w-12 h-12 object-cover rounded-lg border border-sky-300">
+                                        <div>
+                                            <div class="flex items-center gap-1.5 text-xs font-bold text-sky-900">
+                                                <i class="fas fa-check-circle text-emerald-600"></i>
+                                                <span>Existing Photo Retained</span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 mt-0.5">Ready for Vision Multimodal inference.</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="removePreviousImage()" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0">
+                                        <i class="fas fa-trash-alt text-[10px]"></i>
+                                        <span>Remove</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" name="remove_image" id="remove_image_input" value="0">
+                                {% endif %}
+
+                                <!-- Live Camera Preview Container -->
+                                <div id="camera-container" class="hidden w-full rounded-xl overflow-hidden relative bg-slate-900 border border-slate-700 shadow-md">
+                                    <video id="video" autoplay playsinline class="w-full object-cover max-h-[320px]"></video>
+                                    <button type="button" id="capture-btn"
+                                        class="absolute bottom-4 left-1/2 -translate-y-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-500 text-white rounded-full w-12 h-12 shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer border-0">
+                                        <i class="fas fa-camera text-lg"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Canvas Preview Container -->
+                                <div id="canvas-container" class="hidden w-full rounded-xl overflow-hidden relative bg-slate-900 border border-slate-700 shadow-md">
+                                    <canvas id="canvas" class="w-full max-h-[320px] object-cover"></canvas>
+                                    <button type="button" id="retake-btn"
+                                        class="absolute top-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white rounded-lg px-3 py-1.5 text-xs font-bold backdrop-blur-md border border-slate-700 transition-colors cursor-pointer">
+                                        <i class="fas fa-redo mr-1"></i>Retake Photo
+                                    </button>
+                                </div>
+
+                                <!-- Camera & Upload Option Cards -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button type="button" id="start-camera-btn"
+                                        class="p-4 rounded-xl border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 shadow-2xs">
+                                        <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-base">
+                                            <i class="fas fa-camera"></i>
+                                        </div>
+                                        <span class="text-xs font-bold font-mono-code">Take Live Photo</span>
+                                    </button>
+                                    
+                                    <label class="p-4 rounded-xl border border-slate-200 hover:border-indigo-500 bg-slate-50 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-700 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 shadow-2xs">
+                                        <div class="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-base">
+                                            <i class="fas fa-cloud-arrow-up"></i>
+                                        </div>
+                                        <span class="text-xs font-bold font-mono-code">Upload Image File</span>
+                                        <input type="file" id="image-upload" name="symptom_image" accept="image/*" class="hidden">
+                                    </label>
+                                </div>
+
+                                <!-- Back navigation -->
+                                <div class="flex justify-start pt-1">
+                                    <button type="button" onclick="goToNextPart('accordionPart3', 'accordionPart2')" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fas fa-arrow-up text-[10px]"></i>
+                                        <span>Back to Clinical Details</span>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ================= EXECUTE DIAGNOSIS ACTION BAR ================= -->
+                    <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
                         <button type="button" id="reset-form-btn"
-                            class="w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all btn-neumorph border border-slate-300 p-4 bg-white/70 hover:bg-rose-50 hover:text-rose-600 shadow-md flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fas fa-redo-alt"></i>
-                            <span>Clear All</span>
+                            class="w-full sm:w-1/3 py-3.5 px-5 rounded-xl text-slate-600 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-rotate-left text-xs"></i>
+                            <span>Reset All Parts</span>
                         </button>
                         <button type="submit" id="submit-btn"
-                            class="w-full py-3.5 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all btn-neumorph border border-sky-600 p-4 bg-sky-600 hover:bg-sky-700 shadow-lg flex items-center justify-center gap-2 cursor-pointer">
-                            <span>Next Step &bull; Analyze Symptoms</span>
-                            <i class="fas fa-chevron-right text-sm"></i>
+                            class="w-full sm:w-2/3 py-3.5 px-6 rounded-xl text-white text-sm font-extrabold uppercase tracking-wider bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer border-0">
+                            <span>Execute Deep AI Diagnosis</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
                         </button>
                     </div>
+
                 </form>
+
             </div>
-        </div>
 
-        <!-- ================= RIGHT SIDEBAR ================= -->
-        <div class="w-full lg:w-4/12 lg:sticky lg:top-8">
+            <!-- RIGHT: CLINICAL DIAGNOSTIC SIDEBAR -->
+            <div class="lg:col-span-4 space-y-5">
 
-            <div class="neumorph-card rounded-3xl p-7 border border-amber-400 bg-white/80 backdrop-blur-xl shadow-xl">
-
-                <!-- AI Status -->
-                <div
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 border border-cyan-200 mb-6">
-                    <div class="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse"></div>
-                    <span class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">
-                        AI Neural Engine Online
-                    </span>
+                <!-- Pure 3D DNA Symbol Movement (No Card, No Background, No Text) -->
+                <div class="w-full flex items-center justify-center relative -my-1">
+                    <canvas id="step2DnaCanvas" class="w-full max-w-[340px] sm:max-w-[380px] h-[260px] sm:h-[300px] bg-transparent block cursor-grab active:cursor-grabbing"></canvas>
                 </div>
 
-                <!-- Heading -->
-                <h2 class="text-3xl font-bold text-slate-800 leading-tight">
-                    AI Medical Analysis
-                </h2>
-
-                <p class="mt-4 text-sm text-slate-500 leading-7">
-                    Spherix Clinic AI intelligently analyzes your symptoms, affected body
-                    regions and uploaded images to identify possible medical conditions,
-                    estimate severity and recommend appropriate next steps.
-                </p>
-
-                <!-- Divider -->
-                <div class="border-t border-slate-200 my-8"></div>
-
-                <!-- AI Features -->
-                <h4 class="text-sm font-bold uppercase tracking-widest text-slate-700 mb-4">
-                    AI Features
-                </h4>
-
-                <div class="space-y-4">
-
-                    <div class="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
-
-                        <div class="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center">
-                            <i class="fas fa-brain text-cyan-600 text-xl"></i>
-                        </div>
-
-                        <div>
-                            <h5 class="font-semibold text-slate-700">
-                                Symptom Intelligence
-                            </h5>
-
-                            <p class="text-xs text-slate-500 mt-1">
-                                AI compares your symptoms against thousands of medical
-                                patterns.
-                            </p>
-
-                        </div>
-
+                <!-- AI Diagnostic Engine Summary Card -->
+                <div class="white-glass-card rounded-[2rem] p-6">
+                    
+                    <!-- AI Status Badge -->
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 mb-4">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 font-mono-code">
+                            Neural Pipeline Active
+                        </span>
                     </div>
 
-                    <div class="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <h2 class="text-lg font-bold text-slate-900 leading-tight">
+                        Deep Diagnostic Intelligence
+                    </h2>
 
-                        <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                            <i class="fas fa-camera text-green-600 text-xl"></i>
+                    <p class="mt-1.5 text-xs text-slate-500 leading-relaxed">
+                        Correlates anatomical focus, clinical descriptions, duration, modifying factors, and vision imagery across 5,000+ medical monographs.
+                    </p>
+
+                    <div class="border-t border-slate-100 my-4"></div>
+
+                    <!-- AI Confidence Indicator -->
+                    <div>
+                        <div class="flex justify-between items-center text-xs mb-1.5">
+                            <span class="font-bold text-slate-700 font-mono-code uppercase text-[11px]">Calibrated Precision</span>
+                            <span class="font-bold text-blue-600 font-mono-code">96.4%</span>
                         </div>
-
-                        <div>
-
-                            <h5 class="font-semibold text-slate-700">
-                                Image Analysis
-                            </h5>
-
-                            <p class="text-xs text-slate-500 mt-1">
-                                Detects visible signs from uploaded medical images.
-                            </p>
-
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                            <div class="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 rounded-full" style="width: 96.4%;"></div>
                         </div>
-
                     </div>
 
-                    <div class="flex gap-4 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div class="border-t border-slate-100 my-4"></div>
 
-                        <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                            <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                    <!-- Specialties Covered -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2.5 font-mono-code">
+                            Covered Specialties
+                        </h4>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold">🧠 Neurology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold">❤️ Cardiology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">🫁 Pulmonology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold">🩺 Internal Med</span>
+                            <span class="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-bold">👁 Dermatology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold">🦴 Orthopedics</span>
                         </div>
+                    </div>
 
-                        <div>
+                    <div class="border-t border-slate-100 my-4"></div>
 
-                            <h5 class="font-semibold text-slate-700">
-                                Risk Prediction
-                            </h5>
-
-                            <p class="text-xs text-slate-500 mt-1">
-                                Estimates severity and recommends urgency level.
-                            </p>
-
+                    <!-- Security Info -->
+                    <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                            <i class="fas fa-lock text-blue-600 text-sm mb-0.5"></i>
+                            <p class="text-[11px] font-bold text-slate-700 m-0">256-Bit TLS</p>
                         </div>
-
+                        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                            <i class="fas fa-shield-halved text-emerald-600 text-sm mb-0.5"></i>
+                            <p class="text-[11px] font-bold text-slate-700 m-0">HIPAA Compliant</p>
+                        </div>
                     </div>
 
                 </div>
 
-                <!-- Divider -->
-                <div class="border-t border-slate-200 my-8"></div>
-
-                <!-- Workflow -->
-                <h4 class="text-sm font-bold uppercase tracking-widest text-slate-700 mb-4">
-                    AI Workflow
-                </h4>
-
-                <div class="space-y-5">
-
-                    <div class="flex gap-4">
-
-                        <div
-                            class="w-9 h-9 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold">
-                            1
-                        </div>
-
-                        <div>
-
-                            <h5 class="font-semibold text-slate-700">
-                                Collect Information
-                            </h5>
-
-                            <p class="text-xs text-slate-500">
-                                Symptoms, body areas and uploaded images.
-                            </p>
-
-                        </div>
-
+                <!-- Emergency Notice -->
+                <div class="p-5 rounded-[1.5rem] bg-rose-50 border border-rose-200 shadow-2xs">
+                    <div class="flex items-center gap-2 mb-1.5 text-rose-700">
+                        <i class="fas fa-triangle-exclamation text-sm"></i>
+                        <h4 class="text-xs font-bold uppercase tracking-wider font-mono-code">Emergency Triage Notice</h4>
                     </div>
-
-                    <div class="flex gap-4">
-
-                        <div
-                            class="w-9 h-9 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold">
-                            2
-                        </div>
-
-                        <div>
-
-                            <h5 class="font-semibold text-slate-700">
-                                AI Analysis
-                            </h5>
-
-                            <p class="text-xs text-slate-500">
-                                Deep learning compares millions of medical patterns.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div class="flex gap-4">
-
-                        <div
-                            class="w-9 h-9 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold">
-                            3
-                        </div>
-
-                        <div>
-
-                            <h5 class="font-semibold text-slate-700">
-                                Clinical Suggestions
-                            </h5>
-
-                            <p class="text-xs text-slate-500">
-                                Receive likely conditions and recommended actions.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- Divider -->
-                <div class="border-t border-slate-200 my-8"></div>
-
-                <!-- Medical Categories -->
-                <h4 class="text-sm font-bold uppercase tracking-widest text-slate-700 mb-4">
-                    Supported Specialties
-                </h4>
-
-                <div class="flex flex-wrap gap-2">
-
-                    <span class="px-3 py-2 rounded-full bg-cyan-100 text-cyan-700 text-xs font-semibold">
-                        🧠 Neurology
-                    </span>
-
-                    <span class="px-3 py-2 rounded-full bg-pink-100 text-pink-700 text-xs font-semibold">
-                        ❤️ Cardiology
-                    </span>
-
-                    <span class="px-3 py-2 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
-                        🫁 Pulmonology
-                    </span>
-
-                    <span class="px-3 py-2 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">
-                        🩺 General Medicine
-                    </span>
-
-                    <span class="px-3 py-2 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
-                        👁 Dermatology
-                    </span>
-
-                    <span class="px-3 py-2 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
-                        🦴 Orthopedics
-                    </span>
-
-                </div>
-
-                <!-- Divider -->
-                <div class="border-t border-slate-200 my-8"></div>
-
-                <!-- Confidence -->
-                <h4 class="text-sm font-bold uppercase tracking-widest text-slate-700 mb-4">
-                    AI Confidence
-                </h4>
-
-                <div class="w-full h-3 rounded-full bg-slate-200 overflow-hidden">
-
-                    <div class="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 rounded-full"
-                        style="width:96%">
-                    </div>
-
-                </div>
-
-                <div class="flex justify-between mt-2 text-xs">
-
-                    <span class="text-slate-500">
-                        Estimated Accuracy
-                    </span>
-
-                    <span class="font-bold text-cyan-600">
-                        96%
-                    </span>
-
-                </div>
-
-                <!-- Divider -->
-                <div class="border-t border-slate-200 my-8"></div>
-
-                <!-- Security -->
-                <h4 class="text-sm font-bold uppercase tracking-widest text-slate-700 mb-4">
-                    Security
-                </h4>
-
-                <div class="grid grid-cols-2 gap-3">
-
-                    <div class="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
-
-                        <i class="fas fa-lock text-green-600 text-xl mb-2"></i>
-
-                        <p class="text-xs font-semibold">
-                            Encrypted
-                        </p>
-
-                    </div>
-
-                    <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
-
-                        <i class="fas fa-user-shield text-blue-600 text-xl mb-2"></i>
-
-                        <p class="text-xs font-semibold">
-                            Privacy
-                        </p>
-
-                    </div>
-
-                    <div class="rounded-xl border border-purple-200 bg-purple-50 p-4 text-center">
-
-                        <i class="fas fa-cloud text-purple-600 text-xl mb-2"></i>
-
-                        <p class="text-xs font-semibold">
-                            Secure Cloud
-                        </p>
-
-                    </div>
-
-                    <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 text-center">
-
-                        <i class="fas fa-trash text-orange-600 text-xl mb-2"></i>
-
-                        <p class="text-xs font-semibold">Auto Delete</p>
-                    </div>
-                </div>
-                <!-- Emergency -->
-                <div class="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5">
-                    <div class="flex items-center gap-3 mb-3">
-                        <i class="fas fa-triangle-exclamation text-red-600 text-xl"></i>
-                        <h5 class="font-bold text-red-700">Emergency Notice</h5>
-                    </div>
-                    <p class="text-xs leading-6 text-red-600">
-                        If you have severe chest pain, breathing difficulty,
-                        stroke symptoms, seizures, major injuries or uncontrolled
-                        bleeding, seek immediate emergency medical care instead of
-                        relying solely on AI analysis.
+                    <p class="text-xs leading-relaxed text-rose-800 m-0">
+                        For acute crushing chest pain, sudden one-sided facial/body numbness, extreme breathing distress, or severe trauma, call emergency <strong>108 / 112</strong> immediately.
                     </p>
                 </div>
 
-                <!-- Footer -->
-                <div class="mt-8 pt-6 border-t border-slate-200 flex items-center gap-4">
-
-                    <div
-                        class="w-12 h-12 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 flex items-center justify-center text-white">
-                        <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}"
-                            alt="Spherix Clinic Logo" class="w-12 h-12">
-                    </div>
-                    <div>
-                        <h5 class="font-bold text-slate-700">Spherix Clinic</h5>
-                        <p class="text-xs text-slate-500">Intelligent Healthcare Assistant</p>
-                    </div>
-                </div>
             </div>
+
         </div>
-        <!-- ================= END SIDEBAR ================= -->
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                // Elements
-                const bodyPartBtns = document.querySelectorAll('.body-part-btn');
-                const symptomChips = document.querySelectorAll('.symptom-chip');
-                const selectedBodyPartInput = document.getElementById('selected_body_part');
-                const selectedSymptomsInput = document.getElementById('selected_symptoms');
-                const selectionSummary = document.getElementById('selectionSummary');
-                const symptomTextarea = document.getElementById('symptoms');
-                const clearSelectionBtn = document.getElementById('clearSelectionBtn');
 
-                // Camera elements
-                const startCameraBtn = document.getElementById('start-camera-btn');
-                const imageUploadInput = document.getElementById('image-upload');
-                const cameraContainer = document.getElementById('camera-container');
-                const canvasContainer = document.getElementById('canvas-container');
-                const video = document.getElementById('video');
-                const canvas = document.getElementById('canvas');
-                const captureBtn = document.getElementById('capture-btn');
-                const retakeBtn = document.getElementById('retake-btn');
-                const cameraImageDataInput = document.getElementById('camera_image_data');
+    </div>
 
-                const resetFormBtn = document.getElementById('reset-form-btn');
-                const form = document.getElementById('symptomsForm');
-                const submitBtn = document.getElementById('submit-btn');
+</div>
 
-                let stream = null;
-                let selectedBodyPart = null;
-                let selectedSymptoms = [];
+<!-- Core Interactive Script -->
+<script>
+    // Anatomy Probing Database
+    const ANATOMY_QUESTIONS = {
+        'Head': {
+            title: 'Head & Neurological Probing Signs',
+            options: ['Throbbing / Pulsating', 'Dull band-like pressure', 'Light Sensitivity (Photophobia)', 'Sound Sensitivity', 'Visual Aura / Flashes', 'Neck Stiffness', 'Vertigo / Spinning sensation']
+        },
+        'Chest': {
+            title: 'Cardiovascular & Respiratory Probing Signs',
+            options: ['Sharp pleuritic pain (worse on breath)', 'Crushing / Heavy pressure', 'Radiating to left arm/jaw', 'Palpitations / Rapid heartbeat', 'Dry Cough', 'Productive Cough with Phlegm', 'Worse on exertion']
+        },
+        'Abdomen': {
+            title: 'Gastrointestinal & Gut Probing Signs',
+            options: ['Sharp localized cramping', 'Burning epigastric pain', 'Worse after eating', 'Better after eating', 'Nausea / Vomiting', 'Bloating / Gas', 'Change in bowel habits']
+        },
+        'Back': {
+            title: 'Spinal & Musculoskeletal Probing Signs',
+            options: ['Shooting pain down leg (Sciatica)', 'Dull muscular ache', 'Morning stiffness > 30 mins', 'Worse on bending / lifting', 'Numbness in toes / fingers', 'Relieved by rest']
+        },
+        'Arms': {
+            title: 'Upper Limb & Joint Probing Signs',
+            options: ['Joint swelling / heat', 'Reduced range of motion', 'Tingling / Pins & needles', 'Muscle weakness', 'Morning joint stiffness']
+        },
+        'Legs': {
+            title: 'Lower Limb & Joint Probing Signs',
+            options: ['Calf pain / swelling', 'Knee locking / instability', 'Ankle swelling', 'Pain worse on walking', 'Night cramps']
+        },
+        'Skin': {
+            title: 'Dermatological & Systemic Probing Signs',
+            options: ['Intense itching (Pruritus)', 'Red spreading rash', 'Raised hives / wheals', 'Dry flaking skin', 'Blistering / Oozing', 'Chills & Night Sweats']
+        }
+    };
 
-                // ===== BODY PART SELECTION =====
-                bodyPartBtns.forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const bodyPart = btn.dataset.body;
+    // Accordion Toggle Functions
+    function toggleAccordion(partId) {
+        const card = document.getElementById(partId);
+        if (!card) return;
+        card.classList.toggle('open');
+        updateAccuracyScore();
+    }
 
-                        if (selectedBodyPart === bodyPart) {
-                            // Deselect if already selected
-                            selectedBodyPart = null;
-                            btn.classList.remove('active');
-                        } else {
-                            // Select new
-                            bodyPartBtns.forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-                            selectedBodyPart = bodyPart;
-                        }
-                        selectedBodyPartInput.value = selectedBodyPart || '';
-                        updateSummary();
-                    });
-                });
+    function goToNextPart(currentPartId, nextPartId) {
+        const curr = document.getElementById(currentPartId);
+        const next = document.getElementById(nextPartId);
+        if (curr) curr.classList.remove('open');
+        if (next) {
+            next.classList.add('open');
+            next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        updateAccuracyScore();
+    }
 
-                // ===== SYMPTOM SELECTION =====
-                symptomChips.forEach(chip => {
-                    chip.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const symptom = chip.dataset.symptom;
+    function syncDuration(val) {
+        const input = document.getElementById('durationInput');
+        if (!input) return;
+        if (val && val !== 'custom') {
+            input.value = val;
+        }
+        updateAccuracyScore();
+    }
 
-                        if (selectedSymptoms.includes(symptom)) {
-                            selectedSymptoms = selectedSymptoms.filter(s => s !== symptom);
-                            chip.classList.remove('active');
-                        } else {
-                            selectedSymptoms.push(symptom);
-                            chip.classList.add('active');
-                        }
+    // Pain Slider Handler
+    function handlePainSlider(val) {
+        const badge = document.getElementById('painValueBadge');
+        const severitySelect = document.getElementById('severitySelect');
+        const num = parseInt(val, 10);
 
-                        selectedSymptomsInput.value = JSON.stringify(selectedSymptoms);
-                        updateSummary();
-                    });
-                });
+        if (num === 0) {
+            badge.innerText = 'Level 0: No Pain';
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-slate-100 text-slate-700';
+            if (severitySelect) severitySelect.value = 'Mild';
+        } else if (num <= 3) {
+            badge.innerText = `Level ${num}: Mild Pain`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800';
+            if (severitySelect) severitySelect.value = 'Mild';
+        } else if (num <= 6) {
+            badge.innerText = `Level ${num}: Moderate Pain`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-amber-100 text-amber-800';
+            if (severitySelect) severitySelect.value = 'Moderate';
+        } else if (num <= 8) {
+            badge.innerText = `Level ${num}: Severe Pain`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-orange-100 text-orange-800';
+            if (severitySelect) severitySelect.value = 'Severe';
+        } else {
+            badge.innerText = `Level ${num}: Critical / Unbearable`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 animate-pulse';
+            if (severitySelect) severitySelect.value = 'Very Severe';
+        }
+        updateAccuracyScore();
+    }
 
-                // ===== UPDATE SUMMARY =====
-                function updateSummary() {
-                    let summary = [];
-                    if (selectedBodyPart) {
-                        summary.push(`<span class="text-cyan-600">${selectedBodyPart}</span>`);
-                    }
-                    if (selectedSymptoms.length > 0) {
-                        summary.push(`<span class="text-cyan-600">${selectedSymptoms.join(', ')}</span>`);
-                    }
+    // 1-Click Preset Scenario Loader
+    function loadScenarioPreset(type) {
+        const bodyPartDropdown = document.getElementById('bodyPartDropdown');
+        const symptomTextarea = document.getElementById('symptoms');
+        const durationInput = document.getElementById('durationInput');
+        const worseInput = document.getElementById('worseFactorsInput');
+        const betterInput = document.getElementById('betterFactorsInput');
 
-                    if (summary.length > 0) {
-                        selectionSummary.innerHTML = summary.join(' &bull; ');
-                        clearSelectionBtn.classList.remove('hidden');
-                    } else {
-                        selectionSummary.innerHTML = '<span class="text-slate-500">None yet</span>';
-                        clearSelectionBtn.classList.add('hidden');
-                    }
-                }
+        if (type === 'migraine') {
+            selectBodyPart('Head');
+            symptomTextarea.value = 'Throbbing, pulsating unilateral headache with moderate sensitivity to bright lights and sound. Accompanied by mild nausea.';
+            if (durationInput) durationInput.value = '2 days';
+            if (worseInput) worseInput.value = 'Bright lights, loud noises, bending over';
+            if (betterInput) betterInput.value = 'Resting in a dark quiet room, cold compress';
+            handlePainSlider(6);
+        } else if (type === 'flu') {
+            selectBodyPart('Head');
+            symptomTextarea.value = 'Sudden onset high fever with severe generalized body aches, dry persistent cough, sore throat, and fatigue.';
+            if (durationInput) durationInput.value = '3 days';
+            if (worseInput) worseInput.value = 'Cold air, physical activity';
+            if (betterInput) betterInput.value = 'Bed rest, warm fluids, paracetamol';
+            handlePainSlider(5);
+        } else if (type === 'reflux') {
+            selectBodyPart('Chest');
+            symptomTextarea.value = 'Burning sensation behind breastbone (heartburn), sour taste in mouth, bloating and mild nausea after meals.';
+            if (durationInput) durationInput.value = '1 week';
+            if (worseInput) worseInput.value = 'Lying flat after meals, spicy or fatty foods';
+            if (betterInput) betterInput.value = 'Sitting upright, drinking cold water, antacids';
+            handlePainSlider(4);
+        } else if (type === 'backpain') {
+            selectBodyPart('Back');
+            symptomTextarea.value = 'Aching lower back stiffness that started after heavy lifting. Pain radiates mildly into glutes without numbness.';
+            if (durationInput) durationInput.value = '4 days';
+            if (worseInput) worseInput.value = 'Prolonged sitting, bending forward, lifting objects';
+            if (betterInput) betterInput.value = 'Lying on back with knees elevated, warm heat pack';
+            handlePainSlider(5);
+        } else if (type === 'allergy') {
+            selectBodyPart('Skin');
+            symptomTextarea.value = 'Intense itchy red bumps/hives across forearms and neck following contact with detergent. Mild swelling.';
+            if (durationInput) durationInput.value = '24 hours';
+            if (worseInput) worseInput.value = 'Scratching, hot water showers';
+            if (betterInput) betterInput.value = 'Cool water rinse, soothing calamine lotion';
+            handlePainSlider(3);
+        }
 
-                // ===== CLEAR SELECTION =====
-                clearSelectionBtn.addEventListener('click', () => {
-                    selectedBodyPart = null;
-                    selectedBodyPartInput.value = '';
-                    bodyPartBtns.forEach(b => b.classList.remove('active'));
+        // Open Part 2 to review details
+        goToNextPart('accordionPart1', 'accordionPart2');
+    }
 
-                    selectedSymptoms = [];
-                    selectedSymptomsInput.value = '';
-                    symptomChips.forEach(chip => chip.classList.remove('active'));
+    function selectBodyPart(part) {
+        const bodyPartDropdown = document.getElementById('bodyPartDropdown');
+        const selectedBodyPartInput = document.getElementById('selected_body_part');
+        const bodyPartBtns = document.querySelectorAll('.body-part-btn');
 
-                    updateSummary();
-                });
+        if (bodyPartDropdown) bodyPartDropdown.value = part;
+        if (selectedBodyPartInput) selectedBodyPartInput.value = part;
 
-                // ===== GLOBAL FORM RESET =====
-                resetFormBtn.addEventListener('click', () => {
-                    // Clear selections
-                    clearSelectionBtn.click();
+        bodyPartBtns.forEach(btn => {
+            if (btn.dataset.body === part) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
 
-                    // Clear text area
-                    symptomTextarea.value = '';
+        renderAnatomyProbing(part);
+        updateSummary();
+    }
 
-                    // Clear images
-                    cameraImageDataInput.value = '';
-                    imageUploadInput.value = '';
-                    cameraContainer.classList.add('hidden');
-                    canvasContainer.classList.add('hidden');
-                    startCameraBtn.classList.remove('hidden');
+    function renderAnatomyProbing(part) {
+        const box = document.getElementById('anatomyProbingBox');
+        const title = document.getElementById('probingTitle');
+        const optionsContainer = document.getElementById('probingOptions');
 
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                });
+        if (!box || !title || !optionsContainer) return;
 
-                // ===== CAMERA FUNCTIONS =====
-                startCameraBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    try {
-                        stream = await navigator.mediaDevices.getUserMedia({
-                            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-                        });
-                        video.srcObject = stream;
-                        startCameraBtn.classList.add('hidden');
-                        cameraContainer.classList.remove('hidden');
-                    } catch (err) {
-                        console.error("Camera error: ", err);
-                        alert("Could not access camera. Please check permissions.");
-                    }
-                });
-
-                // Capture Image
-                captureBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const context = canvas.getContext('2d');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                    const imageData = canvas.toDataURL('image/jpeg', 0.85);
-                    cameraImageDataInput.value = imageData;
-
-                    // Stop camera
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-
-                    cameraContainer.classList.add('hidden');
-                    canvasContainer.classList.remove('hidden');
-                });
-
-                // Retake Image
-                retakeBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    cameraImageDataInput.value = "";
-                    canvasContainer.classList.add('hidden');
-
-                    try {
-                        stream = await navigator.mediaDevices.getUserMedia({
-                            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-                        });
-                        video.srcObject = stream;
-                        startCameraBtn.classList.add('hidden');
-                        cameraContainer.classList.remove('hidden');
-                    } catch (err) {
-                        console.error("Camera error: ", err);
-                        alert("Could not access camera.");
-                        startCameraBtn.classList.remove('hidden');
-                        cameraContainer.classList.add('hidden');
-                    }
-                });
-
-                // Image Upload
-                imageUploadInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const ctx = canvas.getContext('2d');
-                            const img = new Image();
-                            img.onload = () => {
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                ctx.drawImage(img, 0, 0);
-                                cameraImageDataInput.value = canvas.toDataURL('image/jpeg', 0.85);
-                                startCameraBtn.classList.add('hidden');
-                                cameraContainer.classList.add('hidden');
-                                canvasContainer.classList.remove('hidden');
-                            };
-                            img.src = event.target.result;
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-
-                // Form Submit
-                form.addEventListener('submit', (e) => {
-                    // Auto-fill from selected body part or symptoms if textarea is blank
-                    if (!symptomTextarea.value.trim()) {
-                        let autoParts = [];
-                        if (selectedBodyPart) {
-                            autoParts.push(`Primary affected area: ${selectedBodyPart}`);
-                        }
-                        if (selectedSymptoms.length > 0) {
-                            autoParts.push(`Reported symptoms: ${selectedSymptoms.join(', ')}`);
-                        }
-                        if (autoParts.length > 0) {
-                            symptomTextarea.value = autoParts.join('. ');
-                        } else if (!cameraImageDataInput.value && !imageUploadInput.value) {
-                            e.preventDefault();
-                            alert('Please describe your symptoms, select a body area, or capture/upload an image.');
-                            return;
-                        }
-                    } else if (selectedSymptoms.length > 0 && !symptomTextarea.value.includes(selectedSymptoms[0])) {
-                        symptomTextarea.value = `Keywords: ${selectedSymptoms.join(', ')}\n\n` + symptomTextarea.value;
-                    }
-
-                    if (submitBtn) {
-                        submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Analyzing Symptoms...';
-                    }
-
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                });
+        if (ANATOMY_QUESTIONS[part]) {
+            title.innerText = ANATOMY_QUESTIONS[part].title;
+            optionsContainer.innerHTML = '';
+            
+            ANATOMY_QUESTIONS[part].options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'probing-chip px-3 py-1 rounded-lg text-xs font-semibold bg-white border border-blue-200 text-slate-700 hover:bg-blue-600 hover:text-white transition-all cursor-pointer shadow-2xs';
+                btn.innerText = opt;
+                btn.onclick = function() {
+                    this.classList.toggle('bg-blue-600');
+                    this.classList.toggle('text-white');
+                    this.classList.toggle('border-blue-600');
+                    toggleSymptomFromProbing(opt);
+                };
+                optionsContainer.appendChild(btn);
             });
+            box.classList.remove('hidden');
+        } else {
+            box.classList.add('hidden');
+        }
+    }
 
-            function removePreviousImage() {
-                const banner = document.getElementById('attached-image-banner');
-                const removeInput = document.getElementById('remove_image_input');
-                if (banner) {
-                    banner.style.display = 'none';
-                }
-                if (removeInput) {
-                    removeInput.value = '1';
+    function toggleSymptomFromProbing(symptom) {
+        const textarea = document.getElementById('symptoms');
+        if (!textarea) return;
+        if (!textarea.value.includes(symptom)) {
+            textarea.value = (textarea.value.trim() ? textarea.value.trim() + ', ' : '') + symptom;
+        }
+        updateAccuracyScore();
+    }
+
+    // Voice Dictation (Web Speech API)
+    let recognition = null;
+    let isRecording = false;
+
+    function toggleVoiceDictation() {
+        const btn = document.getElementById('voiceDictateBtn');
+        const icon = document.getElementById('voiceMicIcon');
+        const text = document.getElementById('voiceMicText');
+        const textarea = document.getElementById('symptoms');
+
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('Voice dictation is supported in modern Chrome, Edge, and Safari browsers.');
+            return;
+        }
+
+        if (isRecording) {
+            if (recognition) recognition.stop();
+            isRecording = false;
+            if (btn) btn.classList.remove('mic-recording');
+            if (text) text.innerText = 'Voice Dictation';
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = function() {
+            isRecording = true;
+            if (btn) btn.classList.add('mic-recording');
+            if (text) text.innerText = 'Listening... (Click to stop)';
+        };
+
+        recognition.onresult = function(event) {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript + ' ';
                 }
             }
-        </script>
-        {% endblock %}
+            if (finalTranscript && textarea) {
+                textarea.value = (textarea.value.trim() ? textarea.value.trim() + ' ' : '') + finalTranscript;
+                updateAccuracyScore();
+            }
+        };
+
+        recognition.onerror = function() {
+            isRecording = false;
+            if (btn) btn.classList.remove('mic-recording');
+            if (text) text.innerText = 'Voice Dictation';
+        };
+
+        recognition.onend = function() {
+            isRecording = false;
+            if (btn) btn.classList.remove('mic-recording');
+            if (text) text.innerText = 'Voice Dictation';
+        };
+
+        recognition.start();
+    }
+
+    // Real-Time Red Flag Symptom Sentinel
+    function checkRedFlagKeywords(text) {
+        const redFlagKeywords = [
+            'crushing chest pain', 'chest tightness', 'radiating to jaw', 'slurred speech', 
+            'facial droop', 'sudden weakness', 'sudden blindness', 'coughing blood', 
+            'severe breathlessness', 'unconscious', 'thunderclap headache', 'projectile vomiting'
+        ];
+        const lower = (text || '').toLowerCase();
+        const detected = redFlagKeywords.filter(k => lower.includes(k));
+        const banner = document.getElementById('redFlagSentinel');
+        const bannerText = document.getElementById('redFlagSentinelText');
+
+        if (detected.length > 0 && banner) {
+            banner.classList.remove('hidden');
+            if (bannerText) {
+                bannerText.innerHTML = `Your description mentions potential high-priority warning signs (<strong>${detected.join(', ')}</strong>). Please consider consulting emergency medical services if symptoms are severe.`;
+            }
+        } else if (banner) {
+            banner.classList.add('hidden');
+        }
+    }
+
+    // Dynamic Accuracy & Completeness Calculator
+    function updateAccuracyScore() {
+        const scoreBar = document.getElementById('diagnosticScoreBar');
+        const scoreText = document.getElementById('diagnosticScoreText');
+        const bodyPart = document.getElementById('selected_body_part')?.value;
+        const symptoms = document.getElementById('symptoms')?.value.trim() || '';
+        const duration = document.getElementById('durationInput')?.value.trim() || '';
+        const severity = document.getElementById('severitySelect')?.value || '';
+        const worse = document.getElementById('worseFactorsInput')?.value.trim() || '';
+        const better = document.getElementById('betterFactorsInput')?.value.trim() || '';
+
+        checkRedFlagKeywords(symptoms);
+
+        let score = 40;
+        if (bodyPart) score += 15;
+        if (symptoms.length > 20) score += 20;
+        if (symptoms.length > 60) score += 10;
+        if (duration) score += 5;
+        if (severity) score += 5;
+        if (worse || better) score += 5;
+
+        if (score > 100) score = 100;
+
+        if (scoreBar) scoreBar.style.width = `${score}%`;
+        if (scoreText) {
+            if (score >= 90) scoreText.innerText = `${score}% Maximum Precision`;
+            else if (score >= 70) scoreText.innerText = `${score}% High Quality`;
+            else scoreText.innerText = `${score}% Good`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Elements
+        const bodyPartDropdown = document.getElementById('bodyPartDropdown');
+        const bodyPartBtns = document.querySelectorAll('.body-part-btn');
+        const symptomChips = document.querySelectorAll('.symptom-chip');
+        const selectedBodyPartInput = document.getElementById('selected_body_part');
+        const selectedSymptomsInput = document.getElementById('selected_symptoms');
+        const selectionSummary = document.getElementById('selectionSummary');
+        const symptomTextarea = document.getElementById('symptoms');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+        // Camera elements
+        const startCameraBtn = document.getElementById('start-camera-btn');
+        const imageUploadInput = document.getElementById('image-upload');
+        const cameraContainer = document.getElementById('camera-container');
+        const canvasContainer = document.getElementById('canvas-container');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const cameraImageDataInput = document.getElementById('camera_image_data');
+
+        const resetFormBtn = document.getElementById('reset-form-btn');
+        const form = document.getElementById('symptomsForm');
+        const submitBtn = document.getElementById('submit-btn');
+
+        let stream = null;
+        let selectedBodyPart = selectedBodyPartInput.value || null;
+        let selectedSymptoms = [];
+
+        // Initialize from session
+        if (selectedBodyPart) {
+            selectBodyPart(selectedBodyPart);
+        }
+
+        // ===== BODY PART DROPDOWN & BUTTONS SYNC =====
+        if (bodyPartDropdown) {
+            bodyPartDropdown.addEventListener('change', () => {
+                selectBodyPart(bodyPartDropdown.value);
+            });
+        }
+
+        bodyPartBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const bodyPart = btn.dataset.body;
+                if (selectedBodyPart === bodyPart) {
+                    selectedBodyPart = null;
+                    btn.classList.remove('active');
+                    if (bodyPartDropdown) bodyPartDropdown.value = '';
+                    selectedBodyPartInput.value = '';
+                    renderAnatomyProbing(null);
+                } else {
+                    selectBodyPart(bodyPart);
+                }
+                updateSummary();
+            });
+        });
+
+        // ===== SYMPTOM CHIPS SELECTION =====
+        symptomChips.forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
+                const symptom = chip.dataset.symptom;
+
+                if (selectedSymptoms.includes(symptom)) {
+                    selectedSymptoms = selectedSymptoms.filter(s => s !== symptom);
+                    chip.classList.remove('active');
+                } else {
+                    selectedSymptoms.push(symptom);
+                    chip.classList.add('active');
+                }
+
+                selectedSymptomsInput.value = JSON.stringify(selectedSymptoms);
+                updateSummary();
+            });
+        });
+
+        // ===== UPDATE SUMMARY =====
+        window.updateSummary = function() {
+            let summary = [];
+            const part1SummaryTag = document.getElementById('part1SummaryTag');
+            const badgePart1 = document.getElementById('badgePart1');
+            const currentPart = selectedBodyPartInput.value;
+
+            if (currentPart) {
+                summary.push(`<span class="text-blue-600 font-bold">${currentPart}</span>`);
+                if (part1SummaryTag) part1SummaryTag.innerText = currentPart;
+                if (badgePart1) {
+                    badgePart1.innerText = 'CONFIGURED';
+                    badgePart1.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 font-mono-code';
+                }
+            } else {
+                if (part1SummaryTag) part1SummaryTag.innerText = 'Not Selected';
+                if (badgePart1) {
+                    badgePart1.innerText = 'IN PROGRESS';
+                    badgePart1.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 font-mono-code';
+                }
+            }
+
+            if (selectedSymptoms.length > 0) {
+                summary.push(`<span class="text-indigo-600 font-bold">${selectedSymptoms.join(', ')}</span>`);
+            }
+
+            if (summary.length > 0) {
+                selectionSummary.innerHTML = summary.join(' &bull; ');
+                clearSelectionBtn.classList.remove('hidden');
+            } else {
+                selectionSummary.innerHTML = '<span class="text-slate-400">None selected</span>';
+                clearSelectionBtn.classList.add('hidden');
+            }
+
+            updateAccuracyScore();
+        };
+
+        window.autoGenerateNarrative = function() {
+            let parts = [];
+            const currentPart = selectedBodyPartInput.value;
+            if (currentPart) parts.push(`Primary affected area: ${currentPart}`);
+            const detail = document.getElementById('body_part_detail')?.value;
+            if (detail) parts.push(`Specific location: ${detail}`);
+            if (selectedSymptoms.length > 0) parts.push(`Symptoms experienced: ${selectedSymptoms.join(', ')}`);
+            const dur = document.getElementById('durationInput')?.value;
+            if (dur) parts.push(`Duration: ${dur}`);
+            const sev = document.getElementById('severitySelect')?.value;
+            if (sev) parts.push(`Severity: ${sev}`);
+
+            if (parts.length > 0) {
+                symptomTextarea.value = parts.join('. ') + '.\n\nAdditional notes: ';
+                symptomTextarea.focus();
+                updateAccuracyScore();
+            } else {
+                alert('Please select an anatomical area or quick symptom markers first.');
+            }
+        };
+
+        // Textarea listener for completeness & red flags
+        symptomTextarea.addEventListener('input', () => {
+            const badgePart2 = document.getElementById('badgePart2');
+            if (badgePart2) {
+                if (symptomTextarea.value.trim().length > 5) {
+                    badgePart2.innerText = 'FILLED';
+                    badgePart2.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 font-mono-code';
+                } else {
+                    badgePart2.innerText = 'PENDING';
+                    badgePart2.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 font-mono-code';
+                }
+            }
+            updateAccuracyScore();
+        });
+
+        // ===== CLEAR SELECTION =====
+        clearSelectionBtn.addEventListener('click', () => {
+            selectedBodyPart = null;
+            selectedBodyPartInput.value = '';
+            if (bodyPartDropdown) bodyPartDropdown.value = '';
+            bodyPartBtns.forEach(b => b.classList.remove('active'));
+            renderAnatomyProbing(null);
+
+            selectedSymptoms = [];
+            selectedSymptomsInput.value = '';
+            symptomChips.forEach(chip => chip.classList.remove('active'));
+
+            updateSummary();
+        });
+
+        // ===== GLOBAL FORM RESET =====
+        resetFormBtn.addEventListener('click', () => {
+            clearSelectionBtn.click();
+            symptomTextarea.value = '';
+            cameraImageDataInput.value = '';
+            imageUploadInput.value = '';
+            cameraContainer.classList.add('hidden');
+            canvasContainer.classList.add('hidden');
+            startCameraBtn.classList.remove('hidden');
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            document.querySelectorAll('.part-accordion-card').forEach((card, idx) => {
+                if (idx === 0) card.classList.add('open');
+                else card.classList.remove('open');
+            });
+            updateSummary();
+        });
+
+        // ===== CAMERA CONTROLS =====
+        startCameraBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                cameraContainer.classList.remove('hidden');
+            } catch (err) {
+                console.error("Camera error: ", err);
+                alert("Could not access camera. Please check device permissions.");
+            }
+        });
+
+        // Capture Image
+        captureBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL('image/jpeg', 0.85);
+            cameraImageDataInput.value = imageData;
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            cameraContainer.classList.add('hidden');
+            canvasContainer.classList.remove('hidden');
+            document.getElementById('part3SummaryTag').innerText = 'Camera Photo Captured';
+            updateAccuracyScore();
+        });
+
+        // Retake Image
+        retakeBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            cameraImageDataInput.value = "";
+            canvasContainer.classList.add('hidden');
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                cameraContainer.classList.remove('hidden');
+            } catch (err) {
+                console.error("Camera error: ", err);
+                startCameraBtn.classList.remove('hidden');
+                cameraContainer.classList.add('hidden');
+            }
+        });
+
+        // Image Upload
+        imageUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        cameraImageDataInput.value = canvas.toDataURL('image/jpeg', 0.85);
+                        startCameraBtn.classList.add('hidden');
+                        cameraContainer.classList.add('hidden');
+                        canvasContainer.classList.remove('hidden');
+                        document.getElementById('part3SummaryTag').innerText = 'File Attached';
+                        updateAccuracyScore();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form Submit
+        form.addEventListener('submit', (e) => {
+            const currentPart = selectedBodyPartInput.value;
+            if (!symptomTextarea.value.trim()) {
+                let autoParts = [];
+                if (currentPart) {
+                    autoParts.push(`Primary affected area: ${currentPart}`);
+                }
+                if (selectedSymptoms.length > 0) {
+                    autoParts.push(`Reported symptoms: ${selectedSymptoms.join(', ')}`);
+                }
+                if (autoParts.length > 0) {
+                    symptomTextarea.value = autoParts.join('. ');
+                } else if (!cameraImageDataInput.value && !imageUploadInput.value) {
+                    e.preventDefault();
+                    alert('Please select an anatomical area in Part 1 or describe your symptoms in Part 2 before submitting.');
+                    document.getElementById('accordionPart1').classList.add('open');
+                    return;
+                }
+            } else if (selectedSymptoms.length > 0 && !symptomTextarea.value.includes(selectedSymptoms[0])) {
+                symptomTextarea.value = `Keywords: ${selectedSymptoms.join(', ')}\n\n` + symptomTextarea.value;
+            }
+
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Analyzing Symptoms with AI...';
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-90', 'cursor-wait');
+            }
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Initial setup
+        updateSummary();
+    });
+
+    function removePreviousImage() {
+        const banner = document.getElementById('attached-image-banner');
+        const removeInput = document.getElementById('remove_image_input');
+        if (banner) banner.style.display = 'none';
+        if (removeInput) removeInput.value = '1';
+    }
+
+    // ========================================================
+    // 🧬 PURE 3D DNA DOUBLE-HELIX MOVEMENT SIMULATION (STEP 2)
+    // ========================================================
+    (function () {
+        const canvas = document.getElementById('step2DnaCanvas');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        let width = 0;
+        let height = 0;
+        let dpr = window.devicePixelRatio || 1;
+
+        // Simulation parameters
+        const NUM_RUNGS = 26;
+        const STRAND_RADIUS = 64;
+        const STRAND_HEIGHT_SPAN = 250;
+        const PERSPECTIVE = 320;
+
+        let rotY = 0;
+        let rotX = 0.22;
+        let targetRotY = 0;
+        let targetRotX = 0.22;
+        const baseSpeed = 0.016;
+
+        // Interactive mouse / touch state
+        let isDragging = false;
+        let startPointerX = 0;
+        let startPointerY = 0;
+        let prevRotY = 0;
+        let prevRotX = 0;
+
+        // Floating ambient molecular particles
+        const PARTICLES_COUNT = 24;
+        const particles = [];
+        for (let i = 0; i < PARTICLES_COUNT; i++) {
+            particles.push({
+                x: (Math.random() - 0.5) * 200,
+                y: (Math.random() - 0.5) * 260,
+                z: (Math.random() - 0.5) * 160,
+                vy: -0.25 - Math.random() * 0.3,
+                size: 1.2 + Math.random() * 2.2,
+                color: Math.random() > 0.5 ? '#0284c7' : '#4f46e5',
+                alpha: 0.25 + Math.random() * 0.45,
+                pulse: Math.random() * Math.PI * 2
+            });
+        }
+
+        // Base pairs types for rungs (A-T vs G-C)
+        const rungTypes = [];
+        for (let i = 0; i < NUM_RUNGS; i++) {
+            rungTypes.push({
+                isAT: i % 2 === 0
+            });
+        }
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            width = rect.width;
+            height = rect.height;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 3D Point Projection Helper
+        function project3D(x, y, z) {
+            const cosX = Math.cos(rotX);
+            const sinX = Math.sin(rotX);
+            const y1 = y * cosX - z * sinX;
+            const z1 = y * sinX + z * cosX;
+
+            const cosY = Math.cos(rotY);
+            const sinY = Math.sin(rotY);
+            const x2 = x * cosY + z1 * sinY;
+            const z2 = -x * sinY + z1 * cosY;
+
+            const scale = PERSPECTIVE / (PERSPECTIVE + z2 + 80);
+            const px = width / 2 + x2 * scale;
+            const py = height / 2 + y1 * scale;
+
+            return { x: px, y: py, z: z2, scale: scale };
+        }
+
+        let animationFrameId = null;
+
+        function renderDna() {
+            ctx.clearRect(0, 0, width, height);
+
+            if (!isDragging) {
+                targetRotY += baseSpeed;
+            }
+            rotY += (targetRotY - rotY) * 0.1;
+            rotX += (targetRotX - rotX) * 0.1;
+
+            // Draw Subtle Ambient Floating Particles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                p.y += p.vy;
+                p.pulse += 0.035;
+                if (p.y < -STRAND_HEIGHT_SPAN / 2 - 20) {
+                    p.y = STRAND_HEIGHT_SPAN / 2 + 20;
+                    p.x = (Math.random() - 0.5) * 200;
+                }
+
+                const proj = project3D(p.x, p.y, p.z);
+                const currentAlpha = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0.08, Math.min(0.75, currentAlpha));
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Calculate 3D coordinates for all rungs and nodes
+            const renderItems = [];
+
+            for (let i = 0; i < NUM_RUNGS; i++) {
+                const progress = (i / (NUM_RUNGS - 1)) - 0.5; // -0.5 to 0.5
+                const y = progress * STRAND_HEIGHT_SPAN;
+                const angle = progress * Math.PI * 4.2; // double helix twist
+
+                const x1 = Math.sin(angle) * STRAND_RADIUS;
+                const z1 = Math.cos(angle) * STRAND_RADIUS;
+
+                const x2 = -x1;
+                const z2 = -z1;
+
+                const p1 = project3D(x1, y, z1);
+                const p2 = project3D(x2, y, z2);
+
+                const avgZ = (p1.z + p2.z) / 2;
+                const rungType = rungTypes[i];
+
+                renderItems.push({
+                    type: 'rung',
+                    z: avgZ,
+                    p1: p1,
+                    p2: p2,
+                    rungType: rungType
+                });
+
+                renderItems.push({
+                    type: 'node1',
+                    z: p1.z,
+                    p: p1,
+                    color: '#0284c7' // Cyan / Sky Blue
+                });
+
+                renderItems.push({
+                    type: 'node2',
+                    z: p2.z,
+                    p: p2,
+                    color: '#4f46e5' // Indigo / Royal Blue
+                });
+            }
+
+            // Depth Sort for authentic 3D occlusion
+            renderItems.sort((a, b) => b.z - a.z);
+
+            // Draw Double-Helix Rungs & Nodes
+            for (let k = 0; k < renderItems.length; k++) {
+                const item = renderItems[k];
+
+                if (item.type === 'rung') {
+                    const p1 = item.p1;
+                    const p2 = item.p2;
+
+                    // Gradient for Rung
+                    const grad = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+                    if (item.rungType.isAT) {
+                        grad.addColorStop(0, '#0284c7');
+                        grad.addColorStop(0.5, '#38bdf8');
+                        grad.addColorStop(1, '#f59e0b');
+                    } else {
+                        grad.addColorStop(0, '#4f46e5');
+                        grad.addColorStop(0.5, '#818cf8');
+                        grad.addColorStop(1, '#0d9488');
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = grad;
+                    ctx.lineWidth = Math.max(1.4, 3.0 * ((p1.scale + p2.scale) / 2));
+                    ctx.globalAlpha = Math.min(1, 0.45 + (1 - (item.z + 80) / 180) * 0.55);
+                    ctx.stroke();
+
+                    // Center connecting bead
+                    const midX = (p1.x + p2.x) / 2;
+                    const midY = (p1.y + p2.y) / 2;
+                    const midScale = (p1.scale + p2.scale) / 2;
+
+                    ctx.beginPath();
+                    ctx.arc(midX, midY, 2.2 * midScale, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = 5 * midScale;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.globalAlpha = 1.0;
+
+                } else if (item.type === 'node1' || item.type === 'node2') {
+                    const p = item.p;
+                    const radius = 5.2 * p.scale;
+
+                    // Outer Glow
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = item.color;
+                    ctx.shadowColor = item.color;
+                    ctx.shadowBlur = 10 * p.scale;
+                    ctx.fill();
+
+                    // Inner highlight
+                    ctx.beginPath();
+                    ctx.arc(p.x - radius * 0.26, p.y - radius * 0.26, radius * 0.42, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(renderDna);
+        }
+
+        renderDna();
+
+        // Interactive Pointer Drag Handling
+        canvas.addEventListener('pointerdown', function (e) {
+            isDragging = true;
+            startPointerX = e.clientX;
+            startPointerY = e.clientY;
+            prevRotY = targetRotY;
+            prevRotX = targetRotX;
+            canvas.setPointerCapture(e.pointerId);
+        });
+
+        canvas.addEventListener('pointermove', function (e) {
+            if (isDragging) {
+                const dx = e.clientX - startPointerX;
+                const dy = e.clientY - startPointerY;
+                targetRotY = prevRotY + dx * 0.015;
+                targetRotX = Math.max(-0.5, Math.min(0.5, prevRotX + dy * 0.008));
+            }
+        });
+
+        canvas.addEventListener('pointerup', function (e) {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('pointercancel', function (e) {
+            isDragging = false;
+        });
+
+        // Pause when tab is inactive
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            } else {
+                animationFrameId = requestAnimationFrame(renderDna);
+            }
+        });
+    })();
+</script>
+{% endblock %}

@@ -118,9 +118,9 @@ Open your browser and navigate to: **`http://127.0.0.1:5000`**
 
 | Portal | Email / Identifier | Password | Access URL |
 |---|---|---|---|
-| **System Administrator** | `admin@spherixclinic.com` | `Admin@123` | `/login/admin` or `/login` |
-| **Doctor Portal** | `doc@spherixclinic.com` | `Doc@123` | `/login/doctor` |
-| **Staff (Reception)** | `staff@spherixclinic.com` | `Staff@123` | `/login/staff` |
+| **System Administrator (Dr. Sunny Kushwaha)** | `admin@spherixclinic.com` | `Admin@123` | `/admin/login` or `/doctor/login` |
+| **Hospital Facility (SMCH)** | `hospital@spherixclinic.com` | `hospital123` | `/hospital/login` |
+| **Staff (Reception)** | `staff@spherixclinic.com` | `Staff@123` | `/staff/login` |
 | **Patient Portal** | *(Register instant account)* | *(Self-set)* | `/patient/login` |
 
 ---

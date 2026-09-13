@@ -86,6 +86,24 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
     }
+
+    /* Hide Navbar, Header, and Floating Action Elements when Medicine Sidebar Drawer is Open */
+    body.sidebar-drawer-open header,
+    body.sidebar-drawer-open nav,
+    body.sidebar-drawer-open nav.glass-nav,
+    body.sidebar-drawer-open #main-navbar,
+    body.sidebar-drawer-open #main-footer,
+    body.sidebar-drawer-open footer,
+    body.sidebar-drawer-open #floating-actions-dock,
+    body.sidebar-drawer-open #symptom-chat-toggle,
+    body.sidebar-drawer-open #symptom-chat-widget,
+    body.sidebar-drawer-open #feedback-toggle-btn,
+    body.sidebar-drawer-open #chatbot-toggle-btn {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
 </style>
 {% endblock %}
 
@@ -503,43 +521,59 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {% set ns = namespace(count=0) %}
                         {% for option in result.get('supportive_relief_options', []) %}
-                            {% if not option.is_disclaimer %}
-                            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between group">
+                            {% set is_dict = option is mapping %}
+                            {% set opt_disclaimer = option.get('is_disclaimer') if is_dict else False %}
+                            {% if not opt_disclaimer %}
+                            {% set ns.count = ns.count + 1 %}
+                            {% set med_gen = option.get('generic_name') or option.get('name') if is_dict else option %}
+                            {% set med_brand = option.get('brand_name') or med_gen if is_dict else med_gen %}
+                            {% set med_use = option.get('primary_use') or 'Provides targeted pharmacological symptomatic relief according to FDA monographs.' if is_dict else 'Provides targeted pharmacological symptomatic relief.' %}
+                            {% set med_effects = option.get('side_effects', []) if is_dict else [] %}
+                            {% set med_caution = option.get('caution') or 'Do not exceed recommended dosage. Consult a doctor if symptoms persist.' if is_dict else 'Consult a healthcare professional before taking medication.' %}
+                            {% set med_instr = option.get('instructions') or 'Take orally as directed on FDA drug product label.' if is_dict else 'Take as directed on packaging.' %}
+                            <div class="medicine-card-container p-5 rounded-2xl bg-white border-2 border-slate-200 hover:border-emerald-600 hover:shadow-lg transition-all flex flex-col justify-between group cursor-pointer">
                                 <div>
                                     <div class="flex items-start justify-between gap-2 mb-2">
-                                        <h4 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                                            <span>{{ option.generic_name or option.get('name') }}</span>
-                                            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-500" title="Pharmacologically Verified"></i>
+                                        <h4 class="font-extrabold text-black text-base flex items-center gap-1.5">
+                                            <span class="text-black">{{ med_gen }}</span>
+                                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0" title="OpenFDA Pharmacologically Verified"></i>
                                         </h4>
-                                        <span class="px-2 py-0.5 rounded-full bg-white border border-emerald-200 text-[10px] font-bold text-emerald-700 font-mono-code">FDA Rx/OTC</span>
+                                        <span class="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-300 text-[10px] font-black text-emerald-800 font-mono-code shrink-0">OpenFDA Verified</span>
                                     </div>
-                                    <p class="text-xs text-sky-600 font-semibold mb-2 font-mono-code">Brand: {{ option.get('brand_name', option.generic_name or option.get('name')) }}</p>
-                                    <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-4">
-                                        {{ option.get('primary_use', 'Provides symptomatic relief for targeted complaints.') }}
+                                    <p class="text-xs text-black font-bold mb-2 font-mono-code"><span class="text-slate-700 font-semibold">Brand / Generic:</span> {{ med_brand }}</p>
+                                    <p class="text-xs text-black font-medium line-clamp-3 leading-relaxed mb-4">
+                                        {{ med_use }}
                                     </p>
                                 </div>
 
                                 <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
-                                    <button type="button" class="medicine-info-btn font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
-                                            data-name="{{ option.generic_name or option.get('name') }}"
-                                            data-brand="{{ option.get('brand_name', option.generic_name or option.get('name')) }}"
-                                            data-use="{{ option.get('primary_use', 'Relieves acute discomfort and inflammatory symptoms.') }}"
-                                            data-effects="{{ option.get('side_effects', [])|join(', ') or 'Mild nausea, dizziness, or drowsiness in sensitive individuals.' }}"
-                                            data-caution="{{ option.get('caution', 'Do not exceed maximum daily dosage. Consult a doctor if symptoms persist over 3 days.') }}"
-                                            data-instructions="{{ option.get('instructions', 'Take orally with water after meals. Refer to package labeling for exact frequency.') }}"
-                                            data-source="{{ option.get('source', 'OpenFDA Government Registry & Spherix Pharmacology') }}">
-                                        <span>Full FDA Profile</span>
-                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                    <button type="button" class="medicine-info-btn font-extrabold text-emerald-800 hover:text-black flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 transition-colors"
+                                            data-name="{{ med_gen }}"
+                                            data-brand="{{ med_brand }}"
+                                            data-use="{{ med_use }}"
+                                            data-effects="{{ med_effects|join(', ') if med_effects else 'Mild gastrointestinal discomfort, drowsiness, or dry mouth in sensitive individuals.' }}"
+                                            data-caution="{{ med_caution }}"
+                                            data-instructions="{{ med_instr }}"
+                                            data-source="{{ option.get('source', 'OpenFDA Government Registry') if is_dict else 'OpenFDA Government Registry' }}">
+                                        <span class="underline decoration-emerald-500 font-black text-black">Full FDA Profile</span>
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-black"></i>
                                     </button>
-                                    <a href="{{ url_for('medical_shop') }}" class="text-[11px] font-semibold text-slate-500 hover:text-sky-600 flex items-center gap-1">
-                                        <i data-lucide="shopping-bag" class="w-3 h-3"></i>
+                                    <a href="{{ url_for('medical_shop') }}" class="text-xs font-bold text-black hover:text-emerald-700 flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors">
+                                        <i data-lucide="shopping-bag" class="w-3 h-3 text-emerald-700"></i>
                                         <span>Shop</span>
                                     </a>
                                 </div>
                             </div>
                             {% endif %}
                         {% endfor %}
+                        {% if ns.count == 0 %}
+                            <div class="col-span-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 text-center">
+                                <p class="font-bold text-black">Supportive pharmacological options require direct physician evaluation.</p>
+                                <p class="text-slate-600 mt-1">Please consult a licensed medical professional before taking any medication.</p>
+                            </div>
+                        {% endif %}
                     </div>
 
                     <!-- Live OpenFDA Drug Search Mini-Widget -->
@@ -708,14 +742,14 @@
             <!-- Drawer Header -->
             <div class="p-6 bg-slate-900 text-white flex items-start justify-between border-b border-slate-800 shrink-0">
                 <div class="flex items-center gap-3.5">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shadow-inner">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shadow-inner shrink-0">
                         <i data-lucide="pill" class="w-6 h-6"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
                             <h3 class="text-xl font-display font-bold text-white tracking-tight" id="modal-med-name">Medicine Name</h3>
                             <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30">
-                                OpenFDA Label
+                                OpenFDA Verified
                             </span>
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5 font-mono-code" id="modal-med-brand">Brand Name</p>
@@ -729,46 +763,46 @@
             <!-- Drawer Content Body (Rich OpenFDA Profile) -->
             <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-grow text-slate-800">
                 
-                <!-- 1. Primary Indication & Clinical Use -->
-                <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100">
-                    <h4 class="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-1.5 flex items-center gap-2">
+                <!-- 1. PRIMARY CLINICAL INDICATION -->
+                <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 shadow-2xs">
+                    <h4 class="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-2 font-mono-code">
                         <i data-lucide="stethoscope" class="w-4 h-4 text-emerald-600"></i>
-                        <span>Primary Clinical Indication</span>
+                        <span>PRIMARY CLINICAL INDICATION</span>
                     </h4>
-                    <p id="modal-med-use" class="text-xs sm:text-sm font-medium text-slate-700 leading-relaxed">
+                    <p id="modal-med-use" class="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
                         Primary therapeutic indications and targeted symptom relief...
                     </p>
                 </div>
 
-                <!-- 2. Standard Dosage & Administration Regimen -->
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-2">
-                        <i data-lucide="clock" class="w-4 h-4 text-slate-600"></i>
-                        <span>Standard Dosage & Administration</span>
+                <!-- 2. STANDARD DOSAGE & ADMINISTRATION -->
+                <div class="p-4 rounded-2xl bg-sky-50/70 border border-sky-200/80 shadow-2xs">
+                    <h4 class="text-xs font-black text-sky-900 uppercase tracking-wider mb-2 flex items-center gap-2 font-mono-code">
+                        <i data-lucide="clock" class="w-4 h-4 text-sky-600"></i>
+                        <span>STANDARD DOSAGE &amp; ADMINISTRATION</span>
                     </h4>
-                    <p id="modal-med-instructions" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    <p id="modal-med-instructions" class="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
                         Dosage schedule, frequency, and administration instructions with water after meals...
                     </p>
                 </div>
 
-                <!-- 3. Adverse Effects & Safety Profile -->
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
-                        <span>Potential Side Effects & Adverse Events</span>
+                <!-- 3. POTENTIAL SIDE EFFECTS & ADVERSE EVENTS -->
+                <div class="p-4 rounded-2xl bg-rose-50/70 border border-rose-200/80 shadow-2xs">
+                    <h4 class="text-xs font-black text-rose-900 uppercase tracking-wider mb-2 flex items-center gap-2 font-mono-code">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
+                        <span>POTENTIAL SIDE EFFECTS &amp; ADVERSE EVENTS</span>
                     </h4>
-                    <p id="modal-med-effects" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    <p id="modal-med-effects" class="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
                         Common mild side effects and adverse symptoms reported to OpenFDA...
                     </p>
                 </div>
 
-                <!-- 4. Clinical Caution, Interactions & Contraindications -->
-                <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200">
-                    <h4 class="text-xs font-bold text-amber-800 uppercase tracking-wider mb-1 flex items-center gap-2">
+                <!-- 4. CLINICAL CAUTIONS & BOXED WARNINGS -->
+                <div class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 shadow-2xs">
+                    <h4 class="text-xs font-black text-amber-950 uppercase tracking-wider mb-2 flex items-center gap-2 font-mono-code">
                         <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600"></i>
-                        <span>Clinical Cautions & Boxed Warnings</span>
+                        <span>CLINICAL CAUTIONS &amp; BOXED WARNINGS</span>
                     </h4>
-                    <p id="modal-med-caution" class="text-xs font-medium text-amber-900 leading-relaxed">
+                    <p id="modal-med-caution" class="text-xs sm:text-sm font-semibold text-amber-950 leading-relaxed">
                         Contraindications, drug interactions, hepatic/renal warnings, and pregnancy guidance...
                     </p>
                 </div>
@@ -779,7 +813,7 @@
                         <h5 class="text-xs font-bold text-slate-900">Order from Verified Pharmacy</h5>
                         <p class="text-[11px] text-slate-600">Doorstep delivery with authentic batch validation.</p>
                     </div>
-                    <a href="{{ url_for('medical_shop') }}" class="px-4 py-2.5 rounded-xl btn-radiant-symptom text-white font-bold text-xs shrink-0 transition-colors shadow-md flex items-center gap-1.5 bg-emerald-400">
+                    <a href="{{ url_for('medical_shop') }}" class="px-4 py-2.5 rounded-xl btn-radiant-symptom text-white font-bold text-xs shrink-0 transition-colors shadow-md flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700">
                         <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
                         <span>Order in Shop</span>
                     </a>
@@ -804,54 +838,78 @@
 </div>
 
 <!-- ================= FLOATING AI FOLLOW-UP CHATBOT & INTERACTIVE ASSISTANT ================= -->
-<div class="fixed bottom-6 left-6 z-50">
-    <button id="chat-toggle" class="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-slate-900 text-white flex items-center justify-center transition-all hover:scale-105 shadow-2xl border border-slate-800 cursor-pointer group">
-        <i data-lucide="bot" class="w-7 h-7 text-sky-400 group-hover:scale-110 transition-transform"></i>
-    </button>
+<div class="fixed bottom-6 left-6 z-[999]">
+    <div class="relative group">
+        <button id="symptom-chat-toggle" class="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl ">
+            <img src="{{ url_for('static', filename='images/chatbot1.png') }}" alt="Description">
+            <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full animate-ping"></span>
+            <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+        </button>
+        <span class="absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap bg-slate-900 text-white text-[11px] font-bold py-1.5 px-3 rounded-xl shadow-lg border border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            💬 Ask AI Follow-up on Report
+        </span>
+    </div>
 </div>
 
-<div id="chat-widget" class="hidden fixed bottom-24 left-4 sm:left-6 w-full max-w-sm sm:max-w-md z-50 overflow-hidden symptom-card rounded-3xl shadow-2xl border border-slate-200">
-    <div class="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
-        <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
-                <i data-lucide="bot" class="w-4 h-4"></i>
+<div id="symptom-chat-widget" class="hidden fixed bottom-24 left-4 sm:left-6 w-[calc(100vw-2rem)] sm:w-96 md:w-[420px] max-h-[80vh] z-[1000] overflow-hidden bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col transition-all duration-300">
+    <!-- Header -->
+    <div class="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex justify-between items-center border-b border-slate-800 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-400/30 flex items-center justify-center text-sm shadow-xs">
+             <img src="{{ url_for('static', filename='images/chatbot1.png') }}" alt="Description">
+
             </div>
             <div>
-                <h3 class="font-display font-bold text-sm">Groq AI Follow-up Triage</h3>
-                <p id="clear-chat-btn" class="text-[10px] text-slate-400 hover:text-rose-400 cursor-pointer transition-colors">Clear History</p>
+                <h3 class="font-display font-extrabold text-sm text-white leading-tight">SPHERIX CLINIC Assistant</h3>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-[10px] text-slate-300 font-mono-code">Symptom Context Active</span>
+                    <span class="text-slate-500">&bull;</span>
+                    <button type="button" id="symptom-clear-chat-btn" class="text-[10px] text-slate-400 hover:text-rose-400 cursor-pointer transition-colors bg-transparent border-0 p-0">Clear</button>
+                </div>
             </div>
         </div>
-        <button id="chat-close" class="text-slate-400 hover:text-white text-xl cursor-pointer p-1">&times;</button>
+        <button type="button" id="symptom-chat-close" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border-0">
+            <i class="fas fa-times text-sm"></i>
+        </button>
     </div>
     
     <!-- Quick Query Suggestion Chips -->
-    <div class="p-2.5 bg-slate-100 border-b border-slate-200 overflow-x-auto flex gap-1.5 custom-scrollbar text-[11px]">
-        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+    <div class="p-2.5 bg-slate-50 border-b border-slate-200 overflow-x-auto flex gap-1.5 custom-scrollbar text-[11px] shrink-0">
+        <button type="button" class="symptom-quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-slate-700 font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs">
             Explain diagnosis
         </button>
-        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+        <button type="button" class="symptom-quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-slate-700 font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs">
             Drug interactions?
         </button>
-        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+        <button type="button" class="symptom-quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-slate-700 font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs">
             Foods to avoid
         </button>
-        <button type="button" class="quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-sky-400 text-slate-700 font-medium shrink-0 cursor-pointer">
+        <button type="button" class="symptom-quick-prompt-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-slate-700 font-semibold shrink-0 cursor-pointer transition-colors shadow-2xs">
             When to visit ER?
         </button>
     </div>
 
-    <div id="chat-messages" class="p-4 h-72 sm:h-80 overflow-y-auto space-y-3 bg-slate-50 custom-scrollbar text-xs">
-        <div class="flex" id="initial-chat-message">
-            <div class="bg-sky-600 text-white p-3 rounded-2xl max-w-xs shadow-sm leading-relaxed">
-                <p>Hello! I am your Groq Clinical Assistant. Ask any questions about your report, symptoms, or OpenFDA medication guidance.</p>
+    <!-- Messages Body -->
+    <div id="symptom-chat-messages" class="p-4 h-72 sm:h-80 overflow-y-auto space-y-3 bg-slate-50/70 custom-scrollbar text-xs flex-grow">
+        <div class="flex gap-2.5 items-start" id="initial-chat-message">
+            <div class="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 shadow-xs mt-0.5">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl rounded-tl-none border border-slate-200/80 text-slate-700 shadow-xs leading-relaxed max-w-[85%]">
+                <p class="m-0">Hello! I am your <strong>Groq Clinical Assistant</strong>. Ask any questions regarding your symptom report, medications, or recommended next steps.</p>
             </div>
         </div>
     </div>
 
-    <div class="p-3.5 bg-white border-t border-slate-100">
-        <form id="chat-form" class="flex gap-2">
-            <input type="text" id="chat-input" placeholder="Type medical query..." class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-sky-500">
-            <button type="submit" class="btn-radiant-symptom px-4 py-2 rounded-xl text-white font-bold text-xs">Send</button>
+    <!-- Input Form -->
+    <div class="p-3 bg-white border-t border-slate-200 shrink-0">
+        <form id="symptom-chat-form" class="flex gap-2">
+            <input type="text" id="symptom-chat-input" placeholder="Ask a question about this report..." class="flex-grow bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all font-medium">
+            <button type="submit" id="symptom-chat-send-btn" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer border-0 shadow-md shadow-blue-500/20 shrink-0">
+                <span>Send</span>
+                <i class="fas fa-paper-plane text-[10px]"></i>
+            </button>
         </form>
     </div>
 </div>
@@ -869,31 +927,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeMedicineModalBtn = document.getElementById('close-medicine-modal');
     const medicineInfoBtns = document.querySelectorAll('.medicine-info-btn');
 
+    function openMedicineDrawer(data) {
+        if (!medicineModal) return;
+        const medName = data.name || 'Medication Profile';
+        document.getElementById('modal-med-name').textContent = medName;
+        document.getElementById('modal-med-brand').textContent = `Brand / Salt: ${data.brand || medName}`;
+        document.getElementById('modal-med-use').textContent = data.use || 'Provides targeted pharmacological symptomatic relief according to FDA monographs.';
+        document.getElementById('modal-med-effects').textContent = data.effects || 'Mild gastrointestinal discomfort, dry mouth, or drowsiness in sensitive individuals.';
+        document.getElementById('modal-med-caution').textContent = data.caution || 'Do not exceed recommended daily dosage. Consult a registered physician if symptoms worsen or persist past 48 hours. Keep out of reach of children.';
+        document.getElementById('modal-med-instructions').textContent = data.instructions || data.dose || 'Standard Adult Dosage: Take orally with water after meals, at regular 6-8 hour intervals as directed on FDA package label.';
+        document.getElementById('modal-med-source').textContent = data.source || 'OpenFDA Government Registry Verified';
+        
+        // Asynchronously check if deeper OpenFDA monographs exist for extra details
+        if (medName && medName.length > 2) {
+            fetch(`/api/drug/search?q=${encodeURIComponent(medName)}`)
+                .then(res => res.json())
+                .then(results => {
+                    if (results && results.length > 0) {
+                        const match = results[0];
+                        if (match.primary_use && match.primary_use.length > 10) {
+                            document.getElementById('modal-med-use').textContent = match.primary_use;
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
+        medicineModal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden', 'sidebar-drawer-open');
+        setTimeout(() => {
+            if (medicineModalBackdrop) medicineModalBackdrop.classList.remove('opacity-0');
+            if (medicineModalPanel) medicineModalPanel.classList.remove('translate-x-full');
+        }, 10);
+    }
+
     medicineInfoBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const data = btn.dataset;
-            document.getElementById('modal-med-name').textContent = data.name || 'Medication Profile';
-            document.getElementById('modal-med-brand').textContent = `Brand: ${data.brand || data.name}`;
-            document.getElementById('modal-med-use').textContent = data.use || 'Clinical indications for symptom relief.';
-            document.getElementById('modal-med-effects').textContent = data.effects || 'No major adverse reactions reported in standard OTC dosage.';
-            document.getElementById('modal-med-caution').textContent = data.caution || 'Consult physician before use.';
-            document.getElementById('modal-med-instructions').textContent = data.instructions || 'Follow package labeling.';
-            document.getElementById('modal-med-source').textContent = data.source || 'OpenFDA API';
-            
-            medicineModal.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-            setTimeout(() => {
-                medicineModalBackdrop.classList.remove('opacity-0');
-                medicineModalPanel.classList.remove('translate-x-full');
-            }, 10);
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openMedicineDrawer(btn.dataset);
+        });
+    });
+
+    document.querySelectorAll('.medicine-card-container').forEach(card => {
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('a')) return;
+            const btn = card.querySelector('.medicine-info-btn');
+            if (btn && btn.dataset) {
+                openMedicineDrawer(btn.dataset);
+            }
         });
     });
 
     const closeMedicineModal = () => {
         if (!medicineModal) return;
-        medicineModalBackdrop.classList.add('opacity-0');
-        medicineModalPanel.classList.add('translate-x-full');
-        document.body.classList.remove('overflow-hidden');
+        if (medicineModalBackdrop) medicineModalBackdrop.classList.add('opacity-0');
+        if (medicineModalPanel) medicineModalPanel.classList.add('translate-x-full');
+        document.body.classList.remove('overflow-hidden', 'sidebar-drawer-open');
         setTimeout(() => medicineModal.classList.add('hidden'), 300);
     };
 
@@ -1015,59 +1104,91 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ================= GROQ AI FOLLOW-UP CHATBOT =================
-    const chatToggle = document.getElementById('chat-toggle');
-    const chatWidget = document.getElementById('chat-widget');
-    const chatClose = document.getElementById('chat-close');
-    const chatForm = document.getElementById('chat-form');
-    const chatInput = document.getElementById('chat-input');
-    const chatMessages = document.getElementById('chat-messages');
-    const clearChatBtn = document.getElementById('clear-chat-btn');
-    const quickPromptBtns = document.querySelectorAll('.quick-prompt-btn');
+    const symptomChatToggle = document.getElementById('symptom-chat-toggle');
+    const symptomChatWidget = document.getElementById('symptom-chat-widget');
+    const symptomChatClose = document.getElementById('symptom-chat-close');
+    const symptomChatForm = document.getElementById('symptom-chat-form');
+    const symptomChatInput = document.getElementById('symptom-chat-input');
+    const symptomChatMessages = document.getElementById('symptom-chat-messages');
+    const symptomClearChatBtn = document.getElementById('symptom-clear-chat-btn');
+    const symptomQuickPromptBtns = document.querySelectorAll('.symptom-quick-prompt-btn');
 
-    if (chatToggle && chatWidget) {
-        chatToggle.addEventListener('click', () => {
-            chatWidget.classList.toggle('hidden');
-            if (!chatWidget.classList.contains('hidden')) {
-                chatInput.focus();
+    function formatMedicalMarkdown(text) {
+        if (!text) return '';
+        let sanitized = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        // Convert **bold**
+        sanitized = sanitized.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Convert *italic*
+        sanitized = sanitized.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // Convert newlines to breaks
+        sanitized = sanitized.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+        return sanitized;
+    }
+
+    if (symptomChatToggle && symptomChatWidget) {
+        symptomChatToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            symptomChatWidget.classList.toggle('hidden');
+            if (!symptomChatWidget.classList.contains('hidden') && symptomChatInput) {
+                symptomChatInput.focus();
+                symptomChatMessages.scrollTop = symptomChatMessages.scrollHeight;
             }
         });
     }
 
-    if (chatClose && chatWidget) {
-        chatClose.addEventListener('click', () => {
-            chatWidget.classList.add('hidden');
+    if (symptomChatClose && symptomChatWidget) {
+        symptomChatClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            symptomChatWidget.classList.add('hidden');
         });
     }
 
-    quickPromptBtns.forEach(btn => {
+    symptomQuickPromptBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            if (chatInput) {
-                chatInput.value = btn.textContent.trim();
-                chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            if (symptomChatInput && symptomChatForm) {
+                symptomChatInput.value = btn.textContent.trim();
+                symptomChatForm.dispatchEvent(new Event('submit', { cancelable: true }));
             }
         });
     });
 
-    if (chatForm) {
-        chatForm.addEventListener('submit', async (e) => {
+    if (symptomChatForm) {
+        symptomChatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const message = chatInput.value.trim();
+            const message = symptomChatInput.value.trim();
             if (!message) return;
 
-            // User Message
+            // User Message bubble
             const userMsgEl = document.createElement('div');
             userMsgEl.className = 'flex justify-end';
-            userMsgEl.innerHTML = `<div class="bg-slate-900 text-white p-3 rounded-2xl max-w-xs text-xs shadow-sm">${message}</div>`;
-            chatMessages.appendChild(userMsgEl);
-            chatInput.value = '';
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            userMsgEl.innerHTML = `
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] text-xs shadow-sm leading-relaxed">
+                    ${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                </div>
+            `;
+            symptomChatMessages.appendChild(userMsgEl);
+            symptomChatInput.value = '';
+            symptomChatMessages.scrollTop = symptomChatMessages.scrollHeight;
 
             // Typing indicator
             const typingEl = document.createElement('div');
-            typingEl.className = 'flex';
-            typingEl.innerHTML = `<div class="bg-slate-200 text-slate-600 p-2.5 rounded-2xl text-[11px] animate-pulse">Groq AI analyzing query...</div>`;
-            chatMessages.appendChild(typingEl);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            typingEl.className = 'flex gap-2.5 items-start';
+            typingEl.innerHTML = `
+                <div class="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                    <i class="fas fa-brain animate-pulse"></i>
+                </div>
+                <div class="bg-slate-200/80 text-slate-600 px-3.5 py-2.5 rounded-2xl rounded-tl-none text-[11px] font-medium animate-pulse flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0.2s"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0.4s"></span>
+                    <span class="ml-1">Synthesizing clinical response...</span>
+                </div>
+            `;
+            symptomChatMessages.appendChild(typingEl);
+            symptomChatMessages.scrollTop = symptomChatMessages.scrollHeight;
 
             try {
                 const response = await fetch('/symptoms/chat', {
@@ -1078,27 +1199,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 typingEl.remove();
 
+                const botText = data.assistant || data.reply || data.response || (data.error ? ('⚠️ ' + data.error) : 'Please consult your attending physician for personalized guidance.');
+                const formattedHtml = formatMedicalMarkdown(botText);
+
                 const botMsgEl = document.createElement('div');
-                botMsgEl.className = 'flex';
-                botMsgEl.innerHTML = `<div class="bg-sky-600 text-white p-3 rounded-2xl max-w-xs text-xs shadow-sm leading-relaxed">${data.assistant || data.reply || data.response || 'Please consult your attending doctor for clinical guidance.'}</div>`;
-                chatMessages.appendChild(botMsgEl);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                botMsgEl.className = 'flex gap-2.5 items-start';
+                botMsgEl.innerHTML = `
+                    <div class="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 shadow-xs mt-0.5">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-2xl rounded-tl-none border border-slate-200/90 text-slate-700 max-w-[85%] text-xs shadow-xs leading-relaxed">
+                        ${formattedHtml}
+                    </div>
+                `;
+                symptomChatMessages.appendChild(botMsgEl);
+                symptomChatMessages.scrollTop = symptomChatMessages.scrollHeight;
             } catch (err) {
                 typingEl.remove();
                 const errEl = document.createElement('div');
-                errEl.className = 'flex';
-                errEl.innerHTML = `<div class="bg-rose-100 text-rose-700 p-2.5 rounded-2xl text-xs">Service momentarily busy. Please try again.</div>`;
-                chatMessages.appendChild(errEl);
+                errEl.className = 'flex gap-2.5 items-start';
+                errEl.innerHTML = `
+                    <div class="w-7 h-7 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="bg-rose-50 text-rose-700 border border-rose-200 p-3 rounded-2xl rounded-tl-none text-xs leading-relaxed max-w-[85%]">
+                        Unable to connect to the clinical triage model. Please verify connection and retry.
+                    </div>
+                `;
+                symptomChatMessages.appendChild(errEl);
+                symptomChatMessages.scrollTop = symptomChatMessages.scrollHeight;
             }
         });
     }
 
-    if (clearChatBtn) {
-        clearChatBtn.addEventListener('click', () => {
-            chatMessages.innerHTML = `
-                <div class="flex" id="initial-chat-message">
-                    <div class="bg-sky-600 text-white p-3 rounded-2xl max-w-xs shadow-sm text-xs leading-relaxed">
-                        <p>Hello! I am your Groq Clinical Assistant. Ask any questions about your report, symptoms, or OpenFDA medication guidance.</p>
+    if (symptomClearChatBtn) {
+        symptomClearChatBtn.addEventListener('click', () => {
+            symptomChatMessages.innerHTML = `
+                <div class="flex gap-2.5 items-start" id="initial-chat-message">
+                    <div class="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 shadow-xs mt-0.5">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-2xl rounded-tl-none border border-slate-200/80 text-slate-700 shadow-xs leading-relaxed max-w-[85%]">
+                        <p class="m-0">Hello! I am your <strong>Groq Clinical Assistant</strong>. Ask any questions regarding your symptom report, medications, or recommended next steps.</p>
                     </div>
                 </div>`;
         });

@@ -1,300 +1,383 @@
 {% extends 'layout.html' %}
 
-{% block title %}AI Symptoms Analyzer - Step 1: Your Profile{% endblock %}
+{% block title %}AI Symptoms Analyzer - Step 1: Patient Profile | Spherix Clinic{% endblock %}
 
 {% block head %}
-<!-- Premium Typography -->
-<link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Premium Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
-    /* Neumorphism Style */
-    :root {
-        --neumorph-bg: #0264ee;
-        --primary-color: #0891b2;
-        /* A nice cyan for accents */
-        --text-color: #556270;
-        --shadow-light: #d80000;
-        --shadow-dark: #0066ff;
-    }
-
     body {
-        background-color: var(--neumorph-bg);
+        background-color: #f8fafc;
         font-family: 'Plus Jakarta Sans', sans-serif;
-        color: var(--text-color);
-        overflow-x: hidden;
+        color: #0f172a;
     }
 
-    /* Neumorphism Card Style */
-    .premium-card {
-        background: var(--neumorph-bg);
-        border-radius: 40px;
-        box-shadow: 20px 20px 60px var(--shadow-dark), -20px -20px 60px var(--shadow-light);
+    .font-display { font-family: 'Outfit', sans-serif; }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ultra-clean white glass styling */
+    .white-glass-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Custom Input Styling */
-    .input-group input,
-    .input-group select,
-    .input-group textarea {
-        background: var(--neumorph-bg);
-        border: none;
-        border-radius: 20px;
-        box-shadow: inset 8px 8px 15px var(--shadow-dark), inset -8px -8px 15px var(--shadow-light);
-        color: var(--text-color);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    .white-glass-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 6px 16px -2px rgba(15, 23, 42, 0.04);
     }
 
-    .input-group input:focus,
-    .input-group select:focus {
-        box-shadow: inset 6px 6px 10px var(--shadow-dark), inset -6px -6px 10px var(--shadow-light);
+    /* Ambient Subtle Background Grid */
+    .hero-mesh-bg {
+        background-color: #ffffff;
+        background-image: 
+            radial-gradient(circle at 15% 20%, rgba(224, 242, 254, 0.7) 0%, transparent 45%),
+            radial-gradient(circle at 85% 15%, rgba(238, 242, 255, 0.7) 0%, transparent 40%),
+            radial-gradient(circle at 50% 80%, rgba(240, 253, 250, 0.6) 0%, transparent 50%),
+            linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Form control polish */
+    .input-field {
+        background-color: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        color: #0f172a;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .input-field:focus {
+        background-color: #ffffff;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
         outline: none;
     }
 
-    /* Progress Bar */
-    .progress-container {
-        height: 4px;
-        background: var(--shadow-dark);
-        border-radius: 10px;
-        overflow: hidden;
+    .input-field:hover:not(:focus) {
+        border-color: #cbd5e1;
+        background-color: #ffffff;
     }
 
-    .progress-bar {
-        width: 50%;
-        height: 100%;
-        background: var(--primary-color);
+    /* Step indicator animated pulse */
+    .pulse-dot {
+        animation: pulseScale 2s infinite ease-in-out;
     }
 
-    .btn-neumorph {
-        background: var(--neumorph-bg);
-        box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
-        transition: all 0.3s ease;
-    }
-
-    .btn-neumorph:hover {
-        box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-    }
-
-    .btn-neumorph:active {
-        box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
-    }
-
-    .mono-label {
-        font-family: 'JetBrains Mono', monospace;
-        letter-spacing: 0.1em;
+    @keyframes pulseScale {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.6; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="relative min-h-screen flex items-center justify-center p-6 lg:p-12 overflow-hidden ">
+<div class="hero-mesh-bg min-h-screen py-10 lg:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
 
-    <div class="w-full max-w-7xl relative z-10">
+    <!-- Decorative Top Background Accent -->
+    <div class="max-w-7xl mx-auto mb-8">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <a href="/" class="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors">
+                <i class="fas fa-arrow-left text-[11px]"></i>
+                <span>Back to Clinic Home</span>
+            </a>
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-xs">
+                <span class="w-2 h-2 rounded-full bg-blue-600 pulse-dot"></span>
+                <span>AI Clinical Triage System &bull; Active</span>
+            </div>
+        </div>
+    </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+    <div class="max-w-7xl mx-auto relative z-10">
 
-            <!-- LEFT: FORM SECTION -->
-            <div
-                class="lg:col-span-8 premium-card rounded-[2.5rem] p-8 md:p-14 relative overflow-hidden border border-amber-400 rounded-xl p-6 md:p-8 bg-white/50 shadow-lg add this types of border with shadow in all border">
-                <!-- Top Header -->
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-3 mb-2 text-slate-400">
-                            <span
-                                class="px-3 py-1 rounded-full bg-white/50 border border-slate-300 text-[10px] font-bold uppercase tracking-[0.2em] mono-label">Protocol
-                                01: Profiling</span>
-                            <span class="h-1 w-1 rounded-full bg-slate-300"></span>
-                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] mono-label">Step 1/2</span>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- LEFT: MAIN FORM CONTAINER -->
+            <div class="lg:col-span-8 white-glass-card rounded-[2rem] p-6 sm:p-10 lg:p-12">
+                
+                <!-- Stepper Progress Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-8 mb-8 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2.5 mb-2">
+                            <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 text-[11px] font-extrabold uppercase tracking-wider font-mono-code">
+                                Protocol 01
+                            </span>
+                            <span class="text-xs font-bold text-slate-400">&bull;</span>
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest font-mono-code">Step 1 of 2: Demographics</span>
                         </div>
-                        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-800">Initialize <span
-                                class="text-cyan-600">Health Core</span></h1>
+                        <h1 class="text-2xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+                            Initialize <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Health Profile</span>
+                        </h1>
+                        <p class="text-slate-500 text-xs sm:text-sm mt-1">
+                            Provide baseline physiological metrics to calibrate differential diagnostic algorithms.
+                        </p>
                     </div>
-                    <div class="w-full md:w-48">
-                        <div class="flex justify-between text-[10px] mono-label text-slate-500 mb-2 uppercase">
-                            <span>Analysis Readiness</span>
-                            <span>50%</span>
+
+                    <!-- Progress Bar Track -->
+                    <div class="w-full sm:w-52 shrink-0 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                        <div class="flex justify-between items-center text-[10px] font-extrabold font-mono-code text-slate-600 mb-2 uppercase tracking-wider">
+                            <span>Step Progress</span>
+                            <span class="text-blue-600">50% Complete</span>
                         </div>
-                        <div class="progress-container">
-                            <div class="progress-bar"></div>
+                        <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden p-0.5">
+                            <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-500" style="width: 50%;"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Flash Messages -->
+                <!-- Flash Messages Banner -->
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 {% for category, message in messages %}
-                <div
-                    class="mb-8 p-4 rounded-2xl bg-red-100 border border-red-200 text-red-700 text-sm flex items-center gap-3">
-                    <i class="fas fa-circle-exclamation"></i>
-                    {{ message }}
+                <div class="mb-8 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-3 shadow-xs">
+                    <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-circle-exclamation text-sm"></i>
+                    </div>
+                    <span>{{ message }}</span>
                 </div>
                 {% endfor %}
                 {% endif %}
                 {% endwith %}
 
-                <form method="POST" action="{{ url_for('symptoms') }}" class="space-y-8">
-                    <!-- Metrics Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="input-group group">
-                            <label
-                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1 mono-label">Patient
-                                Age</label>
+                <!-- Form -->
+                <form method="POST" action="{{ url_for('symptoms') }}" class="space-y-7">
+
+                    <!-- Age and Biological Sex -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Age Input -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-calendar-alt text-blue-500 text-xs"></i>
+                                <span>Patient Age <span class="text-rose-500">*</span></span>
+                            </label>
                             <div class="relative">
-                                <input type="number" name="age" required placeholder="Age"
-                                    class="w-full py-4 px-6 rounded-2xl text-lg border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors">
-                                <span
-                                    class="absolute right-14 top-1/2 -translate-y-1/2 text-slate-500 text-xs">YEARS</span>
+                                <input type="number" name="age" required min="1" max="120" placeholder="e.g. 34"
+                                    class="input-field w-full py-3.5 pl-4 pr-16 rounded-2xl text-sm font-semibold placeholder:text-slate-400 shadow-xs">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-extrabold font-mono-code text-slate-400 bg-slate-200/80 px-2 py-1 rounded-md">
+                                    YEARS
+                                </span>
                             </div>
                         </div>
 
-                        <div class="input-group group">
-                            <label
-                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1 mono-label">Biological
-                                Sex</label>
+                        <!-- Biological Sex Input -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-venus-mars text-indigo-500 text-xs"></i>
+                                <span>Biological Sex <span class="text-rose-500">*</span></span>
+                            </label>
                             <div class="relative">
                                 <select name="gender" required
-                                    class="w-full py-4 px-6 rounded-2xl text-lg appearance-none cursor-pointer border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors">
-                                    <option value="" disabled selected>Select</option>
+                                    class="input-field w-full py-3.5 pl-4 pr-10 rounded-2xl text-sm font-semibold appearance-none cursor-pointer shadow-xs">
+                                    <option value="" disabled selected>Select biological sex</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
-                                    <option value="Other">Other</option>
+                                    <option value="Other">Other / Non-binary</option>
                                 </select>
-                                <i
-                                    class="fas fa-chevron-down absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+                                <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                             </div>
                         </div>
+
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="input-group group">
-                            <label
-                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1 mono-label">Height</label>
+                    <!-- Height and Weight -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Height Input -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-ruler-vertical text-teal-500 text-xs"></i>
+                                <span>Height <span class="text-rose-500">*</span></span>
+                            </label>
                             <div class="relative">
-                                <input type="number" name="height" required placeholder="175"
-                                    class="w-full py-4 px-6 rounded-2xl text-lg border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors">
-                                <span
-                                    class="absolute right-14 top-1/2 -translate-y-1/2 text-slate-500 text-xs">CM</span>
+                                <input type="number" name="height" required min="30" max="250" placeholder="e.g. 175"
+                                    class="input-field w-full py-3.5 pl-4 pr-14 rounded-2xl text-sm font-semibold placeholder:text-slate-400 shadow-xs">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-extrabold font-mono-code text-slate-400 bg-slate-200/80 px-2 py-1 rounded-md">
+                                    CM
+                                </span>
                             </div>
                         </div>
-                        <div class="input-group group">
-                            <label
-                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1 mono-label">Body
-                                Mass</label>
+
+                        <!-- Weight Input -->
+                        <div>
+                            <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-weight-scale text-amber-500 text-xs"></i>
+                                <span>Body Mass <span class="text-rose-500">*</span></span>
+                            </label>
                             <div class="relative">
-                                <input type="number" name="weight" required placeholder="70"
-                                    class="w-full py-4 px-6 rounded-2xl text-lg border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors">
-                                <span
-                                    class="absolute right-14 top-1/2 -translate-y-1/2 text-slate-500 text-xs">KG</span>
+                                <input type="number" name="weight" required min="2" max="300" placeholder="e.g. 70"
+                                    class="input-field w-full py-3.5 pl-4 pr-14 rounded-2xl text-sm font-semibold placeholder:text-slate-400 shadow-xs">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-extrabold font-mono-code text-slate-400 bg-slate-200/80 px-2 py-1 rounded-md">
+                                    KG
+                                </span>
                             </div>
                         </div>
+
                     </div>
 
-                    <div class="input-group">
-                        <label
-                            class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1 mono-label">History
-                            & Pre-existing Conditions</label>
+                    <!-- Medical History Textarea -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-file-medical text-rose-500 text-xs"></i>
+                                <span>Pre-Existing Conditions &amp; Allergies</span>
+                            </label>
+                            <span class="text-[10px] font-semibold text-slate-400">Optional</span>
+                        </div>
                         <textarea name="medical_history" rows="3"
-                            placeholder="Describe any relevant medical background..."
-                            class="w-full py-4 px-6 rounded-2xl text-lg resize-none border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors"></textarea>
+                            placeholder="e.g. Hypertension, Type 2 Diabetes, Penicillin allergy, Asthma..."
+                            class="input-field w-full p-4 rounded-2xl text-sm font-normal placeholder:text-slate-400 resize-none shadow-xs"></textarea>
                     </div>
 
-                    <!-- Lifestyle Toggles (Modern Grid) -->
-                    <div class="space-y-4 input-group">
-                        <label
-                            class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1 mono-label">Biological
-                            Modifiers</label>
+                    <!-- Lifestyle & Physiological Modifiers -->
+                    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                        <label class="block text-xs font-extrabold text-slate-800 uppercase tracking-wider font-mono-code flex items-center gap-2">
+                            <i class="fas fa-dna text-blue-600 text-xs"></i>
+                            <span>Lifestyle &amp; Health Modifiers</span>
+                        </label>
+                        
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <select name="smoking_status"
-                                class="w-full py-3 px-4 rounded-xl text-sm border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors">
-                                <option value="" disabled selected>Smoking</option>
-                                <option value="Non-smoker">Non-smoker</option>
-                                <option value="Current smoker">Current smoker</option>
-                            </select>
-                            <select name="alcohol_consumption"
-                                class="w-full py-3 px-4 rounded-xl text-sm border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors">
-                                <option value="" disabled selected>Alcohol</option>
-                                <option value="None">None</option>
-                                <option value="Occasional">Occasional</option>
-                                <option value="Regular">Regular</option>
-                            </select>
-                            <select name="exercise_habits"
-                                class="w-full py-3 px-8 rounded-xl text-sm border border-slate-300 focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 transition-colors">
-                                <option value="" disabled selected>Exercise</option>
-                                <option value="Sedentary">Sedentary</option>
-                                <option value="Active">Active</option>
-                            </select>
+                            
+                            <!-- Smoking -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Smoking Status</label>
+                                <div class="relative">
+                                    <select name="smoking_status"
+                                        class="input-field w-full py-2.5 pl-3.5 pr-8 rounded-xl text-xs font-semibold appearance-none cursor-pointer">
+                                        <option value="" disabled selected>Smoking Status</option>
+                                        <option value="Non-smoker">Non-smoker</option>
+                                        <option value="Current smoker">Current smoker</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+                                </div>
+                            </div>
+
+                            <!-- Alcohol -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Alcohol Use</label>
+                                <div class="relative">
+                                    <select name="alcohol_consumption"
+                                        class="input-field w-full py-2.5 pl-3.5 pr-8 rounded-xl text-xs font-semibold appearance-none cursor-pointer">
+                                        <option value="" disabled selected>Alcohol Use</option>
+                                        <option value="None">None</option>
+                                        <option value="Occasional">Occasional</option>
+                                        <option value="Regular">Regular</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+                                </div>
+                            </div>
+
+                            <!-- Exercise -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Exercise Habit</label>
+                                <div class="relative">
+                                    <select name="exercise_habits"
+                                        class="input-field w-full py-2.5 pl-3.5 pr-8 rounded-xl text-xs font-semibold appearance-none cursor-pointer">
+                                        <option value="" disabled selected>Exercise Level</option>
+                                        <option value="Sedentary">Sedentary</option>
+                                        <option value="Active">Active / Regular</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
-                    <button type="submit" id="submit-btn"
-                            class="w-full py-3.5 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all btn-neumorph border border-sky-600 p-4 bg-sky-600 hover:bg-sky-700 shadow-lg flex items-center justify-center gap-2 cursor-pointer">
-                            <span>Next Step</span>
-                            <i class="fas fa-chevron-right text-sm"></i>
+                    <!-- Submit Button -->
+                    <div class="pt-2">
+                        <button type="submit" id="submit-btn"
+                            class="w-full py-4 px-8 rounded-2xl text-white text-sm font-black uppercase tracking-wider bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer border-0">
+                            <span>Proceed to Clinical Symptoms (Step 2)</span>
+                            <i class="fas fa-arrow-right text-xs transition-transform group-hover:translate-x-1"></i>
                         </button>
+                    </div>
+
                 </form>
+
             </div>
 
-            <!-- RIGHT: INFO SIDEBAR -->
-            <div
-                class="lg:col-span-4 flex flex-col gap-6 border border-amber-400 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg">
+            <!-- RIGHT: CLINICAL INTELLIGENCE SIDEBAR -->
+            <div class="lg:col-span-4 space-y-6">
 
-                <!-- AI Status Card -->
-                <div class="premium-card rounded-[2.5rem] p-8 flex-1 flex flex-col justify-between">
-                    <div>
-                        <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-8"
-                            style="background: var(--neumorph-bg); box-shadow: inset 8px 8px 15px var(--shadow-dark), inset -8px -8px 15px var(--shadow-light);">
-                            <i class="fas fa-brain text-cyan-600 text-2xl"></i>
+                <!-- AI Diagnostic Engine Card -->
+                <div class="white-glass-card rounded-[2rem] p-6 sm:p-8 relative overflow-hidden">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center text-2xl shadow-xs">
+                            <i class="fas fa-brain"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-slate-800 mb-4">Diagnostic <br>Engine V.4</h3>
-                        <p class="text-slate-500 text-sm leading-relaxed mb-8">
-                            Our neural network utilizes millions of clinical data points to calibrate its findings
-                            specifically to your demographic.
-                        </p>
-
-                        <div class="space-y-4">
-                            <div class="flex items-center gap-4 p-4 rounded-2xl transition-colors group"
-                                style="box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);">
-                                <i
-                                    class="fas fa-fingerprint text-cyan-600 group-hover:scale-110 transition-transform"></i>
-                                <span class="text-xs font-medium text-slate-600">End-to-End Encryption</span>
-                            </div>
-                            <div class="flex items-center gap-4 p-4 rounded-2xl transition-colors group"
-                                style="box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);">
-                                <i class="fas fa-dna text-indigo-500 group-hover:scale-110 transition-transform"></i>
-                                <span class="text-xs font-medium text-slate-600">Biometric Alignment</span>
-                            </div>
+                        <div>
+                            <span class="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 font-mono-code block">Deep Neural Network</span>
+                            <h3 class="text-xl font-display font-extrabold text-slate-900 leading-tight">Diagnostic Engine V.4</h3>
                         </div>
                     </div>
 
-                    <div class="mt-12 pt-8 border-t border-slate-300">
-                        <div class="flex items-center gap-3">
-                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
-                            <span
-                                class="text-[10px] font-bold tracking-widest text-emerald-500 mono-label uppercase">System
-                                Link Stable</span>
+                    <p class="text-slate-500 text-xs leading-relaxed mb-6">
+                        Our Bayesian inference network leverages clinical literature and curated disease monographs to correlate your physiological baseline against thousands of potential conditions.
+                    </p>
+
+                    <!-- Feature Verification Pills -->
+                    <div class="space-y-2.5 mb-6">
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs shrink-0">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-700">256-Bit HIPAA Privacy Charter</span>
                         </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs shrink-0">
+                                <i class="fas fa-dna"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-700">Biometric &amp; Vitals Baseline</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                            <div class="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs shrink-0">
+                                <i class="fas fa-landmark"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-700">OpenFDA Registry Grounded</span>
+                        </div>
+                    </div>
+
+                    <!-- Live System Link -->
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+                            <span class="font-bold text-slate-700">System Link</span>
+                        </div>
+                        <span class="text-[10px] font-mono-code font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                            99.99% ONLINE
+                        </span>
                     </div>
                 </div>
 
-                <!-- Secondary Support Card -->
-                <div class="premium-card rounded-[2.5rem] p-8">
-                    <h4 class="text-slate-800 font-bold mb-2 flex items-center gap-2">
-                        <i class="fas fa-user-md text-cyan-600"></i>
-                        Professional Review
-                    </h4>
-                    <p class="text-slate-500 text-[11px] mb-6 leading-relaxed">Need verification? Access 24/7
-                        tele-health consults directly after your AI scan.</p>
-                    <button
-                        class="w-full py-3 rounded-xl text-cyan-600 text-xs font-black uppercase tracking-widest transition-all btn-neumorph border border-slate-300 rounded-2xl p-6 md:p-8 bg-white/50 shadow-lg add this types of border with shadow in all border bg-blue-500 hover:bg-blue-700 hover:text-white">
-                        Connect with Doctor
-                    </button>
+                <!-- Doctor Teleconsultation Card -->
+                <div class="white-glass-card rounded-[2rem] p-6 sm:p-8 bg-gradient-to-br from-white via-slate-50 to-blue-50/40">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center text-base">
+                            <i class="fas fa-user-doctor"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-extrabold text-slate-900 leading-snug">Need Doctor Review?</h4>
+                            <span class="text-[11px] text-slate-500 font-medium">Instant tele-consultations</span>
+                        </div>
+                    </div>
+                    <p class="text-slate-500 text-xs leading-relaxed mb-4">
+                        Prefer speaking directly with a registered physician? Access verified specialists for audio/video consultation.
+                    </p>
+                    <a href="{{ url_for('doctors_list') }}"
+                        class="w-full py-2.5 px-4 rounded-xl text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 text-decoration-none shadow-xs">
+                        <i class="fas fa-video text-[11px]"></i>
+                        <span>Find Doctor Directory</span>
+                    </a>
                 </div>
 
             </div>
 
         </div>
+
     </div>
+
 </div>
 {% endblock %}

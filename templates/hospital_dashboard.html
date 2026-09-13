@@ -543,21 +543,37 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
       <!-- Top Overview Banner / Operational Header -->
       <div class="dashboard-card p-4 p-md-5 mb-5 text-white rounded-4 border-0 shadow-lg position-relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);">
         <div class="position-absolute end-0 top-0 w-96 h-96 bg-primary opacity-10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 position-relative z-1">
-          <div>
-            <div class="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
-              <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill small fw-bold d-inline-flex align-items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-success animate-ping"></span>
-                24/7 HOSPITAL EXECUTIVE COMMAND CENTER
-              </span>
-              <span class="badge bg-white/10 text-white-50 px-2 py-1 rounded-pill small">LIVE SYNC ACTIVE</span>
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4 position-relative z-1">
+          <div class="d-flex align-items-center gap-3.5">
+            <!-- Hospital Profile Logo -->
+            <div class="rounded-2xl p-1 bg-white/95 border border-white/20 shadow-lg flex items-center justify-center flex-shrink-0" style="width: 68px; height: 68px; overflow: hidden; background-color: #ffffff;">
+              {% if current_user.logo_url %}
+              <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+              {% elif current_user.profile_picture_url %}
+              <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Hospital Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+              {% else %}
+              <div class="w-100 h-100 bg-sky-50 text-sky-600 font-bold d-flex align-items-center justify-center fs-3" style="border-radius: 12px;">
+                {{ current_user.name[0] if current_user.name else 'H' }}
+              </div>
+              {% endif %}
             </div>
-            <h2 class="text-2xl font-black text-white tracking-tight mb-1">
-              {{ current_user.name }} • Clinical Performance & Revenue Analytics
-            </h2>
-            <p class="text-slate-300 small mb-0 max-w-2xl">
-              Comprehensive real-time tracking of patient inflow, clinical triage, emergency bed capacity, department allocations, and billing streams.
-            </p>
+            <div>
+              <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill small fw-bold d-inline-flex align-items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-success animate-ping"></span>
+                  24/7 HOSPITAL EXECUTIVE COMMAND CENTER
+                </span>
+                <span class="badge bg-sky-500/20 text-sky-200 border border-sky-400/30 px-3 py-1 rounded-pill small font-mono fw-bold" title="Establishment License ID">
+                  <i class="fas fa-shield-alt me-1 text-sky-300"></i> License: {{ current_user.license_number or current_user.license_no or 'HOSP-LIC-2026-ACTIVE' }}
+                </span>
+              </div>
+              <h2 class="text-2xl font-black text-white tracking-tight mb-1">
+                {{ current_user.name }}
+              </h2>
+              <p class="text-slate-300 small mb-0 max-w-2xl">
+                Comprehensive real-time tracking of patient inflow, clinical triage, emergency bed capacity, department allocations, and billing streams.
+              </p>
+            </div>
           </div>
           
           <div class="d-flex flex-wrap gap-2">
@@ -1893,9 +1909,22 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
           <!-- Display Mode -->
           <div x-show="!editMode.profile" class="dashboard-card p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-              <div>
-                <h4 class="font-bold text-slate-800 mb-0">Hospital Profile Details</h4>
-                <p class="text-xs text-slate-400">Public profile details of your healthcare facility.</p>
+              <div class="d-flex align-items-center gap-3">
+                <div class="rounded-2xl p-1 bg-white border border-slate-200 shadow-sm flex items-center justify-center flex-shrink-0" style="width: 64px; height: 64px; overflow: hidden; background-color: #ffffff;">
+                  {% if current_user.logo_url %}
+                  <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+                  {% elif current_user.profile_picture_url %}
+                  <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Hospital Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                  {% else %}
+                  <div class="w-100 h-100 bg-sky-50 text-sky-600 font-bold d-flex align-items-center justify-center fs-3" style="border-radius: 12px;">
+                    {{ current_user.name[0] if current_user.name else 'H' }}
+                  </div>
+                  {% endif %}
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-800 mb-0">{{ current_user.name }}</h4>
+                  <span class="badge bg-sky-50 text-black border border-sky-200 font-mono text-xs">HOSPITAL NODE #{{ current_user.id }}</span>
+                </div>
               </div>
               <button @click="editMode.profile = true" class="btn btn-secondary-custom btn-sm py-2 px-3">
                 <i class="fas fa-edit me-1"></i> Edit Profile
@@ -2012,9 +2041,37 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
                   </div>
                 </div>
               </div>
-              <div class="form-group">
-                <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">Hospital Logo</label>
-                <input type="file" name="logo" class="form-control" style="border-radius: 8px;" />
+              <div class="form-group mb-4">
+                <label class="text-xs font-bold text-slate-500 text-uppercase mb-2 d-block">Hospital Profile Image / Brand Logo</label>
+                <input type="hidden" name="cropped_profile_image" id="hospitalCroppedLogo">
+                
+                <div class="p-3 rounded-3 border bg-slate-50 d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+                  <div class="position-relative flex-shrink-0">
+                    <div class="rounded-xl bg-white border border-slate-200 p-1 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px; overflow: hidden;">
+                      {% if current_user.logo_url %}
+                      <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" id="hospitalLogoPreview" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+                      {% elif current_user.profile_picture_url %}
+                      <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" id="hospitalLogoPreview" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                      {% else %}
+                      <div id="hospitalLogoPreviewPlaceholder" class="w-100 h-100 bg-sky-100 text-sky-700 font-black d-flex align-items-center justify-content-center fs-4">
+                        {{ current_user.name[0] if current_user.name else 'H' }}
+                      </div>
+                      <img id="hospitalLogoPreview" src="" alt="Logo" class="d-none" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                      {% endif %}
+                    </div>
+                  </div>
+                  
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <input type="file" id="hospitalLogoInput" name="logo" class="crop-image-input d-none" data-crop-image="true" data-crop-target="hospitalCroppedLogo" data-preview-target="hospitalLogoPreview" accept="image/*">
+                      <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 font-bold text-xs d-inline-flex align-items-center gap-1.5 shadow-sm" onclick="document.getElementById('hospitalLogoInput').click();">
+                        <i class="fas fa-crop-alt"></i>
+                        <span>Upload &amp; Crop Logo</span>
+                      </button>
+                    </div>
+                    <span class="text-slate-500 text-xs d-block mt-1">Recommended: 500 &times; 500 px HD PNG/JPG for sharp rendering across portal and receipts</span>
+                  </div>
+                </div>
               </div>
               <div class="pt-2">
                 <button type="submit" class="btn btn-primary-custom px-4 py-2">Save Profile Details</button>

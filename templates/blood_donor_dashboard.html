@@ -1,630 +1,1364 @@
-{% extends "dashboard_layout.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block title %}Blood Donor Hub | Spherix Clinic{% endblock %}
-{% block page_title %}Blood Donor Hub{% endblock %}
-{% block page_subtitle %}Your lifesaver profile, donation history, and verified national honor certificates.{% endblock %}
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Blood Donor Portal | Spherix Clinic</title>
 
-{% block header_actions %}
-<div class="d-flex align-items-center gap-2">
-  <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold shadow-xs">
-    <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-    <span>Active Verified Donor</span>
+  <!-- Modern Fonts & UI Assets -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Frameworks -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/blood_donor_dashboard.css') }}">
+</head>
+
+<body>
+
+<div class="donor-layout" id="donorDashboardApp">
+  
+  <!-- Backdrop for Mobile Sidebar -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleDonorSidebar()"></div>
+
+  <!-- ================================================================= -->
+  <!-- 1. STREAMLINED 5 ESSENTIAL TABS SIDEBAR NAVIGATION                -->
+  <!-- ================================================================= -->
+  <aside class="donor-sidebar" id="donorSidebar">
+    <!-- Brand -->
+    <a href="{{ url_for('home') }}" class="sidebar-brand">
+      <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" alt="Spherix Clinic" class="sidebar-brand-logo" onerror="this.src='/static/images/blood.png';">
+      <div>
+        <div class="font-display font-black text-slate-900 text-base tracking-tight" style="line-height: 1.1;">SPHERIX CLINIC</div>
+        <div class="font-bold text-rose-700" style="font-size: 0.66rem; letter-spacing: 0.08em;">BLOOD DONOR HUB</div>
+      </div>
+    </a>
+
+    <!-- Menu Items (5 Essential Core Tabs) -->
+    <div class="sidebar-menu">
+      
+      <div class="sidebar-section-title">Essential Modules</div>
+      
+      <!-- 1. Overview -->
+      <a class="sidebar-link active" onclick="switchSection('overview', this)" id="nav-overview">
+        <i class="fas fa-th-large text-rose-600"></i> <span>Dashboard Overview</span>
+      </a>
+
+      <!-- 2. Donation Camps & SOS -->
+      <a class="sidebar-link" onclick="switchSection('camps', this)" id="nav-camps">
+        <i class="fas fa-tent text-purple-600"></i> <span>Camps &amp; Emergency SOS</span>
+        <span class="badge bg-red-600 text-white rounded-pill ms-auto text-[10px] px-2 py-0.5 font-bold">SOS</span>
+      </a>
+
+      <!-- 3. Health & Eligibility -->
+      <a class="sidebar-link" onclick="switchSection('eligibility', this)" id="nav-eligibility">
+        <i class="fas fa-heart-pulse text-teal-600"></i> <span>Health &amp; Eligibility</span>
+      </a>
+
+      <!-- 4. Certificates & History -->
+      <a class="sidebar-link" onclick="switchSection('certificates', this)" id="nav-certificates">
+        <i class="fas fa-award text-amber-600"></i> <span>Certificates &amp; History</span>
+      </a>
+
+      <!-- 5. Profile & Security -->
+      <a class="sidebar-link" onclick="switchSection('profile', this)" id="nav-profile">
+        <i class="fas fa-user-shield text-blue-600"></i> <span>Profile &amp; Security</span>
+      </a>
+
+      <div class="sidebar-section-title">Exit</div>
+      <!-- Sign Out -->
+      <a href="{{ url_for('logout') }}" class="sidebar-link text-rose-700 font-bold">
+        <i class="fas fa-sign-out-alt text-rose-600"></i> <span>Sign Out</span>
+      </a>
+
+    </div>
+
+    <!-- Sidebar Footer Profile Mini -->
+    <div class="sidebar-footer">
+      {% if donor.profile_picture_url %}
+      <img src="{{ url_for('static', filename='uploads/' + donor.profile_picture_url) }}" alt="{{ donor.name }}" class="sidebar-user-avatar">
+      {% else %}
+      <div class="sidebar-user-avatar bg-rose-700 text-white d-flex align-items-center justify-content-center font-black text-sm">
+        {{ donor.name[0]|upper if donor.name else 'B' }}
+      </div>
+      {% endif %}
+      <div class="overflow-hidden">
+        <div class="text-slate-900 font-black text-xs text-truncate">{{ donor.name }}</div>
+        <div class="text-rose-700 font-bold text-[10px]">Group {{ donor.blood_group }} &bull; {{ donor.status|capitalize if donor.status else 'Active' }}</div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="text-slate-500 hover:text-rose-700 ms-auto" title="Sign Out">
+        <i class="fas fa-sign-out-alt"></i>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ================================================================= -->
+  <!-- 2. MAIN WORKSPACE WITH TOP NAVIGATION BAR                         -->
+  <!-- ================================================================= -->
+  <main class="donor-main">
+    
+    <!-- Topbar -->
+    <header class="donor-topbar">
+      <!-- Left: Mobile Toggle & Title -->
+      <div class="d-flex align-items-center gap-3">
+        <button type="button" class="btn btn-sm btn-light d-lg-none rounded-xl border" onclick="toggleDonorSidebar()">
+          <i class="fas fa-bars text-slate-800"></i>
+        </button>
+        <div>
+          <h1 class="font-display font-black text-slate-900 text-base sm:text-lg mb-0" id="currentSectionTitle">Blood Donor Hub</h1>
+          <div class="text-[11px] text-slate-500 font-medium d-none d-sm-block">Spherix Transfusion &amp; Voluntary Lifesaver Network</div>
+        </div>
+      </div>
+
+      <!-- Center: Search features -->
+      <div class="topbar-search d-none d-md-block">
+        <i class="fas fa-search"></i>
+        <input type="text" id="topSearchInput" placeholder="Search camps, emergency requests, certificates..." onkeyup="handleGlobalSearch(this.value)">
+      </div>
+
+      <!-- Right: Actions & User Dropdown -->
+      <div class="topbar-actions">
+        <!-- Emergency SOS Button -->
+        <button type="button" onclick="switchSection('camps')" class="topbar-icon-btn text-rose-700" title="24/7 Transfusion SOS Alerts">
+          <i class="fas fa-ambulance"></i>
+        </button>
+
+        <!-- Notification Bell -->
+        <div class="dropdown">
+          <button class="topbar-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-bell text-slate-700"></i>
+            <span class="position-absolute top-1 end-1 p-1 bg-rose-600 border border-white rounded-circle"></span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end shadow-xl border border-slate-200 rounded-2xl p-0 mt-2" style="width: 320px;">
+            <div class="p-3 bg-slate-100 text-slate-900 rounded-t-2xl d-flex justify-content-between align-items-center border-bottom">
+              <span class="font-bold text-xs text-slate-900">Hospital Notifications</span>
+              <span class="badge bg-rose-600 text-white text-[10px] font-bold">3 New</span>
+            </div>
+            <div class="p-2 space-y-1 text-xs">
+              <a class="dropdown-item p-2.5 rounded-xl text-wrap cursor-pointer" onclick="switchSection('camps')">
+                <div class="font-bold text-rose-700"><i class="fas fa-ambulance me-1"></i> Emergency Request Near You</div>
+                <div class="text-slate-600 text-[11px]">Trauma Unit requires 2 units of {{ donor.blood_group }} blood.</div>
+              </a>
+              <a class="dropdown-item p-2.5 rounded-xl text-wrap cursor-pointer" onclick="switchSection('camps')">
+                <div class="font-bold text-slate-900"><i class="fas fa-tent me-1 text-purple-600"></i> New Mobile Camp Scheduled</div>
+                <div class="text-slate-600 text-[11px]">Community drive this weekend in {{ donor.city or 'your city' }}.</div>
+              </a>
+              <a class="dropdown-item p-2.5 rounded-xl text-wrap cursor-pointer" onclick="switchSection('certificates')">
+                <div class="font-bold text-slate-900"><i class="fas fa-award me-1 text-amber-600"></i> Honor Commendation</div>
+                <div class="text-slate-600 text-[11px]">Your voluntary record is synchronized with national registry.</div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Profile Dropdown -->
+        <div class="dropdown">
+          <div class="topbar-user-dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            {% if donor.profile_picture_url %}
+            <img src="{{ url_for('static', filename='uploads/' + donor.profile_picture_url) }}" alt="{{ donor.name }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid #f43f5e;">
+            {% else %}
+            <div class="rounded-circle bg-rose-700 text-white d-flex align-items-center justify-content-center font-black text-xs" style="width: 32px; height: 32px;">
+              {{ donor.name[0]|upper if donor.name else 'B' }}
+            </div>
+            {% endif %}
+            <div class="d-none d-sm-block text-start pe-1">
+              <div class="font-black text-xs text-slate-900 leading-none">{{ donor.name }}</div>
+              <span class="badge bg-rose-100 text-rose-800 font-bold text-[9px] px-1.5 py-0.5 rounded border border-rose-300">{{ donor.blood_group }}</span>
+            </div>
+            <i class="fas fa-chevron-down text-slate-500 text-[10px] ps-1 pe-1"></i>
+          </div>
+          <ul class="dropdown-menu dropdown-menu-end shadow-xl border border-slate-200 rounded-2xl p-2 mt-2" style="min-width: 200px;">
+            <li><a class="dropdown-item rounded-xl text-xs py-2 text-slate-800 font-semibold cursor-pointer" onclick="switchSection('profile')"><i class="fas fa-user-shield me-2 text-blue-600"></i> Profile &amp; Security</a></li>
+            <li><a class="dropdown-item rounded-xl text-xs py-2 text-slate-800 font-semibold cursor-pointer" onclick="switchSection('certificates')"><i class="fas fa-certificate me-2 text-amber-600"></i> Certificates</a></li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li><a class="dropdown-item rounded-xl text-xs py-2 text-danger font-bold" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+          </ul>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Alert Messages (Flask Flash) -->
+    <div class="px-4 pt-3">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show rounded-2xl shadow-sm border border-slate-200 text-slate-900 bg-white d-flex align-items-center gap-2 mb-3 py-3 px-4" role="alert">
+              <i class="fas {% if category == 'error' %}fa-exclamation-circle text-danger{% else %}fa-check-circle text-success{% endif %} fs-5"></i>
+              <div class="fw-semibold text-xs">{{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <!-- =============================================================== -->
+    <!-- 3. TAB SECTIONS CONTAINER (5 ESSENTIAL MODULES)                 -->
+    <!-- =============================================================== -->
+    <div class="p-4 p-md-5" style="max-width: 1400px; margin: 0 auto; width: 100%;">
+      
+      <!-- ============================================================= -->
+      <!-- TAB 1: OVERVIEW                                                -->
+      <!-- ============================================================= -->
+      <div class="dashboard-tab-section active" id="sec-overview">
+        
+        <!-- Live Staff Command Station Sync Banner -->
+        <div class="donor-card p-3.5 mb-4 bg-white d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 border border-emerald-200 shadow-2xs">
+          <div class="d-flex align-items-center gap-3">
+            <div class="staff-sync-badge">
+              <span class="pulse-dot"></span>
+              <span>STAFF PORTAL CONNECTED</span>
+            </div>
+            <div class="text-xs text-slate-700 font-semibold">
+              <i class="fas fa-hospital text-blue-700 me-1"></i> Node: <strong class="text-slate-900">{{ hospital.name if hospital else (donor.hospital_name or 'Spherix Central Transfusion Center') }}</strong>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge {% if donor.status == 'approved' or not donor.status %}bg-emerald-100 text-emerald-800 border border-emerald-300{% else %}bg-amber-100 text-amber-800 border border-amber-300{% endif %} px-2.5 py-1 rounded-pill text-[11px]">
+              <i class="fas fa-shield-check me-1"></i> Status: {{ (donor.status or 'Approved & Verified')|upper }}
+            </span>
+            <a href="tel:1800-SPHERIX-BLOOD" class="text-xs font-bold text-slate-700 hover:text-rose-700 text-decoration-none ms-2">
+              <i class="fas fa-headset text-rose-600 me-1"></i> Staff Helpline
+            </a>
+          </div>
+        </div>
+
+        <!-- Welcome Hero Panel -->
+        <div class="donor-hero-panel p-4 p-md-5 mb-4">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-rose-600 text-white font-black text-xs px-3 py-1 rounded-pill">
+                  <i class="fas fa-heartbeat me-1"></i> VERIFIED LIFESAVER
+                </span>
+                <span class="badge bg-white text-rose-800 border border-rose-300 font-bold text-xs px-2.5 py-1 rounded-pill">
+                  Group {{ donor.blood_group }}
+                </span>
+              </div>
+              <h2 class="font-display font-black text-slate-900 text-2xl sm:text-3xl mb-1 tracking-tight">
+                Welcome back, {{ donor.name }}!
+              </h2>
+              <p class="text-slate-700 text-xs sm:text-sm mb-4 leading-relaxed font-medium" style="max-width: 620px;">
+                Your voluntary donation profile is synchronized with Spherix Transfusion Centers. Thank you for standing ready to save emergency trauma and surgical patients.
+              </p>
+              
+              <!-- Hero Quick Buttons -->
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-danger px-4 py-2.5 rounded-xl font-bold text-xs bg-red-600 hover:bg-red-700 text-white border-0 shadow-sm d-inline-flex align-items-center gap-2" onclick="switchSection('camps')">
+                  <i class="fas fa-tent"></i> Find Camps &amp; SOS Alerts
+                </button>
+                <button type="button" class="btn btn-outline-dark bg-white px-3.5 py-2.5 rounded-xl font-bold text-xs text-slate-900 border-slate-300 shadow-sm d-inline-flex align-items-center gap-2" onclick="switchSection('eligibility')">
+                  <i class="fas fa-stethoscope text-blue-600"></i> Check Eligibility
+                </button>
+                <a href="{{ url_for('download_blood_donor_id_card') }}" class="btn btn-outline-danger bg-white px-3.5 py-2.5 rounded-xl font-bold text-xs text-rose-700 border-rose-300 shadow-sm d-inline-flex align-items-center gap-2">
+                  <i class="fas fa-id-card text-rose-600"></i> Download ID Card
+                </a>
+              </div>
+            </div>
+
+            <!-- Digital Pass Card Mini -->
+            <div class="col-lg-4 d-none d-lg-block">
+              <div class="donor-pass-card p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <div>
+                    <span class="text-[10px] font-bold text-rose-700 uppercase tracking-widest">Spherix Digital ID</span>
+                    <h5 class="font-black text-slate-900 mb-0 font-display text-sm">{{ donor.name }}</h5>
+                  </div>
+                  <div class="rounded-xl bg-rose-600 text-white px-2.5 py-1 font-black text-sm">
+                    {{ donor.blood_group }}
+                  </div>
+                </div>
+                <div class="bg-white/80 p-2.5 rounded-xl border border-rose-200 mb-3 text-xs space-y-1 font-mono">
+                  <div class="d-flex justify-content-between text-slate-700">
+                    <span>ID:</span> <strong class="text-slate-900">{{ donor.license_number or donor.donor_card_id or 'SPX-BD-884' }}</strong>
+                  </div>
+                  <div class="d-flex justify-content-between text-slate-700">
+                    <span>Center:</span> <strong class="text-slate-900 text-truncate" style="max-width: 130px;">{{ hospital.name if hospital else (donor.hospital_name or 'Central Clinic') }}</strong>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center text-[10px] text-slate-600 font-bold">
+                  <span><i class="fas fa-check-circle text-emerald-600 me-1"></i> Staff Approved</span>
+                  <span><i class="fas fa-qrcode text-slate-800 me-1"></i> QR Enabled</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6 Live Vital Metrics Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-lg-2">
+            <div class="stat-metric-card p-3.5 h-100 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Donations</span>
+                <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 d-flex align-items-center justify-content-center text-xs border border-rose-200" style="width: 28px; height: 28px;">
+                  <i class="fas fa-tint"></i>
+                </div>
+              </div>
+              <div>
+                <div class="text-2xl font-black text-rose-700 tracking-tight">{% if donor.last_donation %}1 Unit{% else %}0 Units{% endif %}</div>
+                <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Recorded by staff</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-2">
+            <div class="stat-metric-card p-3.5 h-100 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Lives Saved</span>
+                <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 d-flex align-items-center justify-content-center text-xs border border-emerald-200" style="width: 28px; height: 28px;">
+                  <i class="fas fa-heart"></i>
+                </div>
+              </div>
+              <div>
+                <div class="text-2xl font-black text-emerald-700 tracking-tight">{% if donor.last_donation %}3 Lives{% else %}Pending{% endif %}</div>
+                <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Transfusion impact</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-2">
+            <div class="stat-metric-card p-3.5 h-100 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Last Drive</span>
+                <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 d-flex align-items-center justify-content-center text-xs border border-blue-200" style="width: 28px; height: 28px;">
+                  <i class="far fa-clock"></i>
+                </div>
+              </div>
+              <div>
+                <div class="text-xs font-black text-slate-900 tracking-tight text-truncate" title="{{ donor.last_donation or 'No donation recorded' }}">
+                  {{ donor.last_donation or 'None on Record' }}
+                </div>
+                <div class="text-[11px] font-bold text-blue-700 mt-0.5">Hospital log</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-2">
+            <div class="stat-metric-card p-3.5 h-100 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Next Eligible</span>
+                <div class="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 d-flex align-items-center justify-content-center text-xs border border-teal-200" style="width: 28px; height: 28px;">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+              </div>
+              <div>
+                <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-pill font-bold text-[10px]">
+                  <i class="fas fa-check me-1"></i> Eligible Today
+                </span>
+                <div class="text-[11px] font-semibold text-slate-500 mt-1">Ready for drive</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-2">
+            <div class="stat-metric-card p-3.5 h-100 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Blood Group</span>
+                <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 d-flex align-items-center justify-content-center text-xs border border-rose-200" style="width: 28px; height: 28px;">
+                  <i class="fas fa-tint"></i>
+                </div>
+              </div>
+              <div>
+                <div class="text-2xl font-black text-rose-700 tracking-tight">{{ donor.blood_group }}</div>
+                <div class="text-[11px] font-bold text-slate-600 mt-0.5">Verified Type</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-2">
+            <div class="stat-metric-card p-3.5 h-100 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Certificates</span>
+                <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 d-flex align-items-center justify-content-center text-xs border border-amber-200" style="width: 28px; height: 28px;">
+                  <i class="fas fa-award"></i>
+                </div>
+              </div>
+              <div>
+                <div class="text-2xl font-black text-amber-700 tracking-tight">{% if donor.last_donation %}1 Award{% else %}0 Awards{% endif %}</div>
+                <div class="text-[11px] font-semibold text-slate-500 mt-0.5">Clinical Honor</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Blood Bank Inventory Telemetry Grid (Connected to Staff Dashboard) -->
+        <div class="donor-card p-4 mb-4">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 pb-2 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 d-flex align-items-center justify-content-center text-sm border border-rose-200" style="width: 32px; height: 32px;">
+                <i class="fas fa-layer-group"></i>
+              </div>
+              <div>
+                <h5 class="font-black text-slate-900 mb-0 text-sm uppercase tracking-wider">Real-Time Blood Bank Stock Telemetry</h5>
+                <span class="text-slate-500 text-[11px] font-medium">Synchronized with {{ hospital.name if hospital else 'Hospital Blood Bank' }} Staff Station</span>
+              </div>
+            </div>
+            <a href="{{ url_for('blood_bank') }}" class="text-xs font-bold text-blue-700 hover:text-blue-800 text-decoration-none">
+              <i class="fas fa-external-link-alt me-1"></i> Full Inventory Matrix
+            </a>
+          </div>
+
+          <div class="row g-2.5">
+            {% set groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+            {% for g in groups %}
+            {% set qty = blood_stock.get(g, 10) if blood_stock else 10 %}
+            <div class="col-6 col-sm-3 col-lg">
+              <div class="stock-pill-card {% if donor.blood_group == g %}user-group{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="font-black {% if donor.blood_group == g %}text-rose-700{% else %}text-slate-900{% endif %} text-sm">{{ g }}</span>
+                  {% if donor.blood_group == g %}
+                  <span class="badge bg-rose-600 text-white rounded-pill text-[9px] px-1.5 py-0.5">YOU</span>
+                  {% endif %}
+                </div>
+                <div class="text-xl font-black text-slate-900 tracking-tight">{{ qty }} <span class="text-[10px] font-bold text-slate-500">Units</span></div>
+                <div class="mt-1">
+                  {% if qty < 5 %}
+                  <span class="badge bg-red-100 text-red-800 border border-red-300 rounded-pill text-[9px] px-1.5 py-0.5 font-bold">Low Stock</span>
+                  {% elif qty < 15 %}
+                  <span class="badge bg-amber-100 text-amber-800 border border-amber-300 rounded-pill text-[9px] px-1.5 py-0.5 font-bold">Moderate</span>
+                  {% else %}
+                  <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-pill text-[9px] px-1.5 py-0.5 font-bold">Optimal</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Blood Group Compatibility & Verified Records -->
+        <div class="row g-4 mb-4">
+          <div class="col-lg-6">
+            <div class="donor-card p-4 h-100">
+              <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 d-flex align-items-center justify-content-center text-sm border border-rose-200" style="width: 32px; height: 32px;">
+                    <i class="fas fa-dna"></i>
+                  </div>
+                  <div>
+                    <h5 class="font-black text-slate-900 mb-0 text-sm uppercase tracking-wider">Blood Compatibility: {{ donor.blood_group }}</h5>
+                    <span class="text-slate-500 text-[11px] font-medium">Biological match telemetry</span>
+                  </div>
+                </div>
+                <span class="badge bg-rose-100 text-rose-800 border border-rose-300 font-black text-xs px-2.5 py-1 rounded-pill">{{ donor.blood_group }}</span>
+              </div>
+
+              <div class="space-y-3">
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 mb-2">
+                  <div class="text-xs font-bold text-slate-900 mb-1.5"><i class="fas fa-arrow-up text-emerald-700 me-1"></i> You Can Donate RBC To:</div>
+                  <div class="d-flex flex-wrap gap-1.5">
+                    {% if donor.blood_group == 'O-' %}
+                      <span class="compat-chip can-give">All Types (Universal RBC Donor)</span>
+                    {% elif donor.blood_group == 'O+' %}
+                      <span class="compat-chip can-give">O+</span><span class="compat-chip can-give">A+</span><span class="compat-chip can-give">B+</span><span class="compat-chip can-give">AB+</span>
+                    {% elif donor.blood_group == 'A-' %}
+                      <span class="compat-chip can-give">A-</span><span class="compat-chip can-give">A+</span><span class="compat-chip can-give">AB-</span><span class="compat-chip can-give">AB+</span>
+                    {% elif donor.blood_group == 'A+' %}
+                      <span class="compat-chip can-give">A+</span><span class="compat-chip can-give">AB+</span>
+                    {% elif donor.blood_group == 'B-' %}
+                      <span class="compat-chip can-give">B-</span><span class="compat-chip can-give">B+</span><span class="compat-chip can-give">AB-</span><span class="compat-chip can-give">AB+</span>
+                    {% elif donor.blood_group == 'B+' %}
+                      <span class="compat-chip can-give">B+</span><span class="compat-chip can-give">AB+</span>
+                    {% elif donor.blood_group == 'AB-' %}
+                      <span class="compat-chip can-give">AB-</span><span class="compat-chip can-give">AB+</span>
+                    {% else %}
+                      <span class="compat-chip can-give">AB+</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <div class="text-xs font-bold text-slate-900 mb-1.5"><i class="fas fa-arrow-down text-blue-700 me-1"></i> You Can Receive RBC From:</div>
+                  <div class="d-flex flex-wrap gap-1.5">
+                    {% if donor.blood_group == 'O-' %}
+                      <span class="compat-chip can-receive">O- only</span>
+                    {% elif donor.blood_group == 'O+' %}
+                      <span class="compat-chip can-receive">O+</span><span class="compat-chip can-receive">O-</span>
+                    {% elif donor.blood_group == 'A-' %}
+                      <span class="compat-chip can-receive">A-</span><span class="compat-chip can-receive">O-</span>
+                    {% elif donor.blood_group == 'A+' %}
+                      <span class="compat-chip can-receive">A+</span><span class="compat-chip can-receive">A-</span><span class="compat-chip can-receive">O+</span><span class="compat-chip can-receive">O-</span>
+                    {% elif donor.blood_group == 'B-' %}
+                      <span class="compat-chip can-receive">B-</span><span class="compat-chip can-receive">O-</span>
+                    {% elif donor.blood_group == 'B+' %}
+                      <span class="compat-chip can-receive">B+</span><span class="compat-chip can-receive">B-</span><span class="compat-chip can-receive">O+</span><span class="compat-chip can-receive">O-</span>
+                    {% elif donor.blood_group == 'AB-' %}
+                      <span class="compat-chip can-receive">AB-</span><span class="compat-chip can-receive">A-</span><span class="compat-chip can-receive">B-</span><span class="compat-chip can-receive">O-</span>
+                    {% else %}
+                      <span class="compat-chip can-receive">All Types (Universal Recipient)</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="donor-card p-4 h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 d-flex align-items-center justify-content-center text-sm border border-sky-200" style="width: 32px; height: 32px;">
+                      <i class="far fa-calendar-check"></i>
+                    </div>
+                    <div>
+                      <h5 class="font-black text-slate-900 mb-0 text-sm uppercase tracking-wider">Upcoming Donation &amp; Center</h5>
+                      <span class="text-slate-500 text-[11px] font-medium">Primary collection facility</span>
+                    </div>
+                  </div>
+                  <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs px-2.5 py-1 rounded-pill">Open Today</span>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 mb-3">
+                  <h6 class="font-black text-slate-900 mb-1 text-sm">{{ hospital.name if hospital else (donor.hospital_name or 'Spherix Central Transfusion Center') }}</h6>
+                  <div class="text-slate-700 text-xs space-y-1 font-medium">
+                    <div><i class="fas fa-map-marker-alt text-rose-600 me-1.5"></i> Medical Campus Boulevard, New Delhi</div>
+                    <div><i class="far fa-clock text-slate-500 me-1.5"></i> Daily Operating Hours: 08:00 AM - 08:00 PM</div>
+                    <div><i class="fas fa-phone text-blue-700 me-1.5"></i> Helpline: 1800-SPHERIX-BLOOD</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-dark bg-white flex-grow-1 py-2 rounded-xl font-bold text-xs text-slate-900 border-slate-300" onclick="openScheduleModal()">
+                  <i class="far fa-calendar-plus me-1 text-blue-600"></i> Schedule Walk-In Slot
+                </button>
+                <a href="{{ url_for('blood_bank') }}" class="btn btn-outline-primary py-2 rounded-xl font-bold text-xs">
+                  <i class="fas fa-vials me-1"></i> Live Stock
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- TAB 2: CAMPS & EMERGENCY SOS                                   -->
+      <!-- ============================================================= -->
+      <div class="dashboard-tab-section" id="sec-camps">
+        
+        <!-- Emergency SOS Banner (Always at top of Camps & SOS) -->
+        <div class="emergency-alert-card p-4 p-md-5 mb-4">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-red-600 text-white font-black text-xs px-3 py-1 rounded-pill animate-pulse">
+              <i class="fas fa-ambulance me-1"></i> 24/7 EMERGENCY TRANSFUSION NETWORK
+            </span>
+            <span class="badge bg-rose-200 text-rose-900 font-bold text-xs px-2.5 py-1 rounded-pill border border-rose-300">
+              Group {{ donor.blood_group }} Needed
+            </span>
+          </div>
+          <h3 class="font-black text-slate-900 text-xl sm:text-2xl mb-1">Critical Blood Requirement Alerts</h3>
+          <p class="text-slate-700 text-xs sm:text-sm mb-3 font-medium">
+            Hospitals in your network have active trauma, surgical, and ICU patients requiring voluntary blood transfusions.
+          </p>
+
+          <!-- Critical SOS Cases List -->
+          <div class="space-y-3 mt-3">
+            <div class="p-3.5 rounded-2xl border border-rose-200 bg-white hover:border-rose-300 transition-all shadow-2xs mb-2">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <span class="badge bg-red-600 text-white font-bold text-xs rounded-pill">CRITICAL SOS</span>
+                    <span class="font-black text-slate-900 text-sm">Emergency Trauma Unit - Case #SPX-TR-491</span>
+                    <span class="badge bg-rose-100 text-rose-900 border border-rose-300 font-black text-xs px-2 py-0.5 rounded">{{ donor.blood_group }} Required</span>
+                  </div>
+                  <div class="text-slate-700 text-xs space-y-0.5 font-medium">
+                    <div><i class="fas fa-hospital text-rose-700 me-1.5"></i> {{ hospital.name if hospital else (donor.hospital_name or 'Spherix Central Hospital') }} &bull; ICU Trauma Wing (2 Units Required)</div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-danger px-4 py-2 rounded-xl font-bold text-xs bg-red-600 text-white border-0 shadow-sm" onclick="openRespondModal('Case #SPX-TR-491', '{{ hospital.name if hospital else (donor.hospital_name or 'Spherix Central Hospital') }}', '{{ donor.blood_group }}')">
+                  <i class="fas fa-hand-holding-medical me-1.5"></i> Respond to SOS
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all shadow-2xs">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <span class="badge bg-amber-600 text-white font-bold text-xs rounded-pill">HIGH PRIORITY</span>
+                    <span class="font-black text-slate-900 text-sm">Cardiothoracic Surgery - Case #SPX-CR-812</span>
+                    <span class="badge bg-slate-100 text-slate-900 border border-slate-300 font-black text-xs px-2 py-0.5 rounded">{{ donor.blood_group }} Required</span>
+                  </div>
+                  <div class="text-slate-700 text-xs space-y-0.5 font-medium">
+                    <div><i class="fas fa-hospital text-blue-700 me-1.5"></i> City Blood Transfusion Center &bull; O.T. Complex Block B (1 Unit Required)</div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline-dark bg-white px-4 py-2 rounded-xl font-bold text-xs text-slate-900 border-slate-300" onclick="openRespondModal('Case #SPX-CR-812', 'City Blood Transfusion Center', '{{ donor.blood_group }}')">
+                  <i class="fas fa-calendar-check me-1.5 text-blue-600"></i> Volunteer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- My Registered Camps (Connected to Staff Records) -->
+        {% if my_registrations %}
+        <div class="donor-card p-4 mb-4 bg-emerald-50/40 border border-emerald-200">
+          <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-emerald-200">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-clipboard-check text-emerald-700"></i>
+              <h5 class="font-black text-slate-900 mb-0 text-sm uppercase tracking-wider">My Registered Donation Drives</h5>
+            </div>
+            <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs px-2.5 py-1 rounded-pill">
+              {{ my_registrations|length }} Registered
+            </span>
+          </div>
+          <div class="row g-3">
+            {% for reg in my_registrations %}
+            <div class="col-md-6">
+              <div class="p-3 bg-white rounded-xl border border-emerald-200 shadow-2xs">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <h6 class="font-black text-slate-900 text-xs mb-0">{{ reg.camp_name }}</h6>
+                  <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] rounded-pill font-bold">Confirmed by Staff</span>
+                </div>
+                <div class="text-[11px] text-slate-600">Registered Name: <strong class="text-slate-800">{{ reg.name }}</strong> &bull; {{ reg.phone }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Community Blood Donation Camps -->
+        <div class="donor-card p-4 p-md-5 mb-4">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-3 border-bottom">
+            <div>
+              <h4 class="font-black text-slate-900 mb-0.5 text-lg">Community Blood Donation Camps</h4>
+              <p class="text-slate-600 text-xs mb-0 font-medium">Active mobile drives organized by Spherix hospital staff</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-rose-100 text-rose-800 border border-rose-300 px-3 py-1 font-bold text-xs rounded-pill">
+                {{ camps|length }} Drives Scheduled
+              </span>
+            </div>
+          </div>
+
+          {% if camps %}
+          <div class="row g-3">
+            {% for camp in camps %}
+            <div class="col-md-6 col-lg-4">
+              <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-rose-300 transition-all h-100 d-flex flex-column justify-content-between shadow-2xs">
+                <div>
+                  <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <span class="badge bg-rose-100 text-rose-800 border border-rose-300 font-bold text-[10px] rounded-pill px-2.5 py-1">
+                      <i class="fas fa-tent me-1"></i> Mobile Camp
+                    </span>
+                    <span class="text-[11px] font-bold text-slate-700"><i class="far fa-calendar-alt text-blue-700 me-1"></i>{{ camp.date }}</span>
+                  </div>
+                  <h5 class="font-black text-slate-900 mb-1.5 text-sm">{{ camp.name }}</h5>
+                  <div class="text-slate-700 text-xs space-y-1.5 mb-3 font-medium">
+                    <div><i class="fas fa-map-marker-alt text-rose-600 me-1.5"></i> {{ camp.location }}</div>
+                    <div><i class="far fa-clock text-slate-500 me-1.5"></i> {{ camp.time }}</div>
+                    {% if camp.organizer %}
+                    <div><i class="fas fa-hospital text-blue-700 me-1.5"></i> Organizer: {{ camp.organizer }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between gap-2 pt-3 border-top border-slate-200">
+                  <a href="tel:{{ camp.contact }}" class="text-slate-700 hover:text-slate-900 text-xs font-bold text-decoration-none">
+                    <i class="fas fa-phone-alt me-1 text-slate-500"></i> {{ camp.contact }}
+                  </a>
+                  <button type="button" class="btn btn-sm btn-danger rounded-pill px-3.5 font-bold text-xs bg-red-600 text-white border-0" onclick="openCampRegisterModal('{{ camp.name }}')">
+                    Register
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-5 text-slate-500 border border-dashed rounded-2xl bg-slate-50">
+            <i class="fas fa-tent text-slate-400 text-4xl mb-2"></i>
+            <h6 class="font-bold text-slate-800 text-sm">No Active Mobile Camps in Directory</h6>
+            <p class="text-slate-500 text-xs mb-3">Visit any permanent Spherix Transfusion Center or schedule an appointment.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- TAB 3: HEALTH & ELIGIBILITY                                    -->
+      <!-- ============================================================= -->
+      <div class="dashboard-tab-section" id="sec-eligibility">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="donor-card p-4 p-md-5 h-100">
+              <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 d-flex align-items-center justify-content-center text-xl" style="width: 48px; height: 48px;">
+                  <i class="fas fa-heart-pulse"></i>
+                </div>
+                <div>
+                  <h4 class="font-black text-slate-900 mb-0.5 text-lg">Donation Eligibility Status</h4>
+                  <p class="text-slate-600 text-xs mb-0 font-medium">Clinical criteria and biological parameters</p>
+                </div>
+              </div>
+
+              <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 mb-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="fas fa-check-circle text-emerald-700 text-base"></i>
+                  <span class="font-black text-emerald-950 text-sm">Status: Clinically Cleared</span>
+                </div>
+                <p class="text-emerald-900 text-xs mb-0 font-medium">
+                  Your age ({{ donor.age or '25' }}), verified group ({{ donor.blood_group }}), and clinical registration meet standard medical eligibility requirements.
+                </p>
+              </div>
+
+              <div class="space-y-2 text-xs">
+                <div class="d-flex justify-content-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2">
+                  <span class="text-slate-700 font-medium">Interval between Donations:</span>
+                  <span class="font-bold text-slate-900">90 Days (Whole Blood)</span>
+                </div>
+                <div class="d-flex justify-content-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2">
+                  <span class="text-slate-700 font-medium">Minimum Hemoglobin:</span>
+                  <span class="font-bold text-slate-900">&ge; 12.5 g/dL (Tested On-Site)</span>
+                </div>
+                <div class="d-flex justify-content-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span class="text-slate-700 font-medium">Minimum Body Weight:</span>
+                  <span class="font-bold text-slate-900">&ge; 50 kg (110 lbs)</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-top">
+                <button type="button" class="btn btn-outline-dark bg-white w-100 py-2.5 rounded-xl font-bold text-xs text-slate-900 border-slate-300" onclick="openQuestionnaireModal()">
+                  <i class="fas fa-clipboard-check me-1.5 text-blue-600"></i> Launch Pre-Donation Self-Check
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="donor-card p-4 p-md-5 h-100">
+              <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                <div class="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200 text-sky-700 d-flex align-items-center justify-content-center text-xl" style="width: 48px; height: 48px;">
+                  <i class="fas fa-notes-medical"></i>
+                </div>
+                <div>
+                  <h4 class="font-black text-slate-900 mb-0.5 text-lg">Preparation &amp; Post-Care</h4>
+                  <p class="text-slate-600 text-xs mb-0 font-medium">Clinical advice for safe and comfortable donation</p>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <h6 class="font-black text-sky-900 mb-2 text-xs uppercase tracking-wider">Before Donation:</h6>
+                <ul class="text-xs text-slate-700 space-y-1.5 ps-3 mb-0 font-medium">
+                  <li>Drink at least 500ml water 1-2 hours prior.</li>
+                  <li>Eat a light, healthy meal within 3 hours. Avoid fatty foods.</li>
+                  <li>Ensure 6-8 hours of sound sleep prior to donation.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h6 class="font-black text-rose-900 mb-2 text-xs uppercase tracking-wider">After Donation:</h6>
+                <ul class="text-xs text-slate-700 space-y-1.5 ps-3 mb-0 font-medium">
+                  <li>Rest for 10-15 minutes in the clinic recovery lounge.</li>
+                  <li>Keep bandage clean and dry for 4-5 hours.</li>
+                  <li>Avoid heavy lifting or intense workouts for 24 hours.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- TAB 4: CERTIFICATES & HISTORY                                  -->
+      <!-- ============================================================= -->
+      <div class="dashboard-tab-section" id="sec-certificates">
+        <div class="honor-cert-card p-4 p-md-5 mb-4">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+              <div class="cert-frame shadow-sm bg-white">
+                <div class="cert-frame-inner text-center">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-[10px] font-black text-amber-900 uppercase tracking-wider">
+                      <i class="fas fa-hospital text-amber-700 me-1"></i> {{ hospital.name if hospital else (donor.hospital_name or 'SPHERIX CLINICAL TRANSFUSION UNIT') }}
+                    </span>
+                    <span class="badge bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1 font-bold text-[10px] rounded-pill">
+                      <i class="fas fa-award me-1 text-amber-600"></i> CLINICAL COMMENDATION
+                    </span>
+                  </div>
+
+                  <div class="my-3">
+                    <div class="text-[10px] font-bold text-amber-800 uppercase tracking-widest mb-0.5">Blood Transfusion &amp; Clinical Bank</div>
+                    <h3 class="font-black text-slate-900 mb-1 text-xl tracking-wide font-serif">CERTIFICATE OF HONOR</h3>
+                    <div class="text-xs text-slate-600 italic mb-2">Conferred upon voluntary lifesaver</div>
+                    <div class="text-lg font-black text-slate-900 uppercase tracking-wide font-serif">{{ donor.name }}</div>
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center text-xs text-slate-700 pt-3 mt-2 border-top border-amber-200">
+                    <div><span class="font-bold text-slate-900">Donation Date:</span> {{ donor.last_donation or 'Recorded Upon Drive' }}</div>
+                    <div class="font-bold text-amber-900"><i class="fas fa-certificate text-amber-700 me-1"></i> Hospital Seal &amp; QR Verified</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-5">
+              <h4 class="font-black text-slate-900 text-xl mb-2">Official Honor Certificate</h4>
+              <p class="text-slate-700 text-xs sm:text-sm mb-4 leading-relaxed font-medium">
+                Download your high-resolution Certificate of Appreciation formatted with official medical superintendent signatures and authentication QR code.
+              </p>
+              <div class="d-flex flex-column gap-2">
+                {% if donor.last_donation %}
+                <a href="{{ url_for('download_donation_certificate') }}" class="btn btn-danger py-2.5 rounded-xl font-bold text-xs d-flex align-items-center justify-content-center gap-2 text-white bg-red-600 hover:bg-red-700 border-0">
+                  <i class="fas fa-file-pdf text-amber-200"></i> Download Official Certificate (PDF)
+                </a>
+                {% endif %}
+                <a href="{{ url_for('download_blood_donor_id_card') }}" class="btn btn-outline-dark bg-white py-2.5 rounded-xl font-bold text-xs d-flex align-items-center justify-content-center gap-2 text-slate-900 border-slate-300">
+                  <i class="fas fa-id-card text-rose-600"></i> Download Scannable ID Card
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Donation History Table inside Certificates -->
+        <div class="donor-card p-4 p-md-5">
+          <h5 class="font-black text-slate-900 mb-3 text-base">Verified Donation History Log</h5>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-xs">
+              <thead class="table-light text-slate-700 uppercase tracking-wider font-bold">
+                <tr>
+                  <th scope="col" class="py-3 px-3">Date</th>
+                  <th scope="col" class="py-3 px-3">Center / Hospital</th>
+                  <th scope="col" class="py-3 px-3">Blood Group</th>
+                  <th scope="col" class="py-3 px-3">Type</th>
+                  <th scope="col" class="py-3 px-3">Clinical Status</th>
+                  <th scope="col" class="py-3 px-3 text-end">Commendation</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {% if donor.last_donation %}
+                <tr>
+                  <td class="py-3 px-3 font-bold text-slate-900">
+                    <i class="far fa-calendar-check text-emerald-700 me-1.5"></i> {{ donor.last_donation }}
+                  </td>
+                  <td class="py-3 px-3">
+                    <span class="font-bold text-slate-900">{{ hospital.name if hospital else (donor.hospital_name or 'Spherix Clinical Blood Bank') }}</span>
+                  </td>
+                  <td class="py-3 px-3">
+                    <span class="badge bg-rose-100 text-rose-800 border border-rose-300 font-black px-2 py-0.5 rounded">{{ donor.blood_group }}</span>
+                  </td>
+                  <td class="py-3 px-3 text-slate-700 font-medium">Whole Blood (450 ml)</td>
+                  <td class="py-3 px-3">
+                    <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2.5 py-1 rounded-pill">
+                      <i class="fas fa-check-circle me-1"></i> Processed &amp; Verified
+                    </span>
+                  </td>
+                  <td class="py-3 px-3 text-end">
+                    <a href="{{ url_for('download_donation_certificate') }}" class="btn btn-xs btn-outline-danger rounded-pill px-3 py-1 font-bold text-[11px]">
+                      <i class="fas fa-file-pdf me-1"></i> Certificate
+                    </a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-slate-500 font-medium">
+                    <i class="fas fa-history text-slate-400 text-xl mb-1 d-block"></i>
+                    <span>No completed donation records found on file. Your logs will appear here after your first completed drive.</span>
+                  </td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================= -->
+      <!-- TAB 5: PROFILE & SECURITY (UNIFIED)                           -->
+      <!-- ============================================================= -->
+      <div class="dashboard-tab-section" id="sec-profile">
+        <div class="row g-4">
+          <!-- Left Column: Identity Preview & ID Download -->
+          <div class="col-lg-5">
+            <div class="donor-card p-4 mb-4">
+              <div class="text-center pb-3 border-bottom mb-3">
+                <div class="position-relative d-inline-block mb-2">
+                  {% if donor.profile_picture_url %}
+                  <img src="{{ url_for('static', filename='uploads/' + donor.profile_picture_url) }}" class="rounded-3xl object-cover border-4 border-white shadow-md" style="width: 96px; height: 96px;" alt="{{ donor.name }}" id="previewAvatarImg">
+                  {% else %}
+                  <div class="rounded-3xl bg-rose-700 text-white d-flex align-items-center justify-content-center font-black text-3xl shadow-md mx-auto" style="width: 96px; height: 96px;" id="previewAvatarImg">
+                    {{ donor.name[0]|upper if donor.name else 'B' }}
+                  </div>
+                  {% endif %}
+                </div>
+                <h4 class="font-black text-slate-900 mb-0.5 text-lg">{{ donor.name }}</h4>
+                <div class="text-xs text-slate-600 mb-2 font-mono font-bold">LIC: {{ donor.license_number or donor.donor_card_id or 'SPX-BD-884' }}</div>
+                <div class="d-flex justify-content-center gap-1.5 flex-wrap">
+                  <span class="badge bg-rose-100 text-rose-800 border border-rose-300 px-3 py-1 font-black text-xs rounded-pill">Group {{ donor.blood_group }}</span>
+                  <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 font-bold text-xs rounded-pill">Active Lifesaver</span>
+                </div>
+              </div>
+
+              <div class="space-y-2 text-xs">
+                <div class="d-flex justify-content-between py-1 border-bottom border-slate-100">
+                  <span class="text-slate-600 font-medium">Email:</span>
+                  <span class="font-bold text-slate-900">{{ donor.email }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom border-slate-100">
+                  <span class="text-slate-600 font-medium">Phone:</span>
+                  <span class="font-bold text-slate-900">{{ donor.phone }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom border-slate-100">
+                  <span class="text-slate-600 font-medium">Age:</span>
+                  <span class="font-bold text-slate-900">{{ donor.age or '25' }} Years</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom border-slate-100">
+                  <span class="text-slate-600 font-medium">City:</span>
+                  <span class="font-bold text-slate-900">{{ donor.city or 'Registered' }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-1">
+                  <span class="text-slate-600 font-medium">Center:</span>
+                  <span class="font-bold text-slate-900">{{ hospital.name if hospital else (donor.hospital_name or 'Spherix Health Network') }}</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-top">
+                <a href="{{ url_for('download_blood_donor_id_card') }}" class="btn btn-outline-danger w-100 py-2 rounded-xl font-bold text-xs bg-white text-rose-700 border-rose-300 d-flex align-items-center justify-content-center gap-2">
+                  <i class="fas fa-id-card text-rose-600"></i> Download Scannable ID Card
+                </a>
+              </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="donor-card p-4 border border-rose-200 bg-rose-50/50 mb-4">
+              <h6 class="font-black text-rose-900 mb-1 text-xs uppercase tracking-wider">Danger Zone</h6>
+              <p class="text-slate-700 text-[11px] mb-3 font-medium">Permanently withdraw from the voluntary blood donor registry.</p>
+              
+              <form action="{{ url_for('blood_donor_dashboard') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete your donor account? This action cannot be undone.');">
+                <input type="hidden" name="delete_account" value="1">
+                <button type="submit" class="btn btn-outline-danger btn-sm rounded-xl font-bold text-xs w-100 py-2 bg-white">
+                  <i class="fas fa-trash-alt me-1.5"></i> Delete Donor Account
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Right Column: Profile Form + Security / Password -->
+          <div class="col-lg-7">
+            <!-- Edit Profile Form -->
+            <div class="donor-card p-4 p-md-5 mb-4">
+              <h4 class="font-black text-slate-900 mb-1 text-lg">Edit Donor Profile</h4>
+              <p class="text-slate-600 text-xs mb-4 font-medium">Update your clinical registration details</p>
+
+              <form action="{{ url_for('blood_donor_dashboard') }}" method="POST" enctype="multipart/form-data" class="space-y-4" id="donorProfileForm">
+                <input type="hidden" name="update_profile" value="1">
+                <input type="hidden" name="cropped_profile_image" id="croppedProfileImage">
+                
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 mb-3">
+                  <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Profile Photo</label>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <input type="file" id="profileImageInput" name="profilePicture" accept="image/*" class="crop-image-input d-none" data-crop-image="true" data-crop-target="croppedProfileImage" data-preview-target="previewAvatarImg" data-auto-submit="true">
+                    <button type="button" class="btn btn-sm btn-outline-dark bg-white rounded-xl px-3 py-1.5 font-bold text-xs" onclick="document.getElementById('profileImageInput').click();">
+                      <i class="fas fa-crop-alt text-rose-600 me-1"></i> Upload &amp; Crop Photo
+                    </button>
+                    {% if donor.profile_picture_url %}
+                    <button type="submit" name="delete_picture" value="1" class="btn btn-sm btn-outline-danger rounded-xl px-2.5 py-1.5 font-bold text-xs" onclick="return confirm('Remove profile photo?');">
+                      Remove
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Full Legal Name</label>
+                  <input type="text" name="name" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900 font-bold" value="{{ donor.name }}" required>
+                </div>
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Email</label>
+                    <input type="email" name="email" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900 font-bold" value="{{ donor.email }}" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Phone</label>
+                    <input type="tel" name="phone" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900 font-bold" value="{{ donor.phone }}" required>
+                  </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Blood Group</label>
+                    <select name="blood_group" class="form-select rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900 font-bold" required>
+                      <option value="A+" {% if donor.blood_group == 'A+' %}selected{% endif %}>A+</option>
+                      <option value="A-" {% if donor.blood_group == 'A-' %}selected{% endif %}>A-</option>
+                      <option value="B+" {% if donor.blood_group == 'B+' %}selected{% endif %}>B+</option>
+                      <option value="B-" {% if donor.blood_group == 'B-' %}selected{% endif %}>B-</option>
+                      <option value="AB+" {% if donor.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+                      <option value="AB-" {% if donor.blood_group == 'AB-' %}selected{% endif %}>AB-</option>
+                      <option value="O+" {% if donor.blood_group == 'O+' %}selected{% endif %}>O+</option>
+                      <option value="O-" {% if donor.blood_group == 'O-' %}selected{% endif %}>O-</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Age</label>
+                    <input type="number" name="age" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900 font-bold" value="{{ donor.age or 25 }}" min="18" max="65">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">City</label>
+                    <input type="text" name="city" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900 font-bold" value="{{ donor.city or 'New Delhi' }}" required>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-danger px-4 py-2.5 rounded-xl font-bold text-xs bg-red-600 hover:bg-red-700 text-white border-0">
+                  <i class="fas fa-save me-1.5"></i> Save Profile Changes
+                </button>
+              </form>
+            </div>
+
+            <!-- Change Password Card -->
+            <div class="donor-card p-4 p-md-5 mb-4">
+              <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 d-flex align-items-center justify-content-center text-lg" style="width: 40px; height: 40px;">
+                  <i class="fas fa-lock text-slate-700"></i>
+                </div>
+                <div>
+                  <h5 class="font-black text-slate-900 mb-0.5 text-base">Account Security &amp; Password</h5>
+                  <p class="text-slate-600 text-xs mb-0 font-medium">Update your portal login credentials</p>
+                </div>
+              </div>
+
+              <form action="{{ url_for('blood_donor_dashboard', tab='profile') }}" method="POST" class="space-y-3">
+                <input type="hidden" name="action" value="change_password">
+                <div class="mb-2">
+                  <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Current Password</label>
+                  <input type="password" name="current_password" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900" required>
+                </div>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">New Password</label>
+                    <input type="password" name="new_password" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900" required minlength="6">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Confirm New Password</label>
+                    <input type="password" name="confirm_password" class="form-control rounded-xl text-sm py-2 bg-white border-slate-300 text-slate-900" required minlength="6">
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-outline-dark bg-white w-100 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-slate-900 border-slate-300">
+                  <i class="fas fa-key me-1.5 text-rose-600"></i> Update Password
+                </button>
+              </form>
+            </div>
+
+            <!-- Privacy & Notification Toggles -->
+            <div class="donor-card p-4">
+              <h5 class="font-black text-slate-900 mb-2 text-sm uppercase tracking-wider">Privacy &amp; Alert Preferences</h5>
+              <div class="space-y-3 text-xs">
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-xl bg-slate-50 border border-slate-200 mb-2">
+                  <div>
+                    <strong class="text-slate-900 d-block">Public Donor Directory</strong>
+                    <span class="text-slate-600 font-medium">Allow verified hospitals to contact you during shortages</span>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" checked>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <div>
+                    <strong class="text-slate-900 d-block">Emergency SOS SMS Alerts</strong>
+                    <span class="text-slate-600 font-medium">Receive instant SMS for {{ donor.blood_group }} trauma emergencies</span>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" checked>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODALS                                                            -->
+<!-- ================================================================= -->
+
+<!-- Camp Register Modal -->
+<div class="modal fade" id="campRegisterModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3xl border border-slate-200 shadow-xl overflow-hidden bg-white">
+      <div class="modal-header bg-rose-50 text-rose-900 p-4 border-bottom border-rose-200">
+        <div>
+          <h5 class="modal-title font-black text-rose-900 text-base">Register for Blood Donation Camp</h5>
+          <p class="text-rose-700 text-xs mb-0 font-medium">Voluntary lifesaver registration for hospital staff drives</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('register_for_camp') }}" method="POST">
+        <div class="modal-body p-4 space-y-3">
+          <div class="mb-2">
+            <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Selected Camp</label>
+            <input type="text" name="camp_name" id="modalCampNameInput" class="form-control rounded-xl text-sm bg-slate-50 border-slate-300 font-bold text-slate-900" readonly required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Your Full Name</label>
+            <input type="text" name="name" class="form-control rounded-xl text-sm text-slate-900 font-bold" value="{{ donor.name }}" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Email</label>
+              <input type="email" name="email" class="form-control rounded-xl text-sm text-slate-900 font-bold" value="{{ donor.email }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Phone</label>
+              <input type="tel" name="phone" class="form-control rounded-xl text-sm text-slate-900 font-bold" value="{{ donor.phone }}" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer p-3 bg-slate-50 border-top">
+          <button type="button" class="btn btn-sm btn-outline-secondary rounded-xl px-3 font-bold text-xs" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-danger rounded-xl px-4 py-2 font-bold text-xs bg-red-600 text-white border-0">
+            Confirm Registration
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
-{% endblock %}
 
-{% block content %}
-<style>
-    /* Premium Blood Donor Hub Styling */
-    .donor-hero-panel {
-        background: linear-gradient(135deg, #090d16 0%, #1e0b14 40%, #3b0a1a 80%, #0d060c 100%);
-        border: 1px solid rgba(244, 63, 94, 0.25);
-        box-shadow: 0 16px 36px -10px rgba(225, 29, 72, 0.22);
-        border-radius: 24px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .donor-pass-card {
-        background: linear-gradient(140deg, #2a0813 0%, #4c0a1e 50%, #750e2e 100%);
-        border: 1px solid rgba(251, 113, 133, 0.35);
-        border-radius: 20px;
-        box-shadow: 0 12px 28px -6px rgba(190, 18, 60, 0.35);
-        color: #ffffff;
-    }
-
-    .stat-metric-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 18px;
-        box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    }
-    .stat-metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 24px -4px rgba(225, 29, 72, 0.12);
-        border-color: rgba(225, 29, 72, 0.3);
-    }
-
-    .honor-cert-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 22px;
-        box-shadow: 0 12px 30px -8px rgba(15, 23, 42, 0.08);
-    }
-    .cert-frame {
-        position: relative;
-        background-color: #ffffff;
-        background-image: url("{{ url_for('static', filename='images/certificate_template.png') }}");
-        background-size: 100% 100%;
-        background-repeat: no-repeat;
-        border-radius: 14px;
-        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12);
-        overflow: hidden;
-        min-height: 280px;
-    }
-    .cert-frame-inner {
-        padding-left: 25%;
-        padding-right: 4%;
-        padding-top: 1.5rem;
-        padding-bottom: 1.5rem;
-    }
-
-    .section-spacing {
-        margin-bottom: 2rem !important;
-    }
-    @media (min-width: 768px) {
-        .section-spacing {
-            margin-bottom: 2.5rem !important;
-        }
-    }
-</style>
-
-{% set active_tab = request.args.get('tab', 'overview') %}
-
-<div class="container-fluid p-0">
-    {% if active_tab == 'settings' %}
-    <!-- ============================================== -->
-    <!-- DEDICATED PROFILE & ACCOUNT SETTINGS TAB        -->
-    <!-- ============================================== -->
-    <div class="row g-4">
-        
-        <!-- Left: Profile Information & Photo Form -->
-        <div class="col-lg-7">
-            <div class="stat-metric-card p-4 p-md-5">
-                <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
-                    <div class="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 d-flex align-items-center justify-content-center text-xl shadow-xs" style="width: 48px; height: 48px;">
-                        <i class="fas fa-user-edit"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-black text-slate-900 mb-0.5 text-lg">Edit Donor Profile</h4>
-                        <p class="text-slate-500 text-xs mb-0">Update your clinical records, blood group, and contact information</p>
-                    </div>
-                </div>
-
-                <form action="{{ url_for('blood_donor_dashboard', tab='settings') }}" method="POST" enctype="multipart/form-data" class="space-y-4" id="donorProfileForm">
-                    <input type="hidden" name="update_profile" value="1">
-                    <input type="hidden" name="cropped_profile_image" id="croppedProfileImage">
-                    
-                    <!-- Avatar & Interactive Image Cropper Section -->
-                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 d-flex flex-column flex-sm-row align-items-sm-center gap-3.5 mb-3">
-                        <div class="position-relative flex-shrink-0 text-center text-sm-start">
-                            {% if donor.profile_picture_url %}
-                            <img src="{{ url_for('static', filename='uploads/' + donor.profile_picture_url) }}" 
-                                 id="previewAvatarImg"
-                                 class="rounded-2xl object-cover border-2 border-white shadow-sm" style="width: 72px; height: 72px;" alt="{{ donor.name }}">
-                            {% else %}
-                            <div id="previewAvatarPlaceholder" class="rounded-2xl bg-rose-600 text-white d-flex align-items-center justify-content-center font-bold text-xl shadow-sm mx-auto mx-sm-0" style="width: 72px; height: 72px;">
-                                {{ donor.name[0]|upper if donor.name else 'B' }}
-                            </div>
-                            <img id="previewAvatarImg" class="rounded-2xl object-cover border-2 border-white shadow-sm d-none" style="width: 72px; height: 72px;" alt="{{ donor.name }}">
-                            {% endif %}
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
-                                <label class="form-label text-xs font-bold text-slate-700 uppercase tracking-wider mb-0">Official Profile Photo</label>
-                                <span id="cropStatusBadge" class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] rounded-pill font-bold d-none">
-                                    <i class="fas fa-check-circle me-1"></i> Cropped &amp; Ready
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <input type="file" id="profileImageInput" name="profilePicture" accept="image/*" class="crop-image-input d-none" data-crop-image="true" data-crop-target="croppedProfileImage" data-preview-target="previewAvatarImg" data-auto-submit="true">
-                                <button type="button" class="btn btn-sm btn-dark rounded-xl px-3 py-1.5 font-bold text-xs d-inline-flex align-items-center gap-1.5" onclick="document.getElementById('profileImageInput').click();" style="background: #0f172a;">
-                                    <i class="fas fa-crop-alt text-rose-400"></i>
-                                    <span>Upload &amp; Crop Photo</span>
-                                </button>
-                                {% if donor.profile_picture_url %}
-                                <button type="submit" name="delete_picture" value="1" class="btn btn-sm btn-outline-danger rounded-xl px-2.5 py-1.5 font-bold text-xs" onclick="return confirm('Remove your profile picture?');">
-                                    <i class="fas fa-trash-alt me-1"></i> Remove
-                                </button>
-                                {% endif %}
-                            </div>
-                            <span class="text-[11px] text-slate-400 d-block mt-1">Select an image to adjust, zoom, and crop for your digital pass &amp; ID card</span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="form-label text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Full Legal Name</label>
-                        <input type="text" name="name" class="form-control rounded-xl text-sm py-2.5 bg-slate-50 border-slate-200" value="{{ donor.name }}" required>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email Address</label>
-                            <input type="email" name="email" class="form-control rounded-xl text-sm py-2.5 bg-slate-50 border-slate-200" value="{{ donor.email }}" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Phone / WhatsApp</label>
-                            <input type="tel" name="phone" class="form-control rounded-xl text-sm py-2.5 bg-slate-50 border-slate-200" value="{{ donor.phone }}" required>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Blood Group</label>
-                            <select name="blood_group" class="form-select rounded-xl text-sm py-2.5 bg-slate-50 border-slate-200" required>
-                                <option value="A+" {% if donor.blood_group == 'A+' %}selected{% endif %}>A+</option>
-                                <option value="A-" {% if donor.blood_group == 'A-' %}selected{% endif %}>A-</option>
-                                <option value="B+" {% if donor.blood_group == 'B+' %}selected{% endif %}>B+</option>
-                                <option value="B-" {% if donor.blood_group == 'B-' %}selected{% endif %}>B-</option>
-                                <option value="AB+" {% if donor.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
-                                <option value="AB-" {% if donor.blood_group == 'AB-' %}selected{% endif %}>AB-</option>
-                                <option value="O+" {% if donor.blood_group == 'O+' %}selected{% endif %}>O+</option>
-                                <option value="O-" {% if donor.blood_group == 'O-' %}selected{% endif %}>O-</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Age</label>
-                            <input type="number" name="age" class="form-control rounded-xl text-sm py-2.5 bg-slate-50 border-slate-200" value="{{ donor.age or 25 }}" min="18" max="65">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">City / Region</label>
-                            <input type="text" name="city" class="form-control rounded-xl text-sm py-2.5 bg-slate-50 border-slate-200" value="{{ donor.city or 'New Delhi' }}" required>
-                        </div>
-                    </div>
-
-                    <div class="pt-2">
-                        <button type="submit" class="btn btn-danger px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all text-white bg-gradient-to-r from-red-600 to-rose-600 border-0">
-                            <i class="fas fa-save me-1.5"></i> Save Profile Changes
-                        </button>
-                    </div>
-                </form>
-            </div>
+<!-- Respond Modal -->
+<div class="modal fade" id="respondRequestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3xl border border-slate-200 shadow-xl overflow-hidden bg-white">
+      <div class="modal-header bg-slate-100 text-slate-900 p-4 border-bottom">
+        <div>
+          <h5 class="modal-title font-black text-slate-900 text-base">Respond to Blood Request</h5>
+          <p class="text-slate-600 text-xs mb-0 font-medium">Confirm voluntary donation availability</p>
         </div>
-
-        <!-- Right: Security & Credentials -->
-        <div class="col-lg-5">
-            
-            <!-- Password Security Box -->
-            <div class="stat-metric-card p-4 mb-4">
-                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
-                    <i class="fas fa-lock text-slate-700"></i>
-                    <h5 class="font-black text-slate-900 mb-0 text-sm uppercase tracking-wider">Change Password</h5>
-                </div>
-
-                <form action="{{ url_for('blood_donor_dashboard', tab='settings') }}" method="POST" class="space-y-3">
-                    <input type="hidden" name="action" value="change_password">
-                    
-                    <div>
-                        <label class="form-label text-xs font-bold text-slate-700 mb-1">Current Password</label>
-                        <input type="password" name="current_password" class="form-control rounded-xl text-xs py-2 bg-slate-50" required>
-                    </div>
-                    <div>
-                        <label class="form-label text-xs font-bold text-slate-700 mb-1">New Password</label>
-                        <input type="password" name="new_password" class="form-control rounded-xl text-xs py-2 bg-slate-50" required>
-                    </div>
-                    <div>
-                        <label class="form-label text-xs font-bold text-slate-700 mb-1">Confirm New Password</label>
-                        <input type="password" name="confirm_password" class="form-control rounded-xl text-xs py-2 bg-slate-50" required>
-                    </div>
-
-                    <button type="submit" class="btn btn-outline-dark rounded-xl w-100 py-2 font-bold text-xs mt-1">
-                        <i class="fas fa-key me-1"></i> Update Password
-                    </button>
-                </form>
-            </div>
-
-            <!-- Credentials & Badges Box -->
-            <div class="stat-metric-card p-4 mb-4">
-                <h5 class="font-black text-slate-900 mb-2 text-sm uppercase tracking-wider">Official Credentials</h5>
-                <p class="text-slate-500 text-xs mb-3">Download and present your digital credentials at accredited healthcare facilities.</p>
-                
-                <div class="d-flex flex-column gap-2">
-                    <a href="{{ url_for('download_donation_certificate') }}" class="btn btn-danger py-2 rounded-xl font-bold text-xs d-flex align-items-center justify-content-center gap-2 text-white bg-gradient-to-r from-red-600 to-rose-600 border-0">
-                        <i class="fas fa-certificate text-amber-200"></i> Download PDF Certificate
-                    </a>
-                    <a href="{{ url_for('download_blood_donor_id_card') }}" class="btn btn-dark py-2 rounded-xl font-bold text-xs d-flex align-items-center justify-content-center gap-2 text-white" style="background: #0f172a;">
-                        <i class="fas fa-id-card text-rose-400"></i> Download Scannable ID Card
-                    </a>
-                </div>
-            </div>
-
-            <!-- Danger Zone Box -->
-            <div class="stat-metric-card p-4 border border-rose-200 bg-rose-50/40">
-                <h6 class="font-black text-rose-900 mb-1 text-xs uppercase tracking-wider">Danger Zone</h6>
-                <p class="text-slate-600 text-[11px] mb-3">Permanently withdraw from the voluntary blood donor registry.</p>
-                
-                <form action="{{ url_for('blood_donor_dashboard') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete your donor account? This action cannot be undone.');">
-                    <input type="hidden" name="delete_account" value="1">
-                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-xl font-bold text-xs w-100">
-                        <i class="fas fa-trash-alt me-1"></i> Delete Donor Account
-                    </button>
-                </form>
-            </div>
-
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 space-y-3">
+        <div class="p-3 rounded-2xl bg-rose-50 border border-rose-200 mb-3">
+          <div class="text-[10px] font-bold text-rose-700 uppercase">CASE INQUIRY</div>
+          <div class="text-sm font-black text-slate-900" id="modalCaseIdText">Case #SPX-TR-491</div>
         </div>
-
+        <div>
+          <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Preferred Date &amp; Time</label>
+          <input type="datetime-local" class="form-control rounded-xl text-sm text-slate-900 font-bold" id="respondDateTimeInput">
+        </div>
+      </div>
+      <div class="modal-footer p-3 bg-slate-50 border-top">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-xl px-3 font-bold text-xs" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-sm btn-danger rounded-xl px-4 py-2 font-bold text-xs bg-red-600 text-white border-0" onclick="alert('Availability registered. The transfusion coordinator will contact you directly.'); bootstrap.Modal.getInstance(document.getElementById('respondRequestModal')).hide();">
+          Submit Response
+        </button>
+      </div>
     </div>
-
-    {% else %}
-    <!-- ============================================== -->
-    <!-- OVERVIEW TAB (HERO, STATS, CERTIFICATE, CAMPS) -->
-    <!-- ============================================== -->
-
-    <!-- 1. EXECUTIVE WELCOME & DIGITAL DONOR PASS      -->
-    <div class="donor-hero-panel p-4 p-md-5 text-white section-spacing">
-        <div class="row align-items-center g-4">
-            
-            <!-- Left Column: Greeting & Summary -->
-            <div class="col-lg-7">
-                <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                    <span class="badge bg-white/10 text-white border border-white/20 px-3 py-1.5 rounded-pill text-xs font-bold">
-                        <i class="fas fa-id-card me-1.5 text-rose-300"></i> Donor ID: {{ donor.id }}
-                    </span>
-                    <span class="badge bg-rose-500/30 text-rose-100 border border-rose-400/40 px-3 py-1.5 rounded-pill text-xs font-black">
-                        <i class="fas fa-tint me-1.5 text-rose-300"></i> Blood Group: {{ donor.blood_group }}
-                    </span>
-                    <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-3 py-1.5 rounded-pill text-xs font-bold">
-                        <i class="fas fa-check-circle me-1.5 text-emerald-400"></i> Verified Lifesaver
-                    </span>
-                </div>
-
-                <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-2">
-                    Welcome back, <br>
-                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-rose-200 via-pink-300 to-amber-200">
-                        {{ donor.name }}
-                    </span>
-                </h1>
-                
-                <p class="text-slate-300 text-sm mb-4 max-w-xl leading-relaxed">
-                    Thank you for your noble commitment to saving human lives. Your voluntary donations directly supply emergency trauma units, ICU wards, and life-critical surgical procedures.
-                </p>
-
-                <!-- Action Button Group -->
-                <div class="d-flex flex-wrap gap-2.5">
-                    <a href="{{ url_for('download_donation_certificate') }}" 
-                       class="btn btn-rose px-4 py-2.5 rounded-xl font-bold text-xs text-white shadow-md transition-all bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 border-0 d-inline-flex align-items-center gap-2">
-                        <i class="fas fa-certificate text-amber-300"></i>
-                        <span>Download Certificate (PDF)</span>
-                    </a>
-
-                    <a href="{{ url_for('download_blood_donor_id_card') }}" 
-                       class="btn btn-rose px-4 py-2.5 rounded-xl font-bold text-xs text-white shadow-md transition-all bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 border-0 d-inline-flex align-items-center gap-2">
-                        <i class="fas fa-id-card text-rose-300"></i>
-                        <span>Scannable ID Card</span>
-                    </a>
-                    
-                    <a href="{{ url_for('blood_donor_dashboard', tab='settings') }}" 
-                       class="btn btn-rose px-4 py-2.5 rounded-xl font-bold text-xs text-white shadow-md transition-all bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 border-0 d-inline-flex align-items-center gap-2">
-                        <i class="fas fa-user-cog text-slate-300"></i>
-                        <span>Settings</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Right Column: Digital Lifesaver Card -->
-            <div class="col-lg-5">
-                <div class="donor-pass-card p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="w-8 h-8 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center text-sm text-rose-300">
-                                <i class="fas fa-tint"></i>
-                            </div>
-                            <div>
-                                <div class="text-[9px] font-black uppercase tracking-wider text-rose-200">SPHERIX HEALTH NETWORK</div>
-                                <div class="text-xs font-bold text-white leading-none">DIGITAL DONOR PASS</div>
-                            </div>
-                        </div>
-                        <span class="badge bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
-                            ACTIVE
-                        </span>
-                    </div>
-
-                    <div class="py-2.5 my-2 border-y border-white/10 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-[9px] font-bold text-rose-200 uppercase tracking-wider">DONOR NAME</div>
-                            <div class="text-sm font-black text-white uppercase">{{ donor.name }}</div>
-                            <div class="text-[10px] text-white/70 font-mono">ID: {{ donor.id }} &bull; {{ donor.city or 'Registered City' }}</div>
-                        </div>
-                        <div class="text-end">
-                            <div class="text-[9px] font-bold text-rose-200 uppercase tracking-wider">GROUP</div>
-                            <div class="text-2xl font-black text-rose-300 leading-none">{{ donor.blood_group }}</div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center text-[10px] text-white/60">
-                        <span><i class="fas fa-shield-alt text-emerald-400 me-1"></i> Hospital Verified</span>
-                        <span>Emergency Transfusion Ready</span>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- ============================================== -->
-    <!-- 2. FOUR CORE TELEMETRY METRIC CARDS            -->
-    <!-- ============================================== -->
-    <div class="row g-3 g-md-4 section-spacing">
-        
-        <!-- Metric 1: Blood Group -->
-        <div class="col-6 col-lg-3">
-            <div class="stat-metric-card p-4 h-100 flex flex-col justify-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-slate-500 font-bold text-xs uppercase tracking-wider">Blood Group</span>
-                    <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 d-flex align-items-center justify-content-center text-sm border border-rose-100">
-                        <i class="fas fa-tint"></i>
-                    </div>
-                </div>
-                <div>
-                    <div class="text-2xl font-black text-slate-900 tracking-tight">{{ donor.blood_group }}</div>
-                    <div class="text-xs font-semibold text-rose-600 mt-1 flex items-center gap-1">
-                        <i class="fas fa-check-circle text-[10px]"></i> Compatible Type
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metric 2: Estimated Lives Saved -->
-        <div class="col-6 col-lg-3">
-            <div class="stat-metric-card p-4 h-100 flex flex-col justify-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-slate-500 font-bold text-xs uppercase tracking-wider">Lives Saved</span>
-                    <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 d-flex align-items-center justify-content-center text-sm border border-emerald-100">
-                        <i class="fas fa-heart-pulse"></i>
-                    </div>
-                </div>
-                <div>
-                    <div class="text-2xl font-black text-emerald-600 tracking-tight">Up to 3</div>
-                    <div class="text-xs font-medium text-slate-500 mt-1">Per whole blood donation</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metric 3: Last Donation Date -->
-        <div class="col-6 col-lg-3">
-            <div class="stat-metric-card p-4 h-100 flex flex-col justify-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-slate-500 font-bold text-xs uppercase tracking-wider">Last Donation</span>
-                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 d-flex align-items-center justify-content-center text-sm border border-blue-100">
-                        <i class="far fa-calendar-check"></i>
-                    </div>
-                </div>
-                <div>
-                    <div class="text-base font-black text-slate-900 tracking-tight mt-0.5">
-                        {{ donor.last_donation or 'On Record' }}
-                    </div>
-                    <div class="text-xs font-medium text-blue-600 mt-1">Hospital verified log</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metric 4: Eligibility Status -->
-        <div class="col-6 col-lg-3">
-            <div class="stat-metric-card p-4 h-100 flex flex-col justify-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-slate-500 font-bold text-xs uppercase tracking-wider">Eligibility</span>
-                    <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 d-flex align-items-center justify-content-center text-sm border border-indigo-100">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                </div>
-                <div>
-                    <div>
-                        <span class="badge bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-pill font-bold text-xs" style="background-color: #4bb59f;">
-                            <i class="fas fa-check me-1"></i> Eligible Today
-                        </span>
-                    </div>
-                    <div class="text-xs font-medium text-slate-500 mt-1">Ready for next drive</div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ============================================== -->
-    <!-- 3. OFFICIAL CERTIFICATE OF HONOR CARD          -->
-    <!-- ============================================== -->
-    <div class="honor-cert-card p-4 p-md-5 section-spacing">
-        <div class="row align-items-center g-4">
-            
-            <!-- Left: Certificate Plaque Preview -->
-            <div class="col-lg-7">
-                <div class="cert-frame p-4.5 shadow-sm">
-                    <div class="cert-frame-inner p-3.5">
-                        
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
-                                <i class="fas fa-hospital text-amber-600"></i> {{ donor.hospital_name or 'HOSPITAL TRANSFUSION UNIT' }}
-                            </span>
-                            <span class="badge bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 font-bold text-[10px] rounded-pill">
-                                <i class="fas fa-award me-1 text-amber-500"></i> CLINICAL COMMENDATION
-                            </span>
-                        </div>
-
-                        <div class="text-center my-2.5">
-                            <div class="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-0.5">Blood Transfusion &amp; Clinical Bank</div>
-                            <h2 class="font-black text-slate-900 mb-0.5 text-lg sm:text-xl tracking-wide font-serif">
-                                CERTIFICATE OF HONOR
-                            </h2>
-                            <div class="text-[11px] text-slate-500 italic mb-1.5">Conferred upon voluntary lifesaver</div>
-
-                            <div class="text-lg font-black text-slate-900 uppercase tracking-wide mb-2 font-serif">
-                                {{ donor.name }}
-                            </div>
-
-                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-white/90 border border-amber-300/80 shadow-2xs text-xs font-bold text-slate-800">
-                                <span>Blood Group: <strong class="text-rose-600">{{ donor.blood_group }}</strong></span>
-                                <span class="text-slate-300">&bull;</span>
-                                <span>Facility: <strong class="text-indigo-700">{{ donor.hospital_name or 'Clinical Center' }}</strong></span>
-                            </div>
-                        </div>
-
-                        <!-- Dual Signatories Preview -->
-                        <div class="row g-2 pt-2 mt-1 border-top border-amber-200/60">
-                            <div class="col-6 text-start">
-                                <div class="italic text-indigo-950 font-bold" style="font-family: 'Times New Roman', serif; font-size: 13px;">{{ donor.assigned_staff_name or donor.superintendent_name or 'Medical Superintendent' }}</div>
-                                <div class="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Medical Superintendent</div>
-                                <div class="text-[8px] text-slate-400">Blood Bank In-Charge</div>
-                            </div>
-                            <div class="col-6 text-end">
-                                <div class="italic text-indigo-950 font-bold" style="font-family: 'Times New Roman', serif; font-size: 13px;">{{ donor.president_ceo or 'Managing Director / MD' }}</div>
-                                <div class="text-[9px] font-bold text-slate-800 uppercase tracking-tight">President &amp; Chief Executive / MD</div>
-                                <div class="text-[8px] text-slate-400">{{ donor.hospital_name or 'Hospital Facility' }}</div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center text-[10px] text-slate-600 pt-2 mt-2 border-top border-amber-200/40">
-                            <div>
-                                <span class="font-bold text-slate-800">Donation Date:</span> {{ donor.last_donation or 'Recorded' }}
-                            </div>
-                            <div class="text-end font-bold text-amber-900">
-                                <i class="fas fa-certificate text-amber-600 me-1"></i> Hospital Seal &amp; QR
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right: Certificate Download Panel -->
-            <div class="col-lg-5">
-                <div class="ps-lg-2">
-                    <div class="d-inline-flex align-items-center gap-1.5 px-3 py-1 rounded-pill bg-amber-100 text-amber-900 text-xs font-bold mb-2.5 border border-amber-300">
-                        <i class="fas fa-medal text-amber-600"></i> Lifetime Recognition
-                    </div>
-
-                    <h3 class="font-black text-slate-900 text-xl sm:text-2xl mb-2">
-                        Official Blood Donation Certificate
-                    </h3>
-                    
-                    <p class="text-slate-600 text-xs sm:text-sm mb-3.5 leading-relaxed">
-                        Download your printable, high-resolution Certificate of Appreciation formatted with official medical superintendent signatures, authentication QR code, and security serial.
-                    </p>
-
-                    <div class="d-flex flex-column gap-2">
-                        <a href="{{ url_for('download_donation_certificate') }}" 
-                           class="btn btn-danger py-2.5 px-4 rounded-xl font-bold text-xs d-inline-flex align-items-center justify-content-center gap-2 shadow-sm hover:shadow-md transition-all bg-gradient-to-r from-red-600 to-rose-600 border-0 text-white">
-                            <i class="fas fa-file-pdf text-amber-200"></i>
-                            <span>Download Official PDF Certificate</span>
-                        </a>
-
-                        <a href="{{ url_for('download_blood_donor_id_card') }}" 
-                           class="btn btn-dark py-2.5 px-4 rounded-xl font-bold text-xs d-inline-flex align-items-center justify-content-center gap-2 shadow-sm hover:shadow-md transition-all border-0 text-white" style="background: #0f172a;">
-                            <i class="fas fa-id-card text-rose-400"></i>
-                            <span>Download Scannable Donor ID Card</span>
-                        </a>
-
-                        <a href="{{ url_for('blood_donor_dashboard', tab='settings') }}" 
-                           class="btn btn-outline-secondary py-2 rounded-xl font-bold text-xs d-inline-flex align-items-center justify-content-center gap-2">
-                            <i class="fas fa-user-edit"></i>
-                            <span>Edit Full Profile &amp; Settings</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- ============================================== -->
-    <!-- 4. UPCOMING CAMPS & QUICK INFO                 -->
-    <!-- ============================================== -->
-    <div class="row g-3 g-md-4 mb-4" id="camps-section">
-        
-        <!-- Left: Upcoming Donation Camps -->
-        <div class="col-lg-7">
-            <div class="stat-metric-card p-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <h5 class="font-black text-slate-900 mb-0.5 text-base">Upcoming Blood Donation Camps</h5>
-                        <p class="text-slate-500 text-xs mb-0">Visit active community blood drives in your region</p>
-                    </div>
-                    <span class="badge bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 font-bold text-xs rounded-pill" style="background-color: #006eb9;">{{ camps|length }} Scheduled</span>
-                </div>
-
-                {% if camps %}
-                <div class="space-y-2.5">
-                    {% for camp in camps %}
-                    <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white hover:border-rose-300 transition-all">
-                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
-                            <div>
-                                <h6 class="font-bold text-slate-900 mb-1 text-sm">{{ camp.name }}</h6>
-                                <div class="text-slate-500 text-xs d-flex flex-wrap gap-2.5">
-                                    <span><i class="fas fa-map-marker-alt text-rose-600 me-1"></i>{{ camp.location }}</span>
-                                    <span><i class="far fa-calendar-alt text-blue-600 me-1"></i>{{ camp.date }}</span>
-                                    <span><i class="far fa-clock text-slate-400 me-1"></i>{{ camp.time }}</span>
-                                </div>
-                            </div>
-                            <div class="text-sm-end">
-                                <a href="tel:{{ camp.contact }}" class="btn btn-sm btn-outline-danger rounded-pill px-3 font-bold text-xs">
-                                    <i class="fas fa-phone me-1"></i>{{ camp.contact }}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="text-center py-4 text-slate-400 border border-dashed rounded-xl bg-slate-50/60">
-                    <i class="fas fa-tent text-slate-300 text-2xl mb-1.5"></i>
-                    <div class="font-bold text-slate-700 text-xs">No Mobile Camps Scheduled Today</div>
-                    <div class="text-slate-400 text-[11px]">Check back soon for new drives organized by Spherix partner hospitals.</div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Right: Donor Quick Card -->
-        <div class="col-lg-5" id="profile-section">
-            <div class="stat-metric-card p-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600 to-red-600 text-white d-flex align-items-center justify-content-center text-sm shadow-sm">
-                        <i class="fas fa-user-shield"></i>
-                    </div>
-                    <div>
-                        <h5 class="font-black text-slate-900 mb-0 text-base">Donor Credentials</h5>
-                        <p class="text-slate-500 text-[11px] mb-0">Manage profile details &amp; credentials</p>
-                    </div>
-                </div>
-
-                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 mb-3 space-y-2 text-xs">
-                    <div class="d-flex justify-content-between">
-                        <span class="text-slate-500 font-medium">Full Name:</span>
-                        <span class="font-bold text-slate-800">{{ donor.name }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-slate-500 font-medium">Blood Group:</span>
-                        <span class="font-black text-rose-600">{{ donor.blood_group }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-slate-500 font-medium">Phone:</span>
-                        <span class="font-bold text-slate-800">{{ donor.phone }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-slate-500 font-medium">Region:</span>
-                        <span class="font-bold text-slate-800">{{ donor.city or 'Registered' }}</span>
-                    </div>
-                </div>
-
-                <a href="{{ url_for('blood_donor_dashboard', tab='settings') }}" class="btn btn-dark w-100 py-2.5 rounded-xl font-bold text-xs text-white d-flex align-items-center justify-content-center gap-2" style="background: #0f172a;">
-                    <i class="fas fa-user-edit"></i>
-                    <span>Open Settings &amp; Edit Profile</span>
-                </a>
-            </div>
-        </div>
-
-    </div>
-    {% endif %}
-
+  </div>
 </div>
-{% endblock %}
+
+<!-- Schedule Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3xl border border-slate-200 shadow-xl overflow-hidden bg-white">
+      <div class="modal-header bg-slate-100 text-slate-900 p-4 border-bottom">
+        <div>
+          <h5 class="modal-title font-black text-slate-900 text-base">Schedule Blood Donation Appointment</h5>
+          <p class="text-slate-600 text-xs mb-0 font-medium">Book a priority walk-in slot</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 space-y-3">
+        <div class="mb-2">
+          <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Donor Name</label>
+          <input type="text" class="form-control rounded-xl text-sm text-slate-900 font-bold bg-slate-50" value="{{ donor.name }}" readonly>
+        </div>
+        <div>
+          <label class="form-label text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Preferred Date</label>
+          <input type="date" class="form-control rounded-xl text-sm text-slate-900 font-bold" id="scheduleDateInput">
+        </div>
+      </div>
+      <div class="modal-footer p-3 bg-slate-50 border-top">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-xl px-3 font-bold text-xs" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-danger rounded-xl px-4 py-2 font-bold text-xs bg-red-600 text-white border-0" onclick="alert('Appointment slot reserved successfully.'); bootstrap.Modal.getInstance(document.getElementById('scheduleModal')).hide();">
+          Confirm Appointment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Health Questionnaire Modal -->
+<div class="modal fade" id="questionnaireModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-3xl border border-slate-200 shadow-xl overflow-hidden bg-white">
+      <div class="modal-header bg-slate-100 text-slate-900 p-4 border-bottom">
+        <div>
+          <h5 class="modal-title font-black text-slate-900 text-base">Pre-Donation Clinical Self-Assessment</h5>
+          <p class="text-slate-600 text-xs mb-0 font-medium">Quick pre-screening tool</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 space-y-3">
+        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="q1" checked>
+            <label class="form-check-label text-xs font-bold text-slate-900" for="q1">
+              I am feeling healthy and free of acute illness today.
+            </label>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="q2" checked>
+            <label class="form-check-label text-xs font-bold text-slate-900" for="q2">
+              My body weight is at least 50 kg (110 lbs).
+            </label>
+          </div>
+          <div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" id="q3" checked>
+            <label class="form-check-label text-xs font-bold text-slate-900" for="q3">
+              I have not taken antibiotics within the past 7 days.
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer p-3 bg-slate-50 border-top">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-xl px-3 font-bold text-xs" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-sm btn-dark rounded-xl px-4 py-2 font-bold text-xs text-white" style="background: #0f172a;" onclick="alert('Pre-screening complete: Clinically ready.'); bootstrap.Modal.getInstance(document.getElementById('questionnaireModal')).hide();">
+          Verify Readiness
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleDonorSidebar() {
+    var sidebar = document.getElementById('donorSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+  }
+
+  function switchSection(secId, navLink) {
+    // Hide all tab sections
+    document.querySelectorAll('.dashboard-tab-section').forEach(function(el) {
+      el.classList.remove('active');
+    });
+
+    // Map any legacy or sub-aliases into the 5 essential core tabs
+    var validTabs = ['overview', 'camps', 'eligibility', 'certificates', 'profile'];
+    if (!validTabs.includes(secId)) {
+      if (['requests', 'emergency', 'donate-blood', 'centers', 'requests-near-me', 'my-responses'].includes(secId)) {
+        secId = 'camps';
+      } else if (['settings', 'security', 'privacy', 'danger-zone'].includes(secId)) {
+        secId = 'profile';
+      } else if (['readiness', 'post-care', 'health'].includes(secId)) {
+        secId = 'eligibility';
+      } else if (['history', 'awards', 'id-card', 'milestones'].includes(secId)) {
+        secId = 'certificates';
+      } else {
+        secId = 'overview';
+      }
+    }
+
+    // Show target section
+    var targetSec = document.getElementById('sec-' + secId);
+    if (targetSec) {
+      targetSec.classList.add('active');
+    }
+
+    // Update active sidebar link
+    document.querySelectorAll('.sidebar-link').forEach(function(el) {
+      el.classList.remove('active');
+    });
+    if (navLink) {
+      navLink.classList.add('active');
+    } else {
+      var activeLink = document.getElementById('nav-' + secId);
+      if (activeLink) activeLink.classList.add('active');
+    }
+
+    // Update title
+    var titles = {
+      'overview': 'Blood Donor Hub',
+      'camps': 'Donation Camps & Emergency SOS',
+      'eligibility': 'Health & Eligibility',
+      'certificates': 'Certificates & History',
+      'profile': 'Profile & Account Security'
+    };
+    var titleEl = document.getElementById('currentSectionTitle');
+    if (titleEl && titles[secId]) {
+      titleEl.innerText = titles[secId];
+    }
+
+    // Close mobile sidebar if open
+    var sidebar = document.getElementById('donorSidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (sidebar && sidebar.classList.contains('mobile-open')) {
+      sidebar.classList.remove('mobile-open');
+      overlay.classList.remove('active');
+    }
+
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  function openCampRegisterModal(campName) {
+    document.getElementById('modalCampNameInput').value = campName;
+    new bootstrap.Modal(document.getElementById('campRegisterModal')).show();
+  }
+
+  function openRespondModal(caseId, hospital, bloodGroup) {
+    document.getElementById('modalCaseIdText').innerText = caseId + ' (' + hospital + ') - ' + bloodGroup;
+    var dt = new Date();
+    dt.setDate(dt.getDate() + 1);
+    dt.setHours(10, 0, 0, 0);
+    document.getElementById('respondDateTimeInput').value = dt.toISOString().slice(0, 16);
+    new bootstrap.Modal(document.getElementById('respondRequestModal')).show();
+  }
+
+  function openScheduleModal() {
+    var dt = new Date();
+    dt.setDate(dt.getDate() + 1);
+    document.getElementById('scheduleDateInput').value = dt.toISOString().split('T')[0];
+    new bootstrap.Modal(document.getElementById('scheduleModal')).show();
+  }
+
+  function openQuestionnaireModal() {
+    new bootstrap.Modal(document.getElementById('questionnaireModal')).show();
+  }
+
+  function handleGlobalSearch(query) {
+    query = (query || '').toLowerCase().trim();
+    if (!query) return;
+    if (query.includes('camp') || query.includes('drive') || query.includes('center') || query.includes('sos') || query.includes('emergency') || query.includes('request')) {
+      switchSection('camps');
+    } else if (query.includes('cert') || query.includes('award') || query.includes('history')) {
+      switchSection('certificates');
+    } else if (query.includes('profile') || query.includes('name') || query.includes('setting') || query.includes('password') || query.includes('security')) {
+      switchSection('profile');
+    } else if (query.includes('eligib') || query.includes('health') || query.includes('blood')) {
+      switchSection('eligibility');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var tab = urlParams.get('tab');
+    if (tab) {
+      switchSection(tab);
+    }
+  });
+</script>
+
+</body>
+</html>

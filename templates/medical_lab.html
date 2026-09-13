@@ -1,696 +1,1239 @@
 {% extends "layout.html" %}
 
-{% block title %}Diagnostic Configurator | Spherix Clinic{% endblock %}
+{% block title %}Diagnostic Lab Tests & Full Body Health Checkups • Home Sample Collection • Spherix Clinic{% endblock %}
 
-{% block head %}
+{% block head_extra %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-    :root { 
-        --primary: #0f766e; /* Teal 700 */
-        --accent: #2dd4bf;  /* Teal 400 */
-        --surface: #ffffff;
-        --bg-deep: #f8fafc;
-    }
-    
-    body { 
-        font-family: 'Plus Jakarta Sans', sans-serif; 
-        background-color: var(--bg-deep);
-        /* Subtle mesh gradient background */
-        background-image: 
-            radial-gradient(at 0% 0%, hsla(170,40%,90%,1) 0, transparent 50%), 
-            radial-gradient(at 100% 100%, hsla(210,40%,92%,1) 0, transparent 50%);
-        background-attachment: fixed;
+    :root {
+        --spherix-teal: #0d9488;
+        --spherix-teal-dark: #0f766e;
+        --spherix-teal-light: #f0fdfa;
+        --spherix-blue: #0284c7;
+        --spherix-amber: #f59e0b;
+        --spherix-coral: #ff6f61;
     }
 
-    /* Glass Effect Utilities */
-    .glass-panel {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
+    * {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ambient Hero Mesh Background */
+    .lab-hero-mesh {
+        background: 
+            radial-gradient(circle at 12% 18%, rgba(13, 148, 136, 0.15) 0%, transparent 45%),
+            radial-gradient(circle at 88% 75%, rgba(2, 132, 199, 0.12) 0%, transparent 45%),
+            linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Diagnostics Cards */
+    .lab-card {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 20px;
+        transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+    .lab-card:hover {
+        border-color: #2dd4bf;
+        box-shadow: 0 16px 36px -8px rgba(13, 148, 136, 0.14);
+        transform: translateY(-4px);
+    }
+
+    /* Concern Category Pills */
+    .concern-pill.active {
+        background-color: #0d9488 !important;
+        color: #ffffff !important;
+        border-color: #0d9488 !important;
+        box-shadow: 0 4px 14px rgba(13, 148, 136, 0.3);
     }
 
     /* Custom Scrollbar */
-    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-    /* Animations */
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* Complete Isolation & Hidden Controls when Booking Drawer or Monograph Modal is Open */
+    body.sidebar-drawer-open {
+        overflow: hidden !important;
     }
-    .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
-
-    @keyframes pulse-ring {
-        0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(45, 212, 191, 0); }
-        100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); }
-    }
-    .blob-pulse { animation: pulse-ring 2s infinite; }
-
-    /* Tags */
-    .tag-fasting {
-        background-color: #fff7ed;
-        color: #ea580c;
-        border: 1px solid #ffedd5;
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        text-transform: uppercase;
-        font-weight: 700;
-        letter-spacing: 0.025em;
-    }
-    .tag-stat {
-        background-color: #fef2f2;
-        color: #dc2626;
-        border: 1px solid #fee2e2;
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        text-transform: uppercase;
-        font-weight: 700;
-        letter-spacing: 0.025em;
+    body.sidebar-drawer-open nav.glass-nav,
+    body.sidebar-drawer-open #main-navbar,
+    body.sidebar-drawer-open header,
+    body.sidebar-drawer-open #main-footer,
+    body.sidebar-drawer-open footer,
+    body.sidebar-drawer-open #floating-actions-dock,
+    body.sidebar-drawer-open #chatbot-toggle-btn,
+    body.sidebar-drawer-open #feedback-toggle-btn,
+    body.sidebar-drawer-open #chatbot-widget,
+    body.sidebar-drawer-open #feedback-modal,
+    body.sidebar-drawer-open .floating-cart-badge {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="min-h-screen bg-slate-50 text-slate-900 pb-24">
 
-<div class="min-h-screen flex items-center justify-center p-4 lg:p-8 relative">
-    
-    <!-- Abstract Background Shape -->
-    <div class="absolute top-20 left-10 w-64 h-64 bg-teal-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-    <div class="absolute bottom-20 right-10 w-64 h-64 bg-blue-200/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-
-    <!-- Main Interface Card -->
-    <div class="w-full max-w-[1280px] glass-panel rounded-[2rem] shadow-2xl shadow-slate-200/50 overflow-hidden flex flex-col lg:flex-row relative min-h-[800px] border border-white/60">
-        
-        <!-- LEFT COLUMN: Workspace -->
-        <div class="w-full lg:w-[65%] p-8 lg:p-12 flex flex-col relative z-20">
+    <!-- ================= 1. HERO SECTION & VALUE PROPOSITIONS ================= -->
+    <section class="lab-hero-mesh pt-10 pb-12 px-4 sm:px-6 lg:px-8 border-b border-slate-200">
+        <div class="max-w-6xl mx-auto space-y-6">
             
-            <!-- Top Nav / Breadcrumbs -->
-            <div class="flex justify-between items-start mb-8">
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="w-2 h-2 rounded-full bg-teal-500"></span>
-                        <span class="text-slate-400 text-xs font-semibold uppercase tracking-widest">Lab Configuration</span>
-                    </div>
-                    <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight font-['Space_Grotesk']">Select Diagnostics</h1>
-                    <p class="text-slate-500 mt-2 text-sm max-w-md">Search across 500+ standard panels. Real-time availability check active.</p>
+            <!-- Top Tagline & Pincode Indicator -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-xs font-black uppercase tracking-wider shadow-2xs">
+                    <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+                    <span>100% NABL &amp; CAP Certified Pathology Labs • Doorstep Sample Collection</span>
                 </div>
-                <!-- Mini Progress -->
-                <div class="hidden sm:flex flex-col items-end">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Step 2 of 4</span>
-                    <div class="w-32 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                        <div class="h-full bg-teal-500 w-1/2 rounded-full"></div>
-                    </div>
+
+                <!-- Pincode / City Selector -->
+                <div class="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-bold text-slate-700">
+                    <i class="fas fa-location-dot text-teal-600"></i>
+                    <span>Collection at: <span id="currentPincodeLabel" class="text-teal-900 font-black">110001 (New Delhi)</span></span>
+                    <button type="button" onclick="promptPincode();" class="text-teal-600 hover:text-teal-800 text-xs underline font-extrabold cursor-pointer border-0 bg-transparent ml-1">
+                        Change
+                    </button>
                 </div>
             </div>
 
-            <!-- SEARCH AREA (Sticky) -->
-            <div class="sticky top-0 z-40 bg-white/80 backdrop-blur-md py-4 -mx-4 px-4 mb-2">
-                <div class="relative group" id="dropdown-container">
-                    <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                        <i class="fas fa-microscope text-slate-400 group-focus-within:text-teal-500 transition-colors"></i>
-                    </div>
-                    <input type="text" id="test-search" 
-                           class="w-full pl-12 pr-12 py-5 bg-slate-50 border-0 ring-1 ring-slate-200 rounded-2xl text-slate-800 font-medium placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:bg-white transition-all shadow-sm text-lg"
-                           placeholder="Search tests (e.g. 'Vit D', 'Lipid', 'Cardiac')..."
-                           autocomplete="off">
-                    
-                    <!-- Keyboard Shortcut Hint -->
-                    <div class="absolute inset-y-0 right-5 flex items-center pointer-events-none">
-                        <kbd class="hidden md:inline-flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-400 font-mono">⌘ K</kbd>
-                    </div>
-
-                    <!-- MEGA DROPDOWN -->
-                    <div id="test-dropdown" 
-                         class="absolute top-full left-0 w-full mt-3 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-[500px] overflow-y-auto custom-scroll hidden z-50 divide-y divide-slate-50">
-                        
-                        <!-- Header -->
-                        <div class="bg-slate-50/80 backdrop-blur p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex justify-between">
-                            <span>Available Panels</span>
-                            <span>CPT Code</span>
-                        </div>
-
-                        <!-- 1. HEMATOLOGY -->
-                        <div class="test-category">
-                            <div class="px-5 py-2 bg-slate-50 text-xs font-bold text-slate-900 flex items-center gap-2">
-                                <i class="fas fa-vial text-teal-500"></i> Hematology
-                            </div>
-                            <!-- CBC -->
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-teal-50/50 transition-colors group border-l-4 border-transparent hover:border-teal-400" onclick="addTest('CBC', 'Complete Blood Count (CBC)', 15.00, '85027', false)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm group-hover:text-teal-700">Complete Blood Count</div>
-                                    <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                                        <span>Includes Diff/Platelet</span>
-                                        <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                        <span class="font-mono">TAT: 24h</span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹15.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 85027</div>
-                                </div>
-                            </div>
-                            <!-- ESR -->
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-teal-50/50 transition-colors group border-l-4 border-transparent hover:border-teal-400" onclick="addTest('ESR', 'ESR (Sed Rate)', 8.50, '85652', false)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">ESR (Sedimentation Rate)</div>
-                                    <div class="text-xs text-slate-400 mt-1">Inflammation Marker</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹8.50</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 85652</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 2. VITAMINS & NUTRITION -->
-                        <div class="test-category">
-                            <div class="px-5 py-2 bg-slate-50 text-xs font-bold text-slate-900 flex items-center gap-2">
-                                <i class="fas fa-apple-alt text-orange-500"></i> Vitamins & Nutrition
-                            </div>
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-orange-50/50 transition-colors group border-l-4 border-transparent hover:border-orange-400" onclick="addTest('VITD', 'Vitamin D, 25-Hydroxy', 45.00, '82306', false)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">Vitamin D (25-OH)</div>
-                                    <div class="text-xs text-slate-400 mt-1">Bone Health & Immunity</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹45.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 82306</div>
-                                </div>
-                            </div>
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-orange-50/50 transition-colors group border-l-4 border-transparent hover:border-orange-400" onclick="addTest('B12', 'Vitamin B12 & Folate', 38.00, '82607', true)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">Vitamin B12 & Folate</div>
-                                    <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                                        <span class="tag-fasting">FASTING REQ</span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹38.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 82607</div>
-                                </div>
-                            </div>
-                             <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-orange-50/50 transition-colors group border-l-4 border-transparent hover:border-orange-400" onclick="addTest('IRON', 'Iron Studies Panel', 29.00, '85390', true)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">Iron Studies (TIBC/Ferritin)</div>
-                                    <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                                        <span class="tag-fasting">FASTING REQ</span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹29.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 85390</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 3. BIOCHEMISTRY -->
-                        <div class="test-category">
-                            <div class="px-5 py-2 bg-slate-50 text-xs font-bold text-slate-900 flex items-center gap-2">
-                                <i class="fas fa-dna text-indigo-500"></i> Biochemistry
-                            </div>
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-indigo-50/50 transition-colors group border-l-4 border-transparent hover:border-indigo-400" onclick="addTest('LIPID', 'Lipid Panel', 35.00, '80061', true)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">Lipid Profile</div>
-                                    <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                                        <span class="tag-fasting">FASTING REQ</span>
-                                        <span>Cholesterol, HDL, LDL, Trig</span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹35.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 80061</div>
-                                </div>
-                            </div>
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-indigo-50/50 transition-colors group border-l-4 border-transparent hover:border-indigo-400" onclick="addTest('A1C', 'Hemoglobin A1c', 22.00, '83036', false)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">HbA1c (Diabetes Screen)</div>
-                                    <div class="text-xs text-slate-400 mt-1">Glycated Hemoglobin</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹22.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 83036</div>
-                                </div>
-                            </div>
-                        </div>
-
-                         <!-- 4. CARDIAC HEALTH -->
-                         <div class="test-category">
-                            <div class="px-5 py-2 bg-slate-50 text-xs font-bold text-slate-900 flex items-center gap-2">
-                                <i class="fas fa-heart-pulse text-rose-500"></i> Cardiac Health
-                            </div>
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-rose-50/50 transition-colors group border-l-4 border-transparent hover:border-rose-400" onclick="addTest('CRP', 'C-Reactive Protein (hs-CRP)', 42.00, '86141', false)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">hs-CRP (Cardiac Risk)</div>
-                                    <div class="text-xs text-slate-400 mt-1">High Sensitivity</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹42.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 86141</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 5. INFECTIOUS DISEASE -->
-                        <div class="test-category">
-                            <div class="px-5 py-2 bg-slate-50 text-xs font-bold text-slate-900 flex items-center gap-2">
-                                <i class="fas fa-virus text-green-600"></i> Infectious Disease
-                            </div>
-                            <div class="test-item cursor-pointer p-4 flex items-center justify-between hover:bg-green-50/50 transition-colors group border-l-4 border-transparent hover:border-green-400" onclick="addTest('COVID', 'SARS-CoV-2 PCR', 99.00, '87635', false)">
-                                <div>
-                                    <div class="font-bold text-slate-700 text-sm">COVID-19 RT-PCR</div>
-                                    <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                                        <span class="tag-stat">STAT</span>
-                                        <span>Nasal Swab</span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-slate-700">₹99.00</div>
-                                    <div class="text-[10px] text-slate-400 font-mono">CPT: 87635</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Main Heading -->
+            <div class="text-center max-w-4xl mx-auto space-y-3">
+                <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+                    Diagnostic <span class="text-teal-600">Lab Tests</span> &amp; Full Body Checkups
+                </h1>
+                <p class="text-sm sm:text-base text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+                    Book certified pathology tests from home. Trained phlebotomists, automated digital smart reports in 6–24 hours, and free doctor consultation on every report.
+                </p>
             </div>
 
-            <!-- SELECTED ITEMS GRID -->
-            <div class="flex-grow">
-                <div class="flex justify-between items-end mb-4 border-b border-slate-100 pb-2">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Configuration Summary</h3>
-                    <span class="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-md" id="test-count">0 Selected</span>
-                </div>
-
-                <!-- Empty State -->
-                <div id="empty-state" class="h-64 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center group hover:border-teal-200 transition-colors">
-                    <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                        <i class="fas fa-file-medical text-slate-300 text-2xl group-hover:text-teal-400"></i>
+            <!-- Search Omnibar -->
+            <div class="max-w-3xl mx-auto relative">
+                <div class="relative flex items-center shadow-lg rounded-2xl overflow-hidden bg-white border-2 border-teal-500/30 focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-500/15 transition-all">
+                    <div class="pl-4 sm:pl-5 text-teal-600 text-lg">
+                        <i class="fas fa-microscope"></i>
                     </div>
-                    <p class="text-slate-900 font-semibold">No tests configured</p>
-                    <p class="text-slate-400 text-sm mt-1">Use the search bar or ⌘K to add tests.</p>
-                </div>
-
-                <!-- List Container -->
-                <div id="selected-list" class="space-y-3 hidden">
-                    <!-- JS fills this -->
-                </div>
-            </div>
-
-            <!-- Footer Actions -->
-            <div class="mt-8">
-                <form action="{{ url_for('medical_lab') }}" method="POST">
-                    <input type="hidden" name="selected_tests" id="hidden-tests-input">
-                    <div class="flex gap-4">
-                        <button type="button" class="px-6 py-4 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors">
-                            Save Draft
+                    <input 
+                        type="text" 
+                        id="labSearchInput" 
+                        oninput="handleLabSearchTyping(this.value);"
+                        placeholder="Search for blood tests, health packages (e.g., 'Full Body', 'Vitamin D', 'HbA1c', 'Lipid', 'CBC')..." 
+                        class="w-full py-4 pl-3 pr-24 sm:pr-32 text-sm sm:text-base font-semibold text-slate-800 placeholder-slate-400 bg-transparent border-0 focus:outline-none"
+                    >
+                    <div class="absolute right-2 flex items-center gap-1.5">
+                        <button type="button" onclick="clearLabSearch();" id="clearLabSearchBtn" class="text-slate-400 hover:text-slate-600 p-2 text-sm cursor-pointer hidden">
+                            <i class="fas fa-xmark"></i>
                         </button>
-                        <button type="submit" class="flex-1 bg-slate-900 text-white font-bold py-4 px-6 rounded-xl hover:bg-teal-600 transition-all shadow-lg hover:shadow-teal-500/30 flex items-center justify-between group">
-                            <span class="flex flex-col items-start">
-                                <span class="text-xs text-white/60 font-medium uppercase tracking-wide">Proceed to Checkout</span>
-                                <span class="text-lg leading-none">Confirm Selection</span>
-                            </span>
-                            <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-teal-600 transition-all">
-                                <i class="fas fa-arrow-right"></i>
-                            </div>
+                        <button type="button" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-sm transition-colors flex items-center gap-1.5">
+                            <i class="fas fa-magnifying-glass text-xs"></i>
+                            <span class="hidden sm:inline">Search</span>
                         </button>
                     </div>
-                </form>
+                </div>
+
+                <!-- Quick Keywords Bar -->
+                <div class="flex items-center flex-wrap gap-2 pt-3 justify-center text-xs font-semibold text-slate-600">
+                    <span class="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Popular Searches:</span>
+                    <button type="button" onclick="applyQuickSearch('Full Body');" class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors cursor-pointer">
+                        Full Body Checkup
+                    </button>
+                    <button type="button" onclick="applyQuickSearch('Vitamin D');" class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors cursor-pointer">
+                        Vitamin D
+                    </button>
+                    <button type="button" onclick="applyQuickSearch('HbA1c');" class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors cursor-pointer">
+                        HbA1c (Diabetes)
+                    </button>
+                    <button type="button" onclick="applyQuickSearch('Lipid');" class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors cursor-pointer">
+                        Lipid Profile
+                    </button>
+                    <button type="button" onclick="applyQuickSearch('Thyroid');" class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors cursor-pointer">
+                        Thyroid (T3, T4, TSH)
+                    </button>
+                    <button type="button" onclick="applyQuickSearch('CBC');" class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 transition-colors cursor-pointer">
+                        CBC Hemogram
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4 Trust Pillars (Tata 1mg Standard) -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 pt-4">
+                <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg shrink-0">
+                        <i class="fas fa-house-medical"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-black text-slate-900">Home Sample Pickup</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Free for orders &ge; ₹499</div>
+                    </div>
+                </div>
+
+                <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg shrink-0">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-black text-slate-900">NABL &amp; CAP Certified</div>
+                        <div class="text-[11px] text-slate-500 font-medium">100% automated labs</div>
+                    </div>
+                </div>
+
+                <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg shrink-0">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-black text-slate-900">Smart Reports in 6-24h</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Email, SMS &amp; Portal</div>
+                    </div>
+                </div>
+
+                <div class="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg shrink-0">
+                        <i class="fas fa-user-doctor"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-black text-slate-900">Free Doctor Consult</div>
+                        <div class="text-[11px] text-slate-500 font-medium">On report evaluation</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ================= 2. SHOP BY HEALTH CONCERNS (FILTER TABS) ================= -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-layer-group text-teal-600"></i> Explore by Health Concern
+            </h2>
+            <span class="text-xs text-slate-500 font-semibold" id="catalogResultsCount">Showing 8 Packages &amp; 20+ Tests</span>
+        </div>
+
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scroll no-scrollbar">
+            <button type="button" onclick="filterConcern('all', this);" class="concern-pill active px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                All Tests &amp; Packages
+            </button>
+            <button type="button" onclick="filterConcern('General Wellness', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Full Body Checkups
+            </button>
+            <button type="button" onclick="filterConcern('Diabetes', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Diabetes Care
+            </button>
+            <button type="button" onclick="filterConcern('Heart Health', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Heart &amp; Cardiac
+            </button>
+            <button type="button" onclick="filterConcern('Thyroid & Hormones', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Thyroid &amp; Hormones
+            </button>
+            <button type="button" onclick="filterConcern('Women\'s Health', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Women's Health
+            </button>
+            <button type="button" onclick="filterConcern('Kidney Health', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Kidney &amp; Liver
+            </button>
+            <button type="button" onclick="filterConcern('Bones & Immunity', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Vitamins &amp; Bones
+            </button>
+            <button type="button" onclick="filterConcern('Fever & Infection', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Fever &amp; Infections
+            </button>
+            <button type="button" onclick="filterConcern('Men\'s Health', this);" class="concern-pill px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-extrabold border border-slate-200 whitespace-nowrap cursor-pointer transition-all">
+                Men's Health
+            </button>
+        </div>
+    </section>
+
+    <!-- ================= 3. POPULAR FULL BODY HEALTH PACKAGES (FLAGSHIP RIBBON) ================= -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8" id="healthPackagesSection">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <i class="fas fa-shield-heart text-teal-600"></i> Top Full Body Health Packages
+                </h2>
+                <p class="text-xs text-slate-500 font-medium">Multi-parameter profiles with comprehensive organ screening and maximum savings</p>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: Interactive Receipt/Log -->
-        <div class="hidden lg:flex w-[35%] bg-slate-50/50 backdrop-blur-sm border-l border-slate-200 flex-col">
-            
-            <!-- Header -->
-            <div class="p-8 pb-4 border-b border-slate-100 bg-white/40">
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <div class="w-3 h-3 bg-teal-400 rounded-full blob-pulse"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="packagesGrid">
+            {% for pkg in packages %}
+            <div class="lab-card p-6" data-concern="{{ pkg.concern }}" data-name="{{ pkg.name }}" data-id="{{ pkg.id }}">
+                <div>
+                    <!-- Top Ribbon -->
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 text-[10px] font-black uppercase tracking-wider">
+                            {{ pkg.badge }}
+                        </span>
+                        <span class="text-xs font-bold text-amber-500 flex items-center gap-1">
+                            <i class="fas fa-star text-[11px]"></i> {{ pkg.rating }} <span class="text-slate-400 font-normal">({{ pkg.reviews_count }})</span>
+                        </span>
                     </div>
-                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Live Audit Log</div>
-                </div>
-            </div>
 
-            <!-- Chart Visualization -->
-            <div id="chart-container" class="p-8 hidden">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 text-center">Cost Breakdown</h3>
-                <div class="relative h-64 w-full">
-                    <canvas id="cost-chart"></canvas>
-                </div>
-            </div>
+                    <h3 class="text-lg font-black text-slate-900 hover:text-teal-600 transition-colors mb-2 cursor-pointer" onclick="openTestDetailsModal('{{ pkg.id }}');">
+                        {{ pkg.name }}
+                    </h3>
 
-            <!-- Scrollable Log -->
-            <div class="flex-grow relative overflow-hidden bg-slate-50/30">
-                <!-- Timeline Line -->
-                <div class="absolute left-8 top-0 bottom-0 w-px bg-slate-200/80"></div>
-                
-                <div class="absolute inset-0 overflow-y-auto custom-scroll p-8 space-y-6" id="invoice-feed">
-                    <!-- Initial System Message -->
-                    <div class="relative pl-8">
-                        <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 ring-4 ring-white"></div>
-                        <div class="text-[10px] font-mono text-slate-400 mb-1">SESSION START</div>
-                        <div class="text-sm text-slate-500 font-medium">Session ID: #spherixclinic-{{ range(1000, 9999) | random }}</div>
+                    <!-- Key Indicators -->
+                    <div class="flex items-center flex-wrap gap-2 mb-3 text-[11px] font-bold">
+                        <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 flex items-center gap-1">
+                            <i class="fas fa-vial text-teal-600"></i> {{ pkg.parameters_count }} Tests Included
+                        </span>
+                        <span class="px-2 py-0.5 rounded {% if pkg.fasting_required %}bg-amber-50 text-amber-800 border border-amber-200{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200{% endif %}">
+                            {% if pkg.fasting_required %}Fasting ({{ pkg.fasting_hours }}h){% else %}Non-Fasting{% endif %}
+                        </span>
+                        <span class="px-2 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-200">
+                            Report: {{ pkg.tat_hours }}h
+                        </span>
                     </div>
-                </div>
-            </div>
 
-            <!-- Total Panel -->
-            <div class="p-8 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-30 relative">
-                <div class="space-y-3 mb-6">
-                    <div class="flex justify-between text-sm text-slate-500">
-                        <span>Lab Subtotal</span>
-                        <span class="font-medium text-slate-800" id="subtotal-display">₹0.00</span>
-                    </div>
-                    <div class="flex justify-between text-sm text-slate-500">
-                        <span>Processing & Handling</span>
-                        <span class="font-medium text-slate-800">₹4.99</span>
-                    </div>
-                    <div class="flex justify-between text-sm text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-100 hidden" id="discount-row">
-                        <span class="flex items-center gap-1"><i class="fas fa-tag text-xs"></i> Bundle Savings</span>
-                        <span class="font-bold" id="discount-display">-₹0.00</span>
-                    </div>
+                    <p class="text-xs text-slate-600 font-medium line-clamp-2 leading-relaxed mb-4">
+                        {{ pkg.description }}
+                    </p>
                 </div>
-                
+
                 <div class="pt-4 border-t border-slate-100">
-                    <div class="flex justify-between items-end">
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Estimated Total</div>
-                            <div class="text-3xl font-extrabold text-slate-900 tracking-tight" id="total-display">₹4.99</div>
-                        </div>
-                        <div class="text-right">
-                             <div class="text-xs text-teal-600 font-bold bg-teal-50 px-2 py-1 rounded">INR</div>
-                        </div>
+                    <div class="flex items-baseline gap-2 mb-3">
+                        <span class="text-2xl font-black text-slate-900">₹{{ pkg.price }}</span>
+                        <span class="text-xs font-semibold text-slate-400 line-through">₹{{ pkg.mrp }}</span>
+                        <span class="text-xs font-black text-emerald-600">{{ pkg.discount_percent }}% OFF</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="openTestDetailsModal('{{ pkg.id }}');" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors text-center">
+                            View Tests
+                        </button>
+                        <button type="button" onclick="bookLabItemDirectly('{{ pkg.id }}', '{{ pkg.name }}', {{ pkg.price }}, '{{ pkg.sample_type }}', {{ 'true' if pkg.fasting_required else 'false' }});" class="px-3 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold cursor-pointer transition-all shadow-sm flex items-center justify-center gap-1.5">
+                            <i class="fas fa-plus"></i> Book Now
+                        </button>
                     </div>
                 </div>
             </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ================= 4. INDIVIDUAL PATHOLOGY & DIAGNOSTIC TESTS ================= -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10" id="individualTestsSection">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <i class="fas fa-flask-vial text-teal-600"></i> Individual Diagnostic Tests
+                </h2>
+                <p class="text-xs text-slate-500 font-medium">Single blood, urine &amp; biochemistry profiles with fast digital reporting</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" id="individualTestsGrid">
+            {% for tst in tests %}
+            <div class="lab-card p-5" data-concern="{{ tst.concern }}" data-name="{{ tst.name }}" data-id="{{ tst.id }}">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-extrabold uppercase">
+                            {{ tst.category }}
+                        </span>
+                        {% if tst.popular %}
+                        <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
+                            Popular
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="text-base font-black text-slate-900 hover:text-teal-600 transition-colors mb-1.5 cursor-pointer" onclick="openTestDetailsModal('{{ tst.id }}');">
+                        {{ tst.name }}
+                    </h3>
+
+                    <div class="flex items-center gap-2 text-[10px] font-bold text-slate-500 mb-2.5">
+                        <span><i class="fas fa-vial text-teal-500"></i> {{ tst.sample_type }}</span>
+                        <span>•</span>
+                        <span>{% if tst.fasting_required %}<span class="text-amber-700">Fasting ({{ tst.fasting_hours }}h)</span>{% else %}<span class="text-emerald-700">Non-Fasting</span>{% endif %}</span>
+                        <span>•</span>
+                        <span>TAT: {{ tst.tat_hours }}h</span>
+                    </div>
+
+                    <p class="text-xs text-slate-600 font-medium line-clamp-2 leading-relaxed mb-3">
+                        {{ tst.description }}
+                    </p>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="text-lg font-black text-slate-900">₹{{ tst.price }}</span>
+                            <span class="text-[11px] text-slate-400 line-through">₹{{ tst.mrp }}</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-emerald-600">{{ tst.discount_percent }}% OFF</span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="openTestDetailsModal('{{ tst.id }}');" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors" title="View details">
+                            <i class="fas fa-circle-info"></i>
+                        </button>
+                        <button type="button" onclick="bookLabItemDirectly('{{ tst.id }}', '{{ tst.name }}', {{ tst.price }}, '{{ tst.sample_type }}', {{ 'true' if tst.fasting_required else 'false' }});" class="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1">
+                            <i class="fas fa-plus"></i> Book
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ================= 5. HOW IT WORKS (5-STEP PROCESS) ================= -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+        <div class="bg-gradient-to-br from-teal-900 to-slate-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
+            <div class="max-w-3xl space-y-2 mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold uppercase tracking-wider">
+                    <i class="fas fa-clipboard-check"></i> Standard Operating Procedure
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight">How Home Sample Collection Works</h2>
+                <p class="text-xs sm:text-sm text-slate-300">Simple, hygienic, and precise pathology testing directly from your comfort zone.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 space-y-2">
+                    <div class="w-8 h-8 rounded-lg bg-teal-500 text-white flex items-center justify-center font-black text-sm">1</div>
+                    <div class="text-xs font-black text-white">Book Online</div>
+                    <p class="text-[11px] text-slate-300 font-medium leading-relaxed">Choose health packages or tests and pick your convenient time slot.</p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 space-y-2">
+                    <div class="w-8 h-8 rounded-lg bg-teal-500 text-white flex items-center justify-center font-black text-sm">2</div>
+                    <div class="text-xs font-black text-white">Doorstep Sample</div>
+                    <p class="text-[11px] text-slate-300 font-medium leading-relaxed">Certified phlebotomist arrives with sterile single-use vacuum vials.</p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 space-y-2">
+                    <div class="w-8 h-8 rounded-lg bg-teal-500 text-white flex items-center justify-center font-black text-sm">3</div>
+                    <div class="text-xs font-black text-white">NABL Lab Processing</div>
+                    <p class="text-[11px] text-slate-300 font-medium leading-relaxed">Sample is processed in cold chain storage using automated analyzers.</p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 space-y-2">
+                    <div class="w-8 h-8 rounded-lg bg-teal-500 text-white flex items-center justify-center font-black text-sm">4</div>
+                    <div class="text-xs font-black text-white">Digital Smart Report</div>
+                    <p class="text-[11px] text-slate-300 font-medium leading-relaxed">Download verified PDF report on WhatsApp, SMS, and dashboard.</p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 space-y-2">
+                    <div class="w-8 h-8 rounded-lg bg-teal-500 text-white flex items-center justify-center font-black text-sm">5</div>
+                    <div class="text-xs font-black text-white">Doctor Consultation</div>
+                    <p class="text-[11px] text-slate-300 font-medium leading-relaxed">Complimentary tele-consult with our medical physician to explain results.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<!-- ================= FLOATING BOOKING NOTIFICATION TOAST ================= -->
+<div id="labBookingToast" class="fixed top-6 right-6 z-[10002] max-w-md bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-teal-500/40 flex items-start gap-3.5 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="w-9 h-9 rounded-xl bg-teal-500 text-slate-950 flex items-center justify-center text-base font-black shrink-0 shadow-sm">
+        <i class="fas fa-kit-medical"></i>
+    </div>
+    <div class="flex-1">
+        <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-black text-teal-400 uppercase tracking-wider">Home Sample Collection</span>
+            <span class="text-[10px] font-bold text-slate-400">Doorstep Visit</span>
+        </div>
+        <div class="text-xs font-semibold text-slate-100 mt-1 leading-relaxed" id="labToastMessage">
+            Booking home sample collection for "Comprehensive Gold Health Package" @ ₹1,299. Our certified phlebotomist will arrive with sterile sample kits.
         </div>
     </div>
 </div>
 
-<script>
-    // --- State ---
-    const selectedTests = new Map(); // Use Map for ID -> Data
-    const BASE_FEE = 4.99;
-
-    // --- DOM ---
-    const searchInput = document.getElementById('test-search');
-    const dropdown = document.getElementById('test-dropdown');
-    const selectedList = document.getElementById('selected-list');
-    const emptyState = document.getElementById('empty-state');
-    const invoiceFeed = document.getElementById('invoice-feed');
-    const hiddenInput = document.getElementById('hidden-tests-input');
+<!-- ================= 6. FLOATING LAB CART DOCK ================= -->
+<div id="floatingLabCartBar" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92vw] max-w-xl bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-800 flex items-center justify-between gap-3 transform translate-y-24 transition-transform duration-300 pointer-events-none opacity-0">
+    <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-teal-500 text-white flex items-center justify-center text-base font-black relative">
+            <i class="fas fa-flask"></i>
+            <span id="floatingCartCount" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-black border-2 border-slate-900">0</span>
+        </div>
+        <div>
+            <div class="text-xs font-semibold text-slate-400">Total Selection:</div>
+            <div class="text-base font-black text-white" id="floatingCartTotal">₹0</div>
+        </div>
+    </div>
     
-    // --- Chart.js Visualization ---
-    const ctx = document.getElementById('cost-chart').getContext('2d');
-    let costChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Cost',
-                data: [],
-                backgroundColor: [
-                    '#0d9488', '#14b8a6', '#0f766e', '#115e59',
-                    '#0891b2', '#0e7490', '#155e75', '#0284c7'
-                ],
-                borderColor: '#0f766e',
-                borderWidth: 1,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y', // Make it a horizontal bar chart
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) { return '₹' + value; },
-                        color: '#64748b' // slate-500
-                    },
-                    grid: { color: '#f1f5f9' } // slate-100
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: { color: '#334155' } // slate-700
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let value = context.parsed.x;
-                            if (value !== null) {
-                                return 'Cost: ' + new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value);
-                            }
-                            return '';
-                        }
-                    }
-                }
-            }
-        }
-    });
+    <button type="button" onclick="openLabCheckoutDrawer();" class="px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs cursor-pointer transition-all shadow-md flex items-center gap-1.5">
+        <span>Proceed to Book</span>
+        <i class="fas fa-arrow-right text-[10px]"></i>
+    </button>
+</div>
 
-    // --- Keyboard Shortcut ---
-    document.addEventListener('keydown', (e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-            e.preventDefault();
-            searchInput.focus();
-        }
-    });
+<!-- ================= 7. SLIDE-OVER CHECKOUT & APPOINTMENT DRAWER ================= -->
+<div id="labCheckoutDrawerModal" class="fixed inset-0 z-[9999] bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 flex justify-end opacity-0 pointer-events-none hidden">
+    <!-- Backdrop Click Layer -->
+    <div class="absolute inset-0 bg-transparent cursor-pointer" onclick="closeLabCheckoutDrawer();" aria-label="Close checkout drawer"></div>
 
-    // --- Dropdown Logic ---
-    searchInput.addEventListener('focus', () => dropdown.classList.remove('hidden'));
-    
-    // Click Outside to close
-    document.addEventListener('click', (e) => {
-        if (!document.getElementById('dropdown-container').contains(e.target)) {
-            dropdown.classList.add('hidden');
-        }
-    });
-
-    // Filter Functionality
-    searchInput.addEventListener('keyup', (e) => {
-        const term = e.target.value.toLowerCase();
-        const categories = document.querySelectorAll('.test-category');
+    <!-- Drawer Content -->
+    <div id="labCheckoutDrawerContent" class="relative z-10 w-full sm:w-[90vw] md:w-[80vw] lg:w-[60vw] xl:w-[48vw] max-w-2xl h-screen bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-out translate-x-full overflow-hidden border-l border-slate-200">
         
-        categories.forEach(cat => {
-            const items = cat.querySelectorAll('.test-item');
-            let hasMatch = false;
-            items.forEach(item => {
-                const text = item.innerText.toLowerCase();
-                if(text.includes(term)) {
-                    item.style.display = 'flex';
-                    hasMatch = true;
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-            cat.style.display = hasMatch ? 'block' : 'none';
-        });
-    });
-
-    // --- Add Test ---
-    function addTest(id, name, price, cpt, isFasting) {
-        if (selectedTests.has(id)) return;
-
-        selectedTests.set(id, { name, price });
-        
-        // 1. Update UI List
-        const fastingBadge = isFasting ? `<span class="tag-fasting ml-2">Fasting</span>` : '';
-        
-        const html = `
-            <div class="animate-slide-in group flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all hover:border-teal-100" id="item-${id}">
-                <div class="flex items-center gap-4">
-                    <div class="h-10 w-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xs border border-teal-100">
-                        ${id.substring(0,2)}
-                    </div>
-                    <div>
-                        <div class="font-bold text-slate-800 text-sm flex items-center">
-                            ${name} ${fastingBadge}
-                        </div>
-                        <div class="text-[10px] text-slate-400 font-mono mt-0.5">CPT: ${cpt}</div>
-                    </div>
+        <!-- Top Bar -->
+        <div class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg shrink-0">
+                    <i class="fas fa-calendar-check"></i>
                 </div>
-                <div class="flex items-center gap-5">
-                    <div class="font-bold text-slate-700 text-sm">₹${price.toFixed(2)}</div>
-                    <button onclick="removeTest('${id}')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all">
-                        <i class="fas fa-times"></i>
-                    </button>
+                <div>
+                    <h3 class="text-lg font-black text-slate-900 leading-tight">Diagnostic Appointment Booking</h3>
+                    <div class="text-[11px] text-slate-500 font-medium">Home Sample Collection &amp; Phlebotomist Assignment</div>
                 </div>
             </div>
-        `;
-        
-        selectedList.insertAdjacentHTML('beforeend', html);
-        
-        // 2. Add to Log
-        addToLog(name, price, 'add');
 
-        // 3. Reset
-        searchInput.value = '';
-        dropdown.classList.add('hidden');
-        recalc();
+            <button type="button" onclick="closeLabCheckoutDrawer();" class="text-slate-400 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold cursor-pointer px-3 py-2 rounded-xl transition-all shadow-2xs flex items-center gap-1.5">
+                <i class="fas fa-xmark"></i>
+                <span>Close</span>
+            </button>
+        </div>
+
+        <!-- Drawer Body (Scrollable) -->
+        <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scroll">
+            
+            <!-- Live Phlebotomist Booking Highlight Notice Banner -->
+            <div id="bookingPhlebotomistNoticeBanner" class="p-4 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 rounded-2xl border border-teal-200 text-xs font-medium text-teal-950 flex items-start gap-3 shadow-2xs">
+                <div class="w-8 h-8 rounded-xl bg-teal-200 text-teal-800 flex items-center justify-center text-sm shrink-0 mt-0.5">
+                    <i class="fas fa-house-medical"></i>
+                </div>
+                <div class="leading-relaxed">
+                    Booking home sample collection for <strong id="noticeItemName" class="font-black text-teal-950">"Comprehensive Gold Full Body Health Checkup"</strong> @ <strong id="noticeItemPrice" class="font-black text-teal-950">₹1,299</strong>. Our certified phlebotomist will arrive with sterile sample kits.
+                </div>
+            </div>
+
+            <!-- 1. Selected Tests Breakdown -->
+            <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-black uppercase tracking-wider text-slate-600">Selected Diagnostic Items</span>
+                    <span class="text-xs font-bold text-teal-700" id="drawerSelectedCount">0 items</span>
+                </div>
+                <div id="drawerItemsList" class="space-y-2">
+                    <!-- Dynamic Cart Items -->
+                </div>
+            </div>
+
+            <!-- 2. Patient Profile Information -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <i class="fas fa-user text-teal-600"></i> Patient Information
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Full Name *</label>
+                        <input type="text" id="patientNameInput" value="{{ current_user.name if current_user.is_authenticated else '' }}" placeholder="Patient Name" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Contact Phone Number *</label>
+                        <input type="tel" id="patientPhoneInput" value="{{ current_user.phone if current_user.is_authenticated and current_user.phone else '' }}" placeholder="10-digit mobile number" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Age *</label>
+                        <input type="number" id="patientAgeInput" min="1" max="120" placeholder="e.g. 32" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Gender *</label>
+                        <select id="patientGenderInput" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Sample Collection Date & Time Slot Picker -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <i class="fas fa-clock text-teal-600"></i> Sample Collection Slot
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Collection Date *</label>
+                        <input type="date" id="collectionDateInput" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Preferred Time Slot *</label>
+                        <select id="collectionSlotInput" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                            <option value="06:00 AM - 07:00 AM (Fasting)">06:00 AM - 07:00 AM (Fasting)</option>
+                            <option value="07:00 AM - 08:00 AM (Fasting)" selected>07:00 AM - 08:00 AM (Fasting)</option>
+                            <option value="08:00 AM - 09:00 AM (Fasting)">08:00 AM - 09:00 AM (Fasting)</option>
+                            <option value="09:00 AM - 10:00 AM (Fasting)">09:00 AM - 10:00 AM (Fasting)</option>
+                            <option value="10:00 AM - 11:00 AM (Fasting)">10:00 AM - 11:00 AM (Fasting)</option>
+                            <option value="11:00 AM - 12:00 PM (General)">11:00 AM - 12:00 PM (General)</option>
+                            <option value="04:00 PM - 06:00 PM (Evening)">04:00 PM - 06:00 PM (Evening)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Home Address -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <i class="fas fa-location-dot text-teal-600"></i> Sample Collection Address
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Pincode *</label>
+                        <input type="text" id="patientPincodeInput" value="110001" placeholder="6-digit Pincode" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">City / Region *</label>
+                        <input type="text" id="patientCityInput" value="New Delhi" placeholder="City" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">House / Flat No, Landmark, Street *</label>
+                    <input type="text" id="patientAddressLineInput" placeholder="e.g., Flat 402, Green Valley Apartments, Near Central Park" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600">
+                </div>
+            </div>
+
+            <!-- 5. Bill Summary -->
+            <div class="bg-teal-50/60 p-4 sm:p-5 rounded-2xl border border-teal-200 space-y-2.5 text-xs">
+                <div class="font-black text-slate-900 text-sm mb-2">Order Price Summary</div>
+                <div class="flex items-center justify-between text-slate-600 font-medium">
+                    <span>Items Total (MRP)</span>
+                    <span id="billMrpTotal" class="line-through">₹0</span>
+                </div>
+                <div class="flex items-center justify-between text-emerald-700 font-bold">
+                    <span>Diagnostic Package Discount</span>
+                    <span id="billDiscountTotal">-₹0</span>
+                </div>
+                <div class="flex items-center justify-between text-slate-600 font-medium">
+                    <span>Home Sample Collection Fee</span>
+                    <span id="billCollectionFee" class="text-emerald-600 font-bold">FREE</span>
+                </div>
+                <div class="flex items-center justify-between text-slate-600 font-medium">
+                    <span>Digital Smart Report &amp; Safety Protocol</span>
+                    <span>₹19</span>
+                </div>
+                <div class="pt-2 border-t border-teal-200 flex items-center justify-between text-sm font-black text-slate-900">
+                    <span>Total Amount Payable</span>
+                    <span id="billFinalTotal" class="text-lg text-teal-800">₹0</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Drawer Bottom Action -->
+        <div class="p-4 sm:p-5 border-t border-slate-200 bg-white flex items-center justify-between gap-3 shrink-0">
+            <div>
+                <div class="text-[11px] text-slate-500 font-medium">Total Amount</div>
+                <div class="text-xl font-black text-teal-900" id="drawerBottomTotal">₹0</div>
+            </div>
+            <button type="button" id="confirmBookingSubmitBtn" onclick="submitLabBooking();" class="flex-1 max-w-xs px-6 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs cursor-pointer transition-all shadow-md flex items-center justify-center gap-2">
+                <span>Confirm &amp; Schedule Slot</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= 8. TEST & PACKAGE DETAILS MONOGRAPH MODAL ================= -->
+<div id="testDetailsModal" class="fixed inset-0 z-[9999] bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 flex justify-end opacity-0 pointer-events-none hidden">
+    <!-- Backdrop Click Layer -->
+    <div class="absolute inset-0 bg-transparent cursor-pointer" onclick="closeTestDetailsModal();" aria-label="Close details modal"></div>
+
+    <!-- Drawer Content -->
+    <div id="testDetailsContent" class="relative z-10 w-full sm:w-[90vw] md:w-[80vw] lg:w-[65vw] xl:w-[55vw] max-w-3xl h-screen bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-out translate-x-full overflow-hidden border-l border-slate-200">
+        
+        <!-- Header -->
+        <div class="p-4 sm:p-5 border-b border-slate-200 flex items-start justify-between bg-slate-50 shrink-0">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg shrink-0">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="mTestBadge" class="px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 text-[10px] font-black uppercase tracking-wider">PACKAGE</span>
+                        <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">NABL Verified</span>
+                    </div>
+                    <h3 id="mTestName" class="text-xl font-black text-slate-900 leading-tight">Comprehensive Full Body Checkup</h3>
+                </div>
+            </div>
+
+            <button type="button" onclick="closeTestDetailsModal();" class="text-slate-400 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold cursor-pointer px-3 py-2 rounded-xl transition-all shadow-2xs flex items-center gap-1.5">
+                <i class="fas fa-xmark"></i>
+                <span>Close</span>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scroll">
+            
+            <!-- Quick Meta Info -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">Parameters</div>
+                    <div id="mTestParamCount" class="text-base font-black text-teal-900 mt-0.5">83 Tests</div>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">Sample Type</div>
+                    <div id="mTestSampleType" class="text-xs font-black text-slate-800 mt-1">Blood &amp; Urine</div>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">Fasting</div>
+                    <div id="mTestFasting" class="text-xs font-black text-amber-700 mt-1">10-12 Hours</div>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">Report TAT</div>
+                    <div id="mTestTat" class="text-xs font-black text-sky-800 mt-1">12 Hours</div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="space-y-2">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700">Clinical Description</h4>
+                <p id="mTestDescription" class="text-xs text-slate-600 font-medium leading-relaxed"></p>
+            </div>
+
+            <!-- Who should take -->
+            <div id="mWhoShouldTakeBox" class="p-4 bg-teal-50/70 rounded-2xl border border-teal-200 space-y-1">
+                <div class="text-xs font-black text-teal-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fas fa-users text-teal-600"></i> Who Should Take This Test?
+                </div>
+                <p id="mWhoShouldTake" class="text-xs text-slate-700 font-medium leading-relaxed"></p>
+            </div>
+
+            <!-- Preparation Instructions -->
+            <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-1">
+                <div class="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fas fa-triangle-exclamation text-amber-600"></i> Pre-Test Preparation &amp; Instructions
+                </div>
+                <p id="mTestPreparation" class="text-xs text-slate-700 font-medium leading-relaxed"></p>
+            </div>
+
+            <!-- Parameter Breakdown Accordions (For packages) -->
+            <div id="mParametersSection" class="space-y-3">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <i class="fas fa-list-check text-teal-600"></i> Included Test Parameters (<span id="mTotalParamsHeader">83</span>)
+                </h4>
+                <div id="mParametersAccordionList" class="space-y-2">
+                    <!-- Dynamic Breakdown Cards -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="p-4 sm:p-5 border-t border-slate-200 bg-white flex items-center justify-between gap-3 shrink-0">
+            <div>
+                <div class="flex items-baseline gap-2">
+                    <span id="mModalPrice" class="text-2xl font-black text-slate-900">₹1,299</span>
+                    <span id="mModalMrp" class="text-xs font-semibold text-slate-400 line-through">₹3,499</span>
+                </div>
+                <span id="mModalDiscount" class="text-xs font-black text-emerald-600">63% OFF</span>
+            </div>
+            <button type="button" id="mModalAddToCartBtn" class="px-6 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs cursor-pointer transition-all shadow-md flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                <span>Add to Cart &amp; Book</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= JAVASCRIPT STATE CONTROLLER ================= -->
+<script>
+    // State Store
+    let labCart = [];
+    let currentLabConcern = 'all';
+    let currentLabQuery = '';
+    let labDebounceTimer = null;
+    let cachedActiveTestItem = null;
+
+    // Initialize Default Date
+    document.addEventListener('DOMContentLoaded', () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const yyyy = tomorrow.getFullYear();
+        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const dd = String(tomorrow.getDate()).padStart(2, '0');
+        const dateInput = document.getElementById('collectionDateInput');
+        if (dateInput) {
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+            dateInput.min = `${yyyy}-${mm}-${dd}`;
+        }
+    });
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    // --- Remove Test ---
-    function removeTest(id) {
-        const item = selectedTests.get(id);
-        if(!item) return;
-
-        // Animate removal
-        const domEl = document.getElementById(`item-${id}`);
-        domEl.style.opacity = '0';
-        domEl.style.transform = 'translateX(-10px)';
-        
-        setTimeout(() => {
-            domEl.remove();
-            selectedTests.delete(id);
-            addToLog(item.name, item.price, 'remove');
-            recalc();
-        }, 200);
+    // Pincode Prompt
+    function promptPincode() {
+        const pin = prompt("Enter your 6-digit delivery pincode for lab test home collection:", "110001");
+        if (pin && pin.trim().length === 6) {
+            const cleanPin = pin.trim();
+            const label = document.getElementById('currentPincodeLabel');
+            const input = document.getElementById('patientPincodeInput');
+            if (label) label.innerText = `${cleanPin} (Verified)`;
+            if (input) input.value = cleanPin;
+        }
     }
 
-    // --- Calculation & Updates ---
-    function recalc() {
-        const chartContainer = document.getElementById('chart-container');
-        // Toggle Empty State
-        if (selectedTests.size > 0) {
-            emptyState.classList.add('hidden');
-            selectedList.classList.remove('hidden');
-            chartContainer.classList.remove('hidden');
+    // Cart & Direct Booking Management
+    function showBookingNoticeBanner(name, price) {
+        const banner = document.getElementById('bookingPhlebotomistNoticeBanner');
+        const noticeName = document.getElementById('noticeItemName');
+        const noticePrice = document.getElementById('noticeItemPrice');
+        const toast = document.getElementById('labBookingToast');
+        const toastMsg = document.getElementById('labToastMessage');
+
+        const msg = `Booking home sample collection for "${name}" @ ₹${price}. Our certified phlebotomist will arrive with sterile sample kits.`;
+
+        if (noticeName) noticeName.innerText = `"${name}"`;
+        if (noticePrice) noticePrice.innerText = `₹${price}`;
+        if (banner) banner.classList.remove('hidden');
+
+        if (toast && toastMsg) {
+            toastMsg.innerText = msg;
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            }, 5000);
+        }
+    }
+
+    function bookLabItemDirectly(id, name, price, sampleType, fastingReq) {
+        addLabItemToCart(id, name, price, sampleType, fastingReq);
+        showBookingNoticeBanner(name, price);
+        openLabCheckoutDrawer();
+    }
+
+    function addLabItemToCart(id, name, price, sampleType, fastingReq) {
+        const existing = labCart.find(i => i.id === id);
+        if (!existing) {
+            labCart.push({
+                id: id,
+                name: name,
+                price: parseFloat(price),
+                sample_type: sampleType || 'Blood',
+                fasting_required: Boolean(fastingReq)
+            });
+        }
+        updateCartUI();
+        // Trigger brief visual feedback
+        const cartBar = document.getElementById('floatingLabCartBar');
+        if (cartBar) {
+            cartBar.classList.remove('translate-y-24', 'pointer-events-none', 'opacity-0');
+            cartBar.classList.add('translate-y-0', 'pointer-events-auto', 'opacity-100');
+        }
+    }
+
+    function removeLabItemFromCart(id) {
+        labCart = labCart.filter(i => i.id !== id);
+        updateCartUI();
+    }
+
+    function updateCartUI() {
+        const count = labCart.length;
+        const total = labCart.reduce((sum, i) => sum + i.price, 0);
+
+        // Floating Bar
+        const floatingBar = document.getElementById('floatingLabCartBar');
+        const floatingCount = document.getElementById('floatingCartCount');
+        const floatingTotal = document.getElementById('floatingCartTotal');
+
+        if (floatingCount) floatingCount.innerText = count;
+        if (floatingTotal) floatingTotal.innerText = `₹${total}`;
+
+        if (count > 0) {
+            if (floatingBar) {
+                floatingBar.classList.remove('translate-y-24', 'pointer-events-none', 'opacity-0');
+                floatingBar.classList.add('translate-y-0', 'pointer-events-auto', 'opacity-100');
+            }
         } else {
-            emptyState.classList.remove('hidden');
-            selectedList.classList.add('hidden');
-            chartContainer.classList.add('hidden');
+            if (floatingBar) {
+                floatingBar.classList.add('translate-y-24', 'pointer-events-none', 'opacity-0');
+                floatingBar.classList.remove('translate-y-0', 'pointer-events-auto', 'opacity-100');
+            }
         }
 
-        // Math
-        let subtotal = 0;
-        const chartLabels = [];
-        const chartData = [];
-        selectedTests.forEach(item => subtotal += item.price);
-        
-        // Fake Logic: Apply Bundle Discount if > 3 items
-        let discount = 0;
-        if (selectedTests.size >= 3) {
-            discount = subtotal * 0.10; // 10% off
-            document.getElementById('discount-row').classList.remove('hidden');
-            document.getElementById('discount-display').innerText = `-₹${discount.toFixed(2)}`;
-        } else {
-            document.getElementById('discount-row').classList.add('hidden');
+        // Drawer Items List
+        const drawerList = document.getElementById('drawerItemsList');
+        const drawerCount = document.getElementById('drawerSelectedCount');
+        if (drawerCount) drawerCount.innerText = `${count} ${count === 1 ? 'test' : 'tests'} selected`;
+
+        if (drawerList) {
+            if (count === 0) {
+                drawerList.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">No diagnostic tests in cart yet.</div>`;
+            } else {
+                drawerList.innerHTML = labCart.map(item => `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
+                        <div>
+                            <div class="text-xs font-black text-slate-800">${escapeHtml(item.name)}</div>
+                            <div class="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                                <span><i class="fas fa-vial text-teal-500"></i> ${escapeHtml(item.sample_type)}</span>
+                                <span>•</span>
+                                <span>${item.fasting_required ? '<span class="text-amber-700 font-bold">Fasting</span>' : '<span class="text-emerald-700 font-bold">Non-Fasting</span>'}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-black text-slate-900">₹${item.price}</span>
+                            <button type="button" onclick="removeLabItemFromCart('${item.id}');" class="text-slate-400 hover:text-rose-600 cursor-pointer p-1 text-xs">
+                                <i class="fas fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
         }
 
-        const total = (subtotal + BASE_FEE) - discount;
+        // Bill Summary Calculations
+        const collectionFee = (total >= 499 || total === 0) ? 0 : 99;
+        const platformFee = total > 0 ? 19 : 0;
+        const finalPayable = total + collectionFee + platformFee;
+        const estMrp = Math.round(total * 2.3);
+        const estDiscount = estMrp - total;
 
-        // Update Chart Data
-        selectedTests.forEach(item => {
-            chartLabels.push(item.name);
-            chartData.push(item.price);
+        const billMrp = document.getElementById('billMrpTotal');
+        const billDiscount = document.getElementById('billDiscountTotal');
+        const billCollection = document.getElementById('billCollectionFee');
+        const billFinal = document.getElementById('billFinalTotal');
+        const drawerBottomTotal = document.getElementById('drawerBottomTotal');
+
+        if (billMrp) billMrp.innerText = `₹${estMrp}`;
+        if (billDiscount) billDiscount.innerText = `-₹${estDiscount}`;
+        if (billCollection) billCollection.innerText = collectionFee === 0 ? 'FREE' : `₹${collectionFee}`;
+        if (billFinal) billFinal.innerText = `₹${finalPayable}`;
+        if (drawerBottomTotal) drawerBottomTotal.innerText = `₹${finalPayable}`;
+    }
+
+    // Filter by Health Concern
+    function filterConcern(concern, elem) {
+        currentLabConcern = concern || 'all';
+
+        const pills = document.querySelectorAll('.concern-pill');
+        pills.forEach(p => p.classList.remove('active'));
+        if (elem) elem.classList.add('active');
+
+        const cards = document.querySelectorAll('.lab-card');
+        let visibleCount = 0;
+
+        cards.forEach(c => {
+            const cardConcern = c.getAttribute('data-concern') || '';
+            const cardName = (c.getAttribute('data-name') || '').toLowerCase();
+            const q = currentLabQuery.toLowerCase();
+
+            let matchConcern = (currentLabConcern === 'all' || cardConcern.toLowerCase() === currentLabConcern.toLowerCase());
+            let matchQuery = (!q || cardName.includes(q));
+
+            if (matchConcern && matchQuery) {
+                c.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                c.classList.add('hidden');
+            }
         });
 
-        costChart.data.labels = chartLabels;
-        costChart.data.datasets[0].data = chartData;
-        costChart.update();
-
-        // Update Text
-        document.getElementById('subtotal-display').innerText = `₹${subtotal.toFixed(2)}`;
-        document.getElementById('total-display').innerText = `₹${total.toFixed(2)}`;
-        document.getElementById('test-count').innerText = `${selectedTests.size} Selected`;
-        
-        // Update Form Input
-        hiddenInput.value = Array.from(selectedTests.keys()).join(',');
+        const countLabel = document.getElementById('catalogResultsCount');
+        if (countLabel) {
+            countLabel.innerText = `Showing ${visibleCount} diagnostic ${visibleCount === 1 ? 'item' : 'items'}`;
+        }
     }
 
-    // --- Right Panel Log Logic ---
-    function addToLog(name, price, type) {
-        const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        
-        let html = '';
-        if(type === 'add') {
-            html = `
-                <div class="relative pl-8 animate-slide-in">
-                    <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-teal-500 ring-4 ring-white shadow-sm"></div>
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="text-[10px] font-mono text-slate-400">${time}</div>
-                            <div class="text-sm font-medium text-slate-700">Added: ${name}</div>
-                        </div>
-                        <div class="text-xs font-bold text-teal-600">+₹${price.toFixed(0)}</div>
-                    </div>
-                </div>`;
-        } else {
-            html = `
-                <div class="relative pl-8 animate-slide-in opacity-70">
-                    <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-red-400 ring-4 ring-white shadow-sm"></div>
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="text-[10px] font-mono text-slate-400">${time}</div>
-                            <div class="text-sm font-medium text-slate-500 line-through">Removed: ${name}</div>
-                        </div>
-                        <div class="text-xs font-bold text-slate-400">-₹${price.toFixed(0)}</div>
-                    </div>
-                </div>`;
+    // Live Search Typing
+    function handleLabSearchTyping(val) {
+        currentLabQuery = (val || '').trim();
+        const clearBtn = document.getElementById('clearLabSearchBtn');
+        if (clearBtn) {
+            if (currentLabQuery) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
         }
 
-        invoiceFeed.insertAdjacentHTML('beforeend', html);
-        // Scroll to bottom
-        invoiceFeed.parentElement.scrollTop = invoiceFeed.parentElement.scrollHeight;
+        if (labDebounceTimer) clearTimeout(labDebounceTimer);
+        labDebounceTimer = setTimeout(() => {
+            filterConcern(currentLabConcern, document.querySelector('.concern-pill.active'));
+        }, 150);
     }
 
-    // --- Form Submission Handling ---
-    const configForm = document.querySelector('form[action*="medical_lab"]');
-    if (configForm) {
-        configForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (selectedTests.size === 0) {
-                alert('Please select at least one lab test to proceed.');
-                return;
-            }
+    function clearLabSearch() {
+        const input = document.getElementById('labSearchInput');
+        if (input) input.value = '';
+        currentLabQuery = '';
+        const clearBtn = document.getElementById('clearLabSearchBtn');
+        if (clearBtn) clearBtn.classList.add('hidden');
+        filterConcern(currentLabConcern, document.querySelector('.concern-pill.active'));
+    }
 
-            const testsArray = [];
-            selectedTests.forEach((value, key) => {
-                testsArray.push({
-                    id: key,
-                    name: value.name,
-                    price: value.price
-                });
-            });
+    function applyQuickSearch(term) {
+        const input = document.getElementById('labSearchInput');
+        if (input) input.value = term;
+        handleLabSearchTyping(term);
+    }
 
-            // Submit JSON POST to `/medical-lab/payment`
-            fetch('/medical-lab/payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    selected_tests: testsArray
-                })
-            })
+    // Modal Details Management
+    function openTestDetailsModal(itemId) {
+        const modal = document.getElementById('testDetailsModal');
+        const drawer = document.getElementById('testDetailsContent');
+        if (!modal) return;
+
+        // Fetch details from backend API
+        fetch(`/api/lab/details/${encodeURIComponent(itemId)}`)
             .then(res => res.json())
             .then(data => {
-                if (data.success && data.redirect_url) {
-                    window.location.href = data.redirect_url;
-                } else {
-                    alert(data.error || 'Payment gateway configuration issue. Please contact support.');
+                if (data && data.item) {
+                    const item = data.item;
+                    cachedActiveTestItem = item;
+
+                    document.getElementById('mTestName').innerText = item.name;
+                    document.getElementById('mTestBadge').innerText = item.badge || item.category || 'DIAGNOSTIC';
+                    document.getElementById('mTestParamCount').innerText = `${item.parameters_count} Tests`;
+                    document.getElementById('mTestSampleType').innerText = item.sample_type;
+                    document.getElementById('mTestFasting').innerText = item.fasting_required ? `${item.fasting_hours} Hours` : 'Non-Fasting';
+                    document.getElementById('mTestTat').innerText = `${item.tat_hours} Hours`;
+                    document.getElementById('mTestDescription').innerText = item.description || '';
+                    document.getElementById('mWhoShouldTake').innerText = item.who_should_take || 'Recommended for adults as part of annual or periodic health screening.';
+                    document.getElementById('mTestPreparation').innerText = item.preparation || 'No special preparation needed.';
+
+                    document.getElementById('mModalPrice').innerText = `₹${item.price}`;
+                    document.getElementById('mModalMrp').innerText = `₹${item.mrp}`;
+                    document.getElementById('mModalDiscount').innerText = `${item.discount_percent}% OFF`;
+
+                    // Parameters breakdown
+                    const paramSection = document.getElementById('mParametersSection');
+                    const paramHeader = document.getElementById('mTotalParamsHeader');
+                    const accordionList = document.getElementById('mParametersAccordionList');
+                    if (paramHeader) paramHeader.innerText = item.parameters_count;
+
+                    if (item.parameters_breakdown && item.parameters_breakdown.length > 0) {
+                        if (paramSection) paramSection.classList.remove('hidden');
+                        if (accordionList) {
+                            accordionList.innerHTML = item.parameters_breakdown.map(group => `
+                                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                                    <div class="text-xs font-black text-slate-800 mb-2 flex items-center gap-1.5">
+                                        <i class="fas fa-circle-dot text-teal-600 text-[8px]"></i>
+                                        <span>${escapeHtml(group.group)}</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5 pl-3">
+                                        ${group.tests.map(t => `<span class="px-2 py-0.5 rounded bg-white text-slate-700 text-[11px] font-semibold border border-slate-200">${escapeHtml(t)}</span>`).join('')}
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+                    } else {
+                        if (paramSection) paramSection.classList.remove('hidden');
+                        if (accordionList) {
+                            accordionList.innerHTML = `
+                                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700">
+                                    Includes quantitative automated measurement and reference range comparison for <strong>${escapeHtml(item.name)}</strong>.
+                                </div>
+                            `;
+                        }
+                    }
+
+                    // Add to cart & book button handler
+                    const addBtn = document.getElementById('mModalAddToCartBtn');
+                    if (addBtn) {
+                        addBtn.onclick = () => {
+                            closeTestDetailsModal();
+                            setTimeout(() => {
+                                bookLabItemDirectly(item.id, item.name, item.price, item.sample_type, item.fasting_required);
+                            }, 150);
+                        };
+                    }
+
+                    // Open side drawer with isolation
+                    document.body.classList.add('sidebar-drawer-open');
+                    modal.classList.remove('hidden');
+                    requestAnimationFrame(() => {
+                        modal.classList.remove('opacity-0', 'pointer-events-none');
+                        modal.classList.add('opacity-100', 'pointer-events-auto');
+                        if (drawer) {
+                            drawer.classList.remove('translate-x-full');
+                            drawer.classList.add('translate-x-0');
+                        }
+                    });
                 }
             })
-            .catch(err => {
-                console.error(err);
-                alert('An error occurred while confirming test selection.');
-            });
+            .catch(console.error);
+    }
+
+    function closeTestDetailsModal() {
+        const modal = document.getElementById('testDetailsModal');
+        const drawer = document.getElementById('testDetailsContent');
+        if (drawer) {
+            drawer.classList.remove('translate-x-0');
+            drawer.classList.add('translate-x-full');
+        }
+        if (modal) {
+            modal.classList.remove('opacity-100', 'pointer-events-auto');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+        setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+            // Only remove isolation if checkout drawer is also closed
+            const checkoutModal = document.getElementById('labCheckoutDrawerModal');
+            if (!checkoutModal || checkoutModal.classList.contains('hidden')) {
+                document.body.classList.remove('sidebar-drawer-open');
+            }
+        }, 300);
+    }
+
+    // Checkout Drawer Management
+    function openLabCheckoutDrawer() {
+        if (labCart.length === 0) {
+            alert("Please select at least one health package or diagnostic test to book.");
+            return;
+        }
+
+        const modal = document.getElementById('labCheckoutDrawerModal');
+        const drawer = document.getElementById('labCheckoutDrawerContent');
+        if (!modal) return;
+
+        updateCartUI();
+
+        // Enable element isolation
+        document.body.classList.add('sidebar-drawer-open');
+
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100', 'pointer-events-auto');
+            if (drawer) {
+                drawer.classList.remove('translate-x-full');
+                drawer.classList.add('translate-x-0');
+            }
         });
     }
+
+    function closeLabCheckoutDrawer() {
+        const modal = document.getElementById('labCheckoutDrawerModal');
+        const drawer = document.getElementById('labCheckoutDrawerContent');
+        if (drawer) {
+            drawer.classList.remove('translate-x-0');
+            drawer.classList.add('translate-x-full');
+        }
+        if (modal) {
+            modal.classList.remove('opacity-100', 'pointer-events-auto');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+        setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+            document.body.classList.remove('sidebar-drawer-open');
+        }, 300);
+    }
+
+    // Booking Submission to Flask Backend
+    function submitLabBooking() {
+        if (labCart.length === 0) {
+            alert("Your diagnostic cart is empty.");
+            return;
+        }
+
+        const patientName = document.getElementById('patientNameInput').value.trim();
+        const patientPhone = document.getElementById('patientPhoneInput').value.trim();
+        const patientAge = document.getElementById('patientAgeInput').value.trim();
+        const patientGender = document.getElementById('patientGenderInput').value;
+        const collectionDate = document.getElementById('collectionDateInput').value;
+        const collectionSlot = document.getElementById('collectionSlotInput').value;
+        const pincode = document.getElementById('patientPincodeInput').value.trim();
+        const city = document.getElementById('patientCityInput').value.trim();
+        const addressLine = document.getElementById('patientAddressLineInput').value.trim();
+
+        if (!patientName) {
+            alert("Please enter the patient's full name.");
+            return;
+        }
+        if (!patientPhone || patientPhone.length < 10) {
+            alert("Please provide a valid 10-digit mobile number.");
+            return;
+        }
+        if (!patientAge) {
+            alert("Please enter patient age.");
+            return;
+        }
+        if (!collectionDate) {
+            alert("Please choose a sample collection date.");
+            return;
+        }
+        if (!addressLine) {
+            alert("Please provide the full sample collection address.");
+            return;
+        }
+
+        const submitBtn = document.getElementById('confirmBookingSubmitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Confirming Appointment...</span>';
+        }
+
+        const payload = {
+            selected_tests: labCart,
+            patient_info: {
+                name: patientName,
+                phone: patientPhone,
+                age: patientAge,
+                gender: patientGender
+            },
+            slot_info: {
+                date: collectionDate,
+                slot: collectionSlot
+            },
+            address_info: {
+                pincode: pincode,
+                city: city,
+                address_line: addressLine
+            }
+        };
+
+        fetch('/medical-lab/payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                alert(data.error || "Failed to confirm appointment. Please check details and try again.");
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span>Confirm &amp; Schedule Slot</span><i class="fas fa-arrow-right"></i>';
+                }
+            }
+        })
+        .catch(err => {
+            console.error("Booking error:", err);
+            alert("Network error processing diagnostic booking. Please try again.");
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Confirm &amp; Schedule Slot</span><i class="fas fa-arrow-right"></i>';
+            }
+        });
+    }
+
+    // Keyboard Escape Key Handler
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            closeTestDetailsModal();
+            closeLabCheckoutDrawer();
+        }
+    });
 </script>
 {% endblock %}
