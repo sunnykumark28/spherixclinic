@@ -8929,6 +8929,7 @@ def doctor_verify_otp():
                 is_international=stored_data.get('is_international', False),
                 is_verified=False, # Must be verified by Spherix Clinic Admin before login
                 availability_status='available',
+                profile_picture_url=stored_data.get('profile_picture_url'),
                 consultation_type='Cross-Border Video Consultation' if stored_data.get('is_international') else 'Video & In-Person'
             )
             
@@ -25254,30 +25255,82 @@ def api_chatbot():
         return jsonify({'reply': "I'm experiencing some technical difficulties connecting to my neural network. Please try again in a moment, or contact our support team for assistance."})
 
 @app.route('/image/<user_type>/<user_id>')
-@login_required
 def serve_image(user_type, user_id):
-    """Serves a profile picture from the database."""
+    """Serves a profile picture from memory, database, or disk."""
+    user_id_str = str(user_id).strip()
     entity = None
     if user_type == 'doctor':
-        entity = TEMP_DATA['doctors'].get(user_id)
+        entity = TEMP_DATA.get('doctors', {}).get(user_id) or TEMP_DATA.get('doctors', {}).get(user_id_str)
     elif user_type == 'patient':
-        entity = TEMP_DATA['patients'].get(parse_route_id(user_id))
+        entity = TEMP_DATA.get('patients', {}).get(parse_route_id(user_id)) or TEMP_DATA.get('patients', {}).get(user_id_str)
     elif user_type == 'staff':
-        entity = TEMP_DATA['staff'].get(parse_route_id(user_id))
+        entity = TEMP_DATA.get('staff', {}).get(parse_route_id(user_id)) or TEMP_DATA.get('staff', {}).get(user_id_str)
     elif user_type == 'blood_donor':
-        entity = TEMP_DATA['blood_donors'].get(parse_route_id(user_id))
+        entity = TEMP_DATA.get('blood_donors', {}).get(parse_route_id(user_id)) or TEMP_DATA.get('blood_donors', {}).get(user_id_str)
     elif user_type == 'organ_donor':
-        entity = TEMP_DATA['organ_donors'].get(parse_route_id(user_id))
+        entity = TEMP_DATA.get('organ_donors', {}).get(parse_route_id(user_id)) or TEMP_DATA.get('organ_donors', {}).get(user_id_str)
+    elif user_type == 'hospital':
+        entity = TEMP_DATA.get('hospitals', {}).get(parse_route_id(user_id)) or TEMP_DATA.get('hospitals', {}).get(user_id_str)
 
     if entity and hasattr(entity, 'profile_picture_data') and entity.profile_picture_data:
         return send_file(
             BytesIO(entity.profile_picture_data),
-            mimetype=entity.profile_picture_content_type or 'image/jpeg'
+            mimetype=getattr(entity, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
         )
-    
-    # Fallback to a generic avatar
-    name_str = getattr(entity, 'name', getattr(entity, 'first_name', 'User'))
+
+    # Check for direct file path or URL
+    pic_url = getattr(entity, 'profile_picture_url', None) or getattr(entity, 'logo_url', None)
+    if pic_url:
+        if pic_url.startswith('http://') or pic_url.startswith('https://'):
+            return redirect(pic_url)
+        # Search static uploads folders on disk
+        clean_name = os.path.basename(pic_url)
+        for sub in ['', 'doctor_profiles', 'signatures', 'stamps', 'prescriptions', 'documents']:
+            disk_path = os.path.join(app.root_path, 'static', 'uploads', sub, clean_name)
+            if os.path.exists(disk_path) and os.path.isfile(disk_path):
+                return send_file(disk_path)
+
+    # Check doctor_images database table
+    if user_type == 'doctor':
+        try:
+            conn = get_db_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ?", (user_id_str,))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    return send_file(BytesIO(row[0]), mimetype=row[1] or 'image/jpeg')
+        except Exception:
+            pass
+
+    # Fallback to initials avatar
+    name_str = getattr(entity, 'name', getattr(entity, 'first_name', user_id_str or 'User'))
     return redirect(f"https://api.dicebear.com/7.x/initials/svg?seed={name_str}")
+
+@app.route('/static/uploads/<path:filename>')
+@app.route('/uploads/<path:filename>')
+def serve_uploaded_file(filename):
+    """Serves uploaded files from static/uploads or subdirectories with avatar fallback."""
+    clean_name = os.path.basename(filename)
+    search_dirs = [
+        os.path.join(app.root_path, 'static', 'uploads'),
+        os.path.join(app.root_path, 'static', 'uploads', 'doctor_profiles'),
+        os.path.join(app.root_path, 'static', 'uploads', 'signatures'),
+        os.path.join(app.root_path, 'static', 'uploads', 'stamps'),
+        os.path.join(app.root_path, 'static', 'uploads', 'prescriptions'),
+        os.path.join(app.root_path, 'static', 'uploads', 'documents'),
+        os.path.join(app.root_path, 'static', 'images'),
+        os.path.join(app.root_path, 'static', 'img'),
+        os.path.join(app.root_path, 'static')
+    ]
+    for d in search_dirs:
+        target = os.path.join(d, clean_name)
+        if os.path.exists(target) and os.path.isfile(target):
+            return send_file(target)
+
+    # Fallback to avatar if an image filename is missing on disk
+    name_clean = clean_name.rsplit('.', 1)[0].replace('_', ' ').replace('-', ' ')
+    return redirect(f"https://api.dicebear.com/7.x/initials/svg?seed={name_clean}")
 
 
 # ==============================================================================
