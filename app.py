@@ -75,11 +75,46 @@ try:
 except ImportError:
     OAuth = None
     print("⚠️ Optional package 'authlib' not installed; OAuth login features may be disabled.")
+if sys.platform == 'darwin' and not os.environ.get('ODBCSYSINI'):
+    for prefix in ['/opt/homebrew/etc', '/usr/local/etc']:
+        if os.path.exists(os.path.join(prefix, 'odbcinst.ini')):
+            os.environ['ODBCSYSINI'] = prefix
+            break
+
 try:
     import pyodbc
+    HAS_PYODBC = True
 except ImportError:
-    pyodbc = None
-    print("⚠️ Optional package 'pyodbc' not installed; database connectivity may be impacted.")
+    for sp in ['/opt/anaconda3/lib/python3.13/site-packages', '/opt/homebrew/lib/python3.11/site-packages', '/opt/homebrew/lib/python3.12/site-packages', '/usr/local/lib/python3.11/site-packages']:
+        if os.path.exists(sp) and sp not in sys.path:
+            sys.path.insert(0, sp)
+    try:
+        import pyodbc
+        HAS_PYODBC = True
+    except ImportError:
+        HAS_PYODBC = False
+
+if not HAS_PYODBC or pyodbc is None:
+    class _DummyPyodbcError(Exception):
+        pass
+
+    class _DummyPyodbc:
+        Error = _DummyPyodbcError
+        DatabaseError = _DummyPyodbcError
+        OperationalError = _DummyPyodbcError
+        IntegrityError = _DummyPyodbcError
+        ProgrammingError = _DummyPyodbcError
+        DataError = _DummyPyodbcError
+        InternalError = _DummyPyodbcError
+        NotSupportedError = _DummyPyodbcError
+        _is_dummy = True
+
+        @staticmethod
+        def connect(*args, **kwargs):
+            raise _DummyPyodbcError("pyodbc is not installed or available in this environment.")
+
+    pyodbc = _DummyPyodbc()
+    print("⚠️ Optional package 'pyodbc' not installed; SQL Server connectivity will fall back gracefully.")
 try:
     from flask_socketio import SocketIO, emit, join_room
 except ImportError:
@@ -781,6 +816,9 @@ def get_resolved_db_driver():
     uid = USERNAME
     pwd = PASSWORD
     
+    if not HAS_PYODBC or getattr(pyodbc, '_is_dummy', False):
+        return None
+
     for drv in candidates:
         if not drv:
             continue
@@ -803,12 +841,16 @@ def get_resolved_db_driver():
     return DRIVER
 
 def get_db_connection(database_name=None):
+    if not HAS_PYODBC or getattr(pyodbc, '_is_dummy', False):
+        return None
     target_db = database_name or DATABASE
     active_driver = get_resolved_db_driver()
+    if not active_driver:
+        return None
     try:
         conn_str = f'DRIVER={active_driver};SERVER={SERVER};DATABASE={target_db};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True'
         return pyodbc.connect(conn_str, autocommit=True)
-    except pyodbc.Error as e:
+    except Exception as e:
         if "Cannot open database" in str(e) or "database does not exist" in str(e).lower():
             try:
                 master_conn = pyodbc.connect(
@@ -822,9 +864,9 @@ def get_db_connection(database_name=None):
                 return pyodbc.connect(f'DRIVER={active_driver};SERVER={SERVER};DATABASE={target_db};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True', autocommit=True)
             except Exception as create_err:
                 print(f"⚠️ Error ensuring database {target_db}: {create_err}")
-        if "Can't open lib" in str(e) or "Driver Manager" in str(e):
+        if "Can't open lib" in str(e) or "Driver Manager" in str(e) or "Login timeout expired" in str(e) or "server is unavailable" in str(e).lower():
             return None
-        raise
+        return None
 
 def migrate_legacy_schema(cursor):
     """Checks for existing INT ID columns and automatically migrates them to VARCHAR without losing data."""
