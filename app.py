@@ -849,35 +849,49 @@ def get_resolved_db_driver():
     return DRIVER
 
 def get_db_connection(database_name=None):
-    if not HAS_PYODBC or getattr(pyodbc, '_is_dummy', False):
-        return None
-    target_db = database_name or DATABASE
-    active_driver = get_resolved_db_driver()
-    if not active_driver:
-        return None
-    try:
-        conn_str = f'DRIVER={active_driver};SERVER={SERVER};DATABASE={target_db};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True'
-        return pyodbc.connect(conn_str, autocommit=True)
-    except Exception as e:
-        if "Cannot open database" in str(e) or "database does not exist" in str(e).lower():
+    if HAS_PYODBC and not getattr(pyodbc, '_is_dummy', False):
+        target_db = database_name or DATABASE
+        active_driver = get_resolved_db_driver()
+        if active_driver:
             try:
-                master_conn = pyodbc.connect(
-                    f'DRIVER={active_driver};SERVER={SERVER};DATABASE=master;UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True',
-                    timeout=3,
-                    autocommit=True
-                )
-                m_cursor = master_conn.cursor()
-                m_cursor.execute(f"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{target_db}') CREATE DATABASE {target_db};")
-                master_conn.close()
-                return pyodbc.connect(f'DRIVER={active_driver};SERVER={SERVER};DATABASE={target_db};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True', autocommit=True)
-            except Exception as create_err:
-                print(f"⚠️ Error ensuring database {target_db}: {create_err}")
-        if "Can't open lib" in str(e) or "Driver Manager" in str(e) or "Login timeout expired" in str(e) or "server is unavailable" in str(e).lower():
-            return None
+                conn_str = f'DRIVER={active_driver};SERVER={SERVER};DATABASE={target_db};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True'
+                return pyodbc.connect(conn_str, autocommit=True)
+            except Exception as e:
+                if "Cannot open database" in str(e) or "database does not exist" in str(e).lower():
+                    try:
+                        master_conn = pyodbc.connect(
+                            f'DRIVER={active_driver};SERVER={SERVER};DATABASE=master;UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True',
+                            timeout=3,
+                            autocommit=True
+                        )
+                        m_cursor = master_conn.cursor()
+                        m_cursor.execute(f"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{target_db}') CREATE DATABASE {target_db};")
+                        master_conn.close()
+                        return pyodbc.connect(f'DRIVER={active_driver};SERVER={SERVER};DATABASE={target_db};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True', autocommit=True)
+                    except Exception as create_err:
+                        print(f"⚠️ Error ensuring database {target_db}: {create_err}")
+
+    # Fallback to local SQLite database if SQL Server is not reachable or not configured
+    try:
+        import sqlite3
+        sqlite_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db')
+        if not os.path.exists(sqlite_db_path):
+            try:
+                import setup_db
+                setup_db.setup_sqlite_tables()
+                setup_db.seed_production_data()
+            except Exception as se:
+                print(f"⚠️ Note during SQLite initial seeding: {se}")
+        conn = sqlite3.connect(sqlite_db_path, check_same_thread=False, isolation_level=None)
+        return conn
+    except Exception as sq_err:
+        print(f"⚠️ Error connecting to local SQLite database: {sq_err}")
         return None
 
 def migrate_legacy_schema(cursor):
     """Checks for existing INT ID columns and automatically migrates them to VARCHAR without losing data."""
+    if hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3'):
+        return
     print("🔍 Checking for legacy INT ID columns that need migration...")
     
     # 1. Migrate Primary Keys
@@ -2410,8 +2424,8 @@ def load_data():
     try:
         conn = get_db_connection()
         if conn is None:
-            print("❌ CRITICAL: SQL Database connection not available. Application cannot load data.")
-            sys.exit("Exiting: Database connection is required for the application to run.")
+            print("⚠️ Database connection not available. Operating with in-memory dataset.")
+            return
         cursor = conn.cursor()
 
         # Perform data-safe migration of schema and ensure all tables/columns exist
