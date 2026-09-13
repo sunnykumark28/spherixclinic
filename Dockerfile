@@ -1,33 +1,25 @@
 FROM python:3.11-slim
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    gcc \
-    g++ \
-    python3-dev \
+    curl \
     libffi-dev \
     libssl-dev \
     unixodbc-dev \
-    libcairo2 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libgdk-pixbuf2.0-0 \
-    libxml2 \
-    libxml2-dev \
-    libxslt1.1 \
-    libjpeg62-turbo-dev \
+    libjpeg-dev \
     zlib1g-dev \
-    curl \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip setuptools wheel
-RUN pip install --default-timeout=100 --retries=5 -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 5000
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:$PORT"]
+EXPOSE 8080
+CMD exec gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 2 --threads 4 --timeout 120 app:app
