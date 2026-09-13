@@ -139,7 +139,7 @@ except ImportError:
 
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 GROQ_API_BASE = os.getenv('GROQ_API_BASE', 'https://api.groq.com/openai/v1')
-GROQ_API_MODEL = os.getenv('GROQ_API_MODEL', 'llama-3.3-70b-versatile')
+GROQ_API_MODEL = os.getenv('GROQ_API_MODEL', 'openai/gpt-oss-20b')
 AI_PROVIDER = os.getenv('AI_PROVIDER', 'GROQ').strip().upper()
 
 
@@ -25197,57 +25197,55 @@ def api_chatbot():
             'Content-Type': 'application/json'
         }
         
-        # Try the standard OpenAI-compatible Groq endpoint first
-        try:
-            endpoint_openai = f"{GROQ_API_BASE.rstrip('/')}/chat/completions"
-            if "responses" in endpoint_openai:
-                endpoint_openai = endpoint_openai.replace("responses", "chat/completions")
-            messages = [{"role": "system", "content": system_prompt}] + history
-            
-            payload_openai = {
-                'model': GROQ_API_MODEL,
-                'messages': messages,
-                'temperature': 0.7,
-                'max_tokens': 2048
-            }
-            
-            resp = requests.post(endpoint_openai, headers=headers, json=payload_openai, timeout=30, verify=False)
-            resp.raise_for_status()
-            reply_text = _extract_groq_text_response(resp.json())
-            return jsonify({'reply': reply_text.strip()})
-            
-        except Exception as e:
-            print(f"Standard Chatbot API Error: {e}. Trying fallback format...")
-            # Fallback to the chat/completions and messages format
-            prompt = f"{system_prompt}\n\nConversation History:\n"
-            for msg in history[-6:]:
-                role = "User" if msg.get('role') == 'user' else "Devin"
-                prompt += f"{role}: {msg.get('content')}\n"
-            prompt += "Devin:"
+        candidate_models = [GROQ_API_MODEL, 'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
+        seen = set()
+        models_to_try = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
+        
+        endpoint_openai = f"{GROQ_API_BASE.rstrip('/')}/chat/completions"
+        if "responses" in endpoint_openai:
+            endpoint_openai = endpoint_openai.replace("responses", "chat/completions")
+        messages = [{"role": "system", "content": system_prompt}] + history
 
-            endpoint_custom = f"{GROQ_API_BASE.rstrip('/')}/chat/completions"
-            if "responses" in endpoint_custom:
-                endpoint_custom = endpoint_custom.replace("responses", "chat/completions")
+        for m_name in models_to_try:
+            try:
+                payload_openai = {
+                    'model': m_name,
+                    'messages': messages,
+                    'temperature': 0.7,
+                    'max_tokens': 2048
+                }
+                resp = requests.post(endpoint_openai, headers=headers, json=payload_openai, timeout=25, verify=True)
+                if resp.status_code == 200:
+                    reply_text = _extract_groq_text_response(resp.json())
+                    if reply_text and reply_text.strip():
+                        return jsonify({'reply': reply_text.strip()})
+            except Exception as try_err:
+                print(f"Chatbot model {m_name} notice: {try_err}")
+                continue
 
-            payload_custom = {
-                'model': GROQ_API_MODEL,
-                'messages': [{'role': 'user', 'content': prompt}],
-                'temperature': 0.7,
-                'max_tokens': 2048
-            }
-            response = requests.post(endpoint_custom, headers=headers, json=payload_custom, timeout=30, verify=True)
-            response.raise_for_status()
-            payload_json = response.json()
+        # Fallback to the chat/completions and messages format
+        prompt = f"{system_prompt}\n\nConversation History:\n"
+        for msg in history[-6:]:
+            role = "User" if msg.get('role') == 'user' else "Devin"
+            prompt += f"{role}: {msg.get('content')}\n"
+        prompt += "Devin:"
 
-            reply_text = _extract_groq_text_response(payload_json)
-            
-            if reply_text:
-                return jsonify({'reply': reply_text.strip()})
-            else:
-                raise ValueError("No text generated in fallback format")
+        for m_name in models_to_try:
+            try:
+                payload_custom = {
+                    'model': m_name,
+                    'messages': [{'role': 'user', 'content': prompt}],
+                    'temperature': 0.7,
+                    'max_tokens': 2048
+                }
+                response = requests.post(endpoint_openai, headers=headers, json=payload_custom, timeout=25, verify=True)
+                if response.status_code == 200:
+                    reply_text = _extract_groq_text_response(response.json())
+                    if reply_text and reply_text.strip():
+                        return jsonify({'reply': reply_text.strip()})
+            except Exception:
+                continue
 
-    except Exception as e:
-        print(f"Chatbot error: {e}")
         return jsonify({'reply': "I'm experiencing some technical difficulties connecting to my neural network. Please try again in a moment, or contact our support team for assistance."})
 
 @app.route('/image/<user_type>/<user_id>')
