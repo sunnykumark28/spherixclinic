@@ -20,10 +20,18 @@ from datetime import datetime, date, time, timedelta, timezone
 
 def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
-from dotenv import load_dotenv
-
-# Load environment variables early so API keys are available for all modules
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    for sp in ['/opt/anaconda3/lib/python3.13/site-packages', '/opt/anaconda3/lib/python3.12/site-packages', '/opt/anaconda3/lib/python3.11/site-packages', '/opt/homebrew/lib/python3.11/site-packages', '/opt/homebrew/lib/python3.12/site-packages', '/usr/local/lib/python3.11/site-packages']:
+        if os.path.exists(sp) and sp not in sys.path:
+            sys.path.insert(0, sp)
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        def load_dotenv(): pass
 import time as time_module
 import hashlib
 from urllib.parse import urlparse, quote_plus
