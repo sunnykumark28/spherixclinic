@@ -14,7 +14,7 @@ import csv
 import random
 import copy
 import uuid
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file, make_response, send_from_directory
 import math
 from datetime import datetime, date, time, timedelta, timezone
 
@@ -190,7 +190,7 @@ from flask import request, redirect, url_for
 from audit_logger import log_medical_access
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 application = app
 handler = app
 app.secret_key = os.getenv('FLASK_SECRET', os.urandom(24).hex()) # Use an environment variable for secret key
@@ -25310,7 +25310,7 @@ def serve_image(user_type, user_id):
 @app.route('/static/uploads/<path:filename>')
 @app.route('/uploads/<path:filename>')
 def serve_uploaded_file(filename):
-    """Serves uploaded files from static/uploads or subdirectories with avatar fallback."""
+    """Serves uploaded files and images with multi-directory search and avatar fallback."""
     clean_name = os.path.basename(filename)
     search_dirs = [
         os.path.join(app.root_path, 'static', 'uploads'),
@@ -25327,6 +25327,11 @@ def serve_uploaded_file(filename):
         target = os.path.join(d, clean_name)
         if os.path.exists(target) and os.path.isfile(target):
             return send_file(target)
+
+    # Check if requested filename exists with path intact
+    direct_target = os.path.join(app.root_path, 'static', filename)
+    if os.path.exists(direct_target) and os.path.isfile(direct_target):
+        return send_file(direct_target)
 
     # Fallback to avatar if an image filename is missing on disk
     name_clean = clean_name.rsplit('.', 1)[0].replace('_', ' ').replace('-', ' ')
