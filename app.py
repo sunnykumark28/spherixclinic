@@ -25098,8 +25098,18 @@ def get_chatbot_faq_response(message):
     """Checks the user message against common FAQs and returns a quick response if there is a match."""
     msg = message.lower().strip()
     
+    # 0. Bot identity / name
+    if any(k in msg for k in ['who are you', 'what is your name', 'your name', 'what are you', 'tell me about yourself', 'who made you', 'who is this', 'what is this bot']):
+        return ("Hello! I am **Spherix AI**, your dedicated clinical health intelligence assistant for **Spherix Clinic**.\n\n"
+                "I am here 24/7 to assist you with:\n"
+                "• **Clinical Symptom Guidance & Triage**\n"
+                "• **Medicine Details & Drug Interaction Checks**\n"
+                "• **Finding & Booking Verified Specialist Doctors**\n"
+                "• **Emergency SOS Ambulance Helplines (108 / 112)**\n\n"
+                "How can I assist your health and wellness today?")
+
     # 1. Substitute / doctor diagnosis
-    if any(k in msg for k in ['substitute', 'replace doctor', 'real doctor', 'formal medical advice', 'substitute for doctor']):
+    elif any(k in msg for k in ['substitute', 'replace doctor', 'real doctor', 'formal medical advice', 'substitute for doctor']):
         return ("Absolutely not. Spherix Clinic is designed to provide insightful information and guidance based on your symptoms, "
                 "but it is not a substitute for professional medical advice, diagnosis, or treatment. "
                 "Always consult a qualified doctor for any medical conditions.")
@@ -25182,7 +25192,8 @@ def api_chatbot():
 
         # Clinical, empathetic, and beautifully structured persona
         system_prompt = (
-            "You are Devin, the clinical health intelligence specialist for Spherix Clinic. "
+            "You are Spherix AI, the official clinical health intelligence assistant for Spherix Clinic. "
+            "Your identity and name is 'Spherix AI'. Always identify yourself as Spherix AI when asked who you are. Never refer to yourself as Devin, ChatGPT, or OpenAI. "
             "You are warm, empathetic, clinical, articulate, and direct. "
             "CORE GUIDELINES: "
             "1. Speak naturally with clinical authority and warmth. Never use robotic disclaimers like 'As an AI...', 'I am an AI assistant', or 'Reminder: I am not a doctor'. "
@@ -25229,9 +25240,9 @@ def api_chatbot():
         # Fallback to the chat/completions and messages format
         prompt = f"{system_prompt}\n\nConversation History:\n"
         for msg in history[-6:]:
-            role = "User" if msg.get('role') == 'user' else "Devin"
+            role = "User" if msg.get('role') == 'user' else "Spherix AI"
             prompt += f"{role}: {msg.get('content')}\n"
-        prompt += "Devin:"
+        prompt += "Spherix AI:"
 
         for m_name in models_to_try:
             try:
