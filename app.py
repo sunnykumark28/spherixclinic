@@ -191,6 +191,8 @@ from audit_logger import log_medical_access
 
 # Initialize Flask app
 app = Flask(__name__)
+application = app
+handler = app
 app.secret_key = os.getenv('FLASK_SECRET', os.urandom(24).hex()) # Use an environment variable for secret key
 
 csrf = CSRFProtect(app)
@@ -25246,6 +25248,9 @@ def api_chatbot():
             except Exception:
                 continue
 
+        return jsonify({'reply': "I'm experiencing some technical difficulties connecting to my neural network. Please try again in a moment, or contact our support team for assistance."})
+    except Exception as e:
+        print(f"Chatbot error: {e}")
         return jsonify({'reply': "I'm experiencing some technical difficulties connecting to my neural network. Please try again in a moment, or contact our support team for assistance."})
 
 @app.route('/image/<user_type>/<user_id>')
