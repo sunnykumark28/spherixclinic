@@ -427,15 +427,54 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+UPLOAD_CACHE = {}
+
+def _write_bytes_safely(relative_dir, filename, data_bytes):
+    """
+    Safely attempts to persist data bytes to disk.
+    Tries standard app.root_path/static/uploads first.
+    Falls back to /tmp/uploads for Vercel/serverless environments.
+    """
+    # Tier 1: Local / Standard app static folder
+    try:
+        if relative_dir:
+            target_dir = os.path.join(app.root_path, 'static', 'uploads', relative_dir)
+        else:
+            target_dir = os.path.join(app.root_path, 'static', 'uploads')
+        os.makedirs(target_dir, exist_ok=True)
+        file_path = os.path.join(target_dir, filename)
+        with open(file_path, 'wb') as f:
+            f.write(data_bytes)
+        return True
+    except OSError:
+        pass
+
+    # Tier 2: /tmp directory (writable in AWS Lambda / Vercel Serverless)
+    try:
+        if relative_dir:
+            tmp_dir = os.path.join('/tmp', 'uploads', relative_dir)
+        else:
+            tmp_dir = os.path.join('/tmp', 'uploads')
+        os.makedirs(tmp_dir, exist_ok=True)
+        tmp_file_path = os.path.join(tmp_dir, filename)
+        with open(tmp_file_path, 'wb') as f:
+            f.write(data_bytes)
+        return True
+    except Exception:
+        pass
+
+    return False
+
 def save_user_profile_image(input_source, target_size=(500, 500), filename_prefix='user_profile', subfolder=None):
     """
-    Standardized, high-fidelity profile image & logo processor.
+    Standardized, high-fidelity profile image & logo processor with multi-tier storage.
     - Accepts Base64 data URL string or Werkzeug FileStorage / file object or raw bytes.
     - Auto-corrects EXIF orientation.
     - Crops/resizes with Lanczos filter to the fixed target_size (default 500x500 px).
     - Converts RGBA/P to RGB over white background (or preserves PNG if desired).
-    - Saves into static/uploads/ (or subfolder under static/uploads/).
-    - Returns saved filename (relative to uploads/ or subfolder).
+    - Caches in memory (UPLOAD_CACHE) for instant serving across Vercel / serverless instances.
+    - Safely writes to static/uploads or /tmp/uploads without crashing on read-only filesystems.
+    - Returns saved filename.
     """
     if not input_source:
         return None
@@ -471,9 +510,9 @@ def save_user_profile_image(input_source, target_size=(500, 500), filename_prefi
     elif hasattr(input_source, 'read'):
         # FileStorage or file-like object
         filename = getattr(input_source, 'filename', '') or ''
-        if not filename and getattr(input_source, 'content_type', '') == '':
-            return None
         content_type = getattr(input_source, 'content_type', '') or ''
+        if not filename and content_type == '':
+            return None
         if filename.lower().endswith('.png') or 'png' in content_type.lower():
             is_png = True
         try:
@@ -494,14 +533,10 @@ def save_user_profile_image(input_source, target_size=(500, 500), filename_prefi
     ext = 'png' if is_png else 'jpg'
     safe_prefix = re.sub(r'[^a-zA-Z0-9_-]', '_', str(filename_prefix)) or 'profile'
     filename = f"{safe_prefix}_{timestamp}_{unique_suffix}.{ext}"
+    rel_path = f"{subfolder}/{filename}" if subfolder else filename
 
-    # Determine destination directory
-    if subfolder:
-        upload_dir = os.path.join(app.root_path, 'static', 'uploads', subfolder)
-    else:
-        upload_dir = os.path.join(app.root_path, 'static', 'uploads')
-    os.makedirs(upload_dir, exist_ok=True)
-    full_path = os.path.join(upload_dir, filename)
+    output_bytes = raw_bytes
+    mimetype = 'image/png' if is_png else 'image/jpeg'
 
     if Image and ImageOps:
         try:
@@ -537,22 +572,63 @@ def save_user_profile_image(input_source, target_size=(500, 500), filename_prefi
                 except AttributeError:
                     img = ImageOps.fit(img, (target_w, target_h), Image.LANCZOS, centering=(0.5, 0.5))
 
+            out_bio = BytesIO()
             if is_png:
-                img.save(full_path, format='PNG', optimize=True)
+                img.save(out_bio, format='PNG', optimize=True)
+                mimetype = 'image/png'
             else:
-                img.save(full_path, format='JPEG', quality=95, optimize=True)
-
-            return filename
+                img.save(out_bio, format='JPEG', quality=92, optimize=True)
+                mimetype = 'image/jpeg'
+            output_bytes = out_bio.getvalue()
         except Exception as img_err:
             print(f"PIL process image error in save_user_profile_image: {img_err}")
-            # Fallback to direct byte saving
-            with open(full_path, 'wb') as f:
-                f.write(raw_bytes)
-            return filename
-    else:
-        with open(full_path, 'wb') as f:
-            f.write(raw_bytes)
-        return filename
+            output_bytes = raw_bytes
+
+    # Cache in memory for instant serving
+    UPLOAD_CACHE[filename] = (output_bytes, mimetype)
+    UPLOAD_CACHE[rel_path] = (output_bytes, mimetype)
+
+    # Safely persist to disk (Tier 1: static/uploads -> Tier 2: /tmp/uploads)
+    _write_bytes_safely(subfolder, filename, output_bytes)
+
+    return rel_path
+
+@app.route('/static/uploads/<path:filename>')
+def serve_uploaded_static_file(filename):
+    """Serves uploaded files from memory cache, local static directory, or /tmp directory."""
+    clean_path = filename.lstrip('/')
+    base_name = os.path.basename(clean_path)
+
+    # 1. Check in-memory upload cache
+    if clean_path in UPLOAD_CACHE:
+        data, mimetype = UPLOAD_CACHE[clean_path]
+        return send_file(BytesIO(data), mimetype=mimetype)
+    if base_name in UPLOAD_CACHE:
+        data, mimetype = UPLOAD_CACHE[base_name]
+        return send_file(BytesIO(data), mimetype=mimetype)
+
+    # 2. Check local disk static/uploads
+    static_upload_dir = os.path.join(app.root_path, 'static', 'uploads')
+    local_file_path = os.path.join(static_upload_dir, clean_path)
+    if os.path.exists(local_file_path) and os.path.isfile(local_file_path):
+        return send_from_directory(static_upload_dir, clean_path)
+
+    # 3. Check /tmp/uploads directory (Vercel serverless environment)
+    tmp_upload_dir = os.path.join('/tmp', 'uploads')
+    tmp_file_path = os.path.join(tmp_upload_dir, clean_path)
+    if os.path.exists(tmp_file_path) and os.path.isfile(tmp_file_path):
+        return send_from_directory(tmp_upload_dir, clean_path)
+
+    # 4. Check subdirectories under static/uploads or /tmp/uploads
+    for sub in ['doctor_profiles', 'hospital_logos', 'signatures', 'stamps', 'prescriptions', 'documents']:
+        sub_local = os.path.join(static_upload_dir, sub, base_name)
+        if os.path.exists(sub_local) and os.path.isfile(sub_local):
+            return send_from_directory(os.path.join(static_upload_dir, sub), base_name)
+        sub_tmp = os.path.join(tmp_upload_dir, sub, base_name)
+        if os.path.exists(sub_tmp) and os.path.isfile(sub_tmp):
+            return send_from_directory(os.path.join(tmp_upload_dir, sub), base_name)
+
+    return ("File not found", 404)
 
 # ---------------- Flask-Login Setup ----------------
 # Email Configuration for Notifications
@@ -8833,12 +8909,12 @@ def doctor_register():
         if 'profile_picture' in request.files:
             file = request.files['profile_picture']
             if file and file.filename != '':
-                filename = secure_filename(file.filename)
-                timestamp = utcnow().strftime('%Y%m%d%H%M%S')
-                profile_picture_url = f"doctor_{timestamp}_{filename}"
-                upload_folder = os.path.join(app.root_path, 'static/uploads/doctor_profiles')
-                os.makedirs(upload_folder, exist_ok=True)
-                file.save(os.path.join(upload_folder, profile_picture_url))
+                profile_picture_url = save_user_profile_image(
+                    file, 
+                    target_size=(500, 500), 
+                    filename_prefix='doctor', 
+                    subfolder='doctor_profiles'
+                )
 
         # Generate OTP
         otp = str(random.randint(100000, 999999))
@@ -14074,12 +14150,12 @@ def hospital_register():
         if 'logo' in request.files:
             file = request.files['logo']
             if file and file.filename != '':
-                filename = secure_filename(file.filename)
-                timestamp = utcnow().strftime('%Y%m%d%H%M%S')
-                logo_filename = f"hospital_logo_{timestamp}_{filename}"
-                upload_folder = os.path.join(app.root_path, 'static/uploads/hospital_logos')
-                os.makedirs(upload_folder, exist_ok=True)
-                file.save(os.path.join(upload_folder, logo_filename))
+                logo_filename = save_user_profile_image(
+                    file, 
+                    target_size=(500, 500), 
+                    filename_prefix='hospital_logo', 
+                    subfolder='hospital_logos'
+                )
         
         # Generate Verification OTP
         otp = str(random.randint(100000, 999999))
@@ -15148,13 +15224,11 @@ def hospital_dashboard():
                     file = request.files['profilePicture']
                     if file and file.filename != '':
                         if allowed_file(file.filename):
-                            filename = secure_filename(file.filename)
-                            timestamp = utcnow().strftime('%Y%m%d%H%M%S')
-                            unique_filename = f"staff_profile_{timestamp}_{filename}"
-                            upload_folder = os.path.join(app.root_path, 'static/uploads')
-                            os.makedirs(upload_folder, exist_ok=True)
-                            file.save(os.path.join(upload_folder, unique_filename))
-                            profile_pic = unique_filename
+                            profile_pic = save_user_profile_image(
+                                file,
+                                target_size=(500, 500),
+                                filename_prefix=f"staff_profile_{str(staff_id).replace('/', '_')}"
+                            )
                         else:
                             flash('Invalid image file format.', 'error')
                 
@@ -15954,13 +16028,13 @@ def update_hospital_staff(staff_id):
         file = request.files['profilePicture']
         if file and file.filename != '':
             if allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                timestamp = utcnow().strftime('%Y%m%d%H%M%S')
-                unique_filename = f"staff_profile_{timestamp}_{filename}"
-                upload_folder = os.path.join(app.root_path, 'static/uploads')
-                os.makedirs(upload_folder, exist_ok=True)
-                file.save(os.path.join(upload_folder, unique_filename))
-                staff_member.profile_picture_url = unique_filename
+                saved_pic = save_user_profile_image(
+                    file,
+                    target_size=(500, 500),
+                    filename_prefix=f"staff_profile_{str(staff_member.id).replace('/', '_')}"
+                )
+                if saved_pic:
+                    staff_member.profile_picture_url = saved_pic
             else:
                 flash('Invalid image file format.', 'error')
                 
