@@ -14266,84 +14266,109 @@ def hospital_reset_password():
 
 def generate_captcha_text(length=5):
     """Generate a clean, unambiguous alphanumeric CAPTCHA text."""
-    chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+    # Excludes easily confusable characters (0/O, 1/I/L, 5/S, 8/B) for effortless readability
+    chars = "234679ACDEFHJKMNPRTWXYZ"
     return "".join(random.choices(chars, k=length))
 
 def generate_captcha_image_bytes(text):
-    """Generate a securely distorted visual CAPTCHA image with noise, curves, and rotated characters."""
+    """Generate a clean, high-contrast visual CAPTCHA image with subtle anti-bot curves."""
     from PIL import Image, ImageDraw, ImageFont
-    import io, random
+    import io, random, math, os
 
     width, height = 180, 52
-    # Dark modern canvas background with slight color variation
-    bg_color = (random.randint(10, 20), random.randint(18, 30), random.randint(24, 38))
+    # Modern dark slate background
+    bg_color = (15, 23, 42)
     img = Image.new('RGB', (width, height), color=bg_color)
     draw = ImageDraw.Draw(img)
 
-    # 1. Background noise dots
-    for _ in range(350):
+    # 1. Subtle smooth sine wave background security lines
+    for _ in range(2):
+        points = []
+        phase = random.uniform(0, 2 * math.pi)
+        freq = random.uniform(0.02, 0.04)
+        base_y = random.randint(16, height - 16)
+        for x in range(0, width, 4):
+            y = int(base_y + 5 * math.sin(freq * x + phase))
+            points.append((x, y))
+        wave_color = (random.randint(40, 80), random.randint(70, 130), random.randint(100, 160))
+        draw.line(points, fill=wave_color, width=1)
+
+    # 2. Subtle background noise dots
+    for _ in range(30):
         xy = (random.randint(0, width - 1), random.randint(0, height - 1))
-        dot_color = (random.randint(40, 100), random.randint(80, 180), random.randint(100, 200))
+        dot_color = (random.randint(50, 100), random.randint(70, 140), random.randint(100, 180))
         draw.point(xy, fill=dot_color)
 
-    # 2. Random interference curved/wavy lines
-    for _ in range(5):
-        points = [(x, random.randint(8, height - 8)) for x in range(0, width + 40, 28)]
-        line_color = (random.randint(30, 80), random.randint(120, 220), random.randint(140, 240))
-        draw.line(points, fill=line_color, width=random.randint(1, 2))
-
-    # 3. Draw individual distorted/rotated characters
-    char_x = 12
+    # 3. Robust cross-platform Font Resolution (supports Vercel, Linux, Mac, Windows)
     font_candidates = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.', 'static', 'fonts', 'DejaVuSans-Bold.ttf'),
+        os.path.join(app.root_path, 'static', 'fonts', 'DejaVuSans-Bold.ttf') if 'app' in globals() and hasattr(app, 'root_path') else '',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+        '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf',
         '/System/Library/Fonts/Helvetica.ttc',
-        '/System/Library/Fonts/SFNSText.ttf',
+        '/Library/Fonts/Arial.ttf',
         'Arial.ttf',
         'DejaVuSans-Bold.ttf'
     ]
     font = None
-    for font_path in font_candidates:
+    for p in font_candidates:
+        if p and os.path.exists(p):
+            try:
+                font = ImageFont.truetype(p, 28)
+                break
+            except Exception:
+                continue
+
+    if not font:
         try:
-            font = ImageFont.truetype(font_path, 26)
-            break
+            font = ImageFont.load_default(size=28)
         except Exception:
-            continue
+            font = ImageFont.load_default()
 
-    for char in text:
-        char_img = Image.new('RGBA', (40, 40), (255, 255, 255, 0))
+    # 4. Vibrant high-contrast character palette
+    palette = [
+        (52, 211, 153),   # emerald-400
+        (56, 189, 248),   # sky-400
+        (251, 191, 36),   # amber-400
+        (244, 114, 182),  # pink-400
+        (45, 212, 191),   # teal-400
+        (248, 250, 252),  # bright white
+        (167, 139, 250),  # violet-400
+    ]
+
+    total_chars = len(text)
+    slot_width = (width - 24) / total_chars
+
+    for i, char in enumerate(text):
+        char_img = Image.new('RGBA', (46, 46), (0, 0, 0, 0))
         char_draw = ImageDraw.Draw(char_img)
-        
-        char_colors = [
-            (52, 211, 153),   # emerald-400
-            (45, 212, 191),   # teal-400
-            (34, 211, 238),   # cyan-400
-            (167, 243, 208),  # emerald-200
-            (255, 255, 255),  # white
-            (250, 204, 21)    # amber-400
-        ]
-        char_color = random.choice(char_colors)
-        
-        if font:
-            char_draw.text((8, 4), char, font=font, fill=char_color)
-        else:
-            char_draw.text((8, 6), char, fill=char_color)
+        char_color = random.choice(palette)
 
-        angle = random.randint(-28, 28)
-        rotated_char = char_img.rotate(angle, expand=False, resample=Image.BICUBIC)
-        
-        img.paste(rotated_char, (char_x, random.randint(4, 10)), rotated_char)
-        char_x += random.randint(28, 33)
+        # Precise centering
+        try:
+            bbox = char_draw.textbbox((0, 0), char, font=font)
+            char_w = bbox[2] - bbox[0]
+            char_h = bbox[3] - bbox[1]
+            cx = (46 - char_w) // 2
+            cy = (46 - char_h) // 2
+        except Exception:
+            cx, cy = 8, 6
 
-    # 4. Foreground crossing strike-through lines
-    for _ in range(3):
-        start_pt = (random.randint(0, 30), random.randint(10, height - 10))
-        end_pt = (random.randint(width - 40, width), random.randint(10, height - 10))
-        line_color = (random.randint(80, 200), random.randint(180, 255), random.randint(180, 255))
-        draw.line([start_pt, end_pt], fill=line_color, width=1)
+        char_draw.text((cx, cy), char, font=font, fill=char_color)
 
-    # 5. Additional foreground noise dots
-    for _ in range(100):
+        # Gentle readable angle (-10 to 10 deg)
+        angle = random.randint(-10, 10)
+        rotated = char_img.rotate(angle, expand=False, resample=Image.BILINEAR)
+
+        pos_x = int(12 + i * slot_width + random.randint(-2, 2))
+        pos_y = random.randint(3, 7)
+        img.paste(rotated, (pos_x, pos_y), rotated)
+
+    # 5. Light foreground speckles
+    for _ in range(12):
         xy = (random.randint(0, width - 1), random.randint(0, height - 1))
-        draw.point(xy, fill=(255, 255, 255))
+        draw.point(xy, fill=(180, 220, 240))
 
     buf = io.BytesIO()
     img.save(buf, format='PNG')
