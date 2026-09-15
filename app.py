@@ -429,6 +429,54 @@ def allowed_file(filename):
 
 UPLOAD_CACHE = {}
 
+# ==========================================================
+# CLOUDINARY PERMANENT CLOUD STORAGE (FREE 25 GB)
+# ==========================================================
+CLOUDINARY_AVAILABLE = False
+_cld_uploader = None
+
+try:
+    import importlib
+    _cld = importlib.import_module('cloudinary')
+    _cld_uploader = importlib.import_module('cloudinary.uploader')
+
+    cld_url = os.getenv('CLOUDINARY_URL')
+    cld_name = os.getenv('CLOUDINARY_CLOUD_NAME')
+    cld_key = os.getenv('CLOUDINARY_API_KEY')
+    cld_secret = os.getenv('CLOUDINARY_API_SECRET')
+
+    if cld_url:
+        _cld.config(cloudinary_url=cld_url, secure=True)
+        CLOUDINARY_AVAILABLE = True
+    elif cld_name and cld_key and cld_secret:
+        _cld.config(
+            cloud_name=cld_name,
+            api_key=cld_key,
+            api_secret=cld_secret,
+            secure=True
+        )
+        CLOUDINARY_AVAILABLE = True
+except Exception as _cld_err:
+    pass
+
+def upload_to_cloudinary(file_or_bytes, folder='spherixclinic', public_id=None):
+    """
+    Uploads an image, prescription, or binary file to Cloudinary cloud storage.
+    Returns the permanent HTTPS secure_url, or None if not configured/failed.
+    """
+    if not CLOUDINARY_AVAILABLE or not _cld_uploader:
+        return None
+    try:
+        kwargs = {'folder': folder, 'resource_type': 'auto'}
+        if public_id:
+            kwargs['public_id'] = str(public_id).replace('/', '_').replace('.', '_')
+        res = _cld_uploader.upload(file_or_bytes, **kwargs)
+        if res and isinstance(res, dict) and 'secure_url' in res:
+            return res['secure_url']
+    except Exception as e:
+        print(f"⚠️ Cloudinary upload error: {e}")
+    return None
+
 def _write_bytes_safely(relative_dir, filename, data_bytes):
     """
     Safely attempts to persist data bytes to disk.
@@ -590,6 +638,12 @@ def save_user_profile_image(input_source, target_size=(500, 500), filename_prefi
 
     # Safely persist to disk (Tier 1: static/uploads -> Tier 2: /tmp/uploads)
     _write_bytes_safely(subfolder, filename, output_bytes)
+
+    # Cloudinary Cloud Storage (Permanent CDN URL)
+    cld_url = upload_to_cloudinary(output_bytes, folder=f"spherixclinic/{subfolder or 'profiles'}", public_id=filename.rsplit('.', 1)[0])
+    if cld_url:
+        UPLOAD_CACHE[cld_url] = (output_bytes, mimetype)
+        return cld_url
 
     return rel_path
 
@@ -6428,7 +6482,10 @@ def symptoms_step2():
                 stored_name = f"uploaded_symptom_{timestamp}_{filename}"
                 save_path = os.path.join(uploads_dir, stored_name)
                 uploaded_file.save(save_path)
-                session['symptom_image_path'] = f"/static/uploads/{stored_name}"
+                
+                # Cloudinary Cloud Upload
+                cld_url = upload_to_cloudinary(save_path, folder="spherixclinic/symptoms", public_id=stored_name)
+                session['symptom_image_path'] = cld_url if cld_url else f"/static/uploads/{stored_name}"
                 session.pop('symptom_vision_findings', None)
                 
                 # Save metadata for gallery index
@@ -6454,7 +6511,10 @@ def symptoms_step2():
                 save_path = os.path.join(uploads_dir, stored_name)
                 with open(save_path, 'wb') as f:
                     f.write(binary_data)
-                session['symptom_image_path'] = f"/static/uploads/{stored_name}"
+                
+                # Cloudinary Cloud Upload
+                cld_url = upload_to_cloudinary(binary_data, folder="spherixclinic/symptoms", public_id=stored_name)
+                session['symptom_image_path'] = cld_url if cld_url else f"/static/uploads/{stored_name}"
                 session.pop('symptom_vision_findings', None)
                 
                 # Save metadata for gallery index
