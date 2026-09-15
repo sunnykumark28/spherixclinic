@@ -26072,6 +26072,12 @@ def api_notifications_send_simulated():
 # ==========================================================
 # SEO SEARCH ENGINE OPTIMIZATION ROUTES (GOOGLE INDEXING)
 # ==========================================================
+@app.route('/googleeb21c3b8aa08b91b.html')
+def google_verification_file():
+    """Serves the Google Search Console HTML verification file."""
+    return Response("google-site-verification: googleeb21c3b8aa08b91b.html", mimetype='text/html')
+
+
 @app.route('/robots.txt')
 def robots_txt():
     """Generates standard robots.txt instructions for search engine crawlers."""
