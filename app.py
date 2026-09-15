@@ -26069,6 +26069,71 @@ def api_notifications_send_simulated():
 
 
 
+# ==========================================================
+# SEO SEARCH ENGINE OPTIMIZATION ROUTES (GOOGLE INDEXING)
+# ==========================================================
+@app.route('/robots.txt')
+def robots_txt():
+    """Generates standard robots.txt instructions for search engine crawlers."""
+    base = request.url_root.rstrip('/')
+    content = f"""User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /staff/
+Disallow: /patient/dashboard
+Disallow: /doctor/dashboard
+Disallow: /hospital/dashboard
+
+Sitemap: {base}/sitemap.xml
+"""
+    return Response(content, mimetype='text/plain')
+
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    """Generates dynamic XML sitemap of all public pages for Google Search Console."""
+    base = request.url_root.rstrip('/')
+    now_date = datetime.now().strftime('%Y-%m-%d')
+    
+    pages = [
+        {'loc': f"{base}/", 'priority': '1.0', 'changefreq': 'daily'},
+        {'loc': f"{base}/medical-shop", 'priority': '0.95', 'changefreq': 'daily'},
+        {'loc': f"{base}/symptoms", 'priority': '0.90', 'changefreq': 'weekly'},
+        {'loc': f"{base}/hospitals", 'priority': '0.85', 'changefreq': 'daily'},
+        {'loc': f"{base}/conditions", 'priority': '0.85', 'changefreq': 'weekly'},
+        {'loc': f"{base}/ayurveda", 'priority': '0.80', 'changefreq': 'weekly'},
+        {'loc': f"{base}/cancer-care", 'priority': '0.80', 'changefreq': 'weekly'},
+        {'loc': f"{base}/blood-bank", 'priority': '0.80', 'changefreq': 'daily'},
+        {'loc': f"{base}/blood-donation-camps", 'priority': '0.75', 'changefreq': 'weekly'},
+        {'loc': f"{base}/organ-donors", 'priority': '0.75', 'changefreq': 'weekly'},
+        {'loc': f"{base}/drug-checker", 'priority': '0.80', 'changefreq': 'weekly'},
+        {'loc': f"{base}/emergency", 'priority': '0.90', 'changefreq': 'monthly'},
+        {'loc': f"{base}/login", 'priority': '0.70', 'changefreq': 'monthly'},
+        {'loc': f"{base}/patient/login", 'priority': '0.60', 'changefreq': 'monthly'},
+        {'loc': f"{base}/doctor/login", 'priority': '0.60', 'changefreq': 'monthly'},
+        {'loc': f"{base}/hospital/login", 'priority': '0.60', 'changefreq': 'monthly'},
+        {'loc': f"{base}/about", 'priority': '0.50', 'changefreq': 'monthly'},
+        {'loc': f"{base}/contact", 'priority': '0.50', 'changefreq': 'monthly'},
+        {'loc': f"{base}/faq", 'priority': '0.50', 'changefreq': 'monthly'},
+        {'loc': f"{base}/blog", 'priority': '0.70', 'changefreq': 'weekly'},
+    ]
+
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+    ]
+    for p in pages:
+        xml_lines.append('  <url>')
+        xml_lines.append(f'    <loc>{p["loc"]}</loc>')
+        xml_lines.append(f'    <lastmod>{now_date}</lastmod>')
+        xml_lines.append(f'    <changefreq>{p["changefreq"]}</changefreq>')
+        xml_lines.append(f'    <priority>{p["priority"]}</priority>')
+        xml_lines.append('  </url>')
+    xml_lines.append('</urlset>')
+
+    return Response('\n'.join(xml_lines), mimetype='application/xml')
+
+
 # Ensure default users exist when running via Gunicorn or Python
 
 if __name__ == '__main__':
