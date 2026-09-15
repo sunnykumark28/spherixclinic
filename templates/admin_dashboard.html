@@ -713,7 +713,7 @@
                     <div class="overflow-auto" style="max-height: 340px;" id="adminNotifListContainer">
                         {% if notifications and notifications|length > 0 %}
                             {% for notif in notifications[:15] %}
-                            <div class="p-3 border-bottom hover-bg-light transition cursor-pointer notif-item {% if notif.status == 'unread' %}bg-primary-soft bg-opacity-10{% endif %}" onclick="handleNotifClick('{{ notif.link or '#' }}')">
+                            <div class="p-3 border-bottom hover-bg-light transition cursor-pointer notif-item {% if notif.status == 'unread' %}bg-primary-soft bg-opacity-10{% endif %}" data-notif-link="{{ notif.link or '#' }}" onclick="handleNotifClick(this.dataset.notifLink)">
                                 <div class="d-flex gap-2.5">
                                     <div class="flex-shrink-0 mt-1">
                                         <div class="rounded-circle d-flex align-items-center justify-content-center {% if 'Emergency' in notif.message or 'STAT' in notif.message or 'Blood' in notif.message %}bg-danger bg-opacity-10 text-danger{% elif 'Broadcast' in notif.message or '📢' in notif.message %}bg-primary bg-opacity-10 text-primary{% else %}bg-info bg-opacity-10 text-info{% endif %}" style="width: 32px; height: 32px; font-size: 13px;">
@@ -1968,7 +1968,7 @@
                                             {% set progress_pct = (med_stock / (med_min * 3) * 100)|round|int %}
                                             {% if progress_pct > 100 %}{% set progress_pct = 100 %}{% endif %}
                                             <div class="progress-bar {% if med_stock == 0 %}bg-danger{% elif med_stock < med_min %}bg-warning{% else %}bg-success{% endif %}" 
-                                                 style="width: {{ progress_pct }}%; border-radius: 10px;"></div>
+                                                 style="--bar-pct: {{ progress_pct }}%; width: var(--bar-pct); border-radius: 10px;"></div>
                                         </div>
                                     </div>
                                 </td>
@@ -1984,30 +1984,21 @@
                                         <!-- Quick Restock Button -->
                                         <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1" 
                                                 title="Quick Restock Units"
-                                                onclick="openQuickRestockModal({{ med_id }}, '{{ med.name|replace('\'', '\\\'') }}', {{ med_stock }})">
+                                                data-med-id="{{ med_id }}"
+                                                data-med-name="{{ med.name }}"
+                                                data-med-stock="{{ med_stock }}"
+                                                onclick="openQuickRestockModal(Number(this.dataset.medId), this.dataset.medName, Number(this.dataset.medStock))">
                                             <i class="fas fa-plus"></i> Restock
                                         </button>
                                         <!-- Edit Medicine Button -->
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-circle" style="width: 32px; height: 32px;"
                                                 title="Edit Formulation"
-                                                onclick='openEditMedicineModal({{ {
-                                                    "id": med_id,
-                                                    "name": med.name,
-                                                    "category": med.category|default("General"),
-                                                    "composition": med.composition|default(med.name),
-                                                    "dosage_form": med_dosage,
-                                                    "price": med_price,
-                                                    "stock": med_stock,
-                                                    "min_threshold": med_min,
-                                                    "manufacturer": med_mfg,
-                                                    "batch_number": med_batch,
-                                                    "expiry_date": med_exp,
-                                                    "rx_required": med.rx_required|default(1)
-                                                }|tojson|safe }})'>
+                                                data-medicine='{{ {"id": med_id, "name": med.name, "category": med.category|default("General"), "composition": med.composition|default(med.name), "dosage_form": med_dosage, "price": med_price, "stock": med_stock, "min_threshold": med_min, "manufacturer": med_mfg, "batch_number": med_batch, "expiry_date": med_exp, "rx_required": med.rx_required|default(1)}|tojson|forceescape }}'
+                                                onclick="openEditMedicineModal(JSON.parse(this.dataset.medicine))">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <!-- Delete Medicine Form -->
-                                        <form action="{{ url_for('admin_delete_medicine', med_id=med_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to remove {{ med.name|replace('\'', '\\\'') }} from pharmacy catalog?');">
+                                        <form action="{{ url_for('admin_delete_medicine', med_id=med_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to remove this medicine from pharmacy catalog?');">
                                             <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle" style="width: 32px; height: 32px;" title="Delete Medicine">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -2538,31 +2529,25 @@
                                         <!-- View Report Button -->
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1"
                                                 title="View Full Diagnostic Report"
-                                                onclick='openViewLabReportModal({{ {
-                                                    "id": req_id,
-                                                    "barcode": barcode,
-                                                    "patient_name": req.patient_name,
-                                                    "patient_id": req.patient_id|default("PT-10" ~ loop.index),
-                                                    "test_name": req.test_name,
-                                                    "category": req.category|default("Pathology"),
-                                                    "sample_type": req.sample_type|default("Whole Blood"),
-                                                    "priority": priority,
-                                                    "status": req.status,
-                                                    "result_status": res_stat,
-                                                    "notes": req.notes|default("Standard biological reference ranges applied."),
-                                                    "reported_by": req.reported_by|default("Chief Pathologist"),
-                                                    "date": spec_date
-                                                }|tojson|safe }})'>
+                                                data-report='{{ {"id": req_id, "barcode": barcode, "patient_name": req.patient_name, "patient_id": req.patient_id|default("PT-10" ~ loop.index), "test_name": req.test_name, "category": req.category|default("Pathology"), "sample_type": req.sample_type|default("Whole Blood"), "priority": priority, "status": req.status, "result_status": res_stat, "notes": req.notes|default("Standard biological reference ranges applied."), "reported_by": req.reported_by|default("Chief Pathologist"), "date": spec_date}|tojson|forceescape }}'
+                                                onclick="openViewLabReportModal(JSON.parse(this.dataset.report))">
                                             <i class="fas fa-file-medical"></i> Report
                                         </button>
                                         <!-- Update Findings Button -->
                                         <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" style="width: 32px; height: 32px;"
                                                 title="Update Findings & Status"
-                                                onclick="openUpdateLabResultModal({{ req_id }}, '{{ req.patient_name|replace('\'', '\\\'') }}', '{{ req.test_name|replace('\'', '\\\'') }}', '{{ req.status }}', '{{ res_stat }}', '{{ req.notes|default('')|replace('\'', '\\\'') }}', '{{ req.reported_by|default('')|replace('\'', '\\\'') }}')">
+                                                data-req-id="{{ req_id }}"
+                                                data-patient-name="{{ req.patient_name }}"
+                                                data-test-name="{{ req.test_name }}"
+                                                data-status="{{ req.status }}"
+                                                data-res-stat="{{ res_stat }}"
+                                                data-notes="{{ req.notes|default('') }}"
+                                                data-reported-by="{{ req.reported_by|default('') }}"
+                                                onclick="openUpdateLabResultModal(Number(this.dataset.reqId), this.dataset.patientName, this.dataset.testName, this.dataset.status, this.dataset.resStat, this.dataset.notes, this.dataset.reportedBy)">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <!-- Delete Lab Request -->
-                                        <form action="{{ url_for('admin_delete_lab_request', req_id=req_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete lab record #{{ req_id }} for {{ req.patient_name|replace('\'', '\\\'') }}?');">
+                                        <form action="{{ url_for('admin_delete_lab_request', req_id=req_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this lab record?');">
                                             <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle" style="width: 32px; height: 32px;" title="Delete Record">
                                                 <i class="fas fa-trash"></i>
                                             </button>
