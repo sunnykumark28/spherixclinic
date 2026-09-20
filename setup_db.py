@@ -1,5 +1,5 @@
 """
-setup_db.py — Unified Master Database Management Utility for Spherix Clinic & S iCons
+setup_db.py — Unified Master Database Management Utility for Spherix Clinic & SNY
 Consolidates Database Creation, Table Schemas, Production Data Seeding,
 JSON Data Migration, and Database Reset Operations into a single master module.
 """
@@ -320,19 +320,6 @@ def setup_database_schema(force_sqlite=False):
                         image_data VARBINARY(MAX),
                         content_type VARCHAR(50)
                     )"""),
-                    ("sicons_applications", """CREATE TABLE sicons_applications (
-                        id INT PRIMARY KEY,
-                        full_name NVARCHAR(255),
-                        email NVARCHAR(255),
-                        phone NVARCHAR(50),
-                        position NVARCHAR(255),
-                        department NVARCHAR(255),
-                        submitted_at DATETIME,
-                        files NVARCHAR(MAX),
-                        form_data NVARCHAR(MAX),
-                        profile_picture_data VARBINARY(MAX) NULL,
-                        profile_picture_content_type VARCHAR(50) NULL
-                    )"""),
                     ("organ_requests", """CREATE TABLE organ_requests (
                         id INT PRIMARY KEY,
                         patient_id VARCHAR(50),
@@ -631,7 +618,6 @@ def setup_sqlite_tables():
         "CREATE TABLE IF NOT EXISTS camp_registrations (id INTEGER PRIMARY KEY, camp_name TEXT, name TEXT, email TEXT, phone TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
         "CREATE TABLE IF NOT EXISTS blood_stock (blood_group TEXT PRIMARY KEY, quantity INTEGER DEFAULT 0)",
         "CREATE TABLE IF NOT EXISTS doctor_images (doctor_id TEXT PRIMARY KEY, image_data BLOB, content_type TEXT)",
-        "CREATE TABLE IF NOT EXISTS sicons_applications (id INTEGER PRIMARY KEY, full_name TEXT, email TEXT, phone TEXT, position TEXT, department TEXT, submitted_at TIMESTAMP, files TEXT, form_data TEXT, profile_picture_data BLOB, profile_picture_content_type TEXT)",
         "CREATE TABLE IF NOT EXISTS organ_requests (id INTEGER PRIMARY KEY, patient_id TEXT, hospital_id TEXT, organ_type TEXT, urgency TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
         "CREATE TABLE IF NOT EXISTS patient_feedback (id INTEGER PRIMARY KEY, patient_id TEXT, patient_name TEXT, rating INTEGER, comments TEXT, feedback_target TEXT, target_id TEXT, target_name TEXT, created_at TIMESTAMP)",
         "CREATE TABLE IF NOT EXISTS doctor_opinions (doctor_id TEXT PRIMARY KEY, rating INTEGER, experience TEXT, average_appointments TEXT, created_at TIMESTAMP)",
@@ -882,7 +868,7 @@ def reset_database(force=False):
         'bed_bookings', 'doctor_images', 'staff', 'doctors', 'patients',
         'hospitals', 'blood_donors', 'organ_donors', 'camps', 'blood_stock',
         'organ_requests', 'patient_vitals', 'activity_logs', 'contact_messages',
-        'sicons_applications', 'medicines', 'visitor_passes', 'referrals', 'notifications'
+        'medicines', 'visitor_passes', 'referrals', 'notifications'
     ]
 
     conn = get_sql_server_connection(DATABASE)

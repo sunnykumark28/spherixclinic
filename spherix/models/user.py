@@ -1,0 +1,354 @@
+import random
+from datetime import datetime
+from flask_login import UserMixin
+from spherix.config import (
+    utcnow, GLOBAL_COUNTRY_FLAGS, GLOBAL_COUNTRY_TIMEZONES,
+    format_dual_currency, generate_user_license_id
+)
+
+class Doctor(UserMixin):
+    def __init__(self, id, first_name, last_name, email, password, department, **kwargs):
+        self.id = id
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.password = password
+        self.department = department
+        self.phone = kwargs.get('phone')
+        self.specialization = kwargs.get('specialization')
+        self.address = kwargs.get('address')
+        self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.bio = kwargs.get('bio')
+        self.hospital_name = kwargs.get('hospital_name')
+        self.hospital_address = kwargs.get('hospital_address')
+        self.state = kwargs.get('state')
+        self.city = kwargs.get('city')
+        self.district = kwargs.get('district')
+
+        self.pincode = kwargs.get('pincode')
+        self.country = kwargs.get('country', 'India')
+        self.is_international = kwargs.get('is_international', str(self.country).strip().lower() not in ['india', 'in'])
+        self.currency = kwargs.get('currency', 'USD' if self.is_international else 'INR')
+        self.timezone = kwargs.get('timezone', GLOBAL_COUNTRY_TIMEZONES.get(self.country, 'IST (UTC+5:30)'))
+        self.international_accreditation = kwargs.get('international_accreditation', 'JCI Accredited & ABIM Certified' if self.is_international else 'NMC / MCI Certified Specialist')
+        self.telemedicine_modes = kwargs.get('telemedicine_modes', ['Cross-Border HD Video Telemedicine', 'International Second Opinion', 'E-Prescription Desk'])
+        self.languages_spoken = kwargs.get('languages_spoken', 'English, Hindi' if self.country == 'India' else 'English, Spanish, Arabic')
+
+        self.qualification = kwargs.get('qualification')
+        self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or generate_user_license_id('doctor')
+        self.license_no = self.license_number
+        self.experience = kwargs.get('experience')
+        self.consultation_type = kwargs.get('consultation_type', 'Cross-Border Video Consultation' if self.is_international else 'In-Person & Online')
+        self.consultation_fee = kwargs.get('consultation_fee', '500')
+        self.working_hours = kwargs.get('working_hours', '09:00 AM - 05:00 PM')
+        self.social_links = kwargs.get('social_links', {})
+        self.is_verified = kwargs.get('is_verified', False)
+        self.is_blocked = kwargs.get('is_blocked', False)
+        self.is_hidden = kwargs.get('is_hidden', False)
+        self.is_doctor = True
+        self.is_patient = False
+        self.is_hospital = False
+        self.is_staff = False
+        self.is_blood_donor = False
+        self.is_organ_donor = False
+        self.role = 'Doctor'
+        self.availability_status = kwargs.get('availability_status', 'available')
+        self.hospital_id = kwargs.get('hospital_id')
+        self.latitude = kwargs.get('latitude')
+        self.longitude = kwargs.get('longitude')
+        self.hospital_approval_status = kwargs.get('hospital_approval_status', 'approved' if kwargs.get('hospital_name') else None)
+
+    def get_id(self):
+        return f"doctor-{self.id}"
+
+    @property
+    def country_flag(self):
+        return GLOBAL_COUNTRY_FLAGS.get(self.country, '🌍')
+
+    @property
+    def formatted_fee(self):
+        return format_dual_currency(self.consultation_fee, self.currency)
+
+    @property
+    def reviews(self):
+        from spherix.services.database import TEMP_DATA
+        return sorted([review for review in TEMP_DATA.get('reviews', {}).values() if review.doctor_id == self.id], key=lambda r: r.created_at, reverse=True)
+
+    @property
+    def average_rating(self):
+        reviews = self.reviews
+        if not reviews:
+            return 0
+        return round(sum(r.rating for r in reviews) / len(reviews), 1)
+
+    @property
+    def appointments(self):
+        from spherix.services.database import TEMP_DATA
+        return [appt for appt in TEMP_DATA.get('appointments', {}).values() if appt.doctor_id == self.id]
+
+    @property
+    def messages(self):
+        from spherix.services.database import TEMP_DATA
+        return [msg for msg in TEMP_DATA.get('messages', {}).values() if msg.doctor_id == self.id]
+
+
+class Patient(UserMixin):
+    def __init__(self, id, name, email, password, **kwargs):
+        self.id = id
+        self.name = name
+        self.email = email
+        self.password = password
+        self.age = kwargs.get('age')
+        self.gender = kwargs.get('gender')
+        self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.phone = kwargs.get('phone')
+        self.address = kwargs.get('address')
+        self.country = kwargs.get('country', 'India')
+        self.preferred_currency = kwargs.get('preferred_currency', 'INR')
+        self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('health_id') or generate_user_license_id('patient')
+        self.license_no = self.license_number
+        self.health_id = self.license_number
+        self.is_blocked = kwargs.get('is_blocked', False)
+        self.is_hidden = kwargs.get('is_hidden', False)
+        self.is_patient = True
+        self.is_doctor = False
+        self.is_hospital = False
+        self.is_blood_donor = False
+        self.is_organ_donor = False
+        self.is_staff = False
+        self.role = 'Patient'
+        
+        import json
+        self.clinical_record = kwargs.get('clinical_record')
+        if isinstance(self.clinical_record, str):
+            try:
+                self.clinical_record = json.loads(self.clinical_record)
+            except:
+                self.clinical_record = {}
+        elif not isinstance(self.clinical_record, dict):
+            self.clinical_record = {}
+
+    def get_id(self):
+        return f"patient-{self.id}"
+
+    @property
+    def appointments(self):
+        from spherix.services.database import TEMP_DATA
+        return [
+            appt for appt in TEMP_DATA.get('appointments', {}).values()
+            if appt.patient_id == self.id or (appt.patient_phone and self.phone and str(appt.patient_phone).strip() == str(self.phone).strip())
+        ]
+
+
+class Staff(UserMixin):
+    def __init__(self, id, name, email, password, role, **kwargs):
+        self.id = id
+        self.name = name
+        self.email = email
+        self.password = password
+        self.role = role
+        self.phone = kwargs.get('phone')
+        self.hospital_name = kwargs.get('hospital_name')
+        self.created_at = kwargs.get('created_at', utcnow())
+        self.last_login = kwargs.get('last_login')
+        self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or f"STAFF-REG-{datetime.now().year}-{random.randint(10000, 99999)}"
+        self.license_no = self.license_number
+        self.is_blocked = kwargs.get('is_blocked', False)
+        self.is_hidden = kwargs.get('is_hidden', False)
+        self.is_doctor = False
+        self.is_staff = True
+        self.is_hospital = False
+        self.is_patient = False
+        self.is_blood_donor = False
+        self.is_organ_donor = False
+        self.profile_picture_url = kwargs.get('profile_picture_url')
+
+    def get_id(self):
+        return f"staff-{self.id}"
+
+    @property
+    def appointments(self):
+        return []
+
+HospitalStaff = Staff
+
+
+class Hospital(UserMixin):
+    def __init__(self, id, name, email, password, **kwargs):
+        self.id = id
+        self.name = name
+        self.email = email
+        self.password = password
+        self.logo_url = kwargs.get('logo_url')
+        self.phone = kwargs.get('phone')
+        self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('licenseNo') or generate_user_license_id('hospital')
+        self.license_no = self.license_number
+        self.president_ceo = kwargs.get('president_ceo', kwargs.get('director_name', kwargs.get('md_name', f"Dr. {self.name.split()[0]} MD, Chief Executive")))
+        self.director_name = self.president_ceo
+        self.superintendent_name = kwargs.get('superintendent_name', kwargs.get('doctor_name', kwargs.get('blood_bank_staff', f"Dr. {self.name.split()[0]} Superintendent")))
+        self.blood_bank_staff = self.superintendent_name
+        self.city = kwargs.get('city')
+        self.state = kwargs.get('state')
+        self.zip_code = kwargs.get('zip_code')
+        self.country = kwargs.get('country', 'India')
+        self.is_international = kwargs.get('is_international', str(self.country).strip().lower() not in ['india', 'in'])
+        self.currency = kwargs.get('currency', 'USD' if self.is_international else 'INR')
+        self.timezone = kwargs.get('timezone', GLOBAL_COUNTRY_TIMEZONES.get(self.country, 'IST (UTC+5:30)'))
+        self.total_beds = int(kwargs.get('total_beds') or 0)
+        self.available_beds = int(kwargs.get('available_beds') or 0)
+        self.icu_beds = int(kwargs.get('icu_beds') or 0)
+        self.available_icu_beds = int(kwargs.get('available_icu_beds') or 0)
+        self.doctors_available = kwargs.get('doctors_available') or 'Available'
+        self.address = kwargs.get('address')
+        self.general_bed_fee = float(kwargs.get('general_bed_fee') or 1000.0)
+        self.icu_bed_fee = float(kwargs.get('icu_bed_fee') or 2500.0)
+        self.is_verified = kwargs.get('is_verified', False)
+        self.is_blocked = kwargs.get('is_blocked', False)
+        self.is_hidden = kwargs.get('is_hidden', False)
+        self.is_doctor = False
+        self.is_hospital = True
+        self.is_patient = False
+        self.is_blood_donor = False
+        self.is_organ_donor = False
+        self.is_staff = False
+        self.role = 'Hospital'
+        self.accreditation = kwargs.get('accreditation', 'JCI Gold Accredited' if self.is_international else 'NABH / ISO 9001 Certified')
+        self.international_services = kwargs.get('international_services', [
+            'Medical Visa Assistance & Invitation Letters',
+            'Dedicated Airport Pickup & Patient Transfer',
+            'Multi-Language Medical Translators (Arabic, Russian, French)',
+            'International Direct Health Insurance Billing',
+            'VIP International Patient Suites & Telehealth Follow-ups'
+        ])
+        self.international_bed_booking_enabled = kwargs.get('international_bed_booking_enabled', True)
+        self.blood_stock = kwargs.get('blood_stock', {
+            "A+": 0, "A-": 0, "B+": 0, "B-": 0, "AB+": 0, "AB-": 0, "O+": 0, "O-": 0
+        })
+
+    def get_id(self):
+        return f"hospital-{self.id}"
+
+    @property
+    def country_flag(self):
+        return GLOBAL_COUNTRY_FLAGS.get(self.country, '🌍')
+
+    @property
+    def formatted_general_bed_fee(self):
+        return format_dual_currency(self.general_bed_fee, self.currency)
+
+    @property
+    def formatted_icu_bed_fee(self):
+        return format_dual_currency(self.icu_bed_fee, self.currency)
+
+    @property
+    def doctors(self):
+        from spherix.services.database import TEMP_DATA
+        return [
+            d for d in TEMP_DATA.get('doctors', {}).values()
+            if (d.hospital_name == self.name or str(getattr(d, 'hospital_id', '')) == str(self.id))
+            and not getattr(d, 'is_hidden', False)
+            and not getattr(d, 'is_blocked', False)
+        ]
+
+    @property
+    def doctor_count(self):
+        return len(self.doctors)
+
+    @property
+    def departments_with_doctors(self):
+        dept_map = {}
+        for d in self.doctors:
+            dept = d.department or 'General Medicine'
+            if dept not in dept_map:
+                dept_map[dept] = []
+            dept_map[dept].append(d)
+        return dept_map
+
+    @property
+    def appointments(self):
+        from spherix.services.database import TEMP_DATA
+        doctor_ids = {d.id for d in self.doctors}
+        return [
+            appt for appt in TEMP_DATA.get('appointments', {}).values()
+            if appt.doctor_id in doctor_ids or str(getattr(appt, 'hospital_id', '')) == str(self.id)
+        ]
+
+
+class BloodDonor(UserMixin):
+    def __init__(self, id, name, email, phone, blood_group, age, city, password=None, last_donation=None, **kwargs):
+        self.id = id
+        self.name = name
+        self.email = email
+        self.phone = phone
+        self.blood_group = blood_group
+        self.age = age
+        self.city = city
+        self.password = password
+        self.last_donation = last_donation
+        self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.created_at = kwargs.get('created_at', utcnow())
+        self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('donor_card_id') or generate_user_license_id('blood_donor')
+        self.license_no = self.license_number
+        self.donor_card_id = self.license_number
+        self.status = kwargs.get('status', 'pending')
+        self.is_blocked = kwargs.get('is_blocked', False)
+        self.is_hidden = kwargs.get('is_hidden', False)
+        self.hospital_id = kwargs.get('hospital_id')
+        self.hospital_name = kwargs.get('hospital_name')
+        self.assigned_staff_name = kwargs.get('assigned_staff_name')
+        self.superintendent_name = kwargs.get('superintendent_name')
+        self.president_ceo = kwargs.get('president_ceo')
+        self.is_blood_donor = True
+        self.is_doctor = False
+        self.is_hospital = False
+        self.is_patient = False
+        self.is_organ_donor = False
+        self.is_staff = False
+        self.role = 'Blood Donor'
+        
+    def get_id(self):
+        return f"blood_donor-{self.id}"
+
+    @property
+    def appointments(self):
+        return []
+
+
+class OrganDonor(UserMixin):
+    def __init__(self, id, name, email, phone, organs, blood_group, age, city, password=None, **kwargs):
+        self.id = id
+        self.name = name
+        self.email = email
+        self.phone = phone
+        self.organs = organs if isinstance(organs, list) else []
+        self.blood_group = blood_group
+        self.age = age
+        self.city = city
+        self.password = password
+        self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.created_at = kwargs.get('created_at', utcnow())
+        self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('pledge_id') or generate_user_license_id('organ_donor')
+        self.license_no = self.license_number
+        self.pledge_id = self.license_number
+        self.status = kwargs.get('status', 'pending')
+        self.is_blocked = kwargs.get('is_blocked', False)
+        self.is_hidden = kwargs.get('is_hidden', False)
+        self.hospital_id = kwargs.get('hospital_id')
+        self.hospital_name = kwargs.get('hospital_name')
+        self.assigned_staff_name = kwargs.get('assigned_staff_name')
+        self.superintendent_name = kwargs.get('superintendent_name')
+        self.president_ceo = kwargs.get('president_ceo')
+        self.is_organ_donor = True
+        self.is_blood_donor = False
+        self.is_doctor = False
+        self.is_hospital = False
+        self.is_patient = False
+        self.is_staff = False
+        self.role = 'Organ Donor'
+
+    def get_id(self):
+        return f"organ_donor-{self.id}"
+
+    @property
+    def appointments(self):
+        return []

@@ -1,351 +1,292 @@
 {% extends 'layout.html' %}
+{% set hide_main_nav = True %}
+{% set hide_footer = True %}
 
-{% block title %}System Administrator Portal | Spherix Clinic{% endblock %}
+{% block title %}Admin Login | Spherix Clinic{% endblock %}
 
 {% block head_extra %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 <style>
-    :root {
-        --admin-primary: #1e40af;       /* Deep Authority Blue */
-        --admin-accent: #3b82f6;        /* Vibrant Royal Blue */
-        --admin-dark: #0f172a;          /* Slate 900 */
-        --admin-surface: #ffffff;
-        --admin-border: #e2e8f0;
-    }
-
-    .admin-auth-wrapper {
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-        min-height: calc(100vh - 80px);
-        background-color: #0b1120;
-        background-image: 
-            radial-gradient(at 50% 0%, rgba(30, 64, 175, 0.25) 0px, transparent 65%),
-            radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
-            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-        background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+    /* Full Screen Minimalist Blue Canvas */
+    .admin-login-screen {
+        font-family: 'Montserrat', sans-serif;
+        min-height: 100vh;
+        width: 100vw;
+        background: #1e56d0;
+        background: linear-gradient(135deg, #0c1b44 0%, #104bd6 45%, #000000 100%);
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         overflow: hidden;
+        margin: 0;
+        padding: 1.5rem;
     }
 
-    /* Ambient glow */
-    .admin-ambient-glow {
+    /* Abstract Organic Waves Background */
+    .bg-wave-layer-1 {
         position: absolute;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, transparent 70%);
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        width: 140vw;
+        height: 140vh;
+        top: -20vh;
+        left: -20vw;
+        background: radial-gradient(ellipse at 80% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
+                    radial-gradient(ellipse at 15% 85%, rgba(15, 60, 160, 0.35) 0%, transparent 55%);
         pointer-events: none;
-        filter: blur(80px);
     }
 
-    /* Main Admin Box Container */
-    .admin-console-card {
-        background: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(59, 130, 246, 0.25);
-        border-radius: 1.5rem;
-        box-shadow: 
-            0 25px 60px -15px rgba(0, 0, 0, 0.7),
-            0 0 40px -10px rgba(37, 99, 235, 0.25),
-            0 1px 0 rgba(255, 255, 255, 0.1) inset;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .admin-console-card::before {
-        content: '';
+    .bg-wave-svg {
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #3b82f6, #60a5fa, #818cf8, #3b82f6);
-    }
-
-    /* Admin Input Style */
-    .admin-field-group {
-        position: relative;
-    }
-
-    .admin-field-input {
+        inset: 0;
         width: 100%;
-        background: rgba(30, 41, 59, 0.7);
-        border: 1.5px solid rgba(71, 85, 105, 0.5);
-        border-radius: 0.85rem;
-        padding: 0.85rem 1rem 0.85rem 2.85rem;
-        font-size: 0.925rem;
-        font-weight: 500;
-        color: #f8fafc;
+        height: 100%;
+        pointer-events: none;
+        opacity: 0.22;
+    }
+
+    /* Input Outline Styling */
+    .minimal-auth-input-group {
+        position: relative;
+        width: 100%;
+    }
+
+    .minimal-auth-input {
+        width: 100%;
+        height: 48px;
+        background: transparent;
+        border: 1.5px solid rgba(255, 255, 255, 0.85);
+        border-radius: 4px;
+        padding: 0.75rem 1rem 0.75rem 2.85rem;
+        font-size: 0.85rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #ffffff;
         outline: none;
         transition: all 0.25s ease;
     }
 
-    .admin-field-input:focus {
-        background: rgba(30, 41, 59, 0.95);
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 0 15px rgba(59, 130, 246, 0.2);
+    .minimal-auth-input::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+        letter-spacing: 0.15em;
     }
 
-    .admin-field-input::placeholder {
-        color: #64748b;
+    .minimal-auth-input:focus {
+        border-color: #ffffff;
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.25);
     }
 
-    .admin-field-icon {
+    .minimal-auth-icon {
         position: absolute;
-        left: 1.05rem;
+        left: 1rem;
         top: 50%;
         transform: translateY(-50%);
-        color: #60a5fa;
-        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.85);
         pointer-events: none;
-        transition: color 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* Primary Submit Button */
-    .btn-admin-auth {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
-        color: #ffffff;
+    /* Solid White Login Button */
+    .btn-minimal-white {
+        width: 100%;
+        height: 48px;
+        background: #ffffff;
+        color: #1e56d0;
         font-weight: 700;
-        font-size: 0.95rem;
-        padding: 0.9rem 1.5rem;
-        border-radius: 0.85rem;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.5);
-        transition: all 0.25s ease;
+        font-size: 0.9rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        border: none;
+        border-radius: 4px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    .btn-admin-auth:hover {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-        box-shadow: 0 14px 30px -4px rgba(37, 99, 235, 0.65);
+    .btn-minimal-white:hover {
+        background: #f8fafc;
         transform: translateY(-1px);
-        color: #ffffff;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     }
 
-    /* Live Telemetry Pill */
-    .status-pulse-dot {
-        width: 8px;
-        height: 8px;
-        background-color: #10b981;
-        border-radius: 50%;
-        display: inline-block;
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-        animation: adminPulse 2s infinite;
-    }
-
-    @keyframes adminPulse {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-
-    .font-code {
-        font-family: 'JetBrains Mono', monospace;
+    .btn-minimal-white:active {
+        transform: translateY(0);
     }
 </style>
 
-<div class="admin-auth-wrapper flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-    <div class="admin-ambient-glow"></div>
+<div class="admin-login-screen">
+    
+    <!-- Background Abstract Curved Layers -->
+    <div class="bg-wave-layer-1"></div>
+    <svg class="bg-wave-svg" viewBox="0 0 1440 900" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M-100 200 C300 450 600 -50 1100 250 C1350 400 1500 200 1600 300 V1000 H-100 Z" fill="rgba(255, 255, 255, 0.05)" />
+        <path d="M-50 500 C400 700 800 350 1200 650 C1400 800 1550 600 1600 700 V1000 H-50 Z" fill="rgba(255, 255, 255, 0.04)" />
+        <path d="M-100 0 C400 300 300 800 1000 600 C1300 500 1450 700 1600 650 V0 H-100 Z" fill="rgba(0, 0, 0, 0.05)" />
+    </svg>
 
-    <div class="w-full max-w-[500px] relative z-10">
+    <!-- Top Left Home Back Link -->
+    <a href="{{ url_for('home') }}" class="absolute top-6 left-6 z-30 inline-flex items-center gap-2 text-xs font-semibold text-white/70 hover:text-white transition-colors text-decoration-none" title="Return to Home">
+        <i class="fas fa-arrow-left text-xs"></i>
+        <span>Home</span>
+    </a>
+
+    <!-- Main Auth Center Container -->
+    <div class="w-full max-w-[370px] relative z-10 flex flex-col items-center">
         
-        <!-- Top System Status Strip -->
-        <div class="flex items-center justify-between px-2 mb-3 text-xs text-slate-400 font-code">
-            <div class="flex items-center gap-2">
-                <span class="status-pulse-dot"></span>
-                <span class="text-slate-300 font-semibold">CORE SERVER: ONLINE</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <span>TLS 1.3</span>
-                <span class="text-slate-600">•</span>
-                <span class="text-blue-400 font-semibold">ROOT CONSOLE</span>
-            </div>
-        </div>
+        <!-- Top White Line Art Cart & Upload Icon (Exact match to reference image) -->
+       <div class="mb-10 flex items-center justify-center">
+    <svg
+        class="w-24 h-24"
+        viewBox="0 0 100 100"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg">
 
-        <!-- Master Admin Card -->
-        <div class="admin-console-card p-7 sm:p-9">
-            
-            <!-- Admin Header & Shield Emblem -->
-            <div class="flex items-start justify-between mb-6 pb-5 border-b border-slate-700/60">
-                <div class="flex items-center gap-3.5">
-                    <div class="w-13 h-13 rounded-2xl bg-gradient-to-br from-blue-600 to-slate-900 p-2.5 border border-blue-400/40 shadow-lg flex items-center justify-center shrink-0">
-                        <i class="fas fa-shield-halved text-2xl text-blue-300"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-base font-extrabold text-white tracking-wide font-['Space_Grotesk']">SPHERIX</span>
-                            <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold tracking-wider font-code">ADMIN</span>
+        <!-- Admin Shield -->
+        <path
+            d="M50 12L78 23V45C78 64 66 80 50 88C34 80 22 64 22 45V23L50 12Z"
+            stroke="#ffffff"
+            stroke-width="2.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        />
+
+        <!-- Admin/User Head -->
+        <circle
+            cx="50"
+            cy="39"
+            r="8"
+            stroke="#ffffff"
+            stroke-width="2.8"
+        />
+
+        <!-- Admin/User Body -->
+        <path
+            d="M35 65C35 55.5 41.5 50 50 50C58.5 50 65 55.5 65 65"
+            stroke="#ffffff"
+            stroke-width="2.8"
+            stroke-linecap="round"
+        />
+
+        <!-- Small Check/Security Mark -->
+        <path
+            d="M67 68L71 72L78 64"
+            stroke="#ffffff"
+            stroke-width="2.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        />
+
+    </svg>
+</div>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="w-full mb-4 space-y-2">
+                    {% for category, message in messages %}
+                        <div class="text-xs p-2.5 rounded text-center font-medium {{ 'bg-emerald-500/20 text-emerald-100 border border-emerald-300/40' if category == 'success' else 'bg-rose-500/25 text-white border border-rose-300/40' }}">
+                            {{ message }}
                         </div>
-                        <h2 class="text-xs font-semibold text-slate-400 mt-0.5">Central Management Terminal</h2>
-                    </div>
+                    {% endfor %}
                 </div>
+            {% endif %}
+        {% endwith %}
 
-                <!-- Clearance Level Badge -->
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-medium font-code">
-                    <i class="fas fa-key text-blue-400 text-[10px]"></i> ROOT
+        <!-- Form Form Container -->
+        <form action="{{ url_for('admin_login') }}" method="POST" class="w-full space-y-4" id="adminForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="role" value="admin">
+
+            <!-- 1. Username / Email Input -->
+            <div class="minimal-auth-input-group ">
+                <span class="minimal-auth-icon">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <circle cx="12" cy="7" r="4" />
+                        <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
+                    </svg>
                 </span>
+                <input 
+                    id="adminEmail" 
+                    name="email" 
+                    type="text" 
+                    required 
+                    autocomplete="username" 
+                    value="admin@spherixclinic.com"
+                    placeholder="USERNAME" 
+                    class="minimal-auth-input"
+                >
             </div>
 
-            <!-- Page Title -->
-            <div class="mb-6">
-                <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                    Administrator Login
-                </h1>
-                <p class="text-slate-400 text-xs mt-1 leading-relaxed">
-                    Enter master credentials to manage doctors, hospitals, patient records, and live telemetry.
-                </p>
+            <!-- 2. Password Input -->
+            <div class="minimal-auth-input-group">
+                <span class="minimal-auth-icon">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
+                </span>
+                <input 
+                    id="adminPassword" 
+                    name="password" 
+                    type="password" 
+                    required 
+                    autocomplete="current-password"
+                    placeholder="PASSWORD" 
+                    class="minimal-auth-input"
+                >
             </div>
 
-            <!-- Flash Notifications -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="mb-5 space-y-2">
-                        {% for category, message in messages %}
-                            <div class="flex items-center gap-2.5 text-xs p-3 rounded-lg {{ 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/50' if category == 'success' else 'bg-rose-950/80 text-rose-300 border border-rose-700/50' }}">
-                                <i class="fas {{ 'fa-circle-check text-emerald-400' if category == 'success' else 'fa-triangle-exclamation text-rose-400' }} text-sm shrink-0"></i>
-                                <span class="font-medium">{{ message }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-
-            <!-- Admin Form -->
-            <form action="{{ url_for('admin_login') }}" method="POST" class="space-y-4" id="adminForm">
-                <input type="hidden" name="role" value="admin">
-
-                <!-- Admin Email -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label for="adminEmail" class="text-xs font-bold text-slate-300 uppercase tracking-wider font-code">
-                            Admin Account Email
-                        </label>
-                    </div>
-                    <div class="admin-field-group">
-                        <i class="fas fa-user-shield admin-field-icon"></i>
-                        <input 
-                            id="adminEmail" 
-                            name="email" 
-                            type="email" 
-                            required 
-                            autocomplete="email" 
-                            value="admin@spherixclinic.com"
-                            placeholder="admin@spherixclinic.com" 
-                            class="admin-field-input"
-                        >
-                    </div>
+            <!-- 3. Security Code (CAPTCHA) Seamless Verification Row -->
+            <div class="flex items-center gap-2">
+                <div class="minimal-auth-input-group flex-grow">
+                    <span class="minimal-auth-icon">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                    </span>
+                    <input 
+                        id="adminCaptcha" 
+                        name="captcha" 
+                        type="text" 
+                        required 
+                        maxlength="6"
+                        autocomplete="off"
+                        placeholder="CAPTCHA" 
+                        class="minimal-auth-input"
+                    >
                 </div>
-
-                <!-- Admin Password -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label for="adminPassword" class="text-xs font-bold text-slate-300 uppercase tracking-wider font-code">
-                            Master Access Key
-                        </label>
-                        <span class="text-[11px] text-slate-500 font-code">Encrypted</span>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <div class="h-[48px] px-1 rounded bg-white/10 border border-white/70 overflow-hidden flex items-center justify-center">
+                        <img id="adminCaptchaImg" src="{{ url_for('get_captcha_image', portal_type='admin') }}" alt="CAPTCHA"
+                             class="h-9 w-[130px] object-cover rounded select-none pointer-events-none filter invert brightness-200">
                     </div>
-                    <div class="admin-field-group">
-                        <i class="fas fa-lock-keyhole admin-field-icon"></i>
-                        <input 
-                            id="adminPassword" 
-                            name="password" 
-                            type="password" 
-                            required 
-                            autocomplete="current-password"
-                            placeholder="••••••••••••" 
-                            class="admin-field-input pr-10"
-                        >
-                        <button 
-                            type="button" 
-                            onclick="toggleAdminVisibility()" 
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors p-1"
-                            title="Toggle Key Visibility"
-                        >
-                            <i id="adminEye" class="fas fa-eye text-xs"></i>
-                        </button>
-                    </div>
+                    <button type="button" 
+                            onclick="refreshAdminCaptcha()"
+                            class="w-[48px] h-[48px] rounded border border-white/70 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
+                            title="Refresh Code">
+                        <i id="adminCaptchaRefreshIcon" class="fas fa-sync-alt text-xs"></i>
+                    </button>
                 </div>
+            </div>
 
-                <!-- Security Verification CAPTCHA -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label for="adminCaptcha" class="text-xs font-bold text-slate-300 uppercase tracking-wider font-code">
-                            Security Verification Code
-                        </label>
-                        <span class="text-[10px] text-slate-400 font-code">Case-insensitive</span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <div class="flex items-center gap-2">
-                            <div class="p-0.5 rounded-xl bg-slate-900 border border-blue-500/30 overflow-hidden shadow-sm shrink-0">
-                                <img id="adminCaptchaImg" src="{{ url_for('get_captcha_image', portal_type='admin') }}" alt="Security CAPTCHA"
-                                     class="h-10 w-[140px] object-cover rounded-lg select-none pointer-events-none">
-                            </div>
-                            <button type="button" 
-                                    onclick="refreshAdminCaptcha()"
-                                    class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-blue-300 hover:text-blue-200 border border-slate-700/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                                    title="Regenerate Security CAPTCHA">
-                                <i id="adminCaptchaRefreshIcon" class="fas fa-arrows-rotate text-xs"></i>
-                            </button>
-                        </div>
-                        <div class="admin-field-group flex-grow">
-                            <i class="fas fa-shield-halved admin-field-icon"></i>
-                            <input 
-                                id="adminCaptcha" 
-                                name="captcha" 
-                                type="text" 
-                                required 
-                                maxlength="6"
-                                autocomplete="off"
-                                placeholder="Enter 5-character code" 
-                                class="admin-field-input uppercase font-mono font-bold tracking-wider"
-                            >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Options -->
-                <div class="flex items-center justify-between pt-1 text-xs">
-                    <label class="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-slate-300">
-                        <input type="checkbox" name="remember" checked class="w-4 h-4 bg-slate-800 border-slate-700 rounded text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-900">
-                        <span>Keep admin session active</span>
-                    </label>
-                    <a href="{{ url_for('login_landing') }}" class="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-                        Staff/Doctor Login &rarr;
-                    </a>
-                </div>
-
-                <!-- Action Button -->
-                <button type="submit" class="btn-admin-auth w-full flex items-center justify-center gap-2.5 mt-2" id="submitBtn">
-                    <i class="fas fa-arrow-right-to-bracket text-sm"></i>
-                    <span>Authenticate & Access Console</span>
+            <!-- 4. Login Action Button -->
+            <div class="pt-2">
+                <button type="submit" class="btn-minimal-white" id="submitBtn">
+                    LOGIN
                 </button>
-            </form>
-
-            <!-- Security Notice Banner -->
-            <div class="mt-6 pt-4 border-t border-slate-800 flex items-start gap-2.5 text-[11px] text-slate-400 bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-                <i class="fas fa-circle-exclamation text-amber-400 text-xs shrink-0 mt-0.5"></i>
-                <div>
-                    <span class="text-slate-300 font-semibold">Security Warning:</span>
-                    Authorized administrative personnel only. All access attempts, session tokens, and IP addresses are recorded.
-                </div>
             </div>
 
-            <!-- Footer links -->
-            <div class="mt-5 flex items-center justify-between text-xs text-slate-500 font-code">
-                <span>Core Engine v4.8</span>
-                <a href="{{ url_for('home') }}" class="hover:text-slate-300 transition-colors inline-flex items-center gap-1">
-                    <i class="fas fa-house text-[10px]"></i> Exit to Public Site
-                </a>
-            </div>
-
-        </div>
+        </form>
 
     </div>
 </div>
@@ -361,40 +302,24 @@
         }, 400);
     }
 
-    function toggleAdminVisibility() {
-        var input = document.getElementById('adminPassword');
-        var icon = document.getElementById('adminEye');
-        if (!input || !icon) return;
-
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
+    function showForgotNote() {
+        alert("For security protocol verification, administrator password resets must be issued directly via server root access or by contacting: support@spherixclinic.com");
     }
 
-    function fillAdminDemo() {
-        var email = document.getElementById('adminEmail');
-        var pass = document.getElementById('adminPassword');
-        if (email) email.value = 'admin@spherixclinic.com';
-        if (pass) {
-            pass.value = 'admin123';
-            pass.focus();
-        }
-    }
-
-    // Submit state feedback
+    // Map single username input to admin email if needed
     var form = document.getElementById('adminForm');
     var btn = document.getElementById('submitBtn');
-    if (form && btn) {
-        form.addEventListener('submit', function() {
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-sm"></i> Verifying Authorization...';
-            btn.disabled = true;
-            btn.classList.add('opacity-80', 'cursor-wait');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            var emailField = document.getElementById('adminEmail');
+            if (emailField && emailField.value.trim().toLowerCase() === 'admin') {
+                emailField.value = 'admin@spherixclinic.com';
+            }
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin text-sm mr-2"></i> LOGGING IN...';
+                btn.disabled = true;
+                btn.classList.add('opacity-90', 'cursor-wait');
+            }
         });
     }
 </script>

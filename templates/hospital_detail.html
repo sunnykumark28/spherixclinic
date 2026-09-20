@@ -2,8 +2,38 @@
 
 {% block title %}{{ hospital.name }} - Details{% endblock %}
 
+{% block head %}
+<style>
+    /* Hide layout header and footer completely when hospital full image modal is open */
+    body.hospital-modal-active #top-utility-bar,
+    body.hospital-modal-active header,
+    body.hospital-modal-active nav,
+    body.hospital-modal-active nav.glass-nav,
+    body.hospital-modal-active #main-navbar,
+    body.hospital-modal-active footer,
+    body.hospital-modal-active #main-footer,
+    body.hospital-modal-active #floating-actions-dock,
+    body.hospital-modal-active #floating-dock-container,
+    body.hospital-modal-active #cancer-floating-cta,
+    body.hospital-modal-active #feedback-toggle-btn,
+    body.hospital-modal-active #chatbot-toggle-btn,
+    body.hospital-modal-active #symptom-chat-toggle {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transform: scale(0.96) !important;
+    }
+    body.hospital-modal-active {
+        overflow: hidden !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="min-h-screen bg-slate-50 font-sans pb-24 relative">
+<div class="min-h-screen bg-slate-50 font-sans pb-24 relative"
+     x-data="{ showImageModal: false, copiedEmail: false }"
+     x-init="$watch('showImageModal', val => document.body.classList.toggle('hospital-modal-active', val))">
     
     <!-- Top Pattern -->
     <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-emerald-900 to-slate-50 z-0"></div>
@@ -19,12 +49,20 @@
             
             <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8 text-center md:text-left">
                 <!-- Logo -->
-                <div class="w-32 h-32 rounded-2xl bg-gradient-to-br from-emerald-100 to-cyan-100 shadow-xl border-2 border-emerald-200/50 flex items-center justify-center p-4 flex-shrink-0 backdrop-blur-sm hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                <div class="relative w-32 h-32 sm:w-40 sm:h-40 rounded-3xl bg-gradient-to-br from-emerald-100 to-cyan-100 shadow-xl border-2 sm:border-3 border-emerald-200/70 flex items-center justify-center p-4 flex-shrink-0 backdrop-blur-sm hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group"
+                     @click="showImageModal = true"
+                     title="Click to view full photo & facility credentials">
                     {% if hospital.logo_url %}
-                        <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) }}" alt="{{ hospital.name }}" class="w-full h-full object-contain">
+                        <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) }}" alt="{{ hospital.name }}" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300">
                     {% else %}
-                        <i class="fas fa-hospital text-6xl text-emerald-600"></i>
+                        <i class="fas fa-hospital text-6xl sm:text-7xl text-emerald-600"></i>
                     {% endif %}
+
+                    <!-- Hover View Photo Overlay -->
+                    <div class="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl flex flex-col items-center justify-center text-white gap-1 z-10">
+                        <i class="fas fa-expand text-emerald-300 text-base drop-shadow"></i>
+                        <span class="text-[9px] font-bold font-mono tracking-wider uppercase drop-shadow text-white">Full Image</span>
+                    </div>
                 </div>
 
                 <!-- Info -->
@@ -732,6 +770,108 @@
             </div>
         </form>
     </div>
+
+    <!-- ================= HOSPITAL FULL IMAGE LIGHTBOX MODAL ================= -->
+    <div x-show="showImageModal" 
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         @keydown.escape.window="showImageModal = false"
+         class="fixed inset-0 z-[999999] bg-slate-950/92 backdrop-blur-2xl flex flex-col items-center justify-between p-4 sm:p-6 lg:p-8 overflow-y-auto select-none"
+         style="display: none;">
+        
+        <!-- Modal Header Toolbar -->
+        <div class="w-full max-w-4xl flex items-center justify-between z-20 border-b border-white/15 pb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-600 border border-emerald-400 flex items-center justify-center text-white font-bold text-base shadow-lg">
+                    <i class="fas fa-hospital"></i>
+                </div>
+                <div>
+                    <h3 class="text-white font-display font-black text-base sm:text-lg tracking-tight m-0">{{ hospital.name }}</h3>
+                    <p class="text-emerald-300 font-mono text-[11px] uppercase tracking-wider font-semibold m-0">{{ hospital.city or 'Main Campus' }} • {{ hospital.accreditation|default('NABH Accredited Facility') }}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <!-- Native Browser Fullscreen Toggle -->
+                <button type="button" 
+                        onclick="if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); } else { if (document.exitFullscreen) document.exitFullscreen(); }"
+                        class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-semibold backdrop-blur-md border border-white/15 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        title="Toggle Fullscreen">
+                    <i class="fas fa-expand text-xs"></i>
+                    <span class="hidden sm:inline">Maximize</span>
+                </button>
+
+                <!-- Close Button -->
+                <button type="button" 
+                        @click="showImageModal = false" 
+                        class="w-10 h-10 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center transition-all border border-rose-400/50 cursor-pointer shadow-lg hover:scale-105"
+                        title="Close (Esc)">
+                    <i class="fas fa-times text-base"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Main Body: Full HD Hospital Logo/Image Showcase -->
+        <div class="relative flex-1 w-full max-w-4xl flex flex-col items-center justify-center my-4" 
+             @click.self="showImageModal = false">
+            
+            <div class="relative max-h-[66vh] rounded-3xl overflow-hidden border-2 sm:border-4 border-white/20 shadow-[0_0_80px_rgba(16,185,129,0.35)] bg-slate-900 group p-6 sm:p-8 flex items-center justify-center">
+                {% if hospital.logo_url %}
+                    <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) }}" 
+                         alt="{{ hospital.name }}" 
+                         class="max-h-[52vh] w-auto max-w-full object-contain rounded-2xl transition-transform duration-500 group-hover:scale-[1.01]">
+                {% else %}
+                    <div class="w-56 h-56 sm:w-72 sm:h-72 rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-slate-900 text-white flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
+                        <span class="font-display font-extrabold text-6xl sm:text-7xl tracking-wider text-white">{{ hospital.name[:2]|upper }}</span>
+                        <span class="text-xs uppercase tracking-widest text-emerald-200 font-bold mt-2">{{ hospital.country|default('Global Healthcare') }}</span>
+                    </div>
+                {% endif %}
+                
+                <!-- Verified Hospital Stamp -->
+                <div class="absolute top-4 right-4 px-3 py-1.5 rounded-xl bg-emerald-600/95 text-white font-mono text-xs font-bold backdrop-blur-md border border-emerald-400 flex items-center gap-1.5 shadow-lg">
+                    <i class="fas fa-certificate text-xs"></i>
+                    <span>VERIFIED CLINICAL FACILITY</span>
+                </div>
+            </div>
+
+            <!-- Interactive Hospital Admissions & Contact Bar -->
+            <div class="w-full max-w-2xl mt-4 p-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/15 text-white flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+                <div class="flex items-center gap-3 text-left">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 flex items-center justify-center text-lg shrink-0">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-300 uppercase tracking-widest font-bold block">DIRECT CLINICAL EMAIL</span>
+                        <a href="mailto:{{ hospital.email }}" class="text-sm font-bold text-white hover:text-emerald-300 transition-colors font-mono">{{ hospital.email or 'admissions@spherixclinic.com' }}</a>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" 
+                            @click="navigator.clipboard.writeText('{{ hospital.email or 'admissions@spherixclinic.com' }}'); copiedEmail = true; setTimeout(() => copiedEmail = false, 2500)"
+                            class="px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-mono text-xs font-bold border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-copy text-xs" :class="{ 'text-emerald-400': copiedEmail }"></i>
+                        <span x-show="!copiedEmail">Copy Email</span>
+                        <span x-show="copiedEmail" class="text-emerald-300" style="display: none;">Copied!</span>
+                    </button>
+                    
+                    {% if hospital.phone %}
+                    <a href="tel:{{ hospital.phone }}" 
+                       class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-mono text-xs font-bold transition-all flex items-center gap-1.5 text-decoration-none shadow-md">
+                        <i class="fas fa-phone text-xs"></i>
+                        <span>Call Facility</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>

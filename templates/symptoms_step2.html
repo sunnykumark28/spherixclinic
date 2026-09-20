@@ -849,9 +849,10 @@
             <!-- RIGHT: CLINICAL DIAGNOSTIC SIDEBAR -->
             <div class="lg:col-span-4 space-y-5">
 
-                <!-- Pure 3D DNA Symbol Movement (No Card, No Background, No Text) -->
+                <!-- Ultra-Premium 3D Bioluminescent DNA Visualizer (Sidebar) -->
                 <div class="w-full flex items-center justify-center relative -my-1">
-                    <canvas id="step2DnaCanvas" class="w-full max-w-[340px] sm:max-w-[380px] h-[260px] sm:h-[300px] bg-transparent block cursor-grab active:cursor-grabbing"></canvas>
+                    <div class="absolute inset-0 bg-gradient-to-tr from-sky-400/15 via-indigo-400/10 to-teal-400/15 rounded-full blur-[60px] pointer-events-none"></div>
+                    <canvas id="step2DnaCanvas" class="w-full max-w-[340px] sm:max-w-[380px] h-[260px] sm:h-[300px] bg-transparent block relative z-10 cursor-grab active:cursor-grabbing"></canvas>
                 </div>
 
                 <!-- AI Diagnostic Engine Summary Card -->
@@ -1566,7 +1567,7 @@
     }
 
     // ========================================================
-    // 🧬 PURE 3D DNA DOUBLE-HELIX MOVEMENT SIMULATION (STEP 2)
+    // 🧬 ULTRA-PREMIUM 3D BIOLUMINESCENT DNA HELIX ENGINE (STEP 2)
     // ========================================================
     (function () {
         const canvas = document.getElementById('step2DnaCanvas');
@@ -1577,47 +1578,56 @@
         let height = 0;
         let dpr = window.devicePixelRatio || 1;
 
-        // Simulation parameters
-        const NUM_RUNGS = 26;
-        const STRAND_RADIUS = 64;
-        const STRAND_HEIGHT_SPAN = 250;
+        // Helix Architecture Parameters
+        const NUM_RUNGS = 28;
+        const STRAND_RADIUS = 68;
+        const STRAND_HEIGHT_SPAN = 260;
         const PERSPECTIVE = 320;
 
         let rotY = 0;
-        let rotX = 0.22;
+        let rotX = 0.18;
         let targetRotY = 0;
-        let targetRotX = 0.22;
-        const baseSpeed = 0.016;
-
-        // Interactive mouse / touch state
+        let targetRotX = 0.18;
+        let velocityY = 0.014;
         let isDragging = false;
         let startPointerX = 0;
         let startPointerY = 0;
         let prevRotY = 0;
         let prevRotX = 0;
 
-        // Floating ambient molecular particles
-        const PARTICLES_COUNT = 24;
+        // Genomic Laser Scanner Pulse
+        let scanY = -STRAND_HEIGHT_SPAN / 2;
+        let scanDir = 1;
+        const SCAN_SPEED = 2.0;
+
+        // Bioluminescent Ambient Particles
+        const PARTICLES_COUNT = 30;
         const particles = [];
         for (let i = 0; i < PARTICLES_COUNT; i++) {
             particles.push({
-                x: (Math.random() - 0.5) * 200,
-                y: (Math.random() - 0.5) * 260,
-                z: (Math.random() - 0.5) * 160,
+                x: (Math.random() - 0.5) * 220,
+                y: (Math.random() - 0.5) * 300,
+                z: (Math.random() - 0.5) * 180,
                 vy: -0.25 - Math.random() * 0.3,
-                size: 1.2 + Math.random() * 2.2,
-                color: Math.random() > 0.5 ? '#0284c7' : '#4f46e5',
-                alpha: 0.25 + Math.random() * 0.45,
+                vx: (Math.random() - 0.5) * 0.12,
+                size: 1.1 + Math.random() * 2.0,
+                color: Math.random() > 0.5 ? '#06b6d4' : (Math.random() > 0.5 ? '#6366f1' : '#10b981'),
+                alpha: 0.2 + Math.random() * 0.55,
                 pulse: Math.random() * Math.PI * 2
             });
         }
 
-        // Base pairs types for rungs (A-T vs G-C)
-        const rungTypes = [];
+        // Nucleotide Base Pairs
+        const rungData = [];
+        const baseColors = [
+            { a: '#06b6d4', b: '#f59e0b', code: 'A-T' },
+            { a: '#6366f1', b: '#10b981', code: 'G-C' },
+            { a: '#3b82f6', b: '#ec4899', code: 'T-A' },
+            { a: '#14b8a6', b: '#8b5cf6', code: 'C-G' }
+        ];
+
         for (let i = 0; i < NUM_RUNGS; i++) {
-            rungTypes.push({
-                isAT: i % 2 === 0
-            });
+            rungData.push(baseColors[i % baseColors.length]);
         }
 
         function resizeCanvas() {
@@ -1633,7 +1643,7 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // 3D Point Projection Helper
+        // 3D Matrix Projection
         function project3D(x, y, z) {
             const cosX = Math.cos(rotX);
             const sinX = Math.sin(rotX);
@@ -1649,7 +1659,7 @@
             const px = width / 2 + x2 * scale;
             const py = height / 2 + y1 * scale;
 
-            return { x: px, y: py, z: z2, scale: scale };
+            return { x: px, y: py, z: z2, scale: scale, origY: y };
         }
 
         let animationFrameId = null;
@@ -1658,39 +1668,55 @@
             ctx.clearRect(0, 0, width, height);
 
             if (!isDragging) {
-                targetRotY += baseSpeed;
+                targetRotY += velocityY;
             }
-            rotY += (targetRotY - rotY) * 0.1;
-            rotX += (targetRotX - rotX) * 0.1;
+            rotY += (targetRotY - rotY) * 0.12;
+            rotX += (targetRotX - rotX) * 0.12;
 
-            // Draw Subtle Ambient Floating Particles
+            // Update Laser Scan Position
+            scanY += SCAN_SPEED * scanDir;
+            if (scanY > STRAND_HEIGHT_SPAN / 2) {
+                scanY = STRAND_HEIGHT_SPAN / 2;
+                scanDir = -1;
+            } else if (scanY < -STRAND_HEIGHT_SPAN / 2) {
+                scanY = -STRAND_HEIGHT_SPAN / 2;
+                scanDir = 1;
+            }
+
+            // 1. Draw Ambient Floating Bioluminescent Particles
             for (let i = 0; i < particles.length; i++) {
                 const p = particles[i];
                 p.y += p.vy;
-                p.pulse += 0.035;
-                if (p.y < -STRAND_HEIGHT_SPAN / 2 - 20) {
-                    p.y = STRAND_HEIGHT_SPAN / 2 + 20;
-                    p.x = (Math.random() - 0.5) * 200;
+                p.x += p.vx;
+                p.pulse += 0.04;
+                if (p.y < -STRAND_HEIGHT_SPAN / 2 - 25) {
+                    p.y = STRAND_HEIGHT_SPAN / 2 + 25;
+                    p.x = (Math.random() - 0.5) * 220;
                 }
 
                 const proj = project3D(p.x, p.y, p.z);
-                const currentAlpha = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+                const currentAlpha = p.alpha * (0.5 + 0.5 * Math.sin(p.pulse));
 
                 ctx.beginPath();
                 ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI * 2);
                 ctx.fillStyle = p.color;
-                ctx.globalAlpha = Math.max(0.08, Math.min(0.75, currentAlpha));
+                ctx.globalAlpha = Math.max(0.05, Math.min(0.8, currentAlpha));
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 6 * proj.scale;
                 ctx.fill();
             }
+            ctx.shadowBlur = 0;
             ctx.globalAlpha = 1.0;
 
-            // Calculate 3D coordinates for all rungs and nodes
+            // 2. Generate 3D Helix Backbone Nodes & Coordinates
+            const strand1Points = [];
+            const strand2Points = [];
             const renderItems = [];
 
             for (let i = 0; i < NUM_RUNGS; i++) {
                 const progress = (i / (NUM_RUNGS - 1)) - 0.5; // -0.5 to 0.5
                 const y = progress * STRAND_HEIGHT_SPAN;
-                const angle = progress * Math.PI * 4.2; // double helix twist
+                const angle = progress * Math.PI * 4.4; // Helix twist
 
                 const x1 = Math.sin(angle) * STRAND_RADIUS;
                 const z1 = Math.cos(angle) * STRAND_RADIUS;
@@ -1701,36 +1727,78 @@
                 const p1 = project3D(x1, y, z1);
                 const p2 = project3D(x2, y, z2);
 
+                strand1Points.push(p1);
+                strand2Points.push(p2);
+
                 const avgZ = (p1.z + p2.z) / 2;
-                const rungType = rungTypes[i];
+                const baseInfo = rungData[i];
+
+                // Calculate distance to genomic laser scan line
+                const distToScan = Math.abs(y - scanY);
+                const scanIntensity = Math.max(0, 1 - distToScan / 45);
 
                 renderItems.push({
                     type: 'rung',
                     z: avgZ,
                     p1: p1,
                     p2: p2,
-                    rungType: rungType
+                    baseInfo: baseInfo,
+                    scanIntensity: scanIntensity
                 });
 
                 renderItems.push({
                     type: 'node1',
                     z: p1.z,
                     p: p1,
-                    color: '#0284c7' // Cyan / Sky Blue
+                    color: '#0284c7', // Cyan / Sky
+                    glowColor: '#38bdf8',
+                    scanIntensity: scanIntensity
                 });
 
                 renderItems.push({
                     type: 'node2',
                     z: p2.z,
                     p: p2,
-                    color: '#4f46e5' // Indigo / Royal Blue
+                    color: '#6366f1', // Indigo / Violet
+                    glowColor: '#a855f7',
+                    scanIntensity: scanIntensity
                 });
             }
 
-            // Depth Sort for authentic 3D occlusion
+            // 3. Draw Continuous Bioluminescent Backbone Strands (Ribbons)
+            function drawStrandCurve(points, colorStart, colorEnd, shadowCol) {
+                if (points.length < 2) return;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+
+                for (let i = 0; i < points.length - 1; i++) {
+                    const xc = (points[i].x + points[i + 1].x) / 2;
+                    const yc = (points[i].y + points[i + 1].y) / 2;
+                    ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+                }
+                ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+
+                const grad = ctx.createLinearGradient(0, height * 0.1, 0, height * 0.9);
+                grad.addColorStop(0, colorStart);
+                grad.addColorStop(1, colorEnd);
+
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 2.4;
+                ctx.shadowColor = shadowCol;
+                ctx.shadowBlur = 8;
+                ctx.globalAlpha = 0.85;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            drawStrandCurve(strand1Points, '#38bdf8', '#0284c7', '#0284c7');
+            drawStrandCurve(strand2Points, '#a855f7', '#4f46e5', '#6366f1');
+
+            // 4. Sort all items by Z-depth for realistic 3D occlusion
             renderItems.sort((a, b) => b.z - a.z);
 
-            // Draw Double-Helix Rungs & Nodes
+            // 5. Draw 3D Base Pairs & Molecular Nucleotides
             for (let k = 0; k < renderItems.length; k++) {
                 const item = renderItems[k];
 
@@ -1740,66 +1808,99 @@
 
                     // Gradient for Rung
                     const grad = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
-                    if (item.rungType.isAT) {
-                        grad.addColorStop(0, '#0284c7');
-                        grad.addColorStop(0.5, '#38bdf8');
-                        grad.addColorStop(1, '#f59e0b');
-                    } else {
-                        grad.addColorStop(0, '#4f46e5');
-                        grad.addColorStop(0.5, '#818cf8');
-                        grad.addColorStop(1, '#0d9488');
-                    }
+                    grad.addColorStop(0, item.baseInfo.a);
+                    grad.addColorStop(0.5, '#ffffff');
+                    grad.addColorStop(1, item.baseInfo.b);
+
+                    const avgScale = (p1.scale + p2.scale) / 2;
+                    const isLaserHit = item.scanIntensity > 0.05;
 
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(p2.x, p2.y);
                     ctx.strokeStyle = grad;
-                    ctx.lineWidth = Math.max(1.4, 3.0 * ((p1.scale + p2.scale) / 2));
-                    ctx.globalAlpha = Math.min(1, 0.45 + (1 - (item.z + 80) / 180) * 0.55);
+                    ctx.lineWidth = Math.max(1.4, (2.2 + item.scanIntensity * 2.2) * avgScale);
+                    ctx.globalAlpha = Math.min(1, 0.4 + (1 - (item.z + 80) / 180) * 0.6 + item.scanIntensity * 0.4);
+                    
+                    if (isLaserHit) {
+                        ctx.shadowColor = '#38bdf8';
+                        ctx.shadowBlur = 12 * avgScale;
+                    }
                     ctx.stroke();
+                    ctx.shadowBlur = 0;
 
-                    // Center connecting bead
+                    // Central Hydrogen-Bond Connector Node
                     const midX = (p1.x + p2.x) / 2;
                     const midY = (p1.y + p2.y) / 2;
-                    const midScale = (p1.scale + p2.scale) / 2;
+                    const beadRadius = (2.0 + item.scanIntensity * 1.5) * avgScale;
 
                     ctx.beginPath();
-                    ctx.arc(midX, midY, 2.2 * midScale, 0, Math.PI * 2);
+                    ctx.arc(midX, midY, beadRadius, 0, Math.PI * 2);
                     ctx.fillStyle = '#ffffff';
-                    ctx.shadowColor = '#38bdf8';
-                    ctx.shadowBlur = 5 * midScale;
+                    ctx.shadowColor = isLaserHit ? '#00f2fe' : '#38bdf8';
+                    ctx.shadowBlur = (6 + item.scanIntensity * 10) * avgScale;
                     ctx.fill();
                     ctx.shadowBlur = 0;
                     ctx.globalAlpha = 1.0;
 
                 } else if (item.type === 'node1' || item.type === 'node2') {
                     const p = item.p;
-                    const radius = 5.2 * p.scale;
+                    const baseRadius = 5.4 * p.scale;
+                    const radius = baseRadius * (1 + item.scanIntensity * 0.3);
 
-                    // Outer Glow
+                    // Outer Bioluminescent Halo
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = item.color;
-                    ctx.shadowColor = item.color;
-                    ctx.shadowBlur = 10 * p.scale;
+                    
+                    const radGrad = ctx.createRadialGradient(
+                        p.x - radius * 0.3,
+                        p.y - radius * 0.3,
+                        radius * 0.1,
+                        p.x,
+                        p.y,
+                        radius
+                    );
+                    radGrad.addColorStop(0, '#ffffff');
+                    radGrad.addColorStop(0.3, item.glowColor);
+                    radGrad.addColorStop(1, item.color);
+
+                    ctx.fillStyle = radGrad;
+                    ctx.shadowColor = item.glowColor;
+                    ctx.shadowBlur = (12 + item.scanIntensity * 14) * p.scale;
                     ctx.fill();
 
-                    // Inner highlight
+                    // Specular Glass Highlight Glint
                     ctx.beginPath();
-                    ctx.arc(p.x - radius * 0.26, p.y - radius * 0.26, radius * 0.42, 0, Math.PI * 2);
-                    ctx.fillStyle = '#ffffff';
+                    ctx.arc(p.x - radius * 0.35, p.y - radius * 0.35, radius * 0.32, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                     ctx.fill();
-
                     ctx.shadowBlur = 0;
                 }
             }
+
+            // 6. Draw Subtle Holographic Genomic Scanner Wavefront Line
+            const scanProj = project3D(0, scanY, 0);
+            const scanGradient = ctx.createLinearGradient(scanProj.x - 100, scanProj.y, scanProj.x + 100, scanProj.y);
+            scanGradient.addColorStop(0, 'rgba(56, 189, 248, 0)');
+            scanGradient.addColorStop(0.5, 'rgba(56, 189, 248, 0.4)');
+            scanGradient.addColorStop(1, 'rgba(56, 189, 248, 0)');
+
+            ctx.beginPath();
+            ctx.moveTo(scanProj.x - 100, scanProj.y);
+            ctx.lineTo(scanProj.x + 100, scanProj.y);
+            ctx.strokeStyle = scanGradient;
+            ctx.lineWidth = 1.8;
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 8;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
 
             animationFrameId = requestAnimationFrame(renderDna);
         }
 
         renderDna();
 
-        // Interactive Pointer Drag Handling
+        // Tactile Smooth Drag Handling
         canvas.addEventListener('pointerdown', function (e) {
             isDragging = true;
             startPointerX = e.clientX;
@@ -1813,7 +1914,7 @@
             if (isDragging) {
                 const dx = e.clientX - startPointerX;
                 const dy = e.clientY - startPointerY;
-                targetRotY = prevRotY + dx * 0.015;
+                targetRotY = prevRotY + dx * 0.012;
                 targetRotX = Math.max(-0.5, Math.min(0.5, prevRotX + dy * 0.008));
             }
         });
@@ -1826,7 +1927,7 @@
             isDragging = false;
         });
 
-        // Pause when tab is inactive
+        // Lifecycle Visibility Handling
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 if (animationFrameId) cancelAnimationFrame(animationFrameId);

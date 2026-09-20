@@ -1,0 +1,258 @@
+{% extends 'layout.html' %}
+
+{% block title %}Sign in with Apple | Spherix Health Platform{% endblock %}
+
+{% block content %}
+<style>
+    .apple-glass-card {
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.12), 0 0 1px 1px rgba(0, 0, 0, 0.04);
+    }
+    .apple-input {
+        width: 100%;
+        background: #f5f5f7;
+        border: 1px solid #d2d2d7;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #1d1d1f;
+        outline: none;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .apple-input:focus {
+        background: #ffffff;
+        border-color: #0071e3;
+        box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
+    }
+    .apple-btn-primary {
+        background: #000000;
+        color: #ffffff;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .apple-btn-primary:hover {
+        background: #1d1d1f;
+        transform: scale(1.01);
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+    }
+    .apple-btn-primary:active {
+        transform: scale(0.99);
+    }
+    .apple-btn-outline {
+        background: transparent;
+        color: #1d1d1f;
+        border: 1.5px solid #d2d2d7;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .apple-btn-outline:hover {
+        background: #f5f5f7;
+        border-color: #86868b;
+    }
+</style>
+
+<div class="min-h-[calc(100vh-80px)] bg-[#f5f5f7] flex items-center justify-center p-4 sm:p-6 lg:p-10 font-sans"
+     x-data="{ 
+         step: '{{ 'otp' if otp_sent else 'credentials' }}', 
+         authMode: 'credentials',
+         appleEmail: '{{ session.get('apple_auth_email', '') }}',
+         showDevGuide: false,
+         isLoading: false 
+     }">
+
+    <div class="w-full max-w-lg">
+        <!-- Main Apple ID Authentication Card -->
+        <div class="apple-glass-card rounded-3xl p-8 sm:p-10 text-center relative overflow-hidden">
+            
+            <!-- Apple Icon Header -->
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-black text-white text-3xl mb-5 shadow-lg shadow-black/10">
+                <i class="fab fa-apple"></i>
+            </div>
+
+            <h1 class="text-2xl sm:text-3xl font-bold text-[#1d1d1f] tracking-tight mb-2">
+                Sign in with Apple
+            </h1>
+            
+            <p class="text-xs sm:text-sm text-[#86868b] font-medium mb-6">
+                Use your Apple ID to securely sign in to your 
+                <span class="font-bold text-[#1d1d1f] capitalize">{{ role|replace('_', ' ') }}</span> account.
+            </p>
+
+            <!-- Flash Notification Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6 space-y-2 text-left">
+                        {% for category, message in messages %}
+                            <div class="flex items-center gap-2.5 text-xs p-3.5 rounded-xl {{ 'bg-emerald-50 text-emerald-900 border border-emerald-300' if category == 'success' else 'bg-rose-50 text-rose-900 border border-rose-300' }}">
+                                <i class="fas {{ 'fa-check-circle text-emerald-600' if category == 'success' else 'fa-circle-exclamation text-rose-600' }} text-sm flex-shrink-0"></i>
+                                <span class="font-semibold">{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Live Apple OAuth Banner if credentials configured -->
+            {% if is_configured %}
+            <div class="mb-6 p-4 rounded-2xl bg-sky-50 border border-sky-200 text-left flex items-start gap-3">
+                <i class="fas fa-shield-alt text-sky-600 text-lg mt-0.5"></i>
+                <div class="text-xs">
+                    <p class="font-bold text-sky-950">Official Apple OAuth Enabled</p>
+                    <p class="text-sky-800 mt-0.5">Redirecting to Apple ID OAuth servers for cryptographic signature verification.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- STEP 1: Apple ID & Password / OTP Request Form -->
+            <div x-show="step === 'credentials'">
+                <form method="POST" action="{{ url_for('apple_login', role=role) }}" class="space-y-4 text-left" @submit="isLoading = true">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="authenticate">
+                    <input type="hidden" name="role" value="{{ role }}">
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#1d1d1f] uppercase tracking-wider mb-1.5">Apple ID (Email or Phone)</label>
+                        <div class="relative">
+                            <input type="email" 
+                                   name="apple_email" 
+                                   x-model="appleEmail"
+                                   required 
+                                   placeholder="example@icloud.com" 
+                                   class="apple-input pr-10">
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                                <i class="fab fa-apple"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#1d1d1f] uppercase tracking-wider mb-1.5">Full Name (Optional)</label>
+                        <input type="text" 
+                               name="apple_name" 
+                               placeholder="e.g. Jane Doe" 
+                               class="apple-input">
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" 
+                                class="w-full py-3.5 px-6 apple-btn-primary flex items-center justify-center gap-2 cursor-pointer">
+                            <span x-show="!isLoading" class="flex items-center gap-2">
+                                <i class="fab fa-apple text-lg"></i>
+                                <span>Continue with Apple ID</span>
+                                <i class="fas fa-arrow-right text-xs ml-1"></i>
+                            </span>
+                            <span x-show="isLoading" class="flex items-center gap-2" style="display: none;">
+                                <i class="fas fa-circle-notch fa-spin"></i>
+                                <span>Authenticating...</span>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- 2-Step OTP Option Form -->
+                <div class="mt-4 pt-4 border-t border-slate-200">
+                    <form method="POST" action="{{ url_for('apple_login', role=role) }}" @submit="isLoading = true">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="send_otp">
+                        <input type="hidden" name="apple_email" :value="appleEmail">
+                        
+                        <button type="submit" 
+                                class="w-full py-2.5 px-4 text-xs font-semibold text-slate-700 hover:text-black hover:bg-slate-100 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                :disabled="!appleEmail || !appleEmail.includes('@')">
+                            <i class="fas fa-key text-slate-500"></i>
+                            <span>Verify via 6-Digit Apple Security Code</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- STEP 2: Apple Verification Code (OTP) -->
+            <div x-show="step === 'otp'" style="display: none;">
+                <div class="mb-4 text-left p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <p class="text-slate-600">A 6-digit Apple security verification code was sent to:</p>
+                    <p class="font-bold text-black text-sm mt-0.5" x-text="appleEmail"></p>
+                </div>
+
+                <form method="POST" action="{{ url_for('apple_login', role=role) }}" class="space-y-4 text-left" @submit="isLoading = true">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="verify_otp">
+                    <input type="hidden" name="apple_email" :value="appleEmail">
+
+                    <div>
+                        <label class="block text-xs font-semibold text-[#1d1d1f] uppercase tracking-wider mb-1.5">Enter 6-Digit Code</label>
+                        <input type="text" 
+                               name="otp" 
+                               required 
+                               maxlength="6"
+                               placeholder="123456" 
+                               class="apple-input text-center text-xl tracking-widest font-mono font-bold">
+                    </div>
+
+                    <div class="pt-2 space-y-2">
+                        <button type="submit" class="w-full py-3.5 px-6 apple-btn-primary flex items-center justify-center gap-2 cursor-pointer">
+                            <span x-show="!isLoading">Verify &amp; Continue</span>
+                            <span x-show="isLoading" style="display: none;"><i class="fas fa-circle-notch fa-spin"></i> Verifying...</span>
+                        </button>
+                        
+                        <button type="button" @click="step = 'credentials'" class="w-full py-2.5 px-4 apple-btn-outline text-xs">
+                            &larr; Back to Email Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Privacy & Terms Notice -->
+            <p class="text-[11px] text-[#86868b] mt-6 leading-relaxed">
+                Sign in with Apple allows you to access Spherix Health services while protecting your privacy.
+                By signing in, you agree to our 
+                <a href="{{ url_for('legal_hub', policy_id='terms-of-service') }}" class="underline hover:text-black">Terms of Service</a> and 
+                <a href="{{ url_for('legal_hub', policy_id='privacy-policy') }}" class="underline hover:text-black">Privacy Policy</a>.
+            </p>
+
+            <!-- Dev Guide Accordion / Setup Instructions -->
+            <div class="mt-6 pt-4 border-t border-slate-200 text-left">
+                <button type="button" 
+                        @click="showDevGuide = !showDevGuide" 
+                        class="text-[11px] font-bold text-slate-500 hover:text-slate-900 flex items-center justify-between w-full">
+                    <span><i class="fas fa-code-branch mr-1.5"></i> Apple Developer OAuth Configuration</span>
+                    <i class="fas fa-chevron-down text-[10px] transition-transform duration-200" :class="{ 'rotate-180': showDevGuide }"></i>
+                </button>
+
+                <div x-show="showDevGuide" class="mt-3 p-3.5 rounded-xl bg-slate-900 text-slate-200 text-[11px] font-mono leading-relaxed space-y-2" style="display: none;">
+                    <p class="text-amber-400 font-bold"># Apple OAuth Environment Variables (.env)</p>
+                    <p>APPLE_CLIENT_ID=com.spherixclinic.web</p>
+                    <p>APPLE_TEAM_ID=XXXXXXXXXX</p>
+                    <p>APPLE_KEY_ID=YYYYYYYYYY</p>
+                    <p>APPLE_PRIVATE_KEY_PATH=secrets/AuthKey_YYYYYYYYYY.p8</p>
+                    <p class="text-slate-400 text-[10px] pt-1">Return URL: <span class="text-sky-400">{{ url_for('apple_authorize', _external=True) }}</span></p>
+                </div>
+            </div>
+
+            <!-- Cancel / Back Link -->
+            <div class="mt-4">
+                {% if role == 'doctor' %}
+                    <a href="{{ url_for('doctor_login') }}" class="text-xs font-semibold text-slate-500 hover:text-black">Cancel and return to Doctor Login</a>
+                {% elif role == 'hospital' %}
+                    <a href="{{ url_for('hospital_login') }}" class="text-xs font-semibold text-slate-500 hover:text-black">Cancel and return to Hospital Login</a>
+                {% elif role == 'staff' %}
+                    <a href="{{ url_for('staff_login') }}" class="text-xs font-semibold text-slate-500 hover:text-black">Cancel and return to Staff Login</a>
+                {% elif role == 'blood_donor' %}
+                    <a href="{{ url_for('blood_donor_login') }}" class="text-xs font-semibold text-slate-500 hover:text-black">Cancel and return to Donor Login</a>
+                {% elif role == 'organ_donor' %}
+                    <a href="{{ url_for('organ_donor_login') }}" class="text-xs font-semibold text-slate-500 hover:text-black">Cancel and return to Donor Login</a>
+                {% else %}
+                    <a href="{{ url_for('patient_login') }}" class="text-xs font-semibold text-slate-500 hover:text-black">Cancel and return to Patient Login</a>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

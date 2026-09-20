@@ -22,7 +22,12 @@ api_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 # ----------------- Helper Functions -----------------
 
 def _get_app_temp_data():
-    """Safely retrieves TEMP_DATA from current Flask application module."""
+    """Safely retrieves TEMP_DATA from spherix database service."""
+    try:
+        from spherix.services.database import TEMP_DATA
+        return TEMP_DATA
+    except Exception:
+        pass
     try:
         import sys
         app_mod = sys.modules.get('app') or sys.modules.get('__main__')
