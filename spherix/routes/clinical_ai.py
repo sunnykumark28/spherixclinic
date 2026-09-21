@@ -394,6 +394,14 @@ try:
 except ImportError:
     DISEASE_CATALOG = {}
 
+from spherix.services.nutrition_fitness_service import (
+    calculate_biometrics, MEAL_PLANS_BY_DIET, WORKOUT_ROUTINES,
+    generate_grocery_list, get_ai_nutrition_advice,
+    get_meal_plan_by_diet, get_workout_routine,
+    analyze_with_groq_ai,
+    ACTIVITY_MULTIPLIERS, GOAL_MODIFIERS, DIET_MACRO_RATIOS
+)
+
 clinical_ai_bp = Blueprint('clinical_ai', __name__)
 
 @clinical_ai_bp.route("/api/first-aid/protocol", methods=['POST'])
@@ -688,6 +696,167 @@ def health_calculators():
 @clinical_ai_bp.route("/yoga")
 def yoga():
     return render_template("yoga.html")
+
+
+
+@clinical_ai_bp.route("/nutrition-fitness", methods=['GET', 'POST'])
+@clinical_ai_bp.route("/nutrition-fitness-planner", methods=['GET', 'POST'])
+def nutrition_fitness_planner():
+    # Defaults
+    default_age = 28
+    default_gender = 'male'
+    default_weight = 72.0
+    default_height = 175.0
+    default_activity = 'moderate'
+    default_goal = 'weight_loss'
+    default_diet = 'high_protein'
+    default_routine = 'fat_burn_tone'
+    default_health_conditions = 'None'
+    default_allergies = 'None'
+    default_equipment = 'gym'
+    default_experience = 'intermediate'
+    
+    # Check if patient is logged in to pre-fill vitals
+    if session.get('user_id') and session.get('role') == 'patient':
+        try:
+            from spherix.models import PatientVital
+            conn = get_db_connection()
+            if conn:
+                vital = conn.query(PatientVital).filter(
+                    PatientVital.patient_id == session.get('user_id')
+                ).order_by(PatientVital.recorded_at.desc()).first()
+                if vital:
+                    if vital.weight: default_weight = float(vital.weight)
+                    if vital.height: default_height = float(vital.height)
+                conn.close()
+        except Exception:
+            pass
+
+    has_results = False
+    plan_data = None
+    
+    if request.method == 'POST':
+        try:
+            age = int(request.form.get('age', default_age))
+            gender = request.form.get('gender', default_gender).lower()
+            weight = float(request.form.get('weight', default_weight))
+            height = float(request.form.get('height', default_height))
+            activity = request.form.get('activity_level', default_activity)
+            goal = request.form.get('goal', default_goal)
+            diet = request.form.get('diet_pref', default_diet)
+            routine_key = request.form.get('workout_routine', default_routine)
+            health_conditions = request.form.get('health_conditions', default_health_conditions)
+            allergies = request.form.get('allergies', default_allergies)
+            equipment = request.form.get('equipment', default_equipment)
+            experience = request.form.get('experience', default_experience)
+            
+            form_payload = {
+                'age': age,
+                'gender': gender,
+                'weight': weight,
+                'height': height,
+                'activity_level': activity,
+                'goal': goal,
+                'diet_pref': diet,
+                'workout_routine': routine_key,
+                'health_conditions': health_conditions,
+                'allergies': allergies,
+                'equipment': equipment,
+                'experience': experience
+            }
+            
+            plan_data = analyze_with_groq_ai(form_payload)
+            has_results = True
+        except Exception as e:
+            flash(f"Error calculating plan: {e}", "error")
+    
+    # If initial GET, provide form defaults without premature calculations
+    if not plan_data:
+        default_payload = {
+            'age': default_age,
+            'gender': default_gender,
+            'weight': default_weight,
+            'height': default_height,
+            'activity_level': default_activity,
+            'goal': default_goal,
+            'diet_pref': default_diet,
+            'workout_routine': default_routine,
+            'health_conditions': default_health_conditions,
+            'allergies': default_allergies,
+            'equipment': default_equipment,
+            'experience': default_experience
+        }
+        plan_data = {
+            'form_values': default_payload,
+            'biometrics': {},
+            'ai_analysis': {},
+            'meal_plan': {},
+            'workout_plan': {},
+            'grocery_list': {}
+        }
+
+    return render_template(
+        'nutrition_fitness_planner.html',
+        plan=plan_data,
+        has_results=has_results,
+        activity_options=ACTIVITY_MULTIPLIERS,
+        goal_options=GOAL_MODIFIERS,
+        diet_options=DIET_MACRO_RATIOS,
+        workout_routines=WORKOUT_ROUTINES
+    )
+
+
+
+@clinical_ai_bp.route('/api/nutrition-fitness/generate', methods=['POST'])
+@csrf.exempt
+def api_nutrition_fitness_generate():
+    data = request.get_json(silent=True) or {}
+    try:
+        plan = analyze_with_groq_ai(data)
+        return jsonify({
+            'success': True,
+            **plan
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+
+@clinical_ai_bp.route('/api/nutrition-fitness/calculate-macros', methods=['POST'])
+@csrf.exempt
+def api_nutrition_fitness_calculate_macros():
+    data = request.get_json(silent=True) or {}
+    try:
+        age = int(data.get('age', 28))
+        gender = str(data.get('gender', 'male')).lower()
+        weight = float(data.get('weight', 70))
+        height = float(data.get('height', 175))
+        activity = str(data.get('activity_level', 'moderate'))
+        goal = str(data.get('goal', 'weight_loss'))
+        diet = str(data.get('diet_pref', 'high_protein'))
+
+        biometrics = calculate_biometrics(
+            age=age, gender=gender, weight_kg=weight, height_cm=height,
+            activity_level=activity, goal=goal, diet_pref=diet
+        )
+        return jsonify({'success': True, 'biometrics': biometrics})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+
+@clinical_ai_bp.route('/api/nutrition-fitness/chat-consultant', methods=['POST'])
+@csrf.exempt
+def api_nutrition_fitness_chat_consultant():
+    data = request.get_json(silent=True) or {}
+    question = data.get('question', '').strip()
+    profile = data.get('profile', {})
+
+    if not question:
+        return jsonify({'success': False, 'error': 'Question cannot be empty.'}), 400
+
+    reply = get_ai_nutrition_advice(question, profile)
+    return jsonify({'success': True, 'reply': reply})
 
 
 

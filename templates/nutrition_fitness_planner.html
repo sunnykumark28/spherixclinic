@@ -1,0 +1,1379 @@
+{% extends 'layout.html' %}
+
+{% block title %}Nutrition & Fitness Planner | Spherix Clinic Clinical Intelligence{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+    .font-heading { font-family: 'Outfit', sans-serif; }
+    .font-body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+    
+    .glass-panel-dark {
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .macro-glow-protein { box-shadow: 0 4px 20px -2px rgba(59, 130, 246, 0.25); }
+    .macro-glow-carb { box-shadow: 0 4px 20px -2px rgba(245, 158, 11, 0.25); }
+    .macro-glow-fat { box-shadow: 0 4px 20px -2px rgba(236, 72, 153, 0.25); }
+    
+    @media print {
+        header, nav, footer, .no-print {
+            display: none !important;
+        }
+        body {
+            background: white !important;
+            color: black !important;
+        }
+        .print-only {
+            display: block !important;
+        }
+        .glass-panel {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+            background: white !important;
+        }
+    }
+</style>
+
+<!-- Safely injected initial plan JSON -->
+<script id="initial-plan-data" type="application/json">
+{{ plan | tojson | safe }}
+</script>
+
+<div class="font-body bg-slate-50/70 min-h-screen text-slate-800" x-data="nutritionFitnessPlanner()">
+
+    <!-- HERO SECTION -->
+    <div class="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 text-white pt-16 pb-24 px-4 sm:px-6 lg:px-8">
+        <!-- Background Ambient Glow -->
+        <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-1/2 right-0 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 left-1/3 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-widest mb-4">
+                        <i class="fas fa-heart-pulse animate-pulse"></i>
+                        <span>Clinical Nutrition & Sports Intelligence</span>
+                    </div>
+                    <h1 class="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+                        Precision Nutrition & <br>
+                        <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                            Fitness Architecture
+                        </span>
+                    </h1>
+                    <p class="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed font-normal max-w-2xl">
+                        Mifflin-St Jeor metabolic equations, adaptive macronutrient partitioning, 7-day culinary meal protocols, and hyper-targeted weekly workout splits designed for your unique physiology.
+                    </p>
+
+                    <!-- Quick Highlights Badges -->
+                    <div class="mt-6 flex flex-wrap items-center gap-3 text-xs">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-200">
+                            <i class="fas fa-check-circle text-emerald-400"></i> Evidence-Based TDEE
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-200">
+                            <i class="fas fa-utensils text-amber-400"></i> 7-Day Precision Meals
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-200">
+                            <i class="fas fa-dumbbell text-cyan-400"></i> Custom Training Splits
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-200">
+                            <i class="fas fa-robot text-purple-400"></i> AI Nutritionist Coach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Quick Biometric Summary Pill / Readiness Banner -->
+                <div class="w-full md:w-auto flex-shrink-0">
+                    <template x-if="hasResults && plan.biometrics?.target_calories">
+                        <div class="glass-panel-dark rounded-3xl p-6 border border-emerald-500/30 text-center shadow-2xl relative">
+                            <div class="text-[11px] font-extrabold text-emerald-400 tracking-wider uppercase mb-1">Target Daily Energy</div>
+                            <div class="font-heading text-4xl sm:text-5xl font-black text-white" x-text="(plan.biometrics?.target_calories || 2000) + ' kcal'">
+                                {{ plan.biometrics.target_calories }} kcal
+                            </div>
+                            <div class="mt-2 text-xs text-slate-300 flex items-center justify-center gap-2">
+                                <span>BMR: <strong class="text-white" x-text="plan.biometrics?.bmr || 0"></strong> kcal</span>
+                                <span class="text-slate-500">•</span>
+                                <span>TDEE: <strong class="text-white" x-text="plan.biometrics?.tdee || 0"></strong> kcal</span>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-white/10 flex justify-between gap-4 text-left text-xs">
+                                <div>
+                                    <span class="text-slate-400 block text-[10px]">Protein</span>
+                                    <span class="font-bold text-blue-400" x-text="(plan.biometrics?.macros?.protein?.grams || 0) + 'g (' + (plan.biometrics?.macros?.protein?.pct || 0) + '%)'"></span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block text-[10px]">Carbs</span>
+                                    <span class="font-bold text-amber-400" x-text="(plan.biometrics?.macros?.carbs?.grams || 0) + 'g (' + (plan.biometrics?.macros?.carbs?.pct || 0) + '%)'"></span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block text-[10px]">Fats</span>
+                                    <span class="font-bold text-pink-400" x-text="(plan.biometrics?.macros?.fat?.grams || 0) + 'g (' + (plan.biometrics?.macros?.fat?.pct || 0) + '%)'"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="!hasResults || !plan.biometrics?.target_calories">
+                        <div class="glass-panel-dark rounded-3xl p-6 border border-emerald-500/20 text-left shadow-2xl max-w-sm">
+                            <div class="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2">
+                                <i class="fas fa-brain animate-pulse"></i> Spherix Health Intelligence
+                            </div>
+                            <h3 class="font-heading text-lg font-bold text-white mb-1.5">Precision Medical Synthesis</h3>
+                            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                                Fill in your biometrics and health conditions below to generate an evidence-based clinical strategy.
+                            </p>
+                            <div class="space-y-1.5 text-xs text-slate-300">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-check-circle text-emerald-400 text-[11px]"></i>
+                                    <span>Real-time Spherix Clinic LLM metabolic analysis</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-check-circle text-emerald-400 text-[11px]"></i>
+                                    <span>Deurenberg body fat & lean mass metrics</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-check-circle text-emerald-400 text-[11px]"></i>
+                                    <span>7-Day tailored meals & training splits</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-20 pb-20">
+        
+        <!-- BIOMETRIC CONFIGURATOR CARD (MODERN CLINICAL SUITE) -->
+        <div class="glass-panel rounded-3xl shadow-xl p-6 sm:p-8 mb-8 border border-slate-200/90 relative overflow-hidden">
+            
+            <!-- Top Gradient Accent Line -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500"></div>
+
+            <!-- Header Section -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8 pb-5 border-b border-slate-200">
+                <div class="flex items-start gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-lg shadow-md shadow-emerald-500/20 flex-shrink-0 mt-0.5">
+                        <i class="fas fa-sliders"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-heading text-xl sm:text-2xl font-bold text-slate-900">
+                                Biometric Profile & Fitness Goals
+                            </h2>
+                            <span class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                                Clinical Configurator
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1" x-text="hasResults ? 'Modify parameters below and click Update Clinical Plan to recalculate.' : 'Enter your biometrics, medical condition, and dietary constraints below to generate your custom protocol.'">
+                            Enter your biometrics, medical condition, and dietary constraints below to generate your custom protocol.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Header Action Buttons -->
+                <div class="flex items-center gap-3 self-end lg:self-auto">
+                    <button x-show="hasResults" @click="window.print()" class="no-print inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs">
+                        <i class="fas fa-print"></i> Print Plan
+                    </button>
+                    <button @click="recalculatePlan()" :disabled="loading" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-500/20 transition transform active:scale-95 disabled:opacity-50">
+                        <i class="fas" :class="loading ? 'fa-rotate animate-spin' : (hasResults ? 'fa-rotate' : 'fa-wand-magic-sparkles')"></i>
+                        <span x-text="loading ? 'Analyzing with Spherix Intelligence...' : (hasResults ? 'Update Clinical Plan' : 'Generate My Clinical Plan')">Generate My Clinical Plan</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Body with 3 Distinct Grouped Sections -->
+            <form @submit.prevent="recalculatePlan()" class="space-y-6">
+
+                <!-- SECTION 1: PHYSICAL BIOMETRICS -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <i class="fas fa-id-card-clip text-emerald-600"></i>
+                        <span>1. Core Physical Biometrics</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Age -->
+                        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition">
+                            <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-calendar-days text-slate-400"></i> Age</span>
+                                <span class="text-[10px] text-slate-400 font-semibold">Years</span>
+                            </label>
+                            <div class="relative">
+                                <input type="number" x-model.number="form.age" min="10" max="100" required 
+                                       class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-slate-50/50">
+                            </div>
+                        </div>
+
+                        <!-- Gender -->
+                        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition">
+                            <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-venus-mars text-slate-400"></i> Gender</span>
+                                <span class="text-[10px] text-slate-400 font-semibold">Biology</span>
+                            </label>
+                            <select x-model="form.gender" 
+                                    class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-slate-50/50">
+                                <option value="male">Male (Mifflin +5)</option>
+                                <option value="female">Female (Mifflin -161)</option>
+                            </select>
+                        </div>
+
+                        <!-- Weight -->
+                        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition">
+                            <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-weight-scale text-slate-400"></i> Weight</span>
+                                <span class="text-[10px] text-slate-400 font-semibold">Kilograms (kg)</span>
+                            </label>
+                            <input type="number" step="0.5" x-model.number="form.weight" min="30" max="250" required 
+                                   class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-slate-50/50">
+                        </div>
+
+                        <!-- Height -->
+                        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition">
+                            <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-ruler-vertical text-slate-400"></i> Height</span>
+                                <span class="text-[10px] text-slate-400 font-semibold">Centimeters (cm)</span>
+                            </label>
+                            <input type="number" step="1" x-model.number="form.height" min="100" max="250" required 
+                                   class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-slate-50/50">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: ENERGY, TARGET GOALS & DIETARY PHILOSOPHY -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <i class="fas fa-bullseye text-teal-600"></i>
+                        <span>2. Energy Expenditure & Nutritional Strategy</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Activity Level -->
+                        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-teal-300 transition">
+                            <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-person-running text-teal-500"></i> Activity Level</span>
+                                <span class="text-[10px] text-teal-600 font-extrabold bg-teal-50 px-2 py-0.5 rounded-md">TDEE Multiplier</span>
+                            </label>
+                            <select x-model="form.activity_level" 
+                                    class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-slate-50/50">
+                                <option value="sedentary">Sedentary (Desk Job, No Exercise • 1.2x)</option>
+                                <option value="light">Lightly Active (1-3 days/wk • 1.375x)</option>
+                                <option value="moderate">Moderately Active (3-5 days/wk • 1.55x)</option>
+                                <option value="very_active">Very Active (6-7 days/wk • 1.725x)</option>
+                                <option value="extra_active">Extremely Active (Athletic/Labor • 1.9x)</option>
+                            </select>
+                        </div>
+
+                        <!-- Primary Goal -->
+                        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-teal-300 transition">
+                            <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-crosshairs text-teal-500"></i> Primary Goal</span>
+                                <span class="text-[10px] text-teal-600 font-extrabold bg-teal-50 px-2 py-0.5 rounded-md">Caloric Delta</span>
+                            </label>
+                            <select x-model="form.goal" 
+                                    class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-slate-50/50">
+                                <option value="weight_loss">Sustainable Fat Loss (-500 kcal/day)</option>
+                                <option value="extreme_loss">Aggressive Fat Loss (-750 kcal/day)</option>
+                                <option value="maintenance">Maintenance & Weight Stabilization (0 kcal)</option>
+                                <option value="lean_bulk">Lean Muscle Hypertrophy (+300 kcal/day)</option>
+                                <option value="muscle_hypertrophy">Max Muscle & Strength Surplus (+500 kcal/day)</option>
+                                <option value="diabetic_control">Glycemic Regulation & Insulin Focus (-300 kcal)</option>
+                                <option value="heart_health">Cardioprotective & DASH Support (-250 kcal)</option>
+                            </select>
+                        </div>
+
+                        <!-- Dietary Philosophy -->
+                        <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-teal-300 transition">
+                            <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-utensils text-teal-500"></i> Dietary Philosophy</span>
+                                <span class="text-[10px] text-teal-600 font-extrabold bg-teal-50 px-2 py-0.5 rounded-md">Macro Split</span>
+                            </label>
+                            <select x-model="form.diet_pref" 
+                                    class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-slate-50/50">
+                                <option value="high_protein">High-Protein Fitness (35% P / 40% C / 25% F)</option>
+                                <option value="vegetarian_indian">Vedic Ayurvedic Vegetarian (Paneer/Dal/Ragi)</option>
+                                <option value="balanced">Balanced Omnivore (25% P / 50% C / 25% F)</option>
+                                <option value="low_carb">Low-Carb / Ketogenic (30% P / 20% C / 50% F)</option>
+                                <option value="mediterranean">Mediterranean Cardio-Shield (Fish & Whole Grains)</option>
+                                <option value="vegan_plant">Whole-Food Plant-Based Vegan</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: CLINICAL CONSTRAINTS & TRAINING EQUIPMENT -->
+                <div class="p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-emerald-50/30 border border-emerald-200/60">
+                    <div class="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-emerald-800">
+                        <i class="fas fa-shield-heart text-emerald-600"></i>
+                        <span>3. Medical History, Allergies & Training Setup</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Health Conditions -->
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                <i class="fas fa-heart-pulse text-rose-500 mr-1"></i> Health Conditions
+                            </label>
+                            <select x-model="form.health_conditions" 
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                                <option value="None">None / Healthy Baseline</option>
+                                <option value="Type 2 Diabetes / Prediabetes">Type 2 Diabetes / Prediabetes</option>
+                                <option value="Hypertension (High BP)">Hypertension (High BP)</option>
+                                <option value="PCOS / PCOD">PCOS / PCOD (Hormonal Balance)</option>
+                                <option value="Thyroid (Hypothyroidism)">Thyroid (Hypothyroidism)</option>
+                                <option value="Joint Pain / Arthritis">Joint Pain / Arthritis</option>
+                                <option value="GERD / Acid Reflux">GERD / Acid Reflux</option>
+                            </select>
+                        </div>
+
+                        <!-- Food Allergies -->
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                <i class="fas fa-triangle-exclamation text-amber-500 mr-1"></i> Food Allergies / Intolerance
+                            </label>
+                            <select x-model="form.allergies" 
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                                <option value="None">None / No Allergies</option>
+                                <option value="Lactose / Dairy Intolerance">Lactose / Dairy Intolerance</option>
+                                <option value="Gluten Sensitivity / Celiac">Gluten Sensitivity / Celiac</option>
+                                <option value="Peanut / Tree Nut Allergy">Peanut / Tree Nut Allergy</option>
+                                <option value="Egg Allergy">Egg Allergy</option>
+                                <option value="Seafood / Shellfish">Seafood / Shellfish</option>
+                            </select>
+                        </div>
+
+                        <!-- Equipment Available -->
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                <i class="fas fa-dumbbell text-cyan-500 mr-1"></i> Equipment Available
+                            </label>
+                            <select x-model="form.equipment" 
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                                <option value="gym">Full Commercial Gym (Barbells & Machines)</option>
+                                <option value="dumbbells">Dumbbells & Resistance Bands (Home/Studio)</option>
+                                <option value="bodyweight">Zero-Equipment Calisthenics (Bodyweight)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Summary Bar & Submit CTA -->
+                <div class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+                        <span class="font-bold text-slate-700">Active Profile:</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-semibold text-slate-700" 
+                              x-text="(form.age || 28) + ' yrs • ' + (form.gender === 'male' ? 'Male' : 'Female') + ' • ' + (form.weight || 72) + 'kg • ' + (form.height || 175) + 'cm'">
+                        </span>
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold" x-text="form.goal ? form.goal.replace('_', ' ').toUpperCase() : 'WEIGHT LOSS'"></span>
+                    </div>
+
+                    <button type="submit" :disabled="loading" 
+                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-sm shadow-xl shadow-emerald-500/25 transition transform active:scale-95 disabled:opacity-50">
+                        <i class="fas" :class="loading ? 'fa-rotate animate-spin' : (hasResults ? 'fa-rotate' : 'fa-wand-magic-sparkles')"></i>
+                        <span x-text="loading ? 'Analyzing with Spherix Intelligence...' : (hasResults ? 'Update Clinical Plan' : 'Generate My Clinical Plan')">Generate My Clinical Plan</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- CLEAN INITIAL ONBOARDING STATE (SHOWN BEFORE GENERATING PLAN) -->
+        <div x-show="!hasResults" x-transition.opacity class="mb-12">
+            <div class="glass-panel rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-sm text-center max-w-4xl mx-auto">
+                <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center text-2xl font-black mx-auto mb-4 shadow-xl shadow-emerald-500/20">
+                    <i class="fas fa-microscope"></i>
+                </div>
+                <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">
+                    Evidence-Based Clinical Intelligence Architecture
+                </h3>
+                <p class="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed mb-8">
+                    Spherix Clinic pairs advanced metabolic mathematics with the <strong>Spherix Neural Clinical Engine</strong> to eliminate generic diet guesswork and prescribe tailor-made nutrition, biometrics, and sports protocols.
+                </p>
+
+                <!-- 3 Step Protocol Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left mb-8">
+                    <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-emerald-300 transition">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold mb-3">
+                            1
+                        </div>
+                        <h4 class="font-heading text-base font-bold text-slate-900 mb-1">Physiological Profiling</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            Accurate inputs for age, height, weight, PCOS, diabetes, thyroid, joint pain, and food allergies ensure strict medical contraindication safety.
+                        </p>
+                    </div>
+
+                    <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-emerald-300 transition">
+                        <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center text-sm font-bold mb-3">
+                            2
+                        </div>
+                        <h4 class="font-heading text-base font-bold text-slate-900 mb-1">Spherix Neural Synthesis</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            Computes Mifflin-St Jeor TDEE, Deurenberg body fat %, target delta timeline, and evidence-based clinical supplement stacks.
+                        </p>
+                    </div>
+
+                    <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-emerald-300 transition">
+                        <div class="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center text-sm font-bold mb-3">
+                            3
+                        </div>
+                        <h4 class="font-heading text-base font-bold text-slate-900 mb-1">7-Day Dynamic Protocols</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            Generates complete 7-day culinary meal plans, weekly workout splits, categorized smart grocery checklists, and a 24/7 AI coach.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Callout Action -->
+                <div class="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold">
+                    <i class="fas fa-hand-point-up animate-bounce text-emerald-600"></i>
+                    <span>Configure your biometrics in the form above and click "Generate My Clinical Plan"</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTS CONTAINER (SHOWN AFTER DATA ENTRY / CALCULATION) -->
+        <div x-show="hasResults" x-transition.opacity id="results-section">
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                <!-- STICKY SIDEBAR NAVIGATION (LEFT COLUMN - 3 COLS) -->
+                <aside class="lg:col-span-3 lg:sticky lg:top-24 space-y-4 no-print">
+                    
+                    <div class="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm">
+                        <div class="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest px-2 mb-3 flex items-center justify-between">
+                            <span>Clinical Navigation</span>
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        </div>
+
+                        <nav class="space-y-1.5">
+                            <!-- Tab 1: Biometrics & Macros -->
+                            <button @click="activeTab = 'overview'" 
+                                    :class="activeTab === 'overview' ? 'bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20' : 'bg-transparent text-slate-700 hover:bg-slate-100 font-semibold'"
+                                    class="w-full text-left py-3 px-3.5 rounded-2xl text-xs sm:text-sm transition flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                                          :class="activeTab === 'overview' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200'">
+                                        <i class="fas fa-chart-pie"></i>
+                                    </span>
+                                    <span>Biometrics & Macros</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-xs opacity-70" :class="activeTab === 'overview' ? 'text-white' : 'text-slate-400'"></i>
+                            </button>
+
+                            <!-- Tab 2: 7-Day Meal Architecture -->
+                            <button @click="activeTab = 'meals'" 
+                                    :class="activeTab === 'meals' ? 'bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20' : 'bg-transparent text-slate-700 hover:bg-slate-100 font-semibold'"
+                                    class="w-full text-left py-3 px-3.5 rounded-2xl text-xs sm:text-sm transition flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                                          :class="activeTab === 'meals' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700 group-hover:bg-amber-200'">
+                                        <i class="fas fa-utensils"></i>
+                                    </span>
+                                    <span>7-Day Meal Architecture</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-xs opacity-70" :class="activeTab === 'meals' ? 'text-white' : 'text-slate-400'"></i>
+                            </button>
+
+                            <!-- Tab 3: 7-Day Training Routine -->
+                            <button @click="activeTab = 'workouts'" 
+                                    :class="activeTab === 'workouts' ? 'bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20' : 'bg-transparent text-slate-700 hover:bg-slate-100 font-semibold'"
+                                    class="w-full text-left py-3 px-3.5 rounded-2xl text-xs sm:text-sm transition flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                                          :class="activeTab === 'workouts' ? 'bg-white/20 text-white' : 'bg-cyan-100 text-cyan-700 group-hover:bg-cyan-200'">
+                                        <i class="fas fa-dumbbell"></i>
+                                    </span>
+                                    <span>7-Day Training Routine</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-xs opacity-70" :class="activeTab === 'workouts' ? 'text-white' : 'text-slate-400'"></i>
+                            </button>
+
+                            <!-- Tab 4: Smart Grocery List -->
+                            <button @click="activeTab = 'grocery'" 
+                                    :class="activeTab === 'grocery' ? 'bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20' : 'bg-transparent text-slate-700 hover:bg-slate-100 font-semibold'"
+                                    class="w-full text-left py-3 px-3.5 rounded-2xl text-xs sm:text-sm transition flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                                          :class="activeTab === 'grocery' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200'">
+                                        <i class="fas fa-basket-shopping"></i>
+                                    </span>
+                                    <span>Smart Grocery List</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-xs opacity-70" :class="activeTab === 'grocery' ? 'text-white' : 'text-slate-400'"></i>
+                            </button>
+
+                            <!-- Tab 5: AI Nutritionist Coach -->
+                            <button @click="activeTab = 'coach'" 
+                                    :class="activeTab === 'coach' ? 'bg-purple-600 text-white font-bold shadow-lg shadow-purple-600/20' : 'bg-transparent text-slate-700 hover:bg-slate-100 font-semibold'"
+                                    class="w-full text-left py-3 px-3.5 rounded-2xl text-xs sm:text-sm transition flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                                          :class="activeTab === 'coach' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700 group-hover:bg-purple-200'">
+                                        <i class="fas fa-comment-medical"></i>
+                                    </span>
+                                    <span>AI Nutritionist Coach</span>
+                                </div>
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            </button>
+                        </nav>
+
+                        <!-- Quick Vital Summary Mini Widget in Sidebar -->
+                        <div class="mt-6 pt-4 border-t border-slate-100 space-y-2 text-xs">
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Target Daily:</span>
+                                <strong class="text-emerald-700 font-bold" x-text="(plan.biometrics?.target_calories || 0) + ' kcal'"></strong>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Est. Body Fat:</span>
+                                <strong class="text-slate-800 font-bold" x-text="(plan.biometrics?.body_fat_pct || 0) + '%'"></strong>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Goal Timeline:</span>
+                                <strong class="text-cyan-700 font-bold" x-text="(plan.ai_analysis?.timeline_weeks || 12) + ' Wks'"></strong>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar Print Button -->
+                        <div class="mt-4 pt-3 border-t border-slate-100">
+                            <button @click="window.print()" class="w-full py-2.5 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-2">
+                                <i class="fas fa-print"></i> Print Full Plan
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- MAIN CONTENT AREA (RIGHT COLUMN - 9 COLS) -->
+                <main class="lg:col-span-9 min-w-0">
+
+        <!-- TAB 1: OVERVIEW & BIOMETRICS -->
+        <div x-show="activeTab === 'overview'" x-transition.opacity>
+            
+            <!-- GROQ AI CLINICAL HEALTH INTELLIGENCE DASHBOARD -->
+            <div class="glass-panel-dark text-white rounded-3xl p-6 sm:p-8 mb-8 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
+                <!-- Background Ambient Effects -->
+                <div class="absolute -top-12 -right-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="absolute -bottom-12 -left-12 w-64 h-64 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="relative z-10">
+                    <!-- Header -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-white/10">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center text-xl font-bold shadow-lg shadow-emerald-500/20">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-heading text-xl sm:text-2xl font-bold text-white">Spherix Health Intelligence</h3>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider border border-emerald-500/30">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Analysis
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-300 mt-0.5" x-text="'Clinical Synthesis Engine: ' + (plan.ai_analysis?.source || 'Spherix Health Intelligence Engine')"></p>
+                            </div>
+                        </div>
+
+                        <!-- Metabolic Speed Rating Pill -->
+                        <div class="flex items-center gap-3">
+                            <div class="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-right">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Metabolic Dynamic</span>
+                                <span class="text-xs sm:text-sm font-extrabold text-emerald-400" x-text="plan.ai_analysis?.metabolic_rate_rating || 'Eumetabolic (Healthy Range)'"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clinical Assessment Narrative -->
+                    <div class="p-5 rounded-2xl bg-white/5 border border-white/10 mb-6 backdrop-blur-xs">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-quote-left text-emerald-400 text-lg flex-shrink-0 mt-0.5"></i>
+                            <div class="space-y-2 text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
+                                <p x-text="plan.ai_analysis?.clinical_assessment || 'Your biometrics indicate an optimal baseline for targeted body recomposition and cardiovascular enhancement.'"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6-Metric Composition Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                        <!-- Estimated Body Fat -->
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-white/5 text-center">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Est. Body Fat</span>
+                            <span class="font-heading text-xl sm:text-2xl font-black text-white mt-0.5 block" x-text="(plan.biometrics?.body_fat_pct || 18.5) + '%'"></span>
+                            <span class="text-[10px] text-emerald-400">Deurenberg Index</span>
+                        </div>
+
+                        <!-- Lean Muscle Mass -->
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-white/5 text-center">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Lean Mass</span>
+                            <span class="font-heading text-xl sm:text-2xl font-black text-cyan-400 mt-0.5 block" x-text="(plan.biometrics?.lean_mass_kg || 0) + ' kg'"></span>
+                            <span class="text-[10px] text-slate-400">Active Tissue</span>
+                        </div>
+
+                        <!-- Fat Mass -->
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-white/5 text-center">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Adipose Mass</span>
+                            <span class="font-heading text-xl sm:text-2xl font-black text-pink-400 mt-0.5 block" x-text="(plan.biometrics?.fat_mass_kg || 0) + ' kg'"></span>
+                            <span class="text-[10px] text-slate-400">Total Fat Store</span>
+                        </div>
+
+                        <!-- Devine Ideal Weight -->
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-white/5 text-center">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Devine Target</span>
+                            <span class="font-heading text-xl sm:text-2xl font-black text-amber-400 mt-0.5 block" x-text="(plan.biometrics?.ideal_weight_kg || 0) + ' kg'"></span>
+                            <span class="text-[10px] text-slate-400">Clinical Ideal</span>
+                        </div>
+
+                        <!-- Projected Timeline -->
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-white/5 text-center">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Goal Timeline</span>
+                            <span class="font-heading text-xl sm:text-2xl font-black text-emerald-400 mt-0.5 block" x-text="(plan.ai_analysis?.timeline_weeks || 12) + ' Wks'"></span>
+                            <span class="text-[10px] text-emerald-400/80">Sustainable Phase</span>
+                        </div>
+
+                        <!-- Target Weekly Rate -->
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-white/5 text-center">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Target Delta</span>
+                            <span class="font-heading text-sm sm:text-base font-black text-white mt-1.5 block" x-text="plan.ai_analysis?.weekly_rate || '0.5 kg / wk'"></span>
+                            <span class="text-[10px] text-slate-400">Safe Metabolic Pace</span>
+                        </div>
+                    </div>
+
+                    <!-- Clinical Supplement Protocol & Safety Precautions -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- Evidence-Based Supplements -->
+                        <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <div class="flex items-center gap-2 mb-3 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                                <i class="fas fa-capsules"></i>
+                                <span>Evidence-Based Supplement Stack</span>
+                            </div>
+                            <div class="space-y-2.5">
+                                <template x-for="(supp, sIdx) in (plan.ai_analysis?.supplements || [])" :key="sIdx">
+                                    <div class="p-3 rounded-xl bg-slate-900/60 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                                        <div>
+                                            <span class="font-bold text-white block text-xs" x-text="supp.name"></span>
+                                            <span class="text-[11px] text-slate-300 block" x-text="supp.reason"></span>
+                                        </div>
+                                        <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-extrabold text-[10px] whitespace-nowrap self-start sm:self-auto" x-text="supp.dosage"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Clinical Health Advisory & Biohacks -->
+                        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 mb-3 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                                    <i class="fas fa-shield-heart"></i>
+                                    <span>Clinical Precautions & Biohacks</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <template x-for="(adv, aIdx) in (plan.ai_analysis?.health_advisory || [])" :key="'adv-'+aIdx">
+                                        <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 flex items-start gap-2">
+                                            <i class="fas fa-triangle-exclamation text-amber-400 mt-0.5 flex-shrink-0 text-xs"></i>
+                                            <span x-text="adv"></span>
+                                        </div>
+                                    </template>
+                                    <template x-for="(hack, hIdx) in (plan.ai_analysis?.custom_biohacks || [])" :key="'hack-'+hIdx">
+                                        <div class="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-200 flex items-start gap-2">
+                                            <i class="fas fa-lightbulb text-cyan-400 mt-0.5 flex-shrink-0 text-xs"></i>
+                                            <span x-text="hack"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-white/10 text-[10px] text-slate-400 flex items-center justify-between">
+                                <span>Prescribed under Spherix Clinical Sports Protocol</span>
+                                <i class="fas fa-stethoscope text-emerald-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                
+                <!-- CALORIE & ENERGY SUMMARY CARD -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Energy Balance Matrix</span>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold" 
+                                  :class="{
+                                    'bg-emerald-100 text-emerald-800': plan.biometrics?.bmi_color === 'emerald',
+                                    'bg-amber-100 text-amber-800': plan.biometrics?.bmi_color === 'amber',
+                                    'bg-orange-100 text-orange-800': plan.biometrics?.bmi_color === 'orange',
+                                    'bg-rose-100 text-rose-800': plan.biometrics?.bmi_color === 'rose'
+                                  }" 
+                                  x-text="'BMI ' + (plan.biometrics?.bmi || 0) + ' • ' + (plan.biometrics?.bmi_category || '')">
+                            </span>
+                        </div>
+                        <div class="text-center my-6">
+                            <span class="text-xs text-slate-400 block font-semibold mb-1">Target Daily Caloric Intake</span>
+                            <div class="font-heading text-5xl font-extrabold text-slate-900" x-text="plan.biometrics?.target_calories || 0">
+                                {{ plan.biometrics.target_calories }}
+                            </div>
+                            <span class="text-sm font-bold text-emerald-600">Calories per day</span>
+                        </div>
+
+                        <!-- Energy Gauges -->
+                        <div class="space-y-3 pt-4 border-t border-slate-100 text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-600 flex items-center gap-1.5"><i class="fas fa-bed text-blue-500"></i> Basal Metabolic Rate (BMR):</span>
+                                <strong class="text-slate-900" x-text="(plan.biometrics?.bmr || 0) + ' kcal'"></strong>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-600 flex items-center gap-1.5"><i class="fas fa-person-running text-amber-500"></i> Total Expenditure (TDEE):</span>
+                                <strong class="text-slate-900" x-text="(plan.biometrics?.tdee || 0) + ' kcal'"></strong>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-600 flex items-center gap-1.5"><i class="fas fa-scale-balanced text-purple-500"></i> Clinical Adjustment:</span>
+                                <strong :class="(plan.biometrics?.goal_diff || 0) < 0 ? 'text-rose-600 font-bold' : ((plan.biometrics?.goal_diff || 0) > 0 ? 'text-emerald-600 font-bold' : 'text-slate-700')" 
+                                        x-text="((plan.biometrics?.goal_diff || 0) > 0 ? '+' : '') + (plan.biometrics?.goal_diff || 0) + ' kcal/day'">
+                                </strong>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-600 flex items-center gap-1.5"><i class="fas fa-bullseye text-cyan-500"></i> Devine Ideal Weight:</span>
+                                <strong class="text-slate-900" x-text="(plan.biometrics?.ideal_weight_kg || 0) + ' kg'"></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MACRONUTRIENT ALLOCATION CARD -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-sm lg:col-span-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-heading text-lg font-bold text-slate-900">Macronutrient Distribution</h3>
+                            <p class="text-xs text-slate-500" x-text="'Configured for ' + (plan.biometrics?.diet_label || 'Balanced')"></p>
+                        </div>
+                        <div class="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-700 rounded-full">
+                            100% Balanced Ratio
+                        </div>
+                    </div>
+
+                    <!-- Macro Cards Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                        <!-- Protein -->
+                        <div class="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 macro-glow-protein">
+                            <div class="flex items-center justify-between text-xs font-bold text-blue-700 mb-1">
+                                <span><i class="fas fa-drumstick-bite"></i> PROTEIN</span>
+                                <span x-text="(plan.biometrics?.macros?.protein?.pct || 0) + '%'"></span>
+                            </div>
+                            <div class="font-heading text-3xl font-extrabold text-blue-900 my-1" x-text="(plan.biometrics?.macros?.protein?.grams || 0) + 'g'"></div>
+                            <div class="text-[11px] text-blue-600/80" x-text="(plan.biometrics?.macros?.protein?.calories || 0) + ' kcal • Muscle Repair'"></div>
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-blue-200 h-1.5 rounded-full mt-3 overflow-hidden">
+                                <div class="bg-blue-600 h-full rounded-full" :style="'width: ' + (plan.biometrics?.macros?.protein?.pct || 0) + '%'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Carbohydrates -->
+                        <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 macro-glow-carb">
+                            <div class="flex items-center justify-between text-xs font-bold text-amber-700 mb-1">
+                                <span><i class="fas fa-wheat-awn"></i> CARBS</span>
+                                <span x-text="(plan.biometrics?.macros?.carbs?.pct || 0) + '%'"></span>
+                            </div>
+                            <div class="font-heading text-3xl font-extrabold text-amber-900 my-1" x-text="(plan.biometrics?.macros?.carbs?.grams || 0) + 'g'"></div>
+                            <div class="text-[11px] text-amber-600/80" x-text="(plan.biometrics?.macros?.carbs?.calories || 0) + ' kcal • Glycogen Energy'"></div>
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-amber-200 h-1.5 rounded-full mt-3 overflow-hidden">
+                                <div class="bg-amber-600 h-full rounded-full" :style="'width: ' + (plan.biometrics?.macros?.carbs?.pct || 0) + '%'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Healthy Fats -->
+                        <div class="p-4 rounded-2xl bg-pink-50/70 border border-pink-200/80 macro-glow-fat">
+                            <div class="flex items-center justify-between text-xs font-bold text-pink-700 mb-1">
+                                <span><i class="fas fa-droplet"></i> HEALTHY FATS</span>
+                                <span x-text="(plan.biometrics?.macros?.fat?.pct || 0) + '%'"></span>
+                            </div>
+                            <div class="font-heading text-3xl font-extrabold text-pink-900 my-1" x-text="(plan.biometrics?.macros?.fat?.grams || 0) + 'g'"></div>
+                            <div class="text-[11px] text-pink-600/80" x-text="(plan.biometrics?.macros?.fat?.calories || 0) + ' kcal • Hormone Health'"></div>
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-pink-200 h-1.5 rounded-full mt-3 overflow-hidden">
+                                <div class="bg-pink-600 h-full rounded-full" :style="'width: ' + (plan.biometrics?.macros?.fat?.pct || 0) + '%'"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secondary Nutrient Targets -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                        <!-- Hydration -->
+                        <div class="p-4 rounded-2xl bg-cyan-50/50 border border-cyan-200 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-cyan-500 text-white flex items-center justify-center text-lg">
+                                    <i class="fas fa-glass-water"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-cyan-900">Clinical Hydration</div>
+                                    <div class="text-[11px] text-cyan-700" x-text="'~' + (plan.biometrics?.hydration?.liters_per_day || 2.5) + ' Liters (' + (plan.biometrics?.hydration?.cups_per_day || 10) + ' Glasses/Day)'"></div>
+                                </div>
+                            </div>
+                            <span class="text-xs font-extrabold text-cyan-700 bg-cyan-100 px-2.5 py-1 rounded-lg">Target</span>
+                        </div>
+
+                        <!-- Fiber -->
+                        <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-lg">
+                                    <i class="fas fa-seedling"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-emerald-900">Dietary Prebiotic Fiber</div>
+                                    <div class="text-[11px] text-emerald-700" x-text="(plan.biometrics?.macros?.fiber_grams || 28) + 'g / Day (Gut Microbiome)'"></div>
+                                </div>
+                            </div>
+                            <span class="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">WHO Std</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLINICAL TIPS & EVIDENCE ACCORDION -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg mb-3">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h4 class="font-heading text-base font-bold text-slate-900 mb-1">Protein Pacing</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Divide your protein intake into 4 distinct meals (approx 25-40g each) to trigger Muscle Protein Synthesis (MPS) via the leucine trigger threshold.
+                    </p>
+                </div>
+                <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg mb-3">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h4 class="font-heading text-base font-bold text-slate-900 mb-1">Peri-Workout Nutrient Timing</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Consume complex carbs 60-90 minutes before your workout, and pair rapid-absorbing protein with electrolyte water within 45 minutes post-exercise.
+                    </p>
+                </div>
+                <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs">
+                    <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg mb-3">
+                        <i class="fas fa-moon"></i>
+                    </div>
+                    <h4 class="font-heading text-base font-bold text-slate-900 mb-1">Circadian Hormone Recovery</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">
+                        Avoid heavy carbohydrates 2 hours before bed to maximize natural human growth hormone (HGH) release during slow-wave restorative sleep.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: 7-DAY MEAL ARCHITECTURE -->
+        <div x-show="activeTab === 'meals'" x-transition.opacity>
+            
+            <!-- Day Selector Pills -->
+            <div class="flex flex-wrap gap-2 mb-6 p-2 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                <template x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']" :key="day">
+                    <button @click="currentDay = day" 
+                            :class="currentDay === day ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-500/20' : 'bg-transparent text-slate-600 hover:bg-slate-100 font-medium'"
+                            class="px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5">
+                        <i class="fas fa-calendar-day text-xs" :class="currentDay === day ? 'text-emerald-200' : 'text-slate-400'"></i>
+                        <span x-text="day"></span>
+                    </button>
+                </template>
+            </div>
+
+            <!-- Current Day's Meals -->
+            <div class="space-y-4">
+                
+                <!-- Breakfast -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold">
+                                🌅
+                            </span>
+                            <div>
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-600">Meal 1 • Breakfast (08:00 AM)</span>
+                                <h4 class="font-heading text-lg font-bold text-slate-900" x-text="getCurrentMeals().breakfast?.name || 'Power Breakfast'"></h4>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold" x-text="(getCurrentMeals().breakfast?.cal || 0) + ' kcal'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 font-semibold" x-text="'P: ' + (getCurrentMeals().breakfast?.p || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-orange-100 text-orange-800 font-semibold" x-text="'C: ' + (getCurrentMeals().breakfast?.c || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-pink-100 text-pink-800 font-semibold" x-text="'F: ' + (getCurrentMeals().breakfast?.f || 0) + 'g'"></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3" x-text="'Portion: ' + (getCurrentMeals().breakfast?.portion || 'Standard Serving')"></p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <template x-for="tag in (getCurrentMeals().breakfast?.tags || [])" :key="tag">
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold" x-text="tag"></span>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Snack AM -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold">
+                                🍏
+                            </span>
+                            <div>
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-green-600">Meal 2 • Mid-Morning Booster (11:00 AM)</span>
+                                <h4 class="font-heading text-lg font-bold text-slate-900" x-text="getCurrentMeals().snack_am?.name || 'Nutrient Snack'"></h4>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-green-100 text-green-800 font-bold" x-text="(getCurrentMeals().snack_am?.cal || 0) + ' kcal'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 font-semibold" x-text="'P: ' + (getCurrentMeals().snack_am?.p || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-orange-100 text-orange-800 font-semibold" x-text="'C: ' + (getCurrentMeals().snack_am?.c || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-pink-100 text-pink-800 font-semibold" x-text="'F: ' + (getCurrentMeals().snack_am?.f || 0) + 'g'"></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3" x-text="'Portion: ' + (getCurrentMeals().snack_am?.portion || 'Standard Serving')"></p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <template x-for="tag in (getCurrentMeals().snack_am?.tags || [])" :key="tag">
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold" x-text="tag"></span>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Lunch -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
+                                🥗
+                            </span>
+                            <div>
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-600">Meal 3 • Power Lunch (01:30 PM)</span>
+                                <h4 class="font-heading text-lg font-bold text-slate-900" x-text="getCurrentMeals().lunch?.name || 'Balanced Lunch'"></h4>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 font-bold" x-text="(getCurrentMeals().lunch?.cal || 0) + ' kcal'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 font-semibold" x-text="'P: ' + (getCurrentMeals().lunch?.p || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-orange-100 text-orange-800 font-semibold" x-text="'C: ' + (getCurrentMeals().lunch?.c || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-pink-100 text-pink-800 font-semibold" x-text="'F: ' + (getCurrentMeals().lunch?.f || 0) + 'g'"></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3" x-text="'Portion: ' + (getCurrentMeals().lunch?.portion || 'Standard Serving')"></p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <template x-for="tag in (getCurrentMeals().lunch?.tags || [])" :key="tag">
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold" x-text="tag"></span>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Snack PM -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center text-sm font-bold">
+                                🍵
+                            </span>
+                            <div>
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-orange-600">Meal 4 • Evening Pre-Workout Snack (05:00 PM)</span>
+                                <h4 class="font-heading text-lg font-bold text-slate-900" x-text="getCurrentMeals().snack_pm?.name || 'Pre-Workout Fuel'"></h4>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-orange-100 text-orange-800 font-bold" x-text="(getCurrentMeals().snack_pm?.cal || 0) + ' kcal'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 font-semibold" x-text="'P: ' + (getCurrentMeals().snack_pm?.p || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-orange-100 text-orange-800 font-semibold" x-text="'C: ' + (getCurrentMeals().snack_pm?.c || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-pink-100 text-pink-800 font-semibold" x-text="'F: ' + (getCurrentMeals().snack_pm?.f || 0) + 'g'"></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3" x-text="'Portion: ' + (getCurrentMeals().snack_pm?.portion || 'Standard Serving')"></p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <template x-for="tag in (getCurrentMeals().snack_pm?.tags || [])" :key="tag">
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold" x-text="tag"></span>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Dinner -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold">
+                                🌙
+                            </span>
+                            <div>
+                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-600">Meal 5 • Restorative Dinner (08:00 PM)</span>
+                                <h4 class="font-heading text-lg font-bold text-slate-900" x-text="getCurrentMeals().dinner?.name || 'Nutritious Dinner'"></h4>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold" x-text="(getCurrentMeals().dinner?.cal || 0) + ' kcal'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 font-semibold" x-text="'P: ' + (getCurrentMeals().dinner?.p || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-orange-100 text-orange-800 font-semibold" x-text="'C: ' + (getCurrentMeals().dinner?.c || 0) + 'g'"></span>
+                            <span class="px-2 py-1 rounded-lg bg-pink-100 text-pink-800 font-semibold" x-text="'F: ' + (getCurrentMeals().dinner?.f || 0) + 'g'"></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3" x-text="'Portion: ' + (getCurrentMeals().dinner?.portion || 'Standard Serving')"></p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <template x-for="tag in (getCurrentMeals().dinner?.tags || [])" :key="tag">
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold" x-text="tag"></span>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 3: 7-DAY TRAINING ROUTINE -->
+        <div x-show="activeTab === 'workouts'" x-transition.opacity>
+            <div class="glass-panel rounded-3xl p-6 border border-slate-200 mb-6 shadow-xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-bold text-emerald-600 uppercase tracking-widest" x-text="'Split: ' + (plan.workout_plan?.split || 'Weekly Split')"></span>
+                        <h3 class="font-heading text-2xl font-bold text-slate-900 mt-1" x-text="plan.workout_plan?.title || 'Training Architecture'"></h3>
+                        <p class="text-xs text-slate-500 mt-1" x-text="'Experience Level: ' + (plan.workout_plan?.level || 'All Levels')"></p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                            <i class="fas fa-fire text-emerald-500 mr-1"></i> Metabolic Adaptation
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day Selector Pills for Workout -->
+            <div class="flex flex-wrap gap-2 mb-6 p-2 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                <template x-for="day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']" :key="day">
+                    <button @click="currentDay = day" 
+                            :class="currentDay === day ? 'bg-cyan-600 text-white font-bold shadow-md shadow-cyan-500/20' : 'bg-transparent text-slate-600 hover:bg-slate-100 font-medium'"
+                            class="px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5">
+                        <i class="fas fa-dumbbell text-xs" :class="currentDay === day ? 'text-cyan-200' : 'text-slate-400'"></i>
+                        <span x-text="day"></span>
+                    </button>
+                </template>
+            </div>
+
+            <!-- Workout Session Card for Current Day -->
+            <div>
+                <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-sm mb-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-100">
+                        <div>
+                            <span class="text-[11px] font-extrabold uppercase tracking-wider text-cyan-600" x-text="currentDay + ' Session Focus'"></span>
+                            <h4 class="font-heading text-xl font-bold text-slate-900 mt-0.5" x-text="getCurrentWorkout().focus || 'Rest & Recovery'"></h4>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-bold" x-text="'⏱️ ' + (getCurrentWorkout().duration || '45 mins')"></span>
+                            <span class="px-3 py-1.5 rounded-xl bg-orange-100 text-orange-800 font-bold" x-text="'🔥 ' + (getCurrentWorkout().burn_est || '350 kcal')"></span>
+                        </div>
+                    </div>
+
+                    <!-- Warmup Protocol -->
+                    <div class="mb-6 p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center flex-shrink-0 text-sm">
+                            <i class="fas fa-fire-flame-curved"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-amber-900 block">Dynamic Mobility & Warmup Protocol</span>
+                            <span class="text-xs text-amber-800" x-text="getCurrentWorkout().warmup || '5 minutes dynamic joint rotation.'"></span>
+                        </div>
+                    </div>
+
+                    <!-- Exercise Table / Cards -->
+                    <div class="space-y-3">
+                        <template x-for="(ex, index) in (getCurrentWorkout().exercises || [])" :key="index">
+                            <div class="p-4 rounded-2xl bg-white border border-slate-200 hover:border-cyan-300 transition shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div class="flex items-start gap-3">
+                                    <span class="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-700 font-extrabold text-xs flex items-center justify-center flex-shrink-0 mt-0.5" x-text="index + 1"></span>
+                                    <div>
+                                        <h5 class="font-heading text-sm sm:text-base font-bold text-slate-900" x-text="ex.name"></h5>
+                                        <span class="text-xs text-slate-500 block" x-text="'Target: ' + ex.muscle"></span>
+                                        <span class="text-[11px] text-cyan-700 italic block mt-1" x-text="'Cue: ' + ex.cues"></span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs font-bold flex-shrink-0">
+                                    <span class="px-3 py-1 rounded-lg bg-slate-100 text-slate-800" x-text="ex.sets + ' Sets'"></span>
+                                    <span class="px-3 py-1 rounded-lg bg-blue-50 text-blue-800" x-text="ex.reps + ' Reps'"></span>
+                                    <span class="px-3 py-1 rounded-lg bg-amber-50 text-amber-800" x-text="'Rest: ' + ex.rest"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Cooldown Protocol -->
+                    <div class="mt-6 p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-sm">
+                            <i class="fas fa-spa"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-blue-900 block">Parasympathetic Cooldown & Flexibility</span>
+                            <span class="text-xs text-blue-800" x-text="getCurrentWorkout().cooldown || '5 minutes deep breathing and static stretching.'"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: SMART GROCERY LIST -->
+        <div x-show="activeTab === 'grocery'" x-transition.opacity>
+            <div class="glass-panel rounded-3xl p-6 border border-slate-200 mb-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="font-heading text-2xl font-bold text-slate-900">Weekly Nutrition Shopping List</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                        High-quality whole foods curated for your customized meal plan. Check off items as you shop.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @click="copyGrocery()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs">
+                        <i class="fas" :class="copiedGrocery ? 'fa-check' : 'fa-copy'"></i>
+                        <span x-text="copiedGrocery ? 'Copied to Clipboard!' : 'Copy Shopping List'"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grocery Categories Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="(items, category) in (plan.grocery_list || {})" :key="category">
+                    <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-xs">
+                        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                            <h4 class="font-heading text-base font-bold text-slate-900" x-text="category"></h4>
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        </div>
+                        <ul class="space-y-2.5">
+                            <template x-for="(item, idx) in items" :key="idx">
+                                <li class="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer"
+                                    @click="item.checked = !item.checked">
+                                    <div class="flex items-center gap-2.5">
+                                        <input type="checkbox" :checked="item.checked" class="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 pointer-events-none">
+                                        <span :class="item.checked ? 'line-through text-slate-400' : 'text-slate-800 font-semibold'" x-text="item.item"></span>
+                                    </div>
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600" x-text="item.qty"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- TAB 5: AI NUTRITIONIST COACH CHAT -->
+        <div x-show="activeTab === 'coach'" x-transition.opacity>
+            <div class="glass-panel rounded-3xl p-6 border border-slate-200 shadow-sm max-w-4xl mx-auto">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center text-lg shadow-md shadow-purple-500/20">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-heading text-lg font-bold text-slate-900">Spherix AI Nutrition & Sports Coach</h3>
+                            <p class="text-xs text-slate-500">Powered by Clinical Sports Science & AI Knowledge Engine</p>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                    </span>
+                </div>
+
+                <!-- Quick Suggested Question Chips -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button @click="chatQuestion = 'What are high-protein vegetarian substitutes for paneer?'; sendChat()" 
+                            class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-600 text-xs font-semibold transition border border-slate-200">
+                        💡 High-protein paneer substitutes?
+                    </button>
+                    <button @click="chatQuestion = 'How can I prevent muscle soreness after heavy leg day?'; sendChat()" 
+                            class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-600 text-xs font-semibold transition border border-slate-200">
+                        💡 How to relieve leg soreness (DOMS)?
+                    </button>
+                    <button @click="chatQuestion = 'What is the optimal timing for taking whey protein and creatine?'; sendChat()" 
+                            class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-600 text-xs font-semibold transition border border-slate-200">
+                        💡 Creatine & Whey timing?
+                    </button>
+                </div>
+
+                <!-- Chat Messages Scroll Area -->
+                <div id="chat-scroll-container" class="h-96 overflow-y-auto p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 mb-4">
+                    <template x-for="(msg, i) in chatMessages" :key="i">
+                        <div class="flex" :class="msg.sender === 'user' ? 'justify-end' : 'justify-start'">
+                            <div class="max-w-[85%] p-4 rounded-2xl text-xs sm:text-sm leading-relaxed"
+                                 :class="msg.sender === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none shadow-xs'">
+                                <div class="whitespace-pre-line" x-text="msg.text"></div>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="chatLoading" class="flex justify-start">
+                        <div class="p-3 rounded-2xl bg-white border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
+                            <i class="fas fa-spinner animate-spin text-purple-600"></i>
+                            <span>Formulating clinical recommendation...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Input Form -->
+                <form @submit.prevent="sendChat()" class="flex gap-2">
+                    <input type="text" x-model="chatQuestion" placeholder="Ask about recipes, injuries, supplements, or macro adjustments..." 
+                           class="flex-1 px-4 py-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none">
+                    <button type="submit" :disabled="chatLoading || !chatQuestion.trim()" 
+                            class="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-md shadow-purple-500/20 transition disabled:opacity-50">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+                </main> <!-- END MAIN CONTENT AREA -->
+            </div> <!-- END GRID LAYOUT -->
+
+        </div> <!-- END RESULTS CONTAINER -->
+
+    </div>
+</div>
+
+<script>
+function nutritionFitnessPlanner() {
+    let initialPlan = {};
+    try {
+        const raw = document.getElementById('initial-plan-data')?.textContent || '{}';
+        initialPlan = JSON.parse(raw);
+    } catch (e) {
+        console.error('Initial plan parse error:', e);
+    }
+
+    const formVals = initialPlan.form_values || {};
+    const hasInitialCalculated = Boolean(initialPlan && initialPlan.biometrics && initialPlan.biometrics.target_calories);
+
+    return {
+        hasResults: hasInitialCalculated,
+        activeTab: 'overview',
+        currentDay: 'Monday',
+        loading: false,
+        form: {
+            age: formVals.age || 28,
+            gender: formVals.gender || 'male',
+            weight: formVals.weight || 72,
+            height: formVals.height || 175,
+            activity_level: formVals.activity || formVals.activity_level || 'moderate',
+            goal: formVals.goal || 'weight_loss',
+            diet_pref: formVals.diet || formVals.diet_pref || 'high_protein',
+            workout_routine: formVals.routine || formVals.workout_routine || 'fat_burn_tone',
+            health_conditions: formVals.health_conditions || 'None',
+            allergies: formVals.allergies || 'None',
+            equipment: formVals.equipment || 'gym',
+            experience: formVals.experience || 'intermediate'
+        },
+        plan: initialPlan,
+        copiedGrocery: false,
+        chatQuestion: '',
+        chatMessages: [
+            { sender: 'ai', text: 'Hello! I am your Spherix Clinical Nutrition & Fitness Coach. Ask me anything about recipe substitutions, macro adjustments, or workout execution.' }
+        ],
+        chatLoading: false,
+
+        getCurrentMeals() {
+            if (!this.plan || !this.plan.meal_plan) return {};
+            return this.plan.meal_plan[this.currentDay] || {};
+        },
+
+        getCurrentWorkout() {
+            if (!this.plan || !this.plan.workout_plan || !this.plan.workout_plan.schedule) return {};
+            return this.plan.workout_plan.schedule[this.currentDay] || {};
+        },
+
+        async recalculatePlan() {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/nutrition-fitness/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.form)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.plan.biometrics = data.biometrics;
+                    this.plan.ai_analysis = data.ai_analysis;
+                    this.plan.meal_plan = data.meal_plan;
+                    this.plan.workout_plan = data.workout_plan;
+                    this.plan.grocery_list = data.grocery_list;
+                    this.hasResults = true;
+
+                    // Smoothly scroll down to results
+                    this.$nextTick(() => {
+                        const el = document.getElementById('results-section');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to calculate plan.'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error. Please try again.');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        copyGrocery() {
+            let text = '🛒 SPHERIX CLINIC NUTRITION GROCERY LIST\n\n';
+            if (this.plan && this.plan.grocery_list) {
+                for (let category in this.plan.grocery_list) {
+                    text += `=== ${category.toUpperCase()} ===\n`;
+                    (this.plan.grocery_list[category] || []).forEach(item => {
+                        text += `[ ] ${item.item} (${item.qty})\n`;
+                    });
+                    text += '\n';
+                }
+            }
+            navigator.clipboard.writeText(text);
+            this.copiedGrocery = true;
+            setTimeout(() => { this.copiedGrocery = false; }, 3000);
+        },
+
+        async sendChat() {
+            if (!this.chatQuestion.trim() || this.chatLoading) return;
+            const q = this.chatQuestion.trim();
+            this.chatMessages.push({ sender: 'user', text: q });
+            this.chatQuestion = '';
+            this.chatLoading = true;
+
+            try {
+                const res = await fetch('/api/nutrition-fitness/chat-consultant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: q,
+                        profile: {
+                            age: this.form.age,
+                            gender: this.form.gender,
+                            weight_kg: this.form.weight,
+                            height_cm: this.form.height,
+                            goal: this.form.goal,
+                            diet_pref: this.form.diet_pref,
+                            health_conditions: this.form.health_conditions,
+                            allergies: this.form.allergies,
+                            target_calories: this.plan?.biometrics?.target_calories
+                        }
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.chatMessages.push({ sender: 'ai', text: data.reply });
+                } else {
+                    this.chatMessages.push({ sender: 'ai', text: 'I encountered an issue. Please try asking again.' });
+                }
+            } catch (e) {
+                this.chatMessages.push({ sender: 'ai', text: 'Network connection issue. Please verify your connection and try again.' });
+            } finally {
+                this.chatLoading = false;
+                this.$nextTick(() => {
+                    const el = document.getElementById('chat-scroll-container');
+                    if (el) el.scrollTop = el.scrollHeight;
+                });
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
