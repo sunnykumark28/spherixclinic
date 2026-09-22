@@ -2,7 +2,7 @@ import os
 import sys
 from datetime import datetime, timezone
 
-from flask import Flask, session, request, redirect, url_for, flash, jsonify, current_app
+from flask import Flask, session, request, redirect, url_for, flash, jsonify, current_app, send_from_directory
 from flask_login import current_user, logout_user
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -278,6 +278,15 @@ def create_app(config_object=None):
     @app.template_filter('markdown')
     def render_markdown_filter(text):
         return markdown.markdown(text or '', extensions=['fenced_code', 'tables', 'nl2br'])
+
+    # Serve favicon at root
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            os.path.join(app.root_path, '..', 'static'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon'
+        )
 
     # Dynamic URL resolution fallback for unprefixed template endpoints
     def url_build_error_handler(error, endpoint, values):
