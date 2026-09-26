@@ -159,16 +159,16 @@ def pharmacist():
 @staff_required
 def staff_dashboard():
     """Main dispatcher for staff dashboards based on role."""
-    role = getattr(current_user, 'role', '')
-    if role in ['Receptionist', 'Appointment Management']:
+    role = (getattr(current_user, 'role', '') or '').strip().lower()
+    if any(r in role for r in ['reception', 'appointment', 'front desk']):
         return redirect(url_for('staff_reception_dashboard'))
-    elif role == 'Bed Management':
+    elif 'bed' in role:
         return redirect(url_for('staff_bed_dashboard'))
-    elif role == 'Blood Donor Management':
+    elif 'blood' in role:
         return redirect(url_for('staff_blood_dashboard'))
-    elif role == 'Organ Donor Management':
+    elif 'organ' in role:
         return redirect(url_for('staff_organ_dashboard'))
-    elif role in ['Nurse', 'Nursing']:
+    elif 'nurse' in role or 'nursing' in role:
         return redirect(url_for('staff_nursing_dashboard'))
     else:
         return redirect(url_for('staff_general_dashboard'))
@@ -688,6 +688,26 @@ def staff_reception_dashboard():
                     hospital.available_beds -= 1
                     
                 booking_id = max([0] + [int(k) for k in TEMP_DATA.get('bed_bookings', {}).keys() if str(k).isdigit()]) + 1
+
+                # Sync with beds inventory in TEMP_DATA['beds']
+                matched_bed = None
+                for b in TEMP_DATA.get('beds', {}).values():
+                    if str(b.get('hospital_id', '')) == str(hospital.id):
+                        if room_number and (b.get('bed_id') == room_number or b.get('room_number') == room_number):
+                            matched_bed = b
+                            break
+                        elif not matched_bed and b.get('status') == 'Available' and (
+                            (bed_type == 'ICU' and b.get('bed_type') == 'ICU') or 
+                            (bed_type != 'ICU' and b.get('bed_type') != 'ICU')
+                        ):
+                            matched_bed = b
+
+                if matched_bed:
+                    matched_bed['status'] = 'Occupied'
+                    matched_bed['patient_name'] = patient_name
+                    matched_bed['booking_id'] = booking_id
+                    room_number = matched_bed.get('bed_id') or matched_bed.get('room_number') or room_number
+
                 new_booking = BedBooking(
                     id=booking_id,
                     hospital_id=hospital.id,
@@ -723,6 +743,21 @@ def staff_reception_dashboard():
                 units = int(request.form.get('units', 1))
                 urgency = request.form.get('urgency', 'Stat / Emergency')
                 
+                if 'blood_requests' not in TEMP_DATA:
+                    TEMP_DATA['blood_requests'] = {}
+                req_id = max([0] + [int(k) for k in TEMP_DATA['blood_requests'].keys() if str(k).isdigit()]) + 1
+                TEMP_DATA['blood_requests'][req_id] = {
+                    'id': req_id,
+                    'hospital_id': hospital.id,
+                    'patient_name': patient_name,
+                    'blood_group': blood_group,
+                    'units': units,
+                    'urgency': urgency,
+                    'status': 'pending',
+                    'requested_by': f"{current_user.name} (Reception)",
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M')
+                }
+
                 log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
                 TEMP_DATA['activity_logs'][log_id] = ActivityLog(
                     id=log_id,
@@ -879,12 +914,22 @@ def staff_bed_dashboard():
         elif 'discharge_patient' in request.form:
             booking_id = parse_route_id(request.form.get('booking_id'))
             booking = get_temp_data_item('bed_bookings', booking_id)
-            if booking and str(booking.hospital_id) == str(hospital.id) and booking.status == 'approved':
+            if booking and str(booking.hospital_id) == str(hospital.id) and booking.status in ['approved', 'active']:
                 booking.status = 'discharged'
-                if booking.bed_type == 'ICU':
-                    hospital.available_icu_beds = min(hospital.icu_beds, hospital.available_icu_beds + 1)
-                else:
-                    hospital.available_beds = min(hospital.total_beds, hospital.available_beds + 1)
+                # Find matching bed in TEMP_DATA['beds'] and transition to 'Cleaning'
+                matched_bed = None
+                for b in TEMP_DATA.get('beds', {}).values():
+                    if str(b.get('hospital_id', '')) == str(hospital.id):
+                        if (getattr(booking, 'room_number', None) and (b.get('bed_id') == booking.room_number or b.get('room_number') == booking.room_number)) or \
+                           (b.get('patient_name') == booking.patient_name) or \
+                           (b.get('booking_id') == booking.id):
+                            matched_bed = b
+                            break
+                if matched_bed:
+                    matched_bed['status'] = 'Cleaning'
+                    matched_bed['patient_name'] = None
+                    matched_bed['booking_id'] = None
+                    matched_bed['notes'] = f"Patient {booking.patient_name} discharged. Sanitation and linen reset needed."
                 
                 log_id = TEMP_DATA['next_ids']['activity_log']
                 TEMP_DATA['activity_logs'][log_id] = ActivityLog(
@@ -892,12 +937,91 @@ def staff_bed_dashboard():
                     hospital_id=hospital.id,
                     user_name=current_user.name,
                     action="Discharged Patient",
-                    details=f"Discharged patient {booking.patient_name} from {booking.bed_type} Bed {booking.room_number or 'N/A'}."
+                    details=f"Discharged patient {booking.patient_name} from {booking.bed_type} Bed {booking.room_number or 'N/A'}. Bed transitioned to Cleaning status for housekeeping."
                 )
                 TEMP_DATA['next_ids']['activity_log'] += 1
                 
                 save_data()
-                flash('Patient discharged and bed released successfully.', 'success')
+                flash('Patient discharged. Bed has transitioned to Cleaning status for housekeeping sanitization.', 'info')
+        elif 'mark_bed_cleaned' in request.form:
+            bed_id = request.form.get('bed_id')
+            matched_bed = None
+            for b in TEMP_DATA.get('beds', {}).values():
+                if str(b.get('hospital_id', '')) == str(hospital.id) and (b.get('id') == bed_id or b.get('bed_id') == bed_id):
+                    matched_bed = b
+                    break
+            if matched_bed:
+                if matched_bed.get('status') == 'Cleaning':
+                    matched_bed['status'] = 'Available'
+                    matched_bed['patient_name'] = None
+                    matched_bed['booking_id'] = None
+                    matched_bed['notes'] = ''
+                    if matched_bed.get('bed_type') == 'ICU':
+                        hospital.available_icu_beds = min(hospital.icu_beds, hospital.available_icu_beds + 1)
+                    else:
+                        hospital.available_beds = min(hospital.total_beds, hospital.available_beds + 1)
+                    
+                    log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+                    TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                        id=log_id,
+                        hospital_id=hospital.id,
+                        user_name=current_user.name,
+                        action="Bed Sanitized & Cleared",
+                        details=f"Housekeeping complete: Bed {matched_bed.get('bed_id', bed_id)} sanitized and marked Available."
+                    )
+                    save_data()
+                    flash(f"Bed {matched_bed.get('bed_id', bed_id)} sanitized and released to Available inventory.", 'success')
+                else:
+                    flash(f"Bed {matched_bed.get('bed_id', bed_id)} is currently in '{matched_bed.get('status')}' status (not 'Cleaning').", 'warning')
+            else:
+                flash("Bed not found or access denied.", "error")
+        elif 'update_bed_status' in request.form:
+            bed_id = request.form.get('bed_id')
+            new_status = request.form.get('status', 'Available')
+            patient_name_input = request.form.get('patient_name', '').strip()
+            
+            matched_bed = None
+            for b in TEMP_DATA.get('beds', {}).values():
+                if str(b.get('hospital_id', '')) == str(hospital.id) and (b.get('id') == bed_id or b.get('bed_id') == bed_id):
+                    matched_bed = b
+                    break
+            if matched_bed:
+                old_status = matched_bed.get('status', 'Available')
+                is_icu = matched_bed.get('bed_type') == 'ICU'
+                
+                # Capacity adjustments
+                if old_status == 'Available' and new_status != 'Available':
+                    if is_icu:
+                        hospital.available_icu_beds = max(0, hospital.available_icu_beds - 1)
+                    else:
+                        hospital.available_beds = max(0, hospital.available_beds - 1)
+                elif old_status != 'Available' and new_status == 'Available':
+                    if is_icu:
+                        hospital.available_icu_beds = min(hospital.icu_beds, hospital.available_icu_beds + 1)
+                    else:
+                        hospital.available_beds = min(hospital.total_beds, hospital.available_beds + 1)
+                
+                matched_bed['status'] = new_status
+                if new_status == 'Occupied':
+                    if patient_name_input:
+                        matched_bed['patient_name'] = patient_name_input
+                elif new_status == 'Available':
+                    matched_bed['patient_name'] = None
+                    matched_bed['booking_id'] = None
+                    matched_bed['notes'] = ''
+                
+                log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+                TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                    id=log_id,
+                    hospital_id=hospital.id,
+                    user_name=current_user.name,
+                    action="Bed Status Updated",
+                    details=f"Bed {matched_bed.get('bed_id', bed_id)} status transitioned from '{old_status}' to '{new_status}'."
+                )
+                save_data()
+                flash(f"Bed {matched_bed.get('bed_id', bed_id)} updated to {new_status}.", 'success')
+            else:
+                flash("Bed not found or access denied.", "error")
         elif 'allocate_bed_directly' in request.form:
             try:
                 patient_name = request.form.get('patient_name')
@@ -920,6 +1044,26 @@ def staff_bed_dashboard():
                 if 'bed_booking' not in TEMP_DATA['next_ids']:
                     TEMP_DATA['next_ids']['bed_booking'] = max([1] + [int(k) for k in TEMP_DATA.get('bed_bookings', {}).keys() if str(k).isdigit()]) + 1
                 booking_id = TEMP_DATA['next_ids']['bed_booking']
+
+                # Sync with beds inventory in TEMP_DATA['beds']
+                matched_bed = None
+                for b in TEMP_DATA.get('beds', {}).values():
+                    if str(b.get('hospital_id', '')) == str(hospital.id):
+                        if room_number and (b.get('bed_id') == room_number or b.get('room_number') == room_number):
+                            matched_bed = b
+                            break
+                        elif not matched_bed and b.get('status') == 'Available' and (
+                            (bed_type == 'ICU' and b.get('bed_type') == 'ICU') or 
+                            (bed_type != 'ICU' and b.get('bed_type') != 'ICU')
+                        ):
+                            matched_bed = b
+
+                if matched_bed:
+                    matched_bed['status'] = 'Occupied'
+                    matched_bed['patient_name'] = patient_name
+                    matched_bed['booking_id'] = booking_id
+                    room_number = matched_bed.get('bed_id') or matched_bed.get('room_number') or room_number
+
                 new_booking = BedBooking(
                     id=booking_id,
                     hospital_id=hospital.id,
@@ -958,6 +1102,28 @@ def staff_bed_dashboard():
                 booking = get_temp_data_item('bed_bookings', booking_id)
                 if booking and str(booking.hospital_id) == str(hospital.id) and booking.status == 'approved':
                     old_bed_type = booking.bed_type
+                    old_room_number = booking.room_number
+
+                    # Transition old bed to Cleaning
+                    for b in TEMP_DATA.get('beds', {}).values():
+                        if str(b.get('hospital_id', '')) == str(hospital.id) and (
+                            b.get('bed_id') == old_room_number or b.get('patient_name') == booking.patient_name
+                        ):
+                            b['status'] = 'Cleaning'
+                            b['patient_name'] = None
+                            b['notes'] = f"Transferred to {new_room_number}. Housekeeping needed."
+                            break
+
+                    # Transition new bed to Occupied
+                    for b in TEMP_DATA.get('beds', {}).values():
+                        if str(b.get('hospital_id', '')) == str(hospital.id) and (
+                            b.get('bed_id') == new_room_number or b.get('room_number') == new_room_number
+                        ):
+                            b['status'] = 'Occupied'
+                            b['patient_name'] = booking.patient_name
+                            b['booking_id'] = booking.id
+                            break
+
                     if old_bed_type != new_bed_type:
                         if new_bed_type == 'ICU':
                             if hospital.available_icu_beds <= 0:
@@ -980,7 +1146,7 @@ def staff_bed_dashboard():
                         hospital_id=hospital.id,
                         user_name=current_user.name,
                         action="Bed Transfer",
-                        details=f"Transferred patient {booking.patient_name} from {old_bed_type} to {new_bed_type} (Room {new_room_number})."
+                        details=f"Transferred patient {booking.patient_name} from {old_bed_type} to {new_bed_type} (Room {new_room_number}). Old bed queued for Cleaning."
                     )
                     save_data()
                     flash(f"Patient {booking.patient_name} transferred to {new_bed_type} Bed (Room {new_room_number}).", "success")
@@ -990,10 +1156,25 @@ def staff_bed_dashboard():
 
     hospital_bed_bookings = [b for b in TEMP_DATA.get('bed_bookings', {}).values() if hospital and str(b.hospital_id) == str(hospital.id)]
     hospital_bed_bookings.sort(key=lambda x: x.created_at, reverse=True)
+
+    # Isolated Beds Inventory for this hospital
+    hospital_beds = [b for b in TEMP_DATA.get('beds', {}).values() if hospital and str(b.get('hospital_id', '')) == str(hospital.id)]
+    hospital_beds.sort(key=lambda x: (x.get('ward', ''), x.get('bed_id', '')))
+
+    # Group beds by ward
+    wards = {}
+    for b in hospital_beds:
+        w_name = b.get('ward', 'General Ward')
+        if w_name not in wards:
+            wards[w_name] = []
+        wards[w_name].append(b)
     
     return render_template('staff_bed_dashboard.html', 
                            staff=current_user, hospital=hospital, 
-                           bed_bookings=hospital_bed_bookings, activity_logs=activity_logs)
+                           bed_bookings=hospital_bed_bookings,
+                           beds=hospital_beds,
+                           wards=wards,
+                           activity_logs=activity_logs)
 
 
 
@@ -1115,6 +1296,21 @@ def staff_nursing_dashboard():
                 units = int(request.form.get('units', 1))
                 urgency = request.form.get('urgency', 'Stat / Emergency')
                 
+                if 'blood_requests' not in TEMP_DATA:
+                    TEMP_DATA['blood_requests'] = {}
+                req_id = max([0] + [int(k) for k in TEMP_DATA['blood_requests'].keys() if str(k).isdigit()]) + 1
+                TEMP_DATA['blood_requests'][req_id] = {
+                    'id': req_id,
+                    'hospital_id': hospital.id,
+                    'patient_name': patient_name,
+                    'blood_group': blood_group,
+                    'units': units,
+                    'urgency': urgency,
+                    'status': 'pending',
+                    'requested_by': f"{current_user.name} (Nurse)",
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M')
+                }
+
                 log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
                 TEMP_DATA['activity_logs'][log_id] = ActivityLog(
                     id=log_id,
@@ -1129,6 +1325,38 @@ def staff_nursing_dashboard():
                 flash(f"Error requesting blood: {str(e)}", "error")
             return redirect(url_for('staff_nursing_dashboard'))
 
+        elif 'discharge_inpatient' in request.form:
+            try:
+                booking_id = parse_route_id(request.form.get('booking_id'))
+                booking = get_temp_data_item('bed_bookings', booking_id)
+                if booking and str(booking.hospital_id) == str(hospital.id) and booking.status in ['approved', 'active']:
+                    booking.status = 'discharged'
+                    # Put matching bed into 'Cleaning'
+                    for bed in TEMP_DATA.get('beds', {}).values():
+                        if str(bed.get('hospital_id', '')) == str(hospital.id) and (
+                            bed.get('patient_name') == booking.patient_name or
+                            bed.get('bed_id') == booking.room_number or
+                            bed.get('id') == booking.room_number
+                        ):
+                            bed['status'] = 'Cleaning'
+                            bed['patient_name'] = None
+                            bed['booking_id'] = None
+                            bed['notes'] = f"Discharged by Nurse {current_user.name}. Sanitation requested."
+                            break
+                    log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+                    TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                        id=log_id,
+                        hospital_id=hospital.id,
+                        user_name=current_user.name,
+                        action="Inpatient Nursing Discharge",
+                        details=f"Clinical nursing discharge clearance issued for {booking.patient_name}. Bed transferred to Housekeeping for Cleaning."
+                    )
+                    save_data()
+                    flash(f"Inpatient {booking.patient_name} clinically cleared and discharged. Bed queued for housekeeping cleaning.", "success")
+            except Exception as e:
+                flash(f"Error discharging inpatient: {str(e)}", "error")
+            return redirect(url_for('staff_nursing_dashboard'))
+
         elif 'transfer_inpatient' in request.form:
             try:
                 booking_id = parse_route_id(request.form.get('booking_id'))
@@ -1137,6 +1365,28 @@ def staff_nursing_dashboard():
                 booking = get_temp_data_item('bed_bookings', booking_id)
                 if booking and str(booking.hospital_id) == str(hospital.id):
                     old_type = booking.bed_type
+                    old_room = booking.room_number
+
+                    # Transition old bed to Cleaning
+                    for b in TEMP_DATA.get('beds', {}).values():
+                        if str(b.get('hospital_id', '')) == str(hospital.id) and (
+                            b.get('bed_id') == old_room or b.get('patient_name') == booking.patient_name
+                        ):
+                            b['status'] = 'Cleaning'
+                            b['patient_name'] = None
+                            b['notes'] = f"Transferred to {new_room}. Housekeeping needed."
+                            break
+
+                    # Transition new bed to Occupied
+                    for b in TEMP_DATA.get('beds', {}).values():
+                        if str(b.get('hospital_id', '')) == str(hospital.id) and (
+                            b.get('bed_id') == new_room or b.get('room_number') == new_room
+                        ):
+                            b['status'] = 'Occupied'
+                            b['patient_name'] = booking.patient_name
+                            b['booking_id'] = booking.id
+                            break
+
                     if old_type != new_bed_type:
                         if new_bed_type == 'ICU':
                             if hospital.available_icu_beds <= 0:
@@ -1258,6 +1508,27 @@ def staff_beds_live_stats():
     total_capacity = total_beds + icu_beds
     occupancy_percent = round(((occupied_general + occupied_icu) / total_capacity * 100)) if total_capacity > 0 else 0
     
+    # Beds list
+    hospital_beds = [b for b in TEMP_DATA.get('beds', {}).values() if hospital and str(b.get('hospital_id', '')) == str(hospital.id)]
+    cleaning_count = len([b for b in hospital_beds if b.get('status') == 'Cleaning'])
+    occupied_beds_count = len([b for b in hospital_beds if b.get('status') == 'Occupied'])
+    available_beds_count = len([b for b in hospital_beds if b.get('status') == 'Available'])
+    reserved_beds_count = len([b for b in hospital_beds if b.get('status') == 'Reserved'])
+
+    serialized_beds = [
+        {
+            "id": b.get("id"),
+            "bed_id": b.get("bed_id"),
+            "ward": b.get("ward"),
+            "floor": b.get("floor"),
+            "bed_type": b.get("bed_type"),
+            "status": b.get("status"),
+            "patient_name": b.get("patient_name", ""),
+            "notes": b.get("notes", "")
+        }
+        for b in hospital_beds
+    ]
+
     serialized_bed_bookings = []
     for b in hospital_bed_bookings:
         created_at_val = getattr(b, 'created_at', None)
@@ -1284,9 +1555,14 @@ def staff_beds_live_stats():
             "available_icu_beds": available_icu,
             "occupied_icu_beds": occupied_icu,
             "bed_occupancy_percent": occupancy_percent,
-            "active_admissions_count": len([b for b in hospital_bed_bookings if b.status in ['approved', 'active']])
+            "active_admissions_count": len([b for b in hospital_bed_bookings if b.status in ['approved', 'active']]),
+            "cleaning_beds_count": cleaning_count,
+            "occupied_beds_count": occupied_beds_count,
+            "available_beds_count": available_beds_count,
+            "reserved_beds_count": reserved_beds_count
         },
-        "bed_bookings": serialized_bed_bookings
+        "bed_bookings": serialized_bed_bookings,
+        "beds": serialized_beds
     })
 
 
@@ -1339,26 +1615,164 @@ def staff_nursing_live_stats():
 
 
 @staff_bp.route('/staff/dashboard/general', methods=['GET', 'POST'])
-@staff_role_required('Nurse', 'Pharmacist', 'Lab Technician', 'Admin Staff') # Roles that use the general dash
+@staff_role_required('General Staff', 'Nurse', 'Pharmacist', 'Lab Technician', 'Admin Staff')
 def staff_general_dashboard():
     hospital_name, hospital, activity_logs = get_common_staff_data(current_user)
     
     if request.method == 'POST' and hospital:
-        if 'post_bulletin' in request.form:
+        if 'clock_in' in request.form:
+            today_str = date.today().isoformat()
+            att_key = f"{str(current_user.id).replace('/', '_')}_{today_str}"
+            if 'attendance_logs' not in TEMP_DATA:
+                TEMP_DATA['attendance_logs'] = {}
+            TEMP_DATA['attendance_logs'][att_key] = {
+                'staff_id': current_user.id,
+                'staff_name': current_user.name,
+                'hospital_id': hospital.id,
+                'date': today_str,
+                'clock_in': datetime.now().strftime('%I:%M %p'),
+                'clock_out': None,
+                'hours': 0.0,
+                'status': 'On Duty'
+            }
+            current_user.on_duty = True
+            log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+            TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                id=log_id,
+                hospital_id=hospital.id,
+                user_name=current_user.name,
+                action="Staff Shift Clock-In",
+                details=f"{current_user.name} clocked in for shift duty at {datetime.now().strftime('%I:%M %p')}."
+            )
+            save_data()
+            flash(f"Clocked in successfully at {datetime.now().strftime('%I:%M %p')}. Have a safe & productive shift!", "success")
+            return redirect(url_for('staff_general_dashboard'))
+
+        elif 'clock_out' in request.form:
+            today_str = date.today().isoformat()
+            att_key = f"{str(current_user.id).replace('/', '_')}_{today_str}"
+            if 'attendance_logs' in TEMP_DATA and att_key in TEMP_DATA['attendance_logs']:
+                att = TEMP_DATA['attendance_logs'][att_key]
+                att['clock_out'] = datetime.now().strftime('%I:%M %p')
+                att['status'] = 'Completed'
+                att['hours'] = 8.0  # standard shift duration
+            current_user.on_duty = False
+            log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+            TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                id=log_id,
+                hospital_id=hospital.id,
+                user_name=current_user.name,
+                action="Staff Shift Clock-Out",
+                details=f"{current_user.name} clocked out of shift duty at {datetime.now().strftime('%I:%M %p')}."
+            )
+            save_data()
+            flash("Clocked out successfully. Thank you for your service today!", "info")
+            return redirect(url_for('staff_general_dashboard'))
+
+        elif 'create_task' in request.form:
+            title = request.form.get('title')
+            description = request.form.get('description', '')
+            assigned_to = request.form.get('assigned_to', current_user.name)
+            priority = request.form.get('priority', 'Medium')
+            due_date = request.form.get('due_date') or date.today().isoformat()
+
+            if 'staff_tasks' not in TEMP_DATA:
+                TEMP_DATA['staff_tasks'] = {}
+            task_id = max([0] + [int(k) for k in TEMP_DATA['staff_tasks'].keys() if str(k).isdigit()]) + 1
+            TEMP_DATA['staff_tasks'][task_id] = {
+                'id': task_id,
+                'hospital_id': hospital.id,
+                'title': title,
+                'description': description,
+                'assigned_to': assigned_to,
+                'priority': priority,
+                'due_date': due_date,
+                'status': 'Pending',
+                'created_by': current_user.name,
+                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M')
+            }
+            log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+            TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                id=log_id,
+                hospital_id=hospital.id,
+                user_name=current_user.name,
+                action="New Duty Task Created",
+                details=f"Created task '{title}' assigned to {assigned_to} (Priority: {priority})."
+            )
+            save_data()
+            flash(f"Duty Task '{title}' assigned successfully.", "success")
+            return redirect(url_for('staff_general_dashboard'))
+
+        elif 'update_task_status' in request.form:
+            try:
+                task_id = int(request.form.get('task_id'))
+                new_status = request.form.get('status', 'Pending')
+                task = TEMP_DATA.get('staff_tasks', {}).get(task_id)
+                if task and str(task.get('hospital_id', '')) == str(hospital.id):
+                    old_status = task.get('status', 'Pending')
+                    task['status'] = new_status
+                    save_data()
+                    flash(f"Task #{task_id} status updated from '{old_status}' to '{new_status}'.", "success")
+                else:
+                    flash("Access Denied: Task not found or belongs to another hospital.", "error")
+            except Exception as e:
+                flash(f"Error updating task: {str(e)}", "error")
+            return redirect(url_for('staff_general_dashboard'))
+
+        elif 'apply_leave' in request.form:
+            try:
+                leave_type = request.form.get('leave_type', 'Casual Leave')
+                start_date_str = request.form.get('start_date')
+                end_date_str = request.form.get('end_date')
+                reason = request.form.get('reason', '')
+                
+                start_dt = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_dt = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                days = max(1, (end_dt - start_dt).days + 1)
+
+                if 'leave_requests' not in TEMP_DATA:
+                    TEMP_DATA['leave_requests'] = {}
+                leave_id = max([0] + [int(k) for k in TEMP_DATA['leave_requests'].keys() if str(k).isdigit()]) + 1
+                TEMP_DATA['leave_requests'][leave_id] = {
+                    'id': leave_id,
+                    'staff_id': current_user.id,
+                    'staff_name': current_user.name,
+                    'hospital_id': hospital.id,
+                    'leave_type': leave_type,
+                    'start_date': start_date_str,
+                    'end_date': end_date_str,
+                    'days': days,
+                    'reason': reason,
+                    'status': 'Pending',
+                    'submitted_at': datetime.now().strftime('%Y-%m-%d %H:%M')
+                }
+                log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+                TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                    id=log_id,
+                    hospital_id=hospital.id,
+                    user_name=current_user.name,
+                    action="Leave Application Submitted",
+                    details=f"{current_user.name} applied for {days} day(s) {leave_type} ({start_date_str} to {end_date_str})."
+                )
+                save_data()
+                flash(f"Leave request for {days} day(s) submitted for management approval.", "success")
+            except Exception as e:
+                flash(f"Error submitting leave request: {str(e)}", "error")
+            return redirect(url_for('staff_general_dashboard'))
+
+        elif 'post_bulletin' in request.form:
             title = request.form.get('title')
             content = request.form.get('content')
             
             bulletin_key = f"bulletins_{hospital.id}"
             bulletins = json.loads(TEMP_DATA['settings'].get(bulletin_key, "[]"))
-            bulletins.append({
+            bulletins.insert(0, {
                 "id": len(bulletins) + 1,
                 "title": title,
                 "content": content,
                 "author": current_user.name,
                 "date": datetime.now().strftime('%Y-%m-%d %H:%M')
             })
-            # Keep bulletins sorted newest first
-            bulletins.reverse()
             TEMP_DATA['settings'][bulletin_key] = json.dumps(bulletins)
             
             log_id = TEMP_DATA['next_ids']['activity_log']
@@ -1382,10 +1796,38 @@ def staff_general_dashboard():
             bulletins = json.loads(TEMP_DATA['settings'].get(bulletin_key, "[]"))
         except Exception:
             bulletins = []
+
+    # Isolated Hospital Staff Tasks
+    hospital_tasks = [t for t in TEMP_DATA.get('staff_tasks', {}).values() if hospital and str(t.get('hospital_id', '')) == str(hospital.id)]
+    hospital_tasks.sort(key=lambda x: (0 if x.get('status') != 'Completed' else 1, x.get('due_date', '')))
+
+    # Isolated Hospital Leave Requests
+    hospital_leaves = [l for l in TEMP_DATA.get('leave_requests', {}).values() if hospital and str(l.get('hospital_id', '')) == str(hospital.id)]
+    hospital_leaves.sort(key=lambda x: x.get('submitted_at', ''), reverse=True)
+
+    # Isolated Hospital Attendance Records
+    hospital_attendance = [a for a in TEMP_DATA.get('attendance_logs', {}).values() if hospital and str(a.get('hospital_id', '')) == str(hospital.id)]
+    hospital_attendance.sort(key=lambda x: x.get('date', ''), reverse=True)
+
+    today_str = date.today().isoformat()
+    att_key = f"{str(current_user.id).replace('/', '_')}_{today_str}"
+    today_attendance = TEMP_DATA.get('attendance_logs', {}).get(att_key)
+
+    # Isolated Hospital Colleagues
+    colleagues = [s for s in TEMP_DATA.get('staff', {}).values() if hospital and str(getattr(s, 'hospital_id', '')) == str(hospital.id)]
+    colleagues.sort(key=lambda x: x.name)
             
     return render_template('staff_general_dashboard.html', 
                            staff=current_user, hospital=hospital, 
-                           activity_logs=activity_logs, bulletins=bulletins)
+                           activity_logs=activity_logs, 
+                           bulletins=bulletins,
+                           tasks=hospital_tasks,
+                           leave_requests=hospital_leaves,
+                           attendance_logs=hospital_attendance,
+                           today_attendance=today_attendance,
+                           colleagues=colleagues,
+                           today=date.today())
+
 
 
 

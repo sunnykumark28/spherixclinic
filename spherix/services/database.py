@@ -1,10 +1,13 @@
 import os
 import sys
 import json
+import sqlite3
 import random
+import secrets
+import re
 import copy
 import traceback
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from spherix.config import (
@@ -77,7 +80,7 @@ DATA_FILE = 'data_store.json'
 SERVER = os.getenv('DB_SERVER', 'localhost')
 DATABASE = os.getenv('DB_NAME', 'spherixclinic')
 USERNAME = os.getenv('DB_USER', 'sa')
-PASSWORD = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', 'AnupriyaK#1234')
+PASSWORD = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', '')
 DRIVER = os.getenv('DB_DRIVER', '{ODBC Driver 17 for SQL Server}')
 
 # Default structure if the data file doesn't exist
@@ -100,6 +103,7 @@ TEMP_DATA = {
     "medicines": [],
     "activity_logs": {},
     "auth_activity_logs": [],
+    "terminated_auth_sessions": {},
     "medical_records": {},
     "blood_stock": {
         "A+": 15, "A-": 5, "B+": 12, "B-": 4, "AB+": 8, "AB-": 3, "O+": 25, "O-": 10
@@ -215,7 +219,8 @@ def get_db_connection(database_name=None):
     # Fallback to local SQLite database if SQL Server is not reachable or not configured
     try:
         import sqlite3
-        sqlite_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db')
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        sqlite_db_path = os.getenv('SQLITE_DB_PATH', os.path.join(project_root, 'spherixclinic.db'))
         if not os.path.exists(sqlite_db_path):
             try:
                 import setup_db
@@ -228,6 +233,83 @@ def get_db_connection(database_name=None):
     except Exception as sq_err:
         print(f"⚠️ Error connecting to local SQLite database: {sq_err}")
         return None
+
+def check_table_exists(cursor, table_name):
+    """Checks if a table exists in SQLite or SQL Server without raising an operational error."""
+    try:
+        is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+        if is_sqlite_conn:
+            cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+            return cursor.fetchone() is not None
+        else:
+            cursor.execute(f"IF OBJECT_ID('{table_name}', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
+            row = cursor.fetchone()
+            return bool(row and row[0] == 1)
+    except Exception:
+        return False
+
+def ensure_table_schema(cursor, table_name, sqlite_schema, sqlserver_schema):
+    """Safely creates a table in SQLite or SQL Server without syntax errors."""
+    try:
+        is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+        if is_sqlite_conn:
+            cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({sqlite_schema})")
+        else:
+            cursor.execute(f"IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{table_name}' AND xtype='U') CREATE TABLE {table_name} ({sqlserver_schema})")
+    except Exception as e:
+        print(f"⚠️ ensure_table_schema note for {table_name}: {e}")
+
+def ensure_sqlite_columns(cursor):
+    """Ensures missing columns exist in SQLite database tables."""
+    is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+    if not is_sqlite_conn:
+        return
+    # Hospitals table columns
+    hosp_cols = [
+        ('phone', 'TEXT'), ('city', 'TEXT'), ('state', 'TEXT'), ('address', 'TEXT'), ('logo_url', 'TEXT'),
+        ('country', "TEXT DEFAULT 'India'"), ('currency', "TEXT DEFAULT 'INR'"), ('timezone', "TEXT DEFAULT 'IST (UTC+5:30)'"),
+        ('total_beds', 'INTEGER DEFAULT 0'), ('available_beds', 'INTEGER DEFAULT 0'),
+        ('icu_beds', 'INTEGER DEFAULT 0'), ('available_icu_beds', 'INTEGER DEFAULT 0'),
+        ('general_bed_fee', 'REAL DEFAULT 1000.0'), ('icu_bed_fee', 'REAL DEFAULT 2500.0'),
+        ('doctors_available', "TEXT DEFAULT 'Available'"), ('accreditation', "TEXT DEFAULT 'NABH / ISO 9001 Certified'"),
+        ('international_services', 'TEXT'), ('is_international', 'INTEGER DEFAULT 0'),
+        ('is_verified', 'INTEGER DEFAULT 1'), ('is_blocked', 'INTEGER DEFAULT 0'), ('is_hidden', 'INTEGER DEFAULT 0'),
+        ('blood_stock', 'TEXT'), ('president_ceo', 'TEXT'), ('superintendent_name', 'TEXT'), ('zip_code', 'TEXT')
+    ]
+    for col, col_def in hosp_cols:
+        try:
+            cursor.execute(f"ALTER TABLE hospitals ADD COLUMN {col} {col_def}")
+        except Exception:
+            pass
+
+    # Staff table columns
+    try:
+        cursor.execute("ALTER TABLE staff ADD COLUMN profile_picture_url TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE staff ADD COLUMN hospital_id TEXT")
+    except Exception:
+        pass
+
+    # Blood Donors table columns
+    try:
+        cursor.execute("ALTER TABLE blood_donors ADD COLUMN hospital_id TEXT")
+    except Exception:
+        pass
+
+    # Organ Donors table columns
+    try:
+        cursor.execute("ALTER TABLE organ_donors ADD COLUMN hospital_id TEXT")
+    except Exception:
+        pass
+
+    # Notifications table columns
+    try:
+        cursor.execute("ALTER TABLE notifications ADD COLUMN link TEXT")
+    except Exception:
+        pass
+
 
 def migrate_legacy_schema(cursor):
     """Checks for existing INT ID columns and automatically migrates them to VARCHAR without losing data."""
@@ -631,6 +713,7 @@ def save_data():
             print("❌ SQL Database connection not available. Data cannot be saved.")
             return
         cursor = conn.cursor()
+        ensure_sqlite_columns(cursor)
 
         def json_safe(val):
             if isinstance(val, (dict, list)):
@@ -643,7 +726,7 @@ def save_data():
         db_doc_str_ids = {str(row[0]) for row in db_doc_rows}
         mem_doc_str_ids = {str(k) for k in TEMP_DATA['doctors'].keys()}
         for del_id in db_doc_str_ids - mem_doc_str_ids:
-            cursor.execute("DELETE FROM doctors WHERE id = ?", del_id)
+            cursor.execute("DELETE FROM doctors WHERE id = ?", (del_id,))
         
 
         # Sync doctor images separately
@@ -721,7 +804,7 @@ def save_data():
         cursor.execute("SELECT id FROM patients")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['patients'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM patients WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM patients WHERE id = ?", (del_id,))
         
         for p_id, p in TEMP_DATA['patients'].items():
             cr = getattr(p, 'clinical_record', {})
@@ -803,73 +886,136 @@ def save_data():
         db_hosp_str_ids = {str(row[0]) for row in db_hosp_rows}
         mem_hosp_str_ids = {str(k) for k in TEMP_DATA['hospitals'].keys()}
         for del_id in db_hosp_str_ids - mem_hosp_str_ids:
-            cursor.execute("DELETE FROM hospitals WHERE id = ?", del_id)
+            cursor.execute("DELETE FROM hospitals WHERE id = ?", (del_id,))
         
         for h_id, h in TEMP_DATA['hospitals'].items():
             h_id_str = str(h_id)
             if h_id_str in db_hosp_str_ids:
                 try:
-                    cursor.execute("UPDATE hospitals SET name=?, email=?, password=?, logo_url=?, total_beds=?, available_beds=?, address=?, icu_beds=?, available_icu_beds=?, doctors_available=?, is_verified=?, blood_stock=? WHERE id=?",
-                                   (h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available, getattr(h, 'is_verified', True), json_safe(getattr(h, 'blood_stock', {})), h_id_str))
-                except pyodbc.Error:
+                    cursor.execute("""
+                        UPDATE hospitals SET 
+                            name=?, email=?, password=?, logo_url=?, 
+                            country=?, city=?, state=?, address=?, phone=?, currency=?, timezone=?,
+                            total_beds=?, available_beds=?, icu_beds=?, available_icu_beds=?, 
+                            general_bed_fee=?, icu_bed_fee=?, doctors_available=?, 
+                            is_verified=?, blood_stock=?,
+                            president_ceo=?, superintendent_name=?, zip_code=?
+                        WHERE id=?
+                    """, (
+                        h.name, h.email, h.password, h.logo_url,
+                        getattr(h, 'country', 'India'), getattr(h, 'city', None), getattr(h, 'state', None), getattr(h, 'address', None), getattr(h, 'phone', None), getattr(h, 'currency', 'INR'), getattr(h, 'timezone', 'IST (UTC+5:30)'),
+                        h.total_beds, h.available_beds, h.icu_beds, h.available_icu_beds,
+                        getattr(h, 'general_bed_fee', 1000.0), getattr(h, 'icu_bed_fee', 2500.0), getattr(h, 'doctors_available', 'Available'),
+                        getattr(h, 'is_verified', True), json_safe(getattr(h, 'blood_stock', {})),
+                        getattr(h, 'president_ceo', None), getattr(h, 'superintendent_name', None), getattr(h, 'zip_code', None),
+                        h_id_str
+                    ))
+                except Exception:
                     try:
-                        cursor.execute("UPDATE hospitals SET name=?, email=?, password=?, logo_url=?, total_beds=?, available_beds=?, address=?, icu_beds=?, available_icu_beds=?, doctors_available=? WHERE id=?",
-                                       (h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available, h_id_str))
-                    except pyodbc.Error:
-                        cursor.execute("UPDATE hospitals SET name=?, email=?, password=?, logo_url=?, total_beds=?, available_beds=?, address=? WHERE id=?",
-                                       (h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h_id_str))
+                        cursor.execute("""
+                            UPDATE hospitals SET 
+                                name=?, email=?, password=?, logo_url=?, 
+                                country=?, city=?, state=?, address=?, phone=?, currency=?, timezone=?,
+                                total_beds=?, available_beds=?, icu_beds=?, available_icu_beds=?, 
+                                general_bed_fee=?, icu_bed_fee=?, doctors_available=?, 
+                                is_verified=?, blood_stock=?
+                            WHERE id=?
+                        """, (
+                            h.name, h.email, h.password, h.logo_url,
+                            getattr(h, 'country', 'India'), getattr(h, 'city', None), getattr(h, 'state', None), getattr(h, 'address', None), getattr(h, 'phone', None), getattr(h, 'currency', 'INR'), getattr(h, 'timezone', 'IST (UTC+5:30)'),
+                            h.total_beds, h.available_beds, h.icu_beds, h.available_icu_beds,
+                            getattr(h, 'general_bed_fee', 1000.0), getattr(h, 'icu_bed_fee', 2500.0), getattr(h, 'doctors_available', 'Available'),
+                            getattr(h, 'is_verified', True), json_safe(getattr(h, 'blood_stock', {})),
+                            h_id_str
+                        ))
+                    except Exception:
+                        try:
+                            cursor.execute("UPDATE hospitals SET name=?, email=?, password=?, logo_url=?, total_beds=?, available_beds=?, address=?, icu_beds=?, available_icu_beds=?, doctors_available=?, is_verified=?, blood_stock=? WHERE id=?",
+                                           (h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available, getattr(h, 'is_verified', True), json_safe(getattr(h, 'blood_stock', {})), h_id_str))
+                        except Exception:
+                            cursor.execute("UPDATE hospitals SET name=?, email=?, password=?, logo_url=?, total_beds=?, available_beds=?, address=? WHERE id=?",
+                                           (h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h_id_str))
             else:
                 try:
-                    cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address, icu_beds, available_icu_beds, doctors_available, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                   (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available, getattr(h, 'is_verified', True)))
-                except pyodbc.Error:
+                    cursor.execute("""
+                        INSERT INTO hospitals (
+                            id, name, email, password, logo_url, 
+                            country, city, state, address, phone, currency, timezone,
+                            total_beds, available_beds, icu_beds, available_icu_beds, 
+                            general_bed_fee, icu_bed_fee, doctors_available, 
+                            is_verified, president_ceo, superintendent_name, zip_code
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        h_id_str, h.name, h.email, h.password, h.logo_url,
+                        getattr(h, 'country', 'India'), getattr(h, 'city', None), getattr(h, 'state', None), getattr(h, 'address', None), getattr(h, 'phone', None), getattr(h, 'currency', 'INR'), getattr(h, 'timezone', 'IST (UTC+5:30)'),
+                        h.total_beds, h.available_beds, h.icu_beds, h.available_icu_beds,
+                        getattr(h, 'general_bed_fee', 1000.0), getattr(h, 'icu_bed_fee', 2500.0), getattr(h, 'doctors_available', 'Available'),
+                        getattr(h, 'is_verified', True), getattr(h, 'president_ceo', None), getattr(h, 'superintendent_name', None), getattr(h, 'zip_code', None)
+                    ))
+                except Exception:
                     try:
-                        cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address, icu_beds, available_icu_beds, doctors_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                       (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available))
-                    except pyodbc.Error:
+                        cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address, icu_beds, available_icu_beds, doctors_available, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                       (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available, getattr(h, 'is_verified', True)))
+                    except Exception:
                         cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                                        (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address))
             try:
                 cursor.execute("UPDATE hospitals SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(h, 'is_blocked', False), getattr(h, 'is_hidden', False), h_id_str))
-            except pyodbc.Error:
+            except Exception:
                 pass
 
         # 4. Staff
         cursor.execute("SELECT id FROM staff")
-        db_ids = {row[0] for row in cursor.fetchall()}
-        mem_int_ids = set()
-        for k in TEMP_DATA['staff'].keys():
-            try:
-                mem_int_ids.add(int(str(k).split('/')[-1]) if '/' in str(k) else int(k))
-            except (ValueError, TypeError):
-                pass
-        for del_id in db_ids - mem_int_ids: cursor.execute("DELETE FROM staff WHERE id = ?", del_id)
+        db_raw_ids = {row[0] for row in cursor.fetchall()}
+        db_ids_str = {str(r) for r in db_raw_ids}
+        mem_keys_str = {str(k) for k in TEMP_DATA['staff'].keys()}
+
+        for del_id in db_raw_ids:
+            if str(del_id) not in mem_keys_str:
+                cursor.execute("DELETE FROM staff WHERE id = ?", (del_id,))
         
         for s_id, s in TEMP_DATA['staff'].items():
-            try:
-                s_int_id = int(str(s_id).split('/')[-1]) if '/' in str(s_id) else int(s_id)
-            except (ValueError, TypeError):
-                continue
-                
-            if s_int_id in db_ids:
-                cursor.execute("UPDATE staff SET name=?, email=?, password=?, role=?, phone=?, hospital_name=?, last_login=?, created_at=?, profile_picture_url=? WHERE id=?", 
-                               (s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None), s_int_id))
+            s_id_str = str(s_id)
+            h_id = getattr(s, 'hospital_id', None)
+            if not h_id and getattr(s, 'hospital_name', None):
+                h_match = next((h for h in TEMP_DATA.get('hospitals', {}).values() if (getattr(h, 'name', '') or '').lower().strip() == s.hospital_name.lower().strip()), None)
+                if h_match:
+                    h_id = h_match.id
+                    s.hospital_id = h_id
+
+            target_id = s_id if s_id in db_raw_ids else (s_id_str if s_id_str in db_ids_str else None)
+            if target_id is not None:
+                try:
+                    cursor.execute("UPDATE staff SET name=?, email=?, password=?, role=?, phone=?, hospital_name=?, last_login=?, created_at=?, profile_picture_url=?, hospital_id=? WHERE id=?", 
+                                   (s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None), h_id, target_id))
+                except Exception:
+                    cursor.execute("UPDATE staff SET name=?, email=?, password=?, role=?, phone=?, hospital_name=?, last_login=?, created_at=?, profile_picture_url=? WHERE id=?", 
+                                   (s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None), target_id))
             else:
-                cursor.execute("IF EXISTS (SELECT 1 FROM staff WHERE id = ?) UPDATE staff SET name=?, email=?, password=?, role=?, phone=?, hospital_name=?, last_login=?, created_at=?, profile_picture_url=? WHERE id=? ELSE INSERT INTO staff (id, name, email, password, role, phone, hospital_name, last_login, created_at, profile_picture_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                               (s_int_id, s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None), s_int_id,
-                                s_int_id, s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None)))
+                try:
+                    cursor.execute("INSERT INTO staff (id, name, email, password, role, phone, hospital_name, last_login, created_at, profile_picture_url, hospital_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                   (s_id, s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None), h_id))
+                except Exception:
+                    cursor.execute("INSERT INTO staff (id, name, email, password, role, phone, hospital_name, last_login, created_at, profile_picture_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                   (s_id, s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None)))
             try:
-                cursor.execute("UPDATE staff SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(s, 'is_blocked', False), getattr(s, 'is_hidden', False), s_int_id))
-            except pyodbc.Error:
+                cursor.execute("UPDATE staff SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(s, 'is_blocked', False), getattr(s, 'is_hidden', False), s_id))
+            except Exception:
                 pass
 
         # 5. Appointments
         cursor.execute("SELECT id FROM appointments")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['appointments'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM appointments WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM appointments WHERE id = ?", (del_id,))
         
         for a_id, a in TEMP_DATA['appointments'].items():
+            appt_date_val = str(a.appointment_date) if a.appointment_date is not None else None
+            appt_time_val = a.appointment_time.strftime('%H:%M:%S') if hasattr(a.appointment_time, 'strftime') else (str(a.appointment_time) if a.appointment_time is not None else None)
+            orig_date_val = str(a.original_appointment_date) if a.original_appointment_date is not None else None
+            orig_time_val = a.original_appointment_time.strftime('%H:%M:%S') if hasattr(a.original_appointment_time, 'strftime') else (str(a.original_appointment_time) if a.original_appointment_time is not None else None)
+            created_at_val = a.created_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(a.created_at, 'strftime') else (str(a.created_at) if a.created_at is not None else None)
+
             if a_id in db_ids:
                 sql = """UPDATE appointments SET 
                     patient_name=?, doctor_id=?, patient_id=?, appointment_date=?, appointment_time=?, 
@@ -877,9 +1023,9 @@ def save_data():
                     created_at=?, original_appointment_date=?, original_appointment_time=?, 
                     document_path=?, prescription_path=? WHERE id=?"""
                 values = (
-                    a.patient_name, a.doctor_id, a.patient_id, a.appointment_date, a.appointment_time,
+                    a.patient_name, a.doctor_id, a.patient_id, appt_date_val, appt_time_val,
                     a.patient_age, a.patient_id_number, a.patient_phone, a.reason, a.status,
-                    a.created_at, a.original_appointment_date, a.original_appointment_time,
+                    created_at_val, orig_date_val, orig_time_val,
                     a.document_path, a.prescription_path, a_id
                 )
             else:
@@ -890,9 +1036,9 @@ def save_data():
                     document_path, prescription_path
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
                 values = (
-                    a_id, a.patient_name, a.doctor_id, a.patient_id, a.appointment_date, a.appointment_time,
+                    a_id, a.patient_name, a.doctor_id, a.patient_id, appt_date_val, appt_time_val,
                     a.patient_age, a.patient_id_number, a.patient_phone, a.reason, a.status,
-                    a.created_at, a.original_appointment_date, a.original_appointment_time,
+                    created_at_val, orig_date_val, orig_time_val,
                     a.document_path, a.prescription_path
                 )
             cursor.execute(sql, values)
@@ -901,7 +1047,7 @@ def save_data():
         cursor.execute("SELECT id FROM reviews")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['reviews'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM reviews WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM reviews WHERE id = ?", (del_id,))
         
         for r_id, r in TEMP_DATA['reviews'].items():
             if r_id in db_ids:
@@ -915,7 +1061,7 @@ def save_data():
         cursor.execute("SELECT id FROM messages")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['messages'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM messages WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM messages WHERE id = ?", (del_id,))
         
         for m_id, m in TEMP_DATA['messages'].items():
             if m_id in db_ids:
@@ -937,7 +1083,7 @@ def save_data():
         cursor.execute("SELECT id FROM orders")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['orders'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM orders WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM orders WHERE id = ?", (del_id,))
         
         for o_id, o in TEMP_DATA['orders'].items():
             if o_id in db_ids:
@@ -951,7 +1097,7 @@ def save_data():
         cursor.execute("SELECT id FROM blood_donors")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['blood_donors'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM blood_donors WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM blood_donors WHERE id = ?", (del_id,))
         
         for b_id, b in TEMP_DATA['blood_donors'].items():
             if b_id in db_ids:
@@ -985,7 +1131,7 @@ def save_data():
         cursor.execute("SELECT id FROM organ_donors")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['organ_donors'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM organ_donors WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM organ_donors WHERE id = ?", (del_id,))
         
         for od_id, od in TEMP_DATA['organ_donors'].items():
             if od_id in db_ids:
@@ -1020,24 +1166,15 @@ def save_data():
                 
         # Organ Requests
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='organ_requests' AND xtype='U')
-            CREATE TABLE organ_requests (
-                id INT PRIMARY KEY,
-                patient_id VARCHAR(255),
-                patient_name VARCHAR(255),
-                organ_needed VARCHAR(255),
-                blood_group VARCHAR(50),
-                urgency VARCHAR(50),
-                status VARCHAR(50),
-                hospital_id VARCHAR(255),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'organ_requests',
+                "id INTEGER PRIMARY KEY, patient_id TEXT, patient_name TEXT, organ_needed TEXT, blood_group TEXT, urgency TEXT, status TEXT, hospital_id TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, patient_id VARCHAR(255), patient_name VARCHAR(255), organ_needed VARCHAR(255), blood_group VARCHAR(50), urgency VARCHAR(50), status VARCHAR(50), hospital_id VARCHAR(255), created_at DATETIME"
             )
-            """)
             cursor.execute("SELECT id FROM organ_requests")
             db_ids = {row[0] for row in cursor.fetchall()}
             mem_ids = set(TEMP_DATA.get('organ_requests', {}).keys())
-            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM organ_requests WHERE id = ?", del_id)
+            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM organ_requests WHERE id = ?", (del_id,))
             
             for or_id, o_req in TEMP_DATA.get('organ_requests', {}).items():
                 if or_id in db_ids:
@@ -1047,13 +1184,13 @@ def save_data():
                     cursor.execute("INSERT INTO organ_requests (id, patient_id, patient_name, organ_needed, blood_group, urgency, status, hospital_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                    (or_id, o_req.patient_id, o_req.patient_name, o_req.organ_needed, o_req.blood_group, o_req.urgency, o_req.status, o_req.hospital_id, o_req.created_at))
         except Exception as e:
-            print(f"⚠️ Skipping organ_requests sync (table might not exist): {e}")
+            print(f"⚠️ Skipping organ_requests sync: {e}")
 
         # 10. Camps
         cursor.execute("SELECT id FROM camps")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['camps'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM camps WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM camps WHERE id = ?", (del_id,))
         
         for c_id, c in TEMP_DATA['camps'].items():
             if c_id in db_ids:
@@ -1067,7 +1204,7 @@ def save_data():
         cursor.execute("SELECT id FROM camp_registrations")
         db_ids = {row[0] for row in cursor.fetchall()}
         mem_ids = set(TEMP_DATA['camp_registrations'].keys())
-        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM camp_registrations WHERE id = ?", del_id)
+        for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM camp_registrations WHERE id = ?", (del_id,))
         
         for cr_id, cr in TEMP_DATA['camp_registrations'].items():
             if cr_id in db_ids:
@@ -1079,69 +1216,53 @@ def save_data():
 
         # 12. Blood Stock
         for group, qty in TEMP_DATA['blood_stock'].items():
-            cursor.execute("SELECT blood_group FROM blood_stock WHERE blood_group = ?", group)
+            cursor.execute("SELECT blood_group FROM blood_stock WHERE blood_group = ?", (group,))
             if cursor.fetchone():
                 cursor.execute("UPDATE blood_stock SET quantity = ? WHERE blood_group = ?", (qty, group))
             else:
                 cursor.execute("INSERT INTO blood_stock (blood_group, quantity) VALUES (?, ?)", (group, qty))
 
-        # 13. Bed Bookings (Wrapped in try/except in case table doesn't exist locally)
+        # 13. Bed Bookings
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='bed_bookings' AND xtype='U')
-            CREATE TABLE bed_bookings (
-                id INT PRIMARY KEY,
-                hospital_id VARCHAR(255),
-                patient_id VARCHAR(255),
-                patient_name VARCHAR(255),
-                patient_phone VARCHAR(50),
-                bed_type VARCHAR(50),
-                reason VARCHAR(MAX),
-                status VARCHAR(50),
-                created_at DATETIME,
-                room_number VARCHAR(50)
+            ensure_table_schema(
+                cursor, 'bed_bookings',
+                "id INTEGER PRIMARY KEY, hospital_id TEXT, patient_id TEXT, patient_name TEXT, patient_phone TEXT, bed_type TEXT, reason TEXT, status TEXT, created_at TIMESTAMP, room_number TEXT",
+                "id INT PRIMARY KEY, hospital_id VARCHAR(255), patient_id VARCHAR(255), patient_name VARCHAR(255), patient_phone VARCHAR(50), bed_type VARCHAR(50), reason VARCHAR(MAX), status VARCHAR(50), created_at DATETIME, room_number VARCHAR(50)"
             )
-            """)
             cursor.execute("SELECT id FROM bed_bookings")
             db_ids = {row[0] for row in cursor.fetchall()}
             mem_ids = set(TEMP_DATA.get('bed_bookings', {}).keys())
-            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM bed_bookings WHERE id = ?", del_id)
+            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM bed_bookings WHERE id = ?", (del_id,))
             
             for bb_id, bb in TEMP_DATA.get('bed_bookings', {}).items():
                 if bb_id in db_ids:
                     try:
                         cursor.execute("UPDATE bed_bookings SET hospital_id=?, patient_id=?, patient_name=?, patient_phone=?, bed_type=?, reason=?, status=?, created_at=?, room_number=? WHERE id=?",
                                        (bb.hospital_id, bb.patient_id, bb.patient_name, bb.patient_phone, bb.bed_type, bb.reason, bb.status, bb.created_at, getattr(bb, 'room_number', None), bb_id))
-                    except pyodbc.Error:
+                    except Exception:
                         cursor.execute("UPDATE bed_bookings SET hospital_id=?, patient_id=?, patient_name=?, patient_phone=?, bed_type=?, reason=?, status=?, created_at=? WHERE id=?",
                                        (bb.hospital_id, bb.patient_id, bb.patient_name, bb.patient_phone, bb.bed_type, bb.reason, bb.status, bb.created_at, bb_id))
                 else:
                     try:
                         cursor.execute("INSERT INTO bed_bookings (id, hospital_id, patient_id, patient_name, patient_phone, bed_type, reason, status, created_at, room_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                        (bb_id, bb.hospital_id, bb.patient_id, bb.patient_name, bb.patient_phone, bb.bed_type, bb.reason, bb.status, bb.created_at, getattr(bb, 'room_number', None)))
-                    except pyodbc.Error:
+                    except Exception:
                         cursor.execute("INSERT INTO bed_bookings (id, hospital_id, patient_id, patient_name, patient_phone, bed_type, reason, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                        (bb_id, bb.hospital_id, bb.patient_id, bb.patient_name, bb.patient_phone, bb.bed_type, bb.reason, bb.status, bb.created_at))
         except Exception as e:
-            print(f"⚠️ Skipping bed_bookings sync (table might not exist): {e}")
+            print(f"⚠️ Skipping bed_bookings sync: {e}")
 
         # 14. Activity Logs
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='activity_logs' AND xtype='U')
-            CREATE TABLE activity_logs (
-                id INT PRIMARY KEY,
-                hospital_id VARCHAR(255),
-                user_name VARCHAR(255),
-                action VARCHAR(255),
-                details VARCHAR(MAX),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'activity_logs',
+                "id INTEGER PRIMARY KEY, hospital_id TEXT, user_name TEXT, action TEXT, details TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, hospital_id VARCHAR(255), user_name VARCHAR(255), action VARCHAR(255), details VARCHAR(MAX), created_at DATETIME"
             )
-            """)
             cursor.execute("SELECT id FROM activity_logs")
             db_ids = {row[0] for row in cursor.fetchall()}
             mem_ids = set(TEMP_DATA.get('activity_logs', {}).keys())
-            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM activity_logs WHERE id = ?", del_id)
+            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM activity_logs WHERE id = ?", (del_id,))
             
             for al_id, al in TEMP_DATA.get('activity_logs', {}).items():
                 if al_id in db_ids:
@@ -1151,68 +1272,76 @@ def save_data():
                     cursor.execute("INSERT INTO activity_logs (id, hospital_id, user_name, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                                    (al_id, al.hospital_id, al.user_name, al.action, al.details, al.created_at))
         except Exception as e:
-            print(f"⚠️ Skipping activity_logs sync (table might not exist): {e}")
+            print(f"⚠️ Skipping activity_logs sync: {e}")
 
         # 15. Settings
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='settings' AND xtype='U')
-            CREATE TABLE settings (
-                setting_key VARCHAR(255) PRIMARY KEY,
-                setting_value NVARCHAR(MAX)
+            ensure_table_schema(
+                cursor, 'settings',
+                "key TEXT PRIMARY KEY, value TEXT",
+                "setting_key VARCHAR(255) PRIMARY KEY, setting_value NVARCHAR(MAX)"
             )
-            """)
+            is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+            cursor.execute("SELECT * FROM settings LIMIT 1" if is_sqlite_conn else "SELECT TOP 1 * FROM settings")
+            cols = [c[0] for c in cursor.description] if cursor.description else ['key', 'value']
+            key_col = 'setting_key' if 'setting_key' in cols else 'key'
+            val_col = 'setting_value' if 'setting_value' in cols else 'value'
+            if 'beds' in TEMP_DATA:
+                TEMP_DATA['settings']['beds_data'] = json.dumps(TEMP_DATA['beds'])
+            if 'staff_tasks' in TEMP_DATA:
+                TEMP_DATA['settings']['staff_tasks'] = json.dumps(TEMP_DATA['staff_tasks'])
+            if 'leave_requests' in TEMP_DATA:
+                TEMP_DATA['settings']['leave_requests'] = json.dumps(TEMP_DATA['leave_requests'])
+            if 'attendance_logs' in TEMP_DATA:
+                TEMP_DATA['settings']['attendance_logs'] = json.dumps(TEMP_DATA['attendance_logs'])
+            if 'blood_requests' in TEMP_DATA:
+                TEMP_DATA['settings']['blood_requests'] = json.dumps(TEMP_DATA['blood_requests'])
+
             for key, val in TEMP_DATA.get('settings', {}).items():
-                cursor.execute("IF EXISTS (SELECT * FROM settings WHERE setting_key = ?) UPDATE settings SET setting_value = ? WHERE setting_key = ? ELSE INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)", (key, val, key, key, val))
+                cursor.execute(f"SELECT 1 FROM settings WHERE [{key_col}] = ?", (key,))
+                if cursor.fetchone():
+                    cursor.execute(f"UPDATE settings SET [{val_col}] = ? WHERE [{key_col}] = ?", (val, key))
+                else:
+                    cursor.execute(f"INSERT INTO settings ([{key_col}], [{val_col}]) VALUES (?, ?)", (key, val))
         except Exception as e:
-            print(f"⚠️ Skipping settings sync (table might not exist): {e}")
+            print(f"⚠️ Skipping settings sync: {e}")
 
 
         # 17. Contact Messages
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='contact_messages' AND xtype='U')
-            CREATE TABLE contact_messages (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                name NVARCHAR(255),
-                email NVARCHAR(255),
-                phone NVARCHAR(50),
-                address NVARCHAR(MAX),
-                message NVARCHAR(MAX),
-                date DATETIME
+            ensure_table_schema(
+                cursor, 'contact_messages',
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, phone TEXT, address TEXT, message TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "id INT IDENTITY(1,1) PRIMARY KEY, name NVARCHAR(255), email NVARCHAR(255), phone NVARCHAR(50), address NVARCHAR(MAX), message NVARCHAR(MAX), date DATETIME"
             )
-            """)
             cursor.execute("DELETE FROM contact_messages")
             for msg in reversed(TEMP_DATA.get('contact_messages', [])):
                 cursor.execute("INSERT INTO contact_messages (name, email, phone, address, message, date) VALUES (?, ?, ?, ?, ?, ?)",
                                (msg.get('name'), msg.get('email'), msg.get('phone'), msg.get('address'), msg.get('message'), msg.get('date')))
         except Exception as e:
-            print(f"⚠️ Skipping contact_messages sync (table might not exist): {e}")
+            print(f"⚠️ Skipping contact_messages sync: {e}")
 
         # 18. Newsletter Subscribers
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='newsletter_subscribers' AND xtype='U')
-            CREATE TABLE newsletter_subscribers (
-                email NVARCHAR(255) PRIMARY KEY,
-                name NVARCHAR(255) NULL,
-                contact NVARCHAR(50) NULL,
-                interests NVARCHAR(MAX) NULL,
-                subscribed_at DATETIME DEFAULT GETDATE()
+            ensure_table_schema(
+                cursor, 'newsletter_subscribers',
+                "email TEXT PRIMARY KEY, name TEXT, contact TEXT, interests TEXT, subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "email NVARCHAR(255) PRIMARY KEY, name NVARCHAR(255) NULL, contact NVARCHAR(50) NULL, interests NVARCHAR(MAX) NULL, subscribed_at DATETIME DEFAULT GETDATE()"
             )
-            """)
             
             # Ensure columns exist in case table was created previously with older schema
             try:
-                cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'name'")
-                if not cursor.fetchone():
-                    cursor.execute("ALTER TABLE newsletter_subscribers ADD name NVARCHAR(255) NULL")
-                cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'contact'")
-                if not cursor.fetchone():
-                    cursor.execute("ALTER TABLE newsletter_subscribers ADD contact NVARCHAR(50) NULL")
-                cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'interests'")
-                if not cursor.fetchone():
-                    cursor.execute("ALTER TABLE newsletter_subscribers ADD interests NVARCHAR(MAX) NULL")
+                is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+                if not is_sqlite_conn:
+                    cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'name'")
+                    if not cursor.fetchone():
+                        cursor.execute("ALTER TABLE newsletter_subscribers ADD name NVARCHAR(255) NULL")
+                    cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'contact'")
+                    if not cursor.fetchone():
+                        cursor.execute("ALTER TABLE newsletter_subscribers ADD contact NVARCHAR(50) NULL")
+                    cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'interests'")
+                    if not cursor.fetchone():
+                        cursor.execute("ALTER TABLE newsletter_subscribers ADD interests NVARCHAR(MAX) NULL")
             except Exception as col_err:
                 print(f"⚠️ Error ensuring columns on newsletter_subscribers sync: {col_err}")
 
@@ -1221,7 +1350,7 @@ def save_data():
             mem_emails = {sub['email'] for sub in TEMP_DATA.get('newsletter_subscribers', [])}
             
             for del_email in db_emails - mem_emails:
-                cursor.execute("DELETE FROM newsletter_subscribers WHERE email = ?", del_email)
+                cursor.execute("DELETE FROM newsletter_subscribers WHERE email = ?", (del_email,))
                 
             for sub in TEMP_DATA.get('newsletter_subscribers', []):
                 if sub['email'] not in db_emails:
@@ -1236,25 +1365,21 @@ def save_data():
                         sub['subscribed_at']
                     ))
         except Exception as e:
-            print(f"⚠️ Skipping newsletter_subscribers sync (table might not exist): {e}")
+            print(f"⚠️ Skipping newsletter_subscribers sync: {e}")
             
         # 19. Medicines
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='medicines' AND xtype='U')
-            CREATE TABLE medicines (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                name NVARCHAR(255) UNIQUE,
-                category NVARCHAR(100),
-                price FLOAT
+            ensure_table_schema(
+                cursor, 'medicines',
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, category TEXT, price REAL",
+                "id INT IDENTITY(1,1) PRIMARY KEY, name NVARCHAR(255) UNIQUE, category NVARCHAR(100), price FLOAT"
             )
-            """)
             cursor.execute("SELECT name FROM medicines")
             db_meds = {row[0] for row in cursor.fetchall()}
             mem_meds = {m['name'] for m in TEMP_DATA.get('medicines', [])}
             
             for del_med in db_meds - mem_meds:
-                cursor.execute("DELETE FROM medicines WHERE name = ?", del_med)
+                cursor.execute("DELETE FROM medicines WHERE name = ?", (del_med,))
                 
             for m in TEMP_DATA.get('medicines', []):
                 if m['name'] not in db_meds:
@@ -1264,17 +1389,16 @@ def save_data():
                     cursor.execute("UPDATE medicines SET category=?, price=? WHERE name=?", 
                                    (m.get('category', 'General'), m.get('price', 0.0), m['name']))
         except Exception as e:
-            print(f"⚠️ Skipping medicines sync (table might not exist): {e}")
+            print(f"⚠️ Skipping medicines sync: {e}")
 
         # 12. Patient Feedbacks
         try:
-            cursor.execute("IF OBJECT_ID('patient_feedback', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'patient_feedback'):
                 cursor.execute("SELECT id FROM patient_feedback")
                 db_ids = {row[0] for row in cursor.fetchall()}
                 mem_ids = set(TEMP_DATA.get('feedbacks', {}).keys())
                 for del_id in db_ids - mem_ids:
-                    cursor.execute("DELETE FROM patient_feedback WHERE id = ?", del_id)
+                    cursor.execute("DELETE FROM patient_feedback WHERE id = ?", (del_id,))
                 for fb_id, fb in TEMP_DATA.get('feedbacks', {}).items():
                     if fb_id in db_ids:
                         cursor.execute("UPDATE patient_feedback SET patient_id=?, patient_name=?, rating=?, comments=?, feedback_target=?, target_id=?, target_name=? WHERE id=?",
@@ -1287,13 +1411,12 @@ def save_data():
 
         # 13. Doctor Opinions
         try:
-            cursor.execute("IF OBJECT_ID('doctor_opinions', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'doctor_opinions'):
                 cursor.execute("SELECT doctor_id FROM doctor_opinions")
                 db_doc_ids = {row[0] for row in cursor.fetchall()}
                 mem_doc_ids = set(TEMP_DATA.get('doctor_opinions', {}).keys())
                 for del_id in db_doc_ids - mem_doc_ids:
-                    cursor.execute("DELETE FROM doctor_opinions WHERE doctor_id = ?", del_id)
+                    cursor.execute("DELETE FROM doctor_opinions WHERE doctor_id = ?", (del_id,))
                 for doc_id, op in TEMP_DATA.get('doctor_opinions', {}).items():
                     created_at_val = op.get('created_at')
                     if isinstance(created_at_val, str):
@@ -1313,13 +1436,21 @@ def save_data():
 
         # Sync Patient Vitals
         try:
-            cursor.execute("IF OBJECT_ID('patient_vitals', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+            has_pv = False
+            if is_sqlite_conn:
+                cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='patient_vitals'")
+                has_pv = cursor.fetchone() is not None
+            else:
+                cursor.execute("IF OBJECT_ID('patient_vitals', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
+                has_pv = cursor.fetchone()[0] == 1
+
+            if has_pv:
                 cursor.execute("SELECT id FROM patient_vitals")
                 db_vital_ids = {row[0] for row in cursor.fetchall()}
                 mem_vital_ids = set(TEMP_DATA.get('patient_vitals', {}).keys())
                 for del_id in db_vital_ids - mem_vital_ids:
-                    cursor.execute("DELETE FROM patient_vitals WHERE id = ?", del_id)
+                    cursor.execute("DELETE FROM patient_vitals WHERE id = ?", (del_id,))
                 for v_id, vit in TEMP_DATA.get('patient_vitals', {}).items():
                     rec_at = getattr(vit, 'recorded_at', utcnow())
                     if isinstance(rec_at, str):
@@ -1337,22 +1468,32 @@ def save_data():
                         cursor.execute("UPDATE patient_vitals SET patient_id=?, weight=?, heart_rate=?, blood_sugar=?, systolic_bp=?, diastolic_bp=?, recorded_at=? WHERE id=?",
                                        (target_pid, vit.weight, vit.heart_rate, vit.blood_sugar, vit.systolic_bp, vit.diastolic_bp, rec_at, v_id))
                     else:
-                        cursor.execute("SET IDENTITY_INSERT patient_vitals ON")
+                        if not is_sqlite_conn:
+                            cursor.execute("SET IDENTITY_INSERT patient_vitals ON")
                         cursor.execute("INSERT INTO patient_vitals (id, patient_id, weight, heart_rate, blood_sugar, systolic_bp, diastolic_bp, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                                        (v_id, target_pid, vit.weight, vit.heart_rate, vit.blood_sugar, vit.systolic_bp, vit.diastolic_bp, rec_at))
-                        cursor.execute("SET IDENTITY_INSERT patient_vitals OFF")
+                        if not is_sqlite_conn:
+                            cursor.execute("SET IDENTITY_INSERT patient_vitals OFF")
         except Exception as e:
             print(f"⚠️ Skipping patient_vitals sync: {e}")
 
         # Sync Patient Medical Records
         try:
-            cursor.execute("IF OBJECT_ID('patient_medical_records', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+            has_pmr = False
+            if is_sqlite_conn:
+                cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='patient_medical_records'")
+                has_pmr = cursor.fetchone() is not None
+            else:
+                cursor.execute("IF OBJECT_ID('patient_medical_records', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
+                has_pmr = cursor.fetchone()[0] == 1
+
+            if has_pmr:
                 cursor.execute("SELECT id FROM patient_medical_records")
                 db_mr_ids = {str(row[0]) for row in cursor.fetchall()}
                 mem_mr_ids = {str(k) for k in TEMP_DATA.get('medical_records', {}).keys()}
                 for del_id in db_mr_ids - mem_mr_ids:
-                    cursor.execute("DELETE FROM patient_medical_records WHERE id = ?", del_id)
+                    cursor.execute("DELETE FROM patient_medical_records WHERE id = ?", (del_id,))
                 for mr_id, rec in TEMP_DATA.get('medical_records', {}).items():
                     mr_id_str = str(mr_id)
                     rec_created = getattr(rec, 'created_at', utcnow())
@@ -1393,22 +1534,15 @@ def save_data():
 
         # Notifications
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='notifications' AND xtype='U')
-            CREATE TABLE notifications (
-                id INT PRIMARY KEY,
-                user_id VARCHAR(255),
-                user_type VARCHAR(50),
-                message NVARCHAR(MAX),
-                link NVARCHAR(MAX),
-                status VARCHAR(50),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'notifications',
+                "id INTEGER PRIMARY KEY, user_id TEXT, user_type TEXT, message TEXT, link TEXT, status TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, user_id VARCHAR(255), user_type VARCHAR(50), message NVARCHAR(MAX), link NVARCHAR(MAX), status VARCHAR(50), created_at DATETIME"
             )
-            """)
             cursor.execute("SELECT id FROM notifications")
             db_ids = {row[0] for row in cursor.fetchall()}
             mem_ids = set(TEMP_DATA.get('notifications', {}).keys())
-            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM notifications WHERE id = ?", del_id)
+            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM notifications WHERE id = ?", (del_id,))
             
             for notif_id, notif in TEMP_DATA.get('notifications', {}).items():
                 u_id = getattr(notif, 'user_id', notif.get('user_id', 1) if isinstance(notif, dict) else 1)
@@ -1423,25 +1557,18 @@ def save_data():
                 else:
                     cursor.execute("INSERT INTO notifications (id, user_id, user_type, message, link, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", (notif_id, u_id, u_type, msg, lnk, st, c_at))
         except Exception as e:
-            print(f"⚠️ Skipping notifications sync (table might not exist): {e}")
+            print(f"⚠️ Skipping notifications sync: {e}")
         # Referrals
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='referrals' AND xtype='U')
-            CREATE TABLE referrals (
-                id INT PRIMARY KEY,
-                patient_id VARCHAR(255),
-                referring_doctor_id VARCHAR(255),
-                referred_doctor_id VARCHAR(255),
-                reason NVARCHAR(MAX),
-                status VARCHAR(50),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'referrals',
+                "id INTEGER PRIMARY KEY, patient_id TEXT, referring_doctor_id TEXT, referred_doctor_id TEXT, reason TEXT, status TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, patient_id VARCHAR(255), referring_doctor_id VARCHAR(255), referred_doctor_id VARCHAR(255), reason NVARCHAR(MAX), status VARCHAR(50), created_at DATETIME"
             )
-            """)
             cursor.execute("SELECT id FROM referrals")
             db_ids = {row[0] for row in cursor.fetchall()}
             mem_ids = set(TEMP_DATA.get('referrals', {}).keys())
-            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM referrals WHERE id = ?", del_id)
+            for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM referrals WHERE id = ?", (del_id,))
             
             for ref_id, ref in TEMP_DATA.get('referrals', {}).items():
                 if ref_id in db_ids:
@@ -1449,11 +1576,10 @@ def save_data():
                 else:
                     cursor.execute("INSERT INTO referrals (id, patient_id, referring_doctor_id, referred_doctor_id, reason, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", (ref_id, ref.patient_id, ref.referring_doctor_id, ref.referred_doctor_id, ref.reason, ref.status, ref.created_at))
         except Exception as e:
-            print(f"⚠️ Skipping referrals sync (table might not exist): {e}")
+            print(f"⚠️ Skipping referrals sync: {e}")
         # Sync Doctor Symptom Reviews
         try:
-            cursor.execute("IF OBJECT_ID('doctor_symptom_reviews', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'doctor_symptom_reviews'):
                 cursor.execute("SELECT id FROM doctor_symptom_reviews")
                 db_rev_ids = {row[0] for row in cursor.fetchall()}
                 
@@ -1461,7 +1587,7 @@ def save_data():
                 mem_rev_ids = {r['id'] for r in mem_revs if 'id' in r}
                 
                 for del_id in db_rev_ids - mem_rev_ids:
-                    cursor.execute("DELETE FROM doctor_symptom_reviews WHERE id = ?", del_id)
+                    cursor.execute("DELETE FROM doctor_symptom_reviews WHERE id = ?", (del_id,))
                     
                 for r in mem_revs:
                     created_at_val = r.get('created_at')
@@ -1495,28 +1621,16 @@ def save_data():
 
         # 22. Visitor Passes
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='visitor_passes' AND xtype='U')
-            CREATE TABLE visitor_passes (
-                id INT PRIMARY KEY,
-                hospital_id VARCHAR(255),
-                pass_number VARCHAR(50),
-                visitor_name VARCHAR(255),
-                visitor_phone VARCHAR(50),
-                patient_name VARCHAR(255),
-                ward_room VARCHAR(100),
-                relation VARCHAR(100),
-                valid_hours VARCHAR(50),
-                status VARCHAR(50),
-                issued_at DATETIME,
-                issued_by VARCHAR(255)
+            ensure_table_schema(
+                cursor, 'visitor_passes',
+                "id INTEGER PRIMARY KEY, hospital_id TEXT, pass_number TEXT, visitor_name TEXT, visitor_phone TEXT, patient_name TEXT, ward_room TEXT, relation TEXT, valid_hours TEXT, status TEXT, issued_at TIMESTAMP, issued_by TEXT",
+                "id INT PRIMARY KEY, hospital_id VARCHAR(255), pass_number VARCHAR(50), visitor_name VARCHAR(255), visitor_phone VARCHAR(50), patient_name VARCHAR(255), ward_room VARCHAR(100), relation VARCHAR(100), valid_hours VARCHAR(50), status VARCHAR(50), issued_at DATETIME, issued_by VARCHAR(255)"
             )
-            """)
             cursor.execute("SELECT id FROM visitor_passes")
             db_ids = {row[0] for row in cursor.fetchall()}
             mem_ids = {int(p['id']) for p in TEMP_DATA.get('visitor_passes', {}).values() if isinstance(p, dict) and 'id' in p}
             for del_id in db_ids - mem_ids:
-                cursor.execute("DELETE FROM visitor_passes WHERE id = ?", del_id)
+                cursor.execute("DELETE FROM visitor_passes WHERE id = ?", (del_id,))
             for p_id, vp in TEMP_DATA.get('visitor_passes', {}).items():
                 if isinstance(vp, dict) and 'id' in vp:
                     if int(vp['id']) in db_ids:
@@ -1846,6 +1960,11 @@ def load_data():
 
         # 4. Staff
         stf = fetch_dict("SELECT * FROM staff")
+        for s in stf:
+            if not s.get('hospital_id') and s.get('hospital_name'):
+                h_match = next((h for h in TEMP_DATA['hospitals'].values() if (getattr(h, 'name', '') or '').lower().strip() == s['hospital_name'].lower().strip()), None)
+                if h_match:
+                    s['hospital_id'] = h_match.id
         TEMP_DATA['staff'] = {s['id']: Staff(**s) for s in stf}
 
         # 5. Appointments
@@ -1891,20 +2010,11 @@ def load_data():
 
         # Organ Requests
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='organ_requests' AND xtype='U')
-            CREATE TABLE organ_requests (
-                id INT PRIMARY KEY,
-                patient_id VARCHAR(255),
-                patient_name VARCHAR(255),
-                organ_needed VARCHAR(255),
-                blood_group VARCHAR(50),
-                urgency VARCHAR(50),
-                status VARCHAR(50),
-                hospital_id VARCHAR(255),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'organ_requests',
+                "id INTEGER PRIMARY KEY, patient_id TEXT, patient_name TEXT, organ_needed TEXT, blood_group TEXT, urgency TEXT, status TEXT, hospital_id TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, patient_id VARCHAR(255), patient_name VARCHAR(255), organ_needed VARCHAR(255), blood_group VARCHAR(50), urgency VARCHAR(50), status VARCHAR(50), hospital_id VARCHAR(255), created_at DATETIME"
             )
-            """)
             oreqs = fetch_dict("SELECT * FROM organ_requests")
             if 'organ_requests' not in TEMP_DATA: TEMP_DATA['organ_requests'] = {}
             TEMP_DATA['organ_requests'] = {o['id']: OrganRequest(**o) for o in oreqs}
@@ -1925,21 +2035,11 @@ def load_data():
         
         # 13. Bed Bookings
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='bed_bookings' AND xtype='U')
-            CREATE TABLE bed_bookings (
-                id INT PRIMARY KEY,
-                hospital_id VARCHAR(255),
-                patient_id VARCHAR(255),
-                patient_name VARCHAR(255),
-                patient_phone VARCHAR(50),
-                bed_type VARCHAR(50),
-                reason VARCHAR(MAX),
-                status VARCHAR(50),
-                created_at DATETIME,
-                room_number VARCHAR(50)
+            ensure_table_schema(
+                cursor, 'bed_bookings',
+                "id INTEGER PRIMARY KEY, hospital_id TEXT, patient_id TEXT, patient_name TEXT, patient_phone TEXT, bed_type TEXT, reason TEXT, status TEXT, created_at TIMESTAMP, room_number TEXT",
+                "id INT PRIMARY KEY, hospital_id VARCHAR(255), patient_id VARCHAR(255), patient_name VARCHAR(255), patient_phone VARCHAR(50), bed_type VARCHAR(50), reason VARCHAR(MAX), status VARCHAR(50), created_at DATETIME, room_number VARCHAR(50)"
             )
-            """)
             bbs = fetch_dict("SELECT * FROM bed_bookings")
             if 'bed_bookings' not in TEMP_DATA: TEMP_DATA['bed_bookings'] = {}
             TEMP_DATA['bed_bookings'] = {b['id']: BedBooking(**b) for b in bbs}
@@ -1949,17 +2049,11 @@ def load_data():
 
         # 14. Activity Logs
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='activity_logs' AND xtype='U')
-            CREATE TABLE activity_logs (
-                id INT PRIMARY KEY,
-                hospital_id VARCHAR(255),
-                user_name VARCHAR(255),
-                action VARCHAR(255),
-                details VARCHAR(MAX),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'activity_logs',
+                "id INTEGER PRIMARY KEY, hospital_id TEXT, user_name TEXT, action TEXT, details TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, hospital_id VARCHAR(255), user_name VARCHAR(255), action VARCHAR(255), details VARCHAR(MAX), created_at DATETIME"
             )
-            """)
             alogs = fetch_dict("SELECT * FROM activity_logs")
             if 'activity_logs' not in TEMP_DATA: TEMP_DATA['activity_logs'] = {}
             TEMP_DATA['activity_logs'] = {l['id']: ActivityLog(**l) for l in alogs}
@@ -1969,13 +2063,11 @@ def load_data():
 
         # 15. Settings
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='settings' AND xtype='U')
-            CREATE TABLE settings (
-                setting_key VARCHAR(255) PRIMARY KEY,
-                setting_value NVARCHAR(MAX)
+            ensure_table_schema(
+                cursor, 'settings',
+                "key TEXT PRIMARY KEY, value TEXT",
+                "setting_key VARCHAR(255) PRIMARY KEY, setting_value NVARCHAR(MAX)"
             )
-            """)
             setts = fetch_dict("SELECT * FROM settings")
             if 'settings' not in TEMP_DATA: 
                 TEMP_DATA['settings'] = {
@@ -1984,24 +2076,36 @@ def load_data():
                     "contact_phone": "+91 933 4325 920"
                 }
             for s in setts:
-                TEMP_DATA['settings'][s['setting_key']] = s['setting_value']
-        except Exception:
-            print("⚠️ Skipping settings load (table might not exist)")
+                k = s.get('setting_key') or s.get('key')
+                v = s.get('setting_value') or s.get('value')
+                if k:
+                    TEMP_DATA['settings'][k] = v
+            try:
+                if 'beds_data' in TEMP_DATA['settings']:
+                    TEMP_DATA['beds'] = json.loads(TEMP_DATA['settings']['beds_data'])
+                if 'staff_tasks' in TEMP_DATA['settings']:
+                    raw_tasks = json.loads(TEMP_DATA['settings']['staff_tasks'])
+                    TEMP_DATA['staff_tasks'] = {int(k) if str(k).isdigit() else k: v for k, v in raw_tasks.items()}
+                if 'leave_requests' in TEMP_DATA['settings']:
+                    raw_leave = json.loads(TEMP_DATA['settings']['leave_requests'])
+                    TEMP_DATA['leave_requests'] = {int(k) if str(k).isdigit() else k: v for k, v in raw_leave.items()}
+                if 'attendance_logs' in TEMP_DATA['settings']:
+                    TEMP_DATA['attendance_logs'] = json.loads(TEMP_DATA['settings']['attendance_logs'])
+                if 'blood_requests' in TEMP_DATA['settings']:
+                    raw_br = json.loads(TEMP_DATA['settings']['blood_requests'])
+                    TEMP_DATA['blood_requests'] = {int(k) if str(k).isdigit() else k: v for k, v in raw_br.items()}
+            except Exception as e:
+                print(f"⚠️ Error rehydrating staff entities: {e}")
+        except Exception as e:
+            print(f"⚠️ Skipping settings load: {e}")
 
         # 17. Contact Messages
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='contact_messages' AND xtype='U')
-            CREATE TABLE contact_messages (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                name NVARCHAR(255),
-                email NVARCHAR(255),
-                phone NVARCHAR(50),
-                address NVARCHAR(MAX),
-                message NVARCHAR(MAX),
-                date DATETIME
+            ensure_table_schema(
+                cursor, 'contact_messages',
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, phone TEXT, address TEXT, message TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "id INT IDENTITY(1,1) PRIMARY KEY, name NVARCHAR(255), email NVARCHAR(255), phone NVARCHAR(50), address NVARCHAR(MAX), message NVARCHAR(MAX), date DATETIME"
             )
-            """)
             c_msgs = fetch_dict("SELECT * FROM contact_messages ORDER BY id DESC")
             TEMP_DATA['contact_messages'] = []
             for c in c_msgs:
@@ -2010,33 +2114,30 @@ def load_data():
                     'message': c['message'], 'date': c['date'].strftime('%Y-%m-%d %H:%M:%S') if isinstance(c['date'], datetime) else c['date']
                 })
         except Exception as e:
-            print(f"⚠️ Skipping contact_messages load (table might not exist): {e}")
+            print(f"⚠️ Skipping contact_messages load: {e}")
             if 'contact_messages' not in TEMP_DATA: TEMP_DATA['contact_messages'] = []
 
         # 18. Newsletter Subscribers
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='newsletter_subscribers' AND xtype='U')
-            CREATE TABLE newsletter_subscribers (
-                email NVARCHAR(255) PRIMARY KEY,
-                name NVARCHAR(255) NULL,
-                contact NVARCHAR(50) NULL,
-                interests NVARCHAR(MAX) NULL,
-                subscribed_at DATETIME DEFAULT GETDATE()
+            ensure_table_schema(
+                cursor, 'newsletter_subscribers',
+                "email TEXT PRIMARY KEY, name TEXT, contact TEXT, interests TEXT, subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "email NVARCHAR(255) PRIMARY KEY, name NVARCHAR(255) NULL, contact NVARCHAR(50) NULL, interests NVARCHAR(MAX) NULL, subscribed_at DATETIME DEFAULT GETDATE()"
             )
-            """)
             
             # Ensure columns exist in case table was created previously with older schema
             try:
-                cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'name'")
-                if not cursor.fetchone():
-                    cursor.execute("ALTER TABLE newsletter_subscribers ADD name NVARCHAR(255) NULL")
-                cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'contact'")
-                if not cursor.fetchone():
-                    cursor.execute("ALTER TABLE newsletter_subscribers ADD contact NVARCHAR(50) NULL")
-                cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'interests'")
-                if not cursor.fetchone():
-                    cursor.execute("ALTER TABLE newsletter_subscribers ADD interests NVARCHAR(MAX) NULL")
+                is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+                if not is_sqlite_conn:
+                    cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'name'")
+                    if not cursor.fetchone():
+                        cursor.execute("ALTER TABLE newsletter_subscribers ADD name NVARCHAR(255) NULL")
+                    cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'contact'")
+                    if not cursor.fetchone():
+                        cursor.execute("ALTER TABLE newsletter_subscribers ADD contact NVARCHAR(50) NULL")
+                    cursor.execute("SELECT name FROM sys.columns WHERE object_id = OBJECT_ID('newsletter_subscribers') AND name = 'interests'")
+                    if not cursor.fetchone():
+                        cursor.execute("ALTER TABLE newsletter_subscribers ADD interests NVARCHAR(MAX) NULL")
             except Exception as col_err:
                 print(f"⚠️ Error ensuring columns on newsletter_subscribers load: {col_err}")
 
@@ -2062,20 +2163,16 @@ def load_data():
                     'subscribed_at': s['subscribed_at'].strftime('%Y-%m-%d %H:%M:%S') if isinstance(s['subscribed_at'], datetime) else s['subscribed_at']
                 })
         except Exception as e:
-            print(f"⚠️ Skipping newsletter_subscribers load (table might not exist): {e}")
+            print(f"⚠️ Skipping newsletter_subscribers load: {e}")
             if 'newsletter_subscribers' not in TEMP_DATA: TEMP_DATA['newsletter_subscribers'] = []
             
         # 19. Medicines
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='medicines' AND xtype='U')
-            CREATE TABLE medicines (
-                id INT IDENTITY(1,1) PRIMARY KEY,
-                name NVARCHAR(255) UNIQUE,
-                category NVARCHAR(100),
-                price FLOAT
+            ensure_table_schema(
+                cursor, 'medicines',
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, category TEXT, price REAL",
+                "id INT IDENTITY(1,1) PRIMARY KEY, name NVARCHAR(255) UNIQUE, category NVARCHAR(100), price FLOAT"
             )
-            """)
             meds = fetch_dict("SELECT * FROM medicines")
             if not meds:
                 print("🌱 Seeding comprehensive medicines dataset...")
@@ -2264,8 +2361,7 @@ def load_data():
 
         # 20. Patient Feedback
         try:
-            cursor.execute("IF OBJECT_ID('patient_feedback', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'patient_feedback'):
                 fbs = fetch_dict("SELECT * FROM patient_feedback")
                 TEMP_DATA['feedbacks'] = {fb['id']: Feedback(**fb) for fb in fbs}
             else:
@@ -2276,8 +2372,7 @@ def load_data():
 
         # 21. Doctor Opinions
         try:
-            cursor.execute("IF OBJECT_ID('doctor_opinions', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'doctor_opinions'):
                 ops = fetch_dict("SELECT * FROM doctor_opinions")
                 TEMP_DATA['doctor_opinions'] = {op['doctor_id']: op for op in ops}
             else:
@@ -2288,8 +2383,7 @@ def load_data():
 
         # 21b. Patient Vitals
         try:
-            cursor.execute("IF OBJECT_ID('patient_vitals', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'patient_vitals'):
                 vits = fetch_dict("SELECT * FROM patient_vitals")
                 TEMP_DATA['patient_vitals'] = {v['id']: PatientVital(**v) for v in vits}
             else:
@@ -2300,8 +2394,7 @@ def load_data():
 
         # 21c. Patient Medical Records
         try:
-            cursor.execute("IF OBJECT_ID('patient_medical_records', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'patient_medical_records'):
                 mr_rows = fetch_dict("SELECT * FROM patient_medical_records")
                 TEMP_DATA['medical_records'] = {}
                 for mr in mr_rows:
@@ -2347,18 +2440,11 @@ def load_data():
 
         # Referrals
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='referrals' AND xtype='U')
-            CREATE TABLE referrals (
-                id INT PRIMARY KEY,
-                patient_id VARCHAR(255),
-                referring_doctor_id VARCHAR(255),
-                referred_doctor_id VARCHAR(255),
-                reason NVARCHAR(MAX),
-                status VARCHAR(50),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'referrals',
+                "id INTEGER PRIMARY KEY, patient_id TEXT, referring_doctor_id TEXT, referred_doctor_id TEXT, reason TEXT, status TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, patient_id VARCHAR(255), referring_doctor_id VARCHAR(255), referred_doctor_id VARCHAR(255), reason NVARCHAR(MAX), status VARCHAR(50), created_at DATETIME"
             )
-            """)
             refs = fetch_dict("SELECT * FROM referrals")
             if 'referrals' not in TEMP_DATA: TEMP_DATA['referrals'] = {}
             TEMP_DATA['referrals'] = {r['id']: Referral(**r) for r in refs}
@@ -2368,18 +2454,11 @@ def load_data():
 
         # Notifications
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='notifications' AND xtype='U')
-            CREATE TABLE notifications (
-                id INT PRIMARY KEY,
-                user_id VARCHAR(255),
-                user_type VARCHAR(50),
-                message NVARCHAR(MAX),
-                link NVARCHAR(MAX),
-                status VARCHAR(50),
-                created_at DATETIME
+            ensure_table_schema(
+                cursor, 'notifications',
+                "id INTEGER PRIMARY KEY, user_id TEXT, user_type TEXT, message TEXT, link TEXT, status TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, user_id VARCHAR(255), user_type VARCHAR(50), message NVARCHAR(MAX), link NVARCHAR(MAX), status VARCHAR(50), created_at DATETIME"
             )
-            """)
             notifs = fetch_dict("SELECT * FROM notifications")
             if 'notifications' not in TEMP_DATA: TEMP_DATA['notifications'] = {}
             TEMP_DATA['notifications'] = {n['id']: Notification(**n) for n in notifs}
@@ -2389,8 +2468,7 @@ def load_data():
 
         # 21c. Doctor Symptom Reviews
         try:
-            cursor.execute("IF OBJECT_ID('doctor_symptom_reviews', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
-            if cursor.fetchone()[0] == 1:
+            if check_table_exists(cursor, 'doctor_symptom_reviews'):
                 revs = fetch_dict("SELECT * FROM doctor_symptom_reviews")
                 TEMP_DATA['symptom_reviews'] = []
                 for r in revs:
@@ -2413,23 +2491,11 @@ def load_data():
 
         # 22. Visitor Passes
         try:
-            cursor.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='visitor_passes' AND xtype='U')
-            CREATE TABLE visitor_passes (
-                id INT PRIMARY KEY,
-                hospital_id VARCHAR(255),
-                pass_number VARCHAR(50),
-                visitor_name VARCHAR(255),
-                visitor_phone VARCHAR(50),
-                patient_name VARCHAR(255),
-                ward_room VARCHAR(100),
-                relation VARCHAR(100),
-                valid_hours VARCHAR(50),
-                status VARCHAR(50),
-                issued_at DATETIME,
-                issued_by VARCHAR(255)
+            ensure_table_schema(
+                cursor, 'visitor_passes',
+                "id INTEGER PRIMARY KEY, hospital_id TEXT, pass_number TEXT, visitor_name TEXT, visitor_phone TEXT, patient_name TEXT, ward_room TEXT, relation TEXT, valid_hours TEXT, status TEXT, issued_at TIMESTAMP, issued_by TEXT",
+                "id INT PRIMARY KEY, hospital_id VARCHAR(255), pass_number VARCHAR(50), visitor_name VARCHAR(255), visitor_phone VARCHAR(50), patient_name VARCHAR(255), ward_room VARCHAR(100), relation VARCHAR(100), valid_hours VARCHAR(50), status VARCHAR(50), issued_at DATETIME, issued_by VARCHAR(255)"
             )
-            """)
             vpasses = fetch_dict("SELECT * FROM visitor_passes")
             if 'visitor_passes' not in TEMP_DATA: TEMP_DATA['visitor_passes'] = {}
             for vp in vpasses:
@@ -2469,13 +2535,11 @@ def load_data():
                         pass
                 TEMP_DATA['next_ids'][entity] = max_val + 1
 
-        # Ensure default admin, hospital, and patient exist in memory and DB
+        # Ensure primary admin exists in memory and DB and purge any mock/test data
         chg_admin = setup_admin_user()
-        chg_hosp = setup_hospital_user()
-        chg_pat = setup_patient_user()
         chg_clean = cleanup_temporary_and_duplicate_data()
         init_auth_telemetry()
-        if chg_admin or chg_hosp or chg_pat or chg_clean:
+        if chg_admin or chg_clean:
             save_data()
 
 
@@ -2571,11 +2635,10 @@ def seed_initial_patient_medical_records():
         TEMP_DATA['medical_records'][rec.id] = rec
 
 def cleanup_temporary_and_duplicate_data():
-
     """
-    Removes mock, demo, and duplicate data from TEMP_DATA,
-    ensuring only original and genuine accounts for doctors, patients, staff,
-    hospitals, blood donors, and organ donors are retained and displayed.
+    Removes mock, demo, and test data from TEMP_DATA,
+    ensuring only the primary Administrator and genuine live user accounts exist.
+    Purges test doctors, hospitals, staff, patients, and donors.
     Returns True if any items were purged or deduplicated.
     """
     global TEMP_DATA
@@ -2587,34 +2650,58 @@ def cleanup_temporary_and_duplicate_data():
         'amelie.laurent@spherixclinic.com', 'liam.o.connor@spherixclinic.com',
         'hans.schmidt@spherixclinic.com', 'fatima.al-mansoor@spherixclinic.com',
         'marcus.vance@spherixclinic.com', 'olivia.williams@spherixclinic.com',
-        'doctor@example.com', 'doctor@spherixclinic.com'
+        'doctor@example.com', 'doctor@spherixclinic.com', 'chen@example.com',
+        'marie@example.com', 'arun.verma@example.com'
     }
     mock_hospital_emails = {
         'contact@aiims.edu.in', 'care@apollohealthcity.in', 'fmri@fortishealthcare.com',
         'info@medanta.org', 'international@mayoclinic.org', 'globaldesk@clevelandclinic.ae',
         'international@mountelizabeth.sg', 'international@londonbridge.co.uk',
-        'international@charite.de', 'globaldesk@uhn.ca', 'international@mh.org.au'
+        'international@charite.de', 'globaldesk@uhn.ca', 'international@mh.org.au',
+        'metro@example.com', 'hospital@spherixclinic.com', 'apollo@example.com',
+        'stjude@example.com', 'hospital.test@spherixclinic.com', 'apollo.test@example.com'
+    }
+    mock_staff_emails = {
+        'sumit@gmail.com', 'pooja.nurse@example.com', 'kevin.reception@example.com',
+        'blood.smch@example.com', 'organ.smch@example.com', 'priya.reception@example.com',
+        'bed.smch@example.com', 'nurse.smch@example.com', 'general.smch@example.com',
+        'blood.apollo@example.com', 'organ.apollo@example.com', 'kevin.apollo@example.com',
+        'bed.apollo@example.com', 'nurse.apollo@example.com', 'general.apollo@example.com',
+        'blood.metro@example.com', 'organ.metro@example.com', 'bed.metro@example.com',
+        'nurse.metro@example.com', 'general.metro@example.com', 'reception.smch@example.com'
+    }
+    mock_patient_emails = {
+        'patient@spherixclinic.com', 'patient@example.com', 'emily.watson@example.com',
+        'vikram@example.com', 'anita@example.com', 'rajesh.sharma@example.com',
+        'test@example.com'
     }
     mock_blood_donor_emails = {
-        'rohan.donor@spherixclinic.com', 'aarav.donor@spherixclinic.com'
+        'rohan.donor@spherixclinic.com', 'aarav.donor@spherixclinic.com',
+        'sunny28skk@gmail.com', 'david.m@example.com', 'rohan.g@example.com',
+        'sarah.lin@example.com'
     }
     mock_organ_donor_emails = {
-        'aditya.organdonor@spherixclinic.com', 'ananya.organdonor@spherixclinic.com'
+        'aditya.organdonor@spherixclinic.com', 'ananya.organdonor@spherixclinic.com',
+        'elena@example.com', 'ramesh.c@example.com'
     }
 
-    # 1. Doctors
+    # 1. Doctors (Preserve only genuine admin and non-test verified doctors)
     cleaned_doctors = {}
     seen_doc_emails = set()
     for doc_id, doc in list(TEMP_DATA.get('doctors', {}).items()):
         doc_email = (getattr(doc, 'email', '') or '').strip().lower()
         doc_fname = (getattr(doc, 'first_name', '') or '').strip().lower()
         doc_lname = (getattr(doc, 'last_name', '') or '').strip().lower()
-        if doc_email in mock_doctor_emails or doc_email.startswith('sarah.jenkins.') or (doc_fname == 'aarav' and doc_lname == 'verma'):
+        if doc_email in mock_doctor_emails or doc_email.endswith('@example.com') or doc_email.startswith('sarah.jenkins.') or (doc_fname == 'aarav' and doc_lname == 'verma'):
             data_changed = True
             continue
         if doc_email and doc_email in seen_doc_emails:
             data_changed = True
             continue
+        if 'metro health' in (getattr(doc, 'hospital_name', '') or '').lower():
+            doc.hospital_name = ''
+            doc.hospital_id = ''
+            data_changed = True
         if doc_email:
             seen_doc_emails.add(doc_email)
         cleaned_doctors[doc_id] = doc
@@ -2622,12 +2709,13 @@ def cleanup_temporary_and_duplicate_data():
         data_changed = True
     TEMP_DATA['doctors'] = cleaned_doctors
 
-    # 2. Patients
+    # 2. Patients (Purge test patients)
     cleaned_patients = {}
     seen_pat_emails = set()
     for pat_id, pat in list(TEMP_DATA.get('patients', {}).items()):
         pat_email = (getattr(pat, 'email', '') or '').strip().lower()
-        if getattr(pat, 'address', '') == "Verified Resident, City Portal" and pat_email.endswith('@spherixclinic.com'):
+        pat_name = (getattr(pat, 'name', '') or '').strip().lower()
+        if pat_email in mock_patient_emails or pat_email.endswith('@example.com') or pat_email.endswith('@spherixclinic.local') or 'test integration' in pat_name or getattr(pat, 'address', '') == "Verified Resident, City Portal":
             data_changed = True
             continue
         if pat_email and pat_email in seen_pat_emails:
@@ -2640,12 +2728,13 @@ def cleanup_temporary_and_duplicate_data():
         data_changed = True
     TEMP_DATA['patients'] = cleaned_patients
 
-    # 3. Hospitals
+    # 3. Hospitals (Purge test hospitals)
     cleaned_hospitals = {}
     seen_hosp_emails = set()
     for hosp_id, hosp in list(TEMP_DATA.get('hospitals', {}).items()):
         hosp_email = (getattr(hosp, 'email', '') or '').strip().lower()
-        if hosp_email in mock_hospital_emails:
+        hosp_name = (getattr(hosp, 'name', '') or '').strip().lower()
+        if hosp_email in mock_hospital_emails or hosp_email.endswith('@example.com') or 'metro health' in hosp_name or 'test' in hosp_email:
             data_changed = True
             continue
         if hosp_email and hosp_email in seen_hosp_emails:
@@ -2658,11 +2747,15 @@ def cleanup_temporary_and_duplicate_data():
         data_changed = True
     TEMP_DATA['hospitals'] = cleaned_hospitals
 
-    # 4. Staff
+    # 4. Staff (Purge test staff)
     cleaned_staff = {}
     seen_staff_emails = set()
     for staff_id, staff in list(TEMP_DATA.get('staff', {}).items()):
         staff_email = (getattr(staff, 'email', '') or '').strip().lower()
+        staff_hosp_name = (getattr(staff, 'hospital_name', '') or '').strip().lower()
+        if staff_email in mock_staff_emails or staff_email.endswith('@example.com') or staff_email.endswith('@metro.com') or 'metro@' in staff_email:
+            data_changed = True
+            continue
         if staff_email and staff_email in seen_staff_emails:
             data_changed = True
             continue
@@ -2673,12 +2766,12 @@ def cleanup_temporary_and_duplicate_data():
         data_changed = True
     TEMP_DATA['staff'] = cleaned_staff
 
-    # 5. Blood Donors
+    # 5. Blood Donors (Purge test blood donors)
     cleaned_blood_donors = {}
     seen_bd_emails = set()
     for bd_id, bd in list(TEMP_DATA.get('blood_donors', {}).items()):
         bd_email = (getattr(bd, 'email', '') or '').strip().lower()
-        if bd_email in mock_blood_donor_emails or str(bd_id) in ['BD/2026/001', 'BD/2026/002']:
+        if bd_email in mock_blood_donor_emails or bd_email.endswith('@example.com') or str(bd_id) in ['BD/2026/001', 'BD/2026/002', 'BD/2026/003', 'BD/2026/004']:
             data_changed = True
             continue
         if bd_email and bd_email in seen_bd_emails:
@@ -2691,12 +2784,12 @@ def cleanup_temporary_and_duplicate_data():
         data_changed = True
     TEMP_DATA['blood_donors'] = cleaned_blood_donors
 
-    # 6. Organ Donors
+    # 6. Organ Donors (Purge test organ donors)
     cleaned_organ_donors = {}
     seen_od_emails = set()
     for od_id, od in list(TEMP_DATA.get('organ_donors', {}).items()):
         od_email = (getattr(od, 'email', '') or '').strip().lower()
-        if od_email in mock_organ_donor_emails or str(od_id) in ['OD/2026/001', 'OD/2026/002']:
+        if od_email in mock_organ_donor_emails or od_email.endswith('@example.com') or str(od_id) in ['OD/2026/001', 'OD/2026/002']:
             data_changed = True
             continue
         if od_email and od_email in seen_od_emails:
@@ -2708,6 +2801,12 @@ def cleanup_temporary_and_duplicate_data():
     if len(cleaned_organ_donors) != len(TEMP_DATA.get('organ_donors', {})):
         data_changed = True
     TEMP_DATA['organ_donors'] = cleaned_organ_donors
+
+    # 7. Purge test camps and registrations
+    if 'camps' in TEMP_DATA:
+        TEMP_DATA['camps'] = {k: v for k, v in TEMP_DATA['camps'].items() if getattr(v, 'id', None) not in [101, 102]}
+    if 'camp_registrations' in TEMP_DATA:
+        TEMP_DATA['camp_registrations'] = {k: v for k, v in TEMP_DATA['camp_registrations'].items() if getattr(v, 'email', '') not in mock_patient_emails and not (getattr(v, 'email', '') or '').endswith('@example.com')}
 
     return data_changed
 
@@ -2734,21 +2833,13 @@ def deduplicate_entities(entities):
 
 def setup_admin_user():
     """
-    Ensures the admin user exists with a default password and is connected to SMCH.
+    Ensures the primary Administrator doctor account (admin@spherixclinic.com) exists.
     Returns True if data was changed, False otherwise.
     """
     admin_email = 'admin@spherixclinic.com'
-    admin_password = 'Admin@123' # Explicitly setting the admin password here
-    hashed_password = generate_password_hash(admin_password, method='pbkdf2:sha256:260000')
+    admin_password = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip() or 'Admin@123'
     data_changed = False
 
-    # Find SMCH hospital to link by default
-    smch_hospital = next((h for h in TEMP_DATA['hospitals'].values() if h.name in ["SMCH", "SMCH (Spherix Memorial Care Hospital)"] or h.email == 'hospital@spherixclinic.com'), None)
-    smch_id = smch_hospital.id if smch_hospital else 'HPT/2026/001'
-    smch_name = smch_hospital.name if smch_hospital else 'SMCH'
-    smch_address = smch_hospital.address if smch_hospital else 'Main Medical Campus, Station Road, Motihari, Bihar'
-
-    # Check if admin exists as a doctor or patient
     admin_user = next((doc for doc in TEMP_DATA['doctors'].values() if doc.email == admin_email), None)
     if not admin_user:
         admin_user = next((p for p in TEMP_DATA['patients'].values() if p.email == admin_email), None)
@@ -2759,13 +2850,6 @@ def setup_admin_user():
                 admin_user.first_name = "Sunny"
                 admin_user.last_name = "Kushwaha"
                 data_changed = True
-            # Establish default connection to SMCH hospital
-            if admin_user.hospital_id != smch_id or admin_user.hospital_name != smch_name or admin_user.hospital_approval_status != 'approved':
-                admin_user.hospital_id = smch_id
-                admin_user.hospital_name = smch_name
-                admin_user.hospital_address = smch_address
-                admin_user.hospital_approval_status = 'approved'
-                data_changed = True
             if getattr(admin_user, 'profile_picture_url', None) != 'images/sunnykk.jpg':
                 admin_user.profile_picture_url = 'images/sunnykk.jpg'
                 data_changed = True
@@ -2775,101 +2859,36 @@ def setup_admin_user():
             if getattr(admin_user, 'profile_picture_url', None) != 'images/sunnykk.jpg':
                 admin_user.profile_picture_url = 'images/sunnykk.jpg'
             data_changed = True
-
-        # Admin user exists, check if password needs reset
-        if not check_password_hash(admin_user.password, admin_password):
-            admin_user.password = hashed_password
-            print(f"✅ Admin user '{admin_email}' found. Password has been reset to the default.")
-            data_changed = True
     else:
-        # Admin user does not exist, create one as a doctor connected to SMCH
         year = datetime.now().year
         next_id_num = TEMP_DATA['next_ids']['doctor']
         new_id = f"DOC/{year}/{next_id_num:03d}"
+        hashed_password = generate_password_hash(admin_password, method='pbkdf2:sha256:260000')
         new_admin_doctor = Doctor(
             id=new_id, first_name="Sunny", last_name="Kushwaha", is_verified=True,
             email=admin_email, password=hashed_password, department="Administration",
-            hospital_id=smch_id, hospital_name=smch_name, hospital_address=smch_address,
-            hospital_approval_status='approved', phone='+91 933 4325 920',
+            phone='+91 933 4325 920',
             specialization='Chief Medical Officer & Administrator',
             profile_picture_url='images/sunnykk.jpg'
         )
         TEMP_DATA['doctors'][new_id] = new_admin_doctor
         TEMP_DATA['next_ids']['doctor'] += 1
-        print(f"✅ Admin user '{admin_email}' (Dr. Sunny Kushwaha connected to {smch_name}) created.")
+        print(f"✅ Admin user '{admin_email}' (Dr. Sunny Kushwaha) created.")
         data_changed = True
     
     return data_changed
 
 def setup_hospital_user():
-    """
-    Ensures a default hospital user exists and is connected with the admin doctor.
-    Returns True if data was changed, False otherwise.
-    """
-    email = 'hospital@spherixclinic.com'
-    password = 'hospital123'
-    hashed = generate_password_hash(password, method='pbkdf2:sha256:260000')
-    data_changed = False
-    
-    existing = next((h for h in TEMP_DATA['hospitals'].values() if h.email == email), None)
-    if existing:
-        if existing.name in ["General Hospital", "General Hospital "]:
-            existing.name = "SMCH"
-            data_changed = True
-        smch = existing
-    else:
-        year = datetime.now().year
-        next_id_num = TEMP_DATA['next_ids']['hospital']
-        new_id = f"HPT/{year}/{TEMP_DATA['next_ids']['hospital']:03d}"
-        smch = Hospital(
-            id=new_id, name="SMCH", email=email, password=hashed,
-            total_beds=150, available_beds=42, icu_beds=25, available_icu_beds=6,
-            doctors_available="Available", address="Main Medical Campus, Station Road, Motihari, Bihar",
-            city="Motihari", state="Bihar", is_verified=True
-        )
-        TEMP_DATA['hospitals'][new_id] = smch
-        TEMP_DATA['next_ids']['hospital'] += 1
-        print(f"✅ Hospital user '{email}' (SMCH) created.")
-        data_changed = True
-
-    # Link Admin Doctor to this hospital
-    admin_doc = next((d for d in TEMP_DATA['doctors'].values() if d.email == 'admin@spherixclinic.com'), None)
-    if admin_doc and smch:
-        if admin_doc.hospital_id != smch.id or admin_doc.hospital_name != smch.name or admin_doc.hospital_approval_status != 'approved':
-            admin_doc.hospital_id = smch.id
-            admin_doc.hospital_name = smch.name
-            admin_doc.hospital_address = smch.address
-            admin_doc.hospital_approval_status = 'approved'
-            data_changed = True
-    
-    return data_changed
-
+    """No-op: Prevents auto-generating dummy hospital users."""
+    return False
 
 def setup_patient_user():
-    """Ensures at least one baseline registered patient exists in the system."""
-    data_changed = False
-    patient_email = 'patient@spherixclinic.com'
-    existing_patient = next((p for p in TEMP_DATA['patients'].values() if getattr(p, 'email', '') == patient_email), None)
-    if not existing_patient and len(TEMP_DATA['patients']) == 0:
-        year = datetime.now().year
-        new_id = f"PAT/{year}/001"
-        p = Patient(
-            id=new_id,
-            name='Rajesh Sharma',
-            email=patient_email,
-            password=generate_password_hash('Patient@123', method='pbkdf2:sha256:260000'),
-            phone='+91 9876543210',
-            age=32,
-            gender='Male',
-            address='Station Road, Motihari, Bihar',
-            blood_group='O+',
-            is_verified=True
-        )
-        TEMP_DATA['patients'][new_id] = p
-        TEMP_DATA['next_ids']['patient'] = max(TEMP_DATA['next_ids'].get('patient', 1), 2)
-        print(f"✅ Patient user '{patient_email}' (Rajesh Sharma) created.")
-        data_changed = True
-    return data_changed
+    """No-op: Prevents auto-generating dummy patient users."""
+    return False
+
+def setup_multi_hospital_and_staff():
+    """No-op: Prevents auto-generating dummy multi-hospital staff and fixtures."""
+    return False
 
 
 def setup_international_network():
@@ -3042,10 +3061,21 @@ def recalculate_live_auth_durations():
 
 
 def init_auth_telemetry():
-    """Initializes authentication telemetry and session logs strictly from real registered users."""
+    """Keeps authentication telemetry limited to recorded authentication events."""
     global TEMP_DATA
     if 'auth_activity_logs' not in TEMP_DATA:
         TEMP_DATA['auth_activity_logs'] = []
+
+    # Older builds fabricated one active session for every registered account.
+    # Remove those synthetic records so this monitor represents real logins only.
+    synthetic_prefixes = ('AUTH-DOC-', 'AUTH-HOSP-', 'AUTH-STF-', 'AUTH-PAT-', 'AUTH-BD-', 'AUTH-OD-')
+    logs = TEMP_DATA['auth_activity_logs']
+    TEMP_DATA['auth_activity_logs'] = [
+        log for log in logs
+        if not str(log.get('id', '')).startswith(synthetic_prefixes)
+    ]
+    recalculate_live_auth_durations()
+    return
         
     # If logs list is empty, initialize telemetry entries for real registered users only
     if len(TEMP_DATA['auth_activity_logs']) == 0:
@@ -3290,6 +3320,14 @@ def log_auth_activity(user_id, user_name, user_email, role, action, ip_address=N
     TEMP_DATA['auth_activity_logs'].insert(0, log_entry)
     if len(TEMP_DATA['auth_activity_logs']) > 500:
         TEMP_DATA['auth_activity_logs'] = TEMP_DATA['auth_activity_logs'][:500]
+
+    if status == 'Active' and action in ('LOGIN', 'Active Session', 'Successful Login'):
+        try:
+            from flask import has_request_context, session
+            if has_request_context():
+                session['auth_session_id'] = log_id
+        except Exception:
+            pass
         
     return log_id
 
@@ -3301,9 +3339,16 @@ def log_user_logout(user_id=None, user_email=None, role=None):
         return
     now_dt = utcnow()
     now_str = now_dt.strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        from flask import has_request_context, session
+        auth_session_id = session.get('auth_session_id') if has_request_context() else None
+    except Exception:
+        auth_session_id = None
     
     matched = False
     for log in TEMP_DATA['auth_activity_logs']:
+        if auth_session_id and str(log.get('id')) != str(auth_session_id):
+            continue
         if (user_id and str(log.get('user_id')) == str(user_id)) or (user_email and str(log.get('user_email', '')).lower() == str(user_email).lower()):
             if log.get('status') == 'Active':
                 log['status'] = 'Completed'
@@ -3346,23 +3391,150 @@ def get_auth_telemetry_stats():
     recalculate_live_auth_durations()
     logs = TEMP_DATA.get('auth_activity_logs', [])
     
-    active_sessions_count = sum(1 for l in logs if l.get('status') == 'Active' or 'Active' in str(l.get('duration', '')))
-    failed_count = sum(1 for l in logs if l.get('status') == 'Failed' or 'Failed' in str(l.get('action', '')))
-    successful_count = sum(1 for l in logs if l.get('status') in ['Active', 'Completed', 'Success'] and 'Failed' not in str(l.get('action', '')) and 'Suspicious' not in str(l.get('action', '')))
-    suspicious_count = sum(1 for l in logs if l.get('status') in ['Blocked', 'Quarantined'] or 'Suspicious' in str(l.get('action', '')))
-    password_resets_count = sum(1 for l in logs if 'PASSWORD_RESET' in str(l.get('action', '')) or 'Password Reset' in str(l.get('action', '')))
+    now_dt = utcnow()
+    day_ago = now_dt - timedelta(hours=24)
+
+    def occurred_within_day(log):
+        timestamp = log.get('created_at') or log.get('login_time')
+        try:
+            return datetime.strptime(str(timestamp), '%Y-%m-%d %H:%M:%S') >= day_ago
+        except (TypeError, ValueError):
+            return False
+
+    recent_logs = [log for log in logs if occurred_within_day(log)]
+    active_sessions_count = sum(1 for log in logs if log.get('status') == 'Active')
+    failed_count = sum(1 for log in recent_logs if log.get('status') == 'Failed' or 'Failed' in str(log.get('action', '')))
+    successful_count = sum(1 for log in recent_logs if str(log.get('action', '')).lower() in ('login', 'successful login'))
+    suspicious_count = sum(1 for log in recent_logs if log.get('status') in ['Blocked', 'Quarantined'] or 'Suspicious' in str(log.get('action', '')))
+    password_resets_count = sum(1 for log in recent_logs if 'PASSWORD_RESET' in str(log.get('action', '')) or 'Password Reset' in str(log.get('action', '')))
+    duration_minutes = []
+    for log in logs:
+        if log.get('status') == 'Active':
+            continue
+        match = re.search(r'(\d+)h\s*(\d+)?m|(?<!h\s)(\d+)m', str(log.get('duration', '')))
+        if match:
+            duration_minutes.append(int(match.group(1)) * 60 + int(match.group(2) or 0) if match.group(1) else int(match.group(3)))
+    average_minutes = round(sum(duration_minutes) / len(duration_minutes)) if duration_minutes else 0
+    total_attempts = successful_count + failed_count
+    success_rate = round((successful_count / total_attempts) * 100, 1) if total_attempts else 0.0
+    threat_level = 'High' if suspicious_count else ('Elevated' if failed_count >= 5 else 'Normal')
     
     return {
-        'system_status': 'Secure',
-        'status_color': 'emerald',
+        'system_status': 'Attention required' if threat_level in ('High', 'Elevated') else 'Operational',
+        'status_color': 'danger' if threat_level == 'High' else ('warning' if threat_level == 'Elevated' else 'success'),
         'failed_logins': failed_count,
         'successful_logins': successful_count,
         'suspicious_activities': suspicious_count,
         'active_sessions': active_sessions_count,
         'password_resets': password_resets_count,
         'total_audited_events': len(logs),
-        'average_session_duration': '45m',
-        'threat_level': 'Low / Normal'
+        'average_session_duration': f'{average_minutes}m' if average_minutes else 'No completed sessions',
+        'success_rate': success_rate,
+        'threat_level': threat_level
     }
 
+
+def reset_factory_database():
+    """
+    Completely wipes and factory-resets the Spherix Clinic database:
+    1. Truncates all tables in SQLite (spherixclinic.db) and SQL Server.
+    2. Wipes in-memory TEMP_DATA collections completely.
+    3. Re-initializes baseline admin, hospital, patient, and staff accounts.
+    4. Persists the clean baseline state.
+    """
+    global TEMP_DATA
+    print("🚨 [FACTORY RESET] Initializing comprehensive database factory reset...")
+
+    tables_to_clear = [
+        'camp_registrations', 'appointments', 'messages', 'orders', 'reviews',
+        'bed_bookings', 'doctor_images', 'staff', 'doctors', 'patients',
+        'hospitals', 'blood_donors', 'organ_donors', 'camps', 'blood_stock',
+        'organ_requests', 'patient_vitals', 'activity_logs', 'contact_messages',
+        'visitor_passes', 'referrals', 'notifications', 'doctor_symptom_reviews',
+        'patient_lifestyle_logs'
+    ]
+
+    # 1. Truncate / Clear persistent SQL / SQLite tables
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            for tbl in tables_to_clear:
+                try:
+                    cursor.execute(f"DELETE FROM {tbl}")
+                except Exception:
+                    pass
+            conn.commit()
+            conn.close()
+            print("  ✓ Cleared all operational tables in DB connection.")
+    except Exception as e:
+        print(f"⚠️ Error clearing DB tables during factory reset: {e}")
+
+    # Also wipe local SQLite file explicitly if present
+    sqlite_path = os.getenv('SQLITE_DB_PATH', 'spherixclinic.db')
+    if os.path.exists(sqlite_path):
+        try:
+            s_conn = sqlite3.connect(sqlite_path)
+            s_cur = s_conn.cursor()
+            for tbl in tables_to_clear:
+                try:
+                    s_cur.execute(f"DELETE FROM {tbl}")
+                except Exception:
+                    pass
+            s_conn.commit()
+            s_conn.close()
+            print("  ✓ Cleared tables in SQLite file.")
+        except Exception as e:
+            print(f"⚠️ Error clearing SQLite: {e}")
+
+    # 2. Reset in-memory TEMP_DATA dictionary completely in-place
+    for k in list(TEMP_DATA.keys()):
+        if isinstance(TEMP_DATA[k], dict):
+            TEMP_DATA[k].clear()
+        elif isinstance(TEMP_DATA[k], list):
+            TEMP_DATA[k].clear()
+
+    # Re-establish core keys
+    TEMP_DATA['doctors'] = {}
+    TEMP_DATA['patients'] = {}
+    TEMP_DATA['hospitals'] = {}
+    TEMP_DATA['staff'] = {}
+    TEMP_DATA['appointments'] = {}
+    TEMP_DATA['messages'] = {}
+    TEMP_DATA['orders'] = {}
+    TEMP_DATA['reviews'] = {}
+    TEMP_DATA['blood_donors'] = {}
+    TEMP_DATA['organ_donors'] = {}
+    TEMP_DATA['contact_messages'] = []
+    TEMP_DATA['camp_registrations'] = {}
+    TEMP_DATA['camps'] = {}
+    TEMP_DATA['newsletter_subscribers'] = []
+    TEMP_DATA['patient_vitals'] = {}
+    TEMP_DATA['blood_stock'] = {"A+": 18, "A-": 8, "B+": 24, "B-": 6, "AB+": 12, "AB-": 4, "O+": 32, "O-": 10}
+    TEMP_DATA['visitor_passes'] = {}
+    TEMP_DATA['bed_bookings'] = {}
+    TEMP_DATA['organ_requests'] = {}
+    TEMP_DATA['activity_logs'] = {}
+    TEMP_DATA['referrals'] = {}
+    TEMP_DATA['notifications'] = {}
+    TEMP_DATA['symptom_reviews'] = []
+    TEMP_DATA['medical_records'] = {}
+    TEMP_DATA['auth_activity_logs'] = []
+    TEMP_DATA['next_ids'] = {
+        "doctor": 1, "patient": 1, "hospital": 1, "appointment": 1, "staff": 1,
+        "message": 1, "order": 1, "review": 1, "blood_donor": 1, "organ_donor": 1,
+        "camp": 1, "camp_registration": 1, "bed_booking": 1, "visitor_pass": 1,
+        "patient_vital": 1, "organ_request": 1, "activity_log": 1, "referral": 1, "notification": 1
+    }
+
+    # 3. Setup baseline entities
+    setup_admin_user()
+    setup_hospital_user()
+    setup_patient_user()
+    setup_multi_hospital_and_staff()
+
+    # 4. Save and persist fresh baseline state
+    save_data()
+    print("✅ [FACTORY RESET] System successfully reset to clean factory state.")
+    return True
 

@@ -1,58 +1,683 @@
 {% extends "dashboard_layout.html" %}
 
-{% block title %}Staff Dashboard | Spherix Clinic{% endblock %}
-{% block page_title %}Staff Workspace{% endblock %}
-{% block page_subtitle %}General access portal for hospital staff.{% endblock %}
+{% block title %}General Staff Operations Portal | Spherix Clinic{% endblock %}
+{% block page_title %}Staff Operations & Duty Portal{% endblock %}
+{% block page_subtitle %}Task allocation roster, shift attendance, leave requests, hospital notices & staff directory.{% endblock %}
 
 {% block header_actions %}
-<span class="dashboard-header-badge"><i class="fas fa-id-card"></i> Staff Portal</span>
+<div class="d-flex align-items-center gap-2">
+  <span class="dashboard-header-badge"><i class="fas fa-id-card"></i> {{ staff.department or 'Operations & Support' }}</span>
+  {% if today_attendance and today_attendance.status == 'On Duty' %}
+  <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm">
+    <span class="w-2 h-2 rounded-full bg-success animate-ping"></span>
+    <i class="fas fa-clock"></i> SHIFT ACTIVE (Clocked In)
+  </span>
+  {% else %}
+  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm">
+    <i class="fas fa-power-off"></i> OFF DUTY
+  </span>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block content %}
 <div class="row g-4">
-    <div class="col-lg-8">
+    <!-- Top KPI Cards -->
+    <div class="col-md-3">
         <div class="dashboard-card p-4">
-            <h4 class="fw-bold mb-3">Hospital Bulletin Board</h4>
-            {% if bulletins %}
-            <div class="list-group list-group-flush">
-                {% for bulletin in bulletins[:5] %}
-                <div class="list-group-item px-0 py-3">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1 fw-bold">{{ bulletin.title }}</h5>
-                        <small class="text-muted">{{ bulletin.date }}</small>
-                    </div>
-                    <p class="mb-1 text-muted">{{ bulletin.content }}</p>
-                    <small class="text-muted">Posted by: {{ bulletin.author }}</small>
-                </div>
-                {% endfor %}
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted small fw-bold text-uppercase">Shift Status</span>
+                <span class="badge rounded-pill {% if today_attendance and today_attendance.status == 'On Duty' %}bg-success text-white{% else %}bg-secondary text-white{% endif %}">
+                    {{ today_attendance.status if today_attendance else 'Not Clocked In' }}
+                </span>
             </div>
-            {% else %}
-            <div class="text-muted text-center py-5">No announcements on the bulletin board.</div>
-            {% endif %}
+            <div class="fs-4 fw-extrabold mt-2 text-slate-800">
+                {% if today_attendance and today_attendance.clock_in %}
+                    {{ today_attendance.clock_in }}
+                {% else %}
+                    --:--
+                {% endif %}
+            </div>
+            <div class="text-muted small mt-1">
+                {% if today_attendance and today_attendance.clock_out %}
+                    Clocked out: {{ today_attendance.clock_out }}
+                {% elif today_attendance and today_attendance.status == 'On Duty' %}
+                    Shift in progress
+                {% else %}
+                    Click below to start shift
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <div class="col-lg-4">
+    <div class="col-md-3">
         <div class="dashboard-card p-4">
-            <h4 class="fw-bold mb-3">Post New Announcement</h4>
-            <form action="{{ url_for('staff_general_dashboard') }}" method="POST">
-                <input type="hidden" name="post_bulletin" value="1">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted">Title</label>
-                    <input type="text" name="title" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted">Content</label>
-                    <textarea name="content" class="form-control" rows="4" required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary rounded-pill px-4 w-100">Post to Bulletin</button>
-            </form>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted small fw-bold text-uppercase">Active Tasks</span>
+                <span class="badge rounded-pill bg-primary text-white">Hospital</span>
+            </div>
+            {% set pending_tasks = tasks|selectattr('status', 'ne', 'Completed')|list %}
+            <div class="fs-2 fw-extrabold mt-1 text-primary">{{ pending_tasks|length }}</div>
+            <div class="text-muted small mt-1">{{ tasks|selectattr('status', 'equalto', 'Completed')|list|length }} tasks completed</div>
         </div>
-        <div class="dashboard-card p-4 mt-4">
-            <h4 class="fw-bold mb-3">My Profile</h4>
-            <p class="text-muted small">Welcome, {{ staff.name }}. Your role is: <strong>{{ staff.role }}</strong>.</p>
-            <p class="text-muted small">You are part of the <strong>{{ hospital.name }}</strong> team.</p>
+    </div>
+
+    <div class="col-md-3">
+        <div class="dashboard-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted small fw-bold text-uppercase">Staff On Duty</span>
+                <span class="badge rounded-pill bg-success-subtle text-success">Live</span>
+            </div>
+            {% set on_duty_staff = colleagues|selectattr('on_duty', 'equalto', true)|list %}
+            <div class="fs-2 fw-extrabold mt-1 text-success">{{ on_duty_staff|length }} / {{ colleagues|length }}</div>
+            <div class="text-muted small mt-1">Colleagues on active shift</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="dashboard-card p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted small fw-bold text-uppercase">Leave Requests</span>
+                <span class="badge rounded-pill bg-warning-subtle text-warning">Pending</span>
+            </div>
+            {% set my_pending_leaves = leave_requests|selectattr('status', 'equalto', 'Pending')|list %}
+            <div class="fs-2 fw-extrabold mt-1 text-warning">{{ my_pending_leaves|length }}</div>
+            <div class="text-muted small mt-1">{{ leave_requests|length }} total applications</div>
+        </div>
+    </div>
+
+    <!-- Main Section (Left 8 Cols) -->
+    <div class="col-lg-8">
+        
+        <!-- Shift Clock In / Out Banner Card -->
+        <div class="dashboard-card p-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h5 class="fw-bold text-slate-800 mb-1">
+                        <i class="fas fa-fingerprint text-primary me-2"></i>Daily Shift Timecard &amp; Attendance
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        Date: <strong>{{ today.strftime('%A, %B %d, %Y') }}</strong> | Facility: <strong>{{ hospital.name }}</strong>
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    {% if not today_attendance or today_attendance.status != 'On Duty' %}
+                    <form action="{{ url_for('staff.staff_general_dashboard') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="clock_in" value="1">
+                        <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-xs">
+                            <i class="fas fa-sign-in-alt me-1"></i> Clock In Now
+                        </button>
+                    </form>
+                    {% else %}
+                    <form action="{{ url_for('staff.staff_general_dashboard') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="clock_out" value="1">
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-xs">
+                            <i class="fas fa-sign-out-alt me-1"></i> Clock Out Shift
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Allocation Roster -->
+        <div class="dashboard-card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="fw-bold mb-0">Hospital Duty Roster &amp; Tasks</h4>
+                    <p class="text-muted small mb-0">Assigned maintenance, operations, and support duty items.</p>
+                </div>
+                <button class="btn btn-primary rounded-pill px-4 btn-sm" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                    <i class="fas fa-plus me-1"></i> New Task
+                </button>
+            </div>
+
+            <!-- Task Filter Tabs -->
+            <ul class="nav nav-pills mb-3" id="taskTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active rounded-pill px-3 py-1.5 small font-semibold" data-bs-toggle="pill" data-bs-target="#tab-all-tasks">All Tasks ({{ tasks|length }})</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3 py-1.5 small font-semibold" data-bs-toggle="pill" data-bs-target="#tab-pending-tasks">Pending &amp; In Progress ({{ pending_tasks|length }})</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3 py-1.5 small font-semibold" data-bs-toggle="pill" data-bs-target="#tab-completed-tasks">Completed ({{ tasks|selectattr('status', 'equalto', 'Completed')|list|length }})</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="taskTabContent">
+                <!-- All Tasks Pane -->
+                <div class="tab-pane fade show active" id="tab-all-tasks" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="text-slate-500 small">
+                                    <th>Task Details</th>
+                                    <th>Assigned To</th>
+                                    <th>Priority</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-slate-800">{{ task.title }}</div>
+                                        <div class="text-muted small text-truncate" style="max-width: 260px;">{{ task.description or 'No description' }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-slate-100 text-slate-700 border">{{ task.assigned_to }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill {% if task.priority == 'Urgent' %}bg-danger text-white{% elif task.priority == 'High' %}bg-warning text-dark{% elif task.priority == 'Medium' %}bg-info text-white{% else %}bg-secondary text-white{% endif %}">
+                                            {{ task.priority }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small">{{ task.due_date }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill {% if task.status == 'Completed' %}bg-success-subtle text-success{% elif task.status == 'In Progress' %}bg-primary-subtle text-primary{% else %}bg-warning-subtle text-warning{% endif %}">
+                                            {{ task.status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if task.status != 'Completed' %}
+                                        <form action="{{ url_for('staff.staff_general_dashboard') }}" method="POST" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="update_task_status" value="1">
+                                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                                            {% if task.status == 'Pending' %}
+                                            <input type="hidden" name="status" value="In Progress">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1">Start</button>
+                                            {% else %}
+                                            <input type="hidden" name="status" value="Completed">
+                                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-2.5 py-1">Complete</button>
+                                            {% endif %}
+                                        </form>
+                                        {% else %}
+                                        <span class="text-success small fw-bold"><i class="fas fa-check-circle"></i> Done</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">No duty tasks recorded for this hospital node.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pending Pane -->
+                <div class="tab-pane fade" id="tab-pending-tasks" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="text-slate-500 small">
+                                    <th>Task Details</th>
+                                    <th>Assigned To</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in pending_tasks %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ task.title }}</div>
+                                        <div class="text-muted small">{{ task.description or '' }}</div>
+                                    </td>
+                                    <td><span class="badge bg-slate-100 text-slate-700">{{ task.assigned_to }}</span></td>
+                                    <td>
+                                        <span class="badge rounded-pill {% if task.priority == 'Urgent' %}bg-danger text-white{% elif task.priority == 'High' %}bg-warning text-dark{% else %}bg-info text-white{% endif %}">
+                                            {{ task.priority }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill bg-warning-subtle text-warning">{{ task.status }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <form action="{{ url_for('staff.staff_general_dashboard') }}" method="POST" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="update_task_status" value="1">
+                                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                                            <input type="hidden" name="status" value="Completed">
+                                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Mark Done</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-4">No active pending tasks.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Completed Pane -->
+                <div class="tab-pane fade" id="tab-completed-tasks" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="text-slate-500 small">
+                                    <th>Task Details</th>
+                                    <th>Assigned To</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks if task.status == 'Completed' %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-decoration-line-through text-muted">{{ task.title }}</div>
+                                        <div class="text-muted small">{{ task.description or '' }}</div>
+                                    </td>
+                                    <td>{{ task.assigned_to }}</td>
+                                    <td><span class="badge bg-success text-white rounded-pill">Completed</span></td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="3" class="text-center text-muted py-4">No completed tasks yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leave Requests Section -->
+        <div class="dashboard-card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="fw-bold mb-0">Leave Applications &amp; History</h4>
+                    <p class="text-muted small mb-0">Manage shift leaves, medical off-days, and vacations.</p>
+                </div>
+                <button class="btn btn-outline-primary rounded-pill px-4 btn-sm" data-bs-toggle="modal" data-bs-target="#applyLeaveModal">
+                    <i class="fas fa-calendar-plus me-1"></i> Apply Leave
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr class="text-slate-500 small">
+                            <th>Applicant</th>
+                            <th>Leave Type</th>
+                            <th>Duration</th>
+                            <th>Days</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leave_requests %}
+                        <tr>
+                            <td class="fw-bold">{{ leave.staff_name }}</td>
+                            <td><span class="badge bg-info-subtle text-info">{{ leave.leave_type }}</span></td>
+                            <td class="text-muted small">{{ leave.start_date }} to {{ leave.end_date }}</td>
+                            <td><span class="fw-bold">{{ leave.days }}</span></td>
+                            <td class="text-muted small text-truncate" style="max-width: 200px;">{{ leave.reason or 'N/A' }}</td>
+                            <td>
+                                <span class="badge rounded-pill {% if leave.status == 'Approved' %}bg-success-subtle text-success{% elif leave.status == 'Rejected' %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning{% endif %}">
+                                    {{ leave.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No leave applications recorded.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Colleague Directory -->
+        <div class="dashboard-card p-4 mb-4">
+            <h4 class="fw-bold mb-3">Hospital Staff Directory ({{ hospital.name }})</h4>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr class="text-slate-500 small">
+                            <th>Staff Member</th>
+                            <th>Role &amp; Department</th>
+                            <th>Phone</th>
+                            <th>Duty Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col in colleagues %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center">
+                                        {{ col.name[:1] }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ col.name }}</div>
+                                        <div class="text-muted small">{{ col.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small fw-bold text-slate-700">{{ col.role }}</div>
+                                <div class="text-muted text-[11px]">{{ col.department or 'Hospital Operations' }}</div>
+                            </td>
+                            <td class="text-muted small">{{ col.phone or 'N/A' }}</td>
+                            <td>
+                                {% if col.on_duty %}
+                                <span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1">
+                                    <i class="fas fa-circle text-[8px] me-1"></i> On Duty
+                                </span>
+                                {% else %}
+                                <span class="badge bg-slate-100 text-slate-600 rounded-pill px-2.5 py-1">
+                                    Off Duty
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Right Sidebar (4 Cols) -->
+    <div class="col-lg-4">
+        
+        <!-- My Profile Card -->
+        <div class="dashboard-card p-4 mb-4">
+            <h5 class="fw-bold text-slate-800 mb-3"><i class="fas fa-user-circle text-primary me-2"></i>Staff Identity</h5>
+            <div class="text-center py-2">
+                {% if staff.profile_picture_url %}
+                <img src="{{ staff.profile_picture_url }}" alt="Profile" class="w-20 h-20 rounded-circle object-cover mx-auto mb-2 border shadow-sm">
+                {% else %}
+                <div class="w-20 h-20 rounded-circle bg-primary text-white fs-2 fw-bold d-flex align-items-center justify-content-center mx-auto mb-2 shadow-sm">
+                    {{ staff.name[:1] }}
+                </div>
+                {% endif %}
+                <h5 class="fw-bold mb-0 text-slate-800">{{ staff.name }}</h5>
+                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 mt-1">{{ staff.role }}</span>
+            </div>
+
+            <hr class="my-3 border-slate-200">
+
+            <div class="small space-y-2">
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Staff ID:</span>
+                    <span class="fw-bold">{{ staff.id }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Hospital:</span>
+                    <span class="fw-bold text-end" style="max-width: 180px;">{{ hospital.name }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Department:</span>
+                    <span class="fw-bold">{{ staff.department or 'Operations' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Email:</span>
+                    <span class="fw-bold">{{ staff.email }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Phone:</span>
+                    <span class="fw-bold">{{ staff.phone or 'N/A' }}</span>
+                </div>
+            </div>
+
+            <button class="btn btn-outline-secondary rounded-pill px-4 w-100 btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                <i class="fas fa-user-edit me-1"></i> Edit Profile
+            </button>
+        </div>
+
+        <!-- Bulletin Board Announcements -->
+        <div class="dashboard-card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-slate-800 mb-0"><i class="fas fa-bullhorn text-danger me-2"></i>Hospital Bulletin</h5>
+                <button class="btn btn-sm btn-outline-danger rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#postAnnouncementModal">
+                    + Post
+                </button>
+            </div>
+            
+            {% if bulletins %}
+            <div class="custom-scroll" style="max-height: 380px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for bulletin in bulletins %}
+                    <div class="list-group-item px-0 py-3 border-0 border-bottom border-slate-100">
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-1">
+                            <h6 class="mb-0 fw-bold text-slate-800">{{ bulletin.title }}</h6>
+                            <span class="text-muted text-[10px]">{{ bulletin.date }}</span>
+                        </div>
+                        <p class="mb-1 text-muted small">{{ bulletin.content }}</p>
+                        <div class="text-[11px] text-primary fw-semibold"><i class="fas fa-user-edit me-1"></i>{{ bulletin.author }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="text-muted text-center py-4 small">No announcements posted on this hospital board yet.</div>
+            {% endif %}
+        </div>
+
+        <!-- Hospital Operational Telemetry -->
+        <div class="dashboard-card p-4 mb-4">
+            <h5 class="fw-bold text-slate-800 mb-3"><i class="fas fa-hospital-user text-info me-2"></i>Hospital Summary</h5>
+            <div class="space-y-2.5 small">
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Total Bed Inventory:</span>
+                    <span class="fw-bold">{{ hospital.total_beds }} Beds</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Available General Beds:</span>
+                    <span class="fw-bold text-success">{{ hospital.available_beds }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Available ICU Beds:</span>
+                    <span class="fw-bold text-danger">{{ hospital.available_icu_beds }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Emergency Blood Units:</span>
+                    <span class="fw-bold text-danger">{{ hospital.blood_stock.values()|sum if hospital.blood_stock else 0 }} Units</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Feed -->
+        <div class="dashboard-card p-4">
+            <h5 class="fw-bold text-slate-800 mb-3"><i class="fas fa-history text-secondary me-2"></i>Recent Hospital Logs</h5>
+            <div class="custom-scroll" style="max-height: 250px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for log in activity_logs %}
+                    <div class="list-group-item px-0 py-2 border-0 border-bottom border-slate-100">
+                        <div class="d-flex justify-content-between">
+                            <span class="small fw-bold text-slate-800">{{ log.action }}</span>
+                            <span class="text-muted text-[10px]">{{ log.timestamp.strftime('%H:%M:%S') if log.timestamp else '' }}</span>
+                        </div>
+                        <p class="text-muted small mb-0 mt-0.5">{{ log.details }}</p>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted small py-3">No activity logged.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ============================================== -->
+<!-- MODALS                                         -->
+<!-- ============================================== -->
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="createTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow border-0">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-tasks text-primary me-2"></i>Assign Duty Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('staff.staff_general_dashboard') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="create_task" value="1">
+                <div class="modal-body p-4 space-y-3">
+                    <div>
+                        <label class="form-label small fw-bold">Task Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. Sterilize OR 2 Packs or Audit Crash Carts" required>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-bold">Description / Protocol</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Provide detailed instructions..."></textarea>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Assignee</label>
+                            <select name="assigned_to" class="form-select">
+                                <option value="{{ staff.name }}">{{ staff.name }} (Self)</option>
+                                <option value="All Staff">All Staff</option>
+                                {% for col in colleagues %}
+                                {% if col.name != staff.name %}
+                                <option value="{{ col.name }}">{{ col.name }} ({{ col.role }})</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-bold">Due Date</label>
+                        <input type="date" name="due_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Create Task</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+<!-- Apply Leave Modal -->
+<div class="modal fade" id="applyLeaveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow border-0">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-calendar-plus text-primary me-2"></i>Apply for Shift Leave</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('staff.staff_general_dashboard') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="apply_leave" value="1">
+                <div class="modal-body p-4 space-y-3">
+                    <div>
+                        <label class="form-label small fw-bold">Leave Type</label>
+                        <select name="leave_type" class="form-select" required>
+                            <option value="Casual Leave">Casual Leave</option>
+                            <option value="Sick Leave">Sick Leave</option>
+                            <option value="Annual Leave">Annual Leave</option>
+                            <option value="Emergency Off">Emergency Off</option>
+                        </select>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Start Date</label>
+                            <input type="date" name="start_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">End Date</label>
+                            <input type="date" name="end_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-bold">Reason</label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Explain the reason for leave..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Submit Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Post Announcement Modal -->
+<div class="modal fade" id="postAnnouncementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow border-0">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-bullhorn text-danger me-2"></i>Post Bulletin Notice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('staff.staff_general_dashboard') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="post_bulletin" value="1">
+                <div class="modal-body p-4 space-y-3">
+                    <div>
+                        <label class="form-label small fw-bold">Notice Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. Infection Control Protocol Update" required>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-bold">Notice Content</label>
+                        <textarea name="content" class="form-control" rows="4" placeholder="Type notice details for all hospital staff..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">Post Notice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow border-0">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-edit text-primary me-2"></i>Update Staff Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('staff.staff_update_profile') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body p-4 space-y-3">
+                    <div>
+                        <label class="form-label small fw-bold">Full Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ staff.name }}" required>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-bold">Contact Phone</label>
+                        <input type="tel" name="phone" class="form-control" value="{{ staff.phone or '' }}" required>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-bold">New Password (leave blank to keep current)</label>
+                        <input type="password" name="password" class="form-control" placeholder="••••••••">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

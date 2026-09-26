@@ -1237,8 +1237,15 @@ def bed_booking_invoice(booking_id):
         flash("Booking not found.", "error")
         return redirect(url_for('home'))
 
-    is_patient = hasattr(current_user, 'is_doctor') and not current_user.is_doctor and str(booking.patient_id) == str(current_user.id)
-    is_hospital = getattr(current_user, 'is_hospital', False) and str(booking.hospital_id) == str(current_user.id)
+    pat_id_str = str(getattr(booking, 'patient_id', ''))
+    user_id_str = str(getattr(current_user, 'id', ''))
+    user_lic_str = str(getattr(current_user, 'license_no', ''))
+    is_patient = (getattr(current_user, 'is_patient', False) or (hasattr(current_user, 'is_doctor') and not current_user.is_doctor)) and (
+        pat_id_str in (user_id_str, user_lic_str) or
+        (getattr(booking, 'patient_phone', None) and getattr(current_user, 'phone', None) and str(booking.patient_phone).strip() == str(current_user.phone).strip()) or
+        (getattr(booking, 'patient_name', '').strip().lower() == getattr(current_user, 'name', '').strip().lower())
+    )
+    is_hospital = getattr(current_user, 'is_hospital', False) and str(getattr(booking, 'hospital_id', '')) == str(current_user.id)
     is_admin = hasattr(current_user, 'email') and current_user.email == 'admin@spherixclinic.com'
 
     if not (is_patient or is_hospital or is_admin):
@@ -1249,8 +1256,10 @@ def bed_booking_invoice(booking_id):
         flash("Invoice is only available for approved bookings.", "warning")
         return redirect(request.referrer or url_for('home'))
 
-    hospital = TEMP_DATA['hospitals'].get(booking.hospital_id)
-    fee = hospital.icu_bed_fee if booking.bed_type == 'ICU' else hospital.general_bed_fee
+    hospital = TEMP_DATA.get('hospitals', {}).get(booking.hospital_id)
+    hosp_name = getattr(hospital, 'name', 'Affiliated Healthcare Hospital')
+    hosp_address = getattr(hospital, 'address', 'Medical District Central Facility')
+    fee = (getattr(hospital, 'icu_bed_fee', 2500) if booking.bed_type == 'ICU' else getattr(hospital, 'general_bed_fee', 800)) if hospital else (2500 if booking.bed_type == 'ICU' else 800)
 
     try:
         class BedBookingInvoicePDF(FPDF):
@@ -1292,10 +1301,10 @@ def bed_booking_invoice(booking_id):
         # Hospital details header
         pdf.set_font('Helvetica', 'B', 12)
         pdf.set_text_color(15, 23, 42)
-        pdf.cell(0, 6, to_latin1_str(hospital.name), 0, 1, 'L')
+        pdf.cell(0, 6, to_latin1_str(hosp_name), 0, 1, 'L')
         pdf.set_font('Helvetica', '', 9)
         pdf.set_text_color(100, 116, 139)
-        pdf.cell(0, 5, to_latin1_str(hospital.address or 'N/A'), 0, 1, 'L')
+        pdf.cell(0, 5, to_latin1_str(hosp_address or 'N/A'), 0, 1, 'L')
         pdf.ln(4)
         
         # Meta Block
@@ -1311,7 +1320,8 @@ def bed_booking_invoice(booking_id):
         pdf.cell(35, 6, 'Billing Date:', 0, 0, 'L')
         pdf.set_font('Helvetica', '', 10)
         pdf.set_text_color(15, 23, 42)
-        pdf.cell(0, 6, booking.created_at.strftime('%Y-%m-%d'), 0, 1, 'L')
+        billing_date = booking.created_at.strftime('%Y-%m-%d') if hasattr(booking.created_at, 'strftime') else (str(booking.created_at)[:10] if booking.created_at else datetime.now().strftime('%Y-%m-%d'))
+        pdf.cell(0, 6, billing_date, 0, 1, 'L')
         
         pdf.ln(5)
         pdf.set_draw_color(229, 231, 235)
@@ -1813,6 +1823,22 @@ def hospital_dashboard():
                     current_user.logo_url = saved_logo
                     current_user.profile_picture_url = saved_logo
             
+            # Synchronize into TEMP_DATA
+            if current_user.id in TEMP_DATA.get('hospitals', {}):
+                hosp_mem = TEMP_DATA['hospitals'][current_user.id]
+                hosp_mem.name = current_user.name
+                hosp_mem.email = current_user.email
+                hosp_mem.president_ceo = current_user.president_ceo
+                hosp_mem.director_name = current_user.director_name
+                hosp_mem.superintendent_name = current_user.superintendent_name
+                hosp_mem.blood_bank_staff = current_user.blood_bank_staff
+                hosp_mem.phone = current_user.phone
+                hosp_mem.address = current_user.address
+                hosp_mem.city = current_user.city
+                hosp_mem.state = current_user.state
+                hosp_mem.zip_code = current_user.zip_code
+                hosp_mem.logo_url = getattr(current_user, 'logo_url', None)
+            
             save_data()
             flash('Hospital profile updated successfully.', 'success')
             return redirect(url_for('hospital_dashboard') + '#settings')
@@ -2230,6 +2256,19 @@ def hospital_dashboard():
             "details": log.details
         })
 
+    # Notifications for this hospital
+    hospital_notifications = [
+        n for n in TEMP_DATA.get('notifications', {}).values()
+        if (str(getattr(n, 'user_id', '')) == str(current_user.id) or getattr(n, 'user_type', None) == 'hospital')
+    ]
+    def _get_notif_sort_key(n):
+        c = getattr(n, 'created_at', None)
+        if isinstance(c, datetime):
+            return c.isoformat()
+        return str(c) if c else ''
+    hospital_notifications.sort(key=_get_notif_sort_key, reverse=True)
+    unread_notifications = [n for n in hospital_notifications if getattr(n, 'status', 'unread') == 'unread']
+
     return render_template('hospital_dashboard.html', 
                            appointments_serialized=appointments_serialized,
                            bed_bookings_serialized=bed_bookings_serialized,
@@ -2280,7 +2319,24 @@ def hospital_dashboard():
                            inventory=hospital_inventory,
                            ambulances=hospital_ambulances,
                            patient_vitals=hospital_patient_vitals,
-                           reports=hospital_reports)
+                           reports=hospital_reports,
+                           unread_notifications=unread_notifications,
+                           hospital_notifications=hospital_notifications)
+
+
+
+@hospital_bp.route('/hospital/notifications/mark-read', methods=['POST'])
+@hospital_required
+def hospital_mark_notifications_read():
+    """Marks all unread notifications for this hospital as read."""
+    count = 0
+    for n in TEMP_DATA.get('notifications', {}).values():
+        if (str(getattr(n, 'user_id', '')) == str(current_user.id) or getattr(n, 'user_type', None) == 'hospital') and getattr(n, 'status', 'unread') == 'unread':
+            n.status = 'read'
+            count += 1
+    if count > 0:
+        save_data()
+    return jsonify({"success": True, "count": count})
 
 
 

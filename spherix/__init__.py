@@ -43,6 +43,9 @@ def create_app(config_object=None):
     login_manager.login_view = 'auth.login_landing'
 
     # CSRF Protection
+    # Existing form and JavaScript endpoints are incrementally protected with
+    # explicit tokens/exemptions. Global enforcement would reject legacy flows
+    # that do not yet submit a CSRF token.
     app.config['WTF_CSRF_CHECK_DEFAULT'] = False
     csrf.init_app(app)
 
@@ -50,7 +53,9 @@ def create_app(config_object=None):
     limiter.init_app(app)
 
     # CORS
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    allowed_origins = [origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
+    if allowed_origins:
+        cors.init_app(app, resources={r"/api/*": {"origins": allowed_origins}})
 
     # JWT
     jwt.init_app(app)
@@ -160,6 +165,12 @@ def create_app(config_object=None):
     @app.before_request
     def check_blocked_status():
         if current_user and current_user.is_authenticated:
+            auth_session_id = session.get('auth_session_id')
+            if auth_session_id in TEMP_DATA.get('terminated_auth_sessions', {}):
+                logout_user()
+                session.pop('auth_session_id', None)
+                flash('This session was terminated by an administrator.', 'error')
+                return redirect(url_for('auth.login_landing'))
             if getattr(current_user, 'is_blocked', False):
                 excluded_endpoints = ['static', 'auth.login_landing', 'auth.logout', 'login_landing', 'logout']
                 if request.endpoint and request.endpoint not in excluded_endpoints:
@@ -228,9 +239,14 @@ def create_app(config_object=None):
             all_notifs = list(TEMP_DATA.get('notifications', {}).values())
             user_notifs = [n for n in all_notifs if str(n.user_id) == user_id]
 
-            unread_count = sum(1 for n in user_notifs if n.status == 'unread')
-            user_notifs.sort(key=lambda x: x.created_at, reverse=True)
+            def _get_ts(n):
+                c = getattr(n, 'created_at', None)
+                if isinstance(c, datetime):
+                    return c.isoformat()
+                return str(c) if c else ''
+            user_notifs.sort(key=_get_ts, reverse=True)
 
+            unread_count = sum(1 for n in user_notifs if getattr(n, 'status', 'unread') == 'unread')
             return dict(
                 notifications=user_notifs,
                 unread_notifications_count=unread_count

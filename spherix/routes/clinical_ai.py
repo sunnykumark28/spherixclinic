@@ -2688,7 +2688,7 @@ def api_yoga_session_generator():
     }
 
     try:
-        resp = requests.post(endpoint, headers=headers, json=payload, timeout=30, verify=False)
+        resp = requests.post(endpoint, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
         reply_text = _extract_groq_text_response(resp.json())
         return jsonify({'session_markdown': reply_text.strip()})
@@ -2737,7 +2737,7 @@ def api_yoga_assistant():
     }
 
     try:
-        resp = requests.post(endpoint, headers=headers, json=payload, timeout=30, verify=False)
+        resp = requests.post(endpoint, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
         reply_text = _extract_groq_text_response(resp.json())
         return jsonify({'reply': reply_text.strip()})
@@ -3252,5 +3252,4 @@ def _analyze_drugs_with_openfda_and_groq(drugs):
             print(f"⚠️ Groq Drug Analysis fallback trigger: {e}")
             
     return None
-
 

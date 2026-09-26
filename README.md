@@ -87,7 +87,7 @@ pip install -r requirements.txt
 Create a `.env` file in the root directory (or copy from `.env.example`):
 ```env
 # Flask Settings
-SECRET_KEY=spherix_super_secure_key_2026
+SECRET_KEY=replace-with-a-random-value-of-at-least-32-bytes
 FLASK_ENV=development
 DEBUG=True
 
@@ -104,24 +104,31 @@ MAIL_PORT=587
 MAIL_USE_TLS=True
 MAIL_USERNAME=your-email@gmail.com
 MAIL_PASSWORD=your-app-password
+
+# Optional browser origins (comma-separated). Empty means same-origin only.
+CORS_ALLOWED_ORIGINS=https://your-domain.example
+SOCKETIO_CORS_ALLOWED_ORIGINS=https://your-domain.example
+
+# Set unique values before first startup to provision initial portal accounts.
+ADMIN_BOOTSTRAP_PASSWORD=choose-a-unique-admin-password
+HOSPITAL_BOOTSTRAP_PASSWORD=choose-a-unique-hospital-password
 ```
 
 ### 6. Run the Application
 ```bash
 python app.py
 ```
-Open your browser and navigate to: **`http://127.0.0.1:5000`**
+Open your browser and navigate to: **`https://127.0.0.1:5001`** (the local self-signed certificate may trigger a browser warning).
 
 ---
 
-## 🔑 Default Portal Credentials (Demo Mode)
+## 🔑 Initial Portal Setup
 
 | Portal | Email / Identifier | Password | Access URL |
 |---|---|---|---|
-| **System Administrator (Dr. Sunny Kushwaha)** | `admin@spherixclinic.com` | `Admin@123` | `/admin/login` or `/doctor/login` |
-| **Hospital Facility (SMCH)** | `hospital@spherixclinic.com` | `hospital123` | `/hospital/login` |
-| **Staff (Reception)** | `staff@spherixclinic.com` | `Staff@123` | `/staff/login` |
-| **Patient Portal** | *(Register instant account)* | *(Self-set)* | `/patient/login` |
+| **System Administrator** | Configure `ADMIN_BOOTSTRAP_PASSWORD` before first startup | Set during setup | `/admin/login` |
+| **Hospital Facility** | Configure `HOSPITAL_BOOTSTRAP_PASSWORD` before first startup | Set during setup | `/hospital/login` |
+| **Staff and Patient Portals** | Create accounts through the registration flow | Set during setup | Portal login pages |
 
 ---
 

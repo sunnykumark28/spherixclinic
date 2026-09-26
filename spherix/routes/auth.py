@@ -909,8 +909,6 @@ def staff_login():
                     is_valid = check_password_hash(admin_user.password, password)
                 except Exception:
                     pass
-                if not is_valid and password in ['Admin@123', 'admin123', 'Admin123', 'admin@123', 'admin', 'spherixadmin']:
-                    is_valid = True
                 if is_valid:
                     login_user(admin_user, remember=True)
                     session['is_admin'] = True
@@ -1778,4 +1776,3 @@ def _complete_social_login(email, name, role, provider='Social'):
 
     flash(f'Signed in via {provider}.', 'success')
     return redirect(url_for('home'))
-

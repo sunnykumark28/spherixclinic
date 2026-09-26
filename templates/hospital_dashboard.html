@@ -1,14 +1,184 @@
-{% extends 'dashboard_layout.html' %} {% block title %}Hospital Dashboard |
-Spherix Clinic{% endblock %} {% block page_title %}{{ current_user.name }}{%
-endblock %} {% block page_subtitle %}Welcome back to your command center.{%
-endblock %} {% block header_actions %} {% endblock %} {% block content %}
+{% extends 'dashboard_layout.html' %}
+{% block title %}Hospital Dashboard | Spherix Clinic{% endblock %}
+{% block page_title %}{{ current_user.name }}{% endblock %}
+{% block page_subtitle %}Welcome back to your command center.{% endblock %}
+{% block header_actions %}{% endblock %}
+{% block dashboard_top_header %}{% endblock %}
+{% block content %}
 
 <style>
   :root {
     --dash-text: #1e293b;
     --dash-muted: #64748b;
-    --dash-accent: #4361ee;
-    --primary: #4361ee; /* Added for consistency */
+    --dash-accent: #0284c7;
+    --primary: #0284c7;
+    --doc-primary: #0284c7;
+  }
+
+  /* Hospital Sticky Topbar */
+  .hospital-topbar {
+    margin: -28px -32px 24px -32px;
+    padding: 12px 28px;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    transition: all 0.2s ease;
+  }
+  @media (max-width: 991.98px) {
+    .hospital-topbar {
+      margin: -20px -16px 20px -16px;
+      padding: 10px 16px;
+    }
+  }
+
+  /* Universal OmniSearch Styles */
+  .omni-search-container {
+    position: relative;
+    flex-grow: 1;
+    max-width: 580px;
+  }
+
+  .omni-search-input-group {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 99px;
+    padding: 3px 5px 3px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  }
+
+  .omni-search-input-group:focus-within {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3.5px rgba(2, 132, 199, 0.15), 0 4px 12px rgba(2, 132, 199, 0.08);
+    background: #ffffff;
+  }
+
+  .omni-search-input {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    font-size: 0.86rem;
+    color: #0f172a;
+    flex-grow: 1;
+    padding: 4px 0;
+    width: 100%;
+  }
+
+  .omni-search-input::placeholder {
+    color: #94a3b8;
+    font-size: 0.82rem;
+  }
+
+  .omni-search-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.05);
+    max-height: 480px;
+    overflow-y: auto;
+    z-index: 1060;
+  }
+
+  .omni-filter-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .omni-filter-pill:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .omni-filter-pill.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+  }
+
+  .omni-result-category {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    padding: 8px 12px 4px 12px;
+  }
+
+  .omni-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    color: #1e293b;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .omni-result-item:hover, .omni-result-item.selected {
+    background: #f0f9ff;
+    color: #0369a1;
+  }
+
+  .omni-result-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  /* Real-time Notification Pulse */
+  .notif-pulse-badge {
+    animation: notif-pulse 2s infinite;
+  }
+  @keyframes notif-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
+
+  /* In-Page Element Pulse Highlighter Animation */
+  @keyframes searchPulseAnimation {
+    0% { outline: 3px solid #0284c7; background-color: rgba(2, 132, 199, 0.22); transform: scale(1.02); }
+    50% { outline: 4px solid #0369a1; background-color: rgba(2, 132, 199, 0.35); transform: scale(1.03); }
+    100% { outline: 2px solid transparent; background-color: transparent; transform: scale(1); }
+  }
+  .search-highlight-pulse {
+    animation: searchPulseAnimation 2.4s ease-out forwards !important;
+    border-radius: 10px;
+    position: relative;
+    z-index: 10;
   }
 
   .dashboard-body,
@@ -460,6 +630,65 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
 }
 </script>
 
+<script id="hospital-omni-data" type="application/json">
+{
+  "doctors": [
+    {% for d in doctors %}
+    {
+      "id": {{ d.id|tojson }},
+      "name": {{ ("Dr. " ~ (d.first_name or '') ~ " " ~ (d.last_name or ''))|trim|tojson }},
+      "specialization": {{ (d.specialization or '')|tojson }},
+      "department": {{ (d.department or '')|tojson }},
+      "email": {{ (d.email or '')|tojson }},
+      "phone": {{ (d.phone or '')|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "staff": [
+    {% for s in staff %}
+    {
+      "id": {{ s.id|tojson }},
+      "name": {{ (s.name or 'Staff Member')|tojson }},
+      "role": {{ (s.role or s.department or 'Staff')|tojson }},
+      "email": {{ (s.email or '')|tojson }},
+      "phone": {{ (s.phone or '')|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "bedBookings": [
+    {% for b in bed_bookings %}
+    {
+      "id": {{ b.id|tojson }},
+      "patient_name": {{ (b.patient_name or 'Patient')|tojson }},
+      "bed_type": {{ (b.bed_type or 'General')|tojson }},
+      "status": {{ (b.status or 'Pending')|tojson }},
+      "date": {{ (b.booking_date or '')|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "emergencyCases": [
+    {% for e in emergency_cases %}
+    {
+      "id": {{ (e.id if e.id is defined else loop.index)|tojson }},
+      "patient_name": {{ (e.patient_name or 'Emergency Patient')|tojson }},
+      "severity": {{ (e.severity or 'Critical')|tojson }},
+      "status": {{ (e.status or 'Triage')|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "ambulances": [
+    {% for a in ambulances %}
+    {
+      "id": {{ (a.id if a.id is defined else loop.index)|tojson }},
+      "vehicle_number": {{ (a.vehicle_number or a.plate_no or 'AMB-Unit')|tojson }},
+      "driver_name": {{ (a.driver_name or 'Fleet Paramedic')|tojson }},
+      "status": {{ (a.status or 'Available')|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+
 <script>
   (function() {
     try {
@@ -536,6 +765,231 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
       </div>
     {% endif %}
   {% endwith %}
+
+  <!-- ================= 2. TOPBAR: OMNISEARCH, NOTIFICATIONS & PROFILE ================= -->
+  <header class="hospital-topbar" id="hospitalTopbar">
+    <!-- Left: Mobile Menu Toggle & Dynamic Active Tab Page Title -->
+    <div class="d-flex align-items-center gap-2 gap-sm-3">
+      <button class="btn btn-light d-lg-none rounded-circle p-2 shadow-sm border" onclick="toggleSidebar()" type="button" title="Toggle Sidebar Navigation">
+        <i class="fas fa-bars text-slate-800"></i>
+      </button>
+      <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <h5 class="fw-bold mb-0 text-slate-900 fs-6 fs-sm-5 d-flex align-items-center gap-1.5" id="hospitalTopbarTitle">
+            <i :class="getTabIcon(activeTab)" class="text-primary me-1"></i>
+            <span x-text="getTabTitle(activeTab)">Hospital Executive Command Center</span>
+          </h5>
+          <span class="badge bg-black text-white rounded-pill px-2 py-0.5 text-[10px] font-mono border d-none d-md-inline-block" title="Hospital Establishment License">
+            LIC: {{ current_user.license_number or current_user.license_no or current_user.id }}
+          </span>
+        </div>
+        <small class="text-muted d-none d-sm-flex align-items-center gap-1.5" style="font-size: 0.72rem;">
+          <i class="fas fa-hospital-alt text-primary"></i> {{ current_user.name }} • Spherix Clinical Operating System
+        </small>
+      </div>
+    </div>
+
+    <!-- Center: Universal OmniSearch Bar with Search Button (Searches All Hospital Elements) -->
+    <div class="omni-search-container">
+      <div class="omni-search-input-group">
+        <i class="fas fa-search text-primary" style="font-size: 0.95rem;"></i>
+        <input type="text" 
+               id="globalHospitalSearchInput" 
+               class="omni-search-input" 
+               placeholder="Search all tabs, doctors, staff, beds, emergencies, fleet, page elements... (⌘K)"
+               autocomplete="off"
+               oninput="handleHospitalOmniSearch(this.value)"
+               onkeydown="handleHospitalOmniKeyDown(event)"
+               onfocus="handleHospitalOmniFocus()">
+        <button type="button" 
+                class="btn btn-sm btn-link text-muted p-0 text-xs d-none" 
+                id="hospitalOmniClearBtn" 
+                onclick="clearHospitalOmniSearch()" 
+                title="Clear Search">
+          <i class="fas fa-times-circle text-slate-400"></i>
+        </button>
+        <span class="badge bg-slate-100 text-slate-500 rounded-pill px-2 py-0.5 text-[10px] fw-bold border d-none d-lg-inline-block">
+          ⌘K
+        </span>
+        <button type="button" 
+                class="btn btn-primary btn-sm rounded-pill px-3 py-1 fw-bold text-xs d-flex align-items-center gap-1.5 shadow-sm flex-shrink-0" 
+                id="globalHospitalSearchBtn"
+                onclick="executeHospitalOmniSearch()"
+                title="Search All Dashboard Elements">
+          <i class="fas fa-search"></i>
+          <span class="d-none d-sm-inline">Search</span>
+        </button>
+      </div>
+
+      <!-- Live OmniSearch Dropdown Results Panel -->
+      <div id="hospitalOmniSearchResults" class="omni-search-dropdown shadow-2xl rounded-4 border bg-white overflow-hidden d-none">
+        <!-- Filter pills bar -->
+        <div class="p-2 border-bottom bg-slate-50 d-flex gap-1 overflow-x-auto" id="hospitalOmniFilterBar">
+          <button type="button" class="omni-filter-pill active" onclick="setHospitalOmniFilter('all')">All (<span id="hospOmniCountAll">0</span>)</button>
+          <button type="button" class="omni-filter-pill" onclick="setHospitalOmniFilter('tabs')">Tabs &amp; Tools (<span id="hospOmniCountTabs">0</span>)</button>
+          <button type="button" class="omni-filter-pill" onclick="setHospitalOmniFilter('doctors')">Doctors &amp; Staff (<span id="hospOmniCountStaff">0</span>)</button>
+          <button type="button" class="omni-filter-pill" onclick="setHospitalOmniFilter('beds')">Beds &amp; Stays (<span id="hospOmniCountBeds">0</span>)</button>
+          <button type="button" class="omni-filter-pill" onclick="setHospitalOmniFilter('emergency')">Emergency &amp; Fleet (<span id="hospOmniCountEmergency">0</span>)</button>
+          <button type="button" class="omni-filter-pill" onclick="setHospitalOmniFilter('elements')">Page Elements (<span id="hospOmniCountElements">0</span>)</button>
+        </div>
+
+        <!-- Results List Container -->
+        <div id="hospitalOmniResultsList" class="p-2" style="max-height: 380px; overflow-y: auto;">
+          <!-- Injected dynamically by JS -->
+        </div>
+
+        <!-- Dropdown Footer -->
+        <div class="px-3 py-2 bg-slate-50 border-top d-flex justify-content-between align-items-center text-muted" style="font-size: 0.72rem;">
+          <span><kbd class="bg-white px-1 border rounded">↵</kbd> Select • <kbd class="bg-white px-1 border rounded">Esc</kbd> Close</span>
+          <span class="text-primary fw-bold cursor-pointer" onclick="executeHospitalOmniSearch()">Search Current View →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Action Cluster (Available Beds Pill, Notification Bell, Profile Button) -->
+    <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
+      
+      <!-- Quick Bed Telemetry Pill -->
+      <button type="button" 
+              @click="activeTab = 'beds'"
+              class="btn btn-sm btn-light border rounded-pill px-3 py-1.5 d-none d-md-inline-flex align-items-center gap-1.5 shadow-sm text-xs fw-bold text-slate-700 hover:border-primary transition"
+              title="Quick jump to Bed Management">
+        <i class="fas fa-bed text-emerald-600"></i>
+        <span>{{ current_user.available_beds or 0 }} Beds Available</span>
+      </button>
+
+      <!-- Hospital Notification Bell Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-light rounded-circle p-2 position-relative shadow-sm border" 
+                type="button" 
+                data-bs-toggle="dropdown" 
+                aria-expanded="false"
+                style="width: 40px; height: 40px;" 
+                title="Hospital Alerts & Notifications">
+          <i class="fas fa-bell text-slate-700"></i>
+          {% if unread_notifications and unread_notifications|length > 0 %}
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white notif-pulse-badge hosp-notif-badge-count" style="font-size: 0.65rem;">
+            {{ unread_notifications|length }}
+          </span>
+          {% endif %}
+        </button>
+        <div class="dropdown-menu dropdown-menu-end shadow-2xl border-0 rounded-4 p-0 mt-2" style="width: 370px; max-width: 90vw; z-index: 1050;">
+          <div class="p-3 bg-slate-900 text-white rounded-top-4 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-bell text-warning"></i>
+              <span class="fw-bold fs-6">Facility Alerts</span>
+              {% if unread_notifications and unread_notifications|length > 0 %}
+              <span class="badge bg-danger rounded-pill px-2 py-0.5 text-[10px] hosp-notif-badge-count">{{ unread_notifications|length }} new</span>
+              {% endif %}
+            </div>
+            {% if unread_notifications and unread_notifications|length > 0 %}
+            <button type="button" class="btn btn-xs btn-outline-light rounded-pill px-2.5 py-0.5 text-[11px] fw-bold" onclick="markHospitalNotifsRead()">
+              Mark Read
+            </button>
+            {% endif %}
+          </div>
+          <div class="p-2 overflow-auto" id="hospitalTopbarNotifList" style="max-height: 290px;">
+            {% if unread_notifications and unread_notifications|length > 0 %}
+              {% for n in unread_notifications[:6] %}
+              <div class="p-2.5 border-bottom rounded-3 hover:bg-slate-50 transition mb-1 hosp-notif-item">
+                <div class="d-flex align-items-start gap-2">
+                  <div class="p-1.5 rounded-circle bg-primary bg-opacity-10 text-primary mt-0.5 flex-shrink-0">
+                    <i class="fas fa-info-circle text-xs"></i>
+                  </div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="text-xs fw-bold text-slate-800 leading-snug">{{ n.message }}</div>
+                    <div class="text-[10px] text-muted mt-1 d-flex align-items-center gap-1">
+                      <i class="far fa-clock"></i>
+                      {{ n.created_at.strftime('%I:%M %p, %d %b') if n.created_at and n.created_at.strftime is defined else 'Just now' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="p-4 text-center text-muted">
+                <i class="far fa-bell-slash fs-3 mb-2 opacity-40"></i>
+                <div class="small fw-semibold">No unread alerts</div>
+                <div class="text-xs text-slate-400 mt-1">All facility notifications have been reviewed</div>
+              </div>
+            {% endif %}
+          </div>
+          <div class="p-2 border-top bg-slate-50 text-center rounded-bottom-4">
+            <a href="javascript:void(0)" class="text-xs fw-bold text-primary text-decoration-none" @click="activeTab = 'audit_logs'">
+              View System Audit Logs →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hospital Profile Button & Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-light p-1 pe-2.5 rounded-pill d-flex align-items-center gap-2 border shadow-sm" 
+                type="button" 
+                data-bs-toggle="dropdown" 
+                aria-expanded="false"
+                title="Hospital Profile & Quick Navigation">
+          <div class="rounded-circle overflow-hidden flex-shrink-0 border" style="width: 34px; height: 34px; background: #ffffff;">
+            {% if current_user.logo_url %}
+            <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+            {% elif current_user.profile_picture_url %}
+            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Hospital" style="width: 100%; height: 100%; object-fit: cover;">
+            {% else %}
+            <div class="w-100 h-100 bg-sky-100 text-sky-700 font-bold d-flex align-items-center justify-center text-xs">
+              {{ current_user.name[0] if current_user.name else 'H' }}
+            </div>
+            {% endif %}
+          </div>
+          <div class="text-start d-none d-lg-block" style="max-width: 140px;">
+            <div class="text-xs fw-bold text-slate-900 text-truncate">{{ current_user.name }}</div>
+            <div class="text-[10px] text-muted text-truncate font-mono">ID: {{ current_user.id }}</div>
+          </div>
+          <i class="fas fa-chevron-down text-muted text-[10px]"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-2xl border-0 rounded-4 p-2 mt-2" style="width: 260px; z-index: 1050;">
+          <li class="px-3 py-2 border-bottom mb-1 bg-slate-50 rounded-3">
+            <div class="fw-bold text-xs text-slate-900 text-truncate">{{ current_user.name }}</div>
+            <div class="text-[11px] text-muted text-truncate">{{ current_user.email }}</div>
+            <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-2 py-0.5 text-[10px] mt-1 font-mono">
+              <i class="fas fa-check-circle me-1"></i> Verified Hospital
+            </span>
+          </li>
+          <li>
+            <a class="dropdown-item rounded-2 py-2 text-xs fw-semibold d-flex align-items-center gap-2" href="javascript:void(0)" @click="activeTab = 'settings'; settingsTab = 'profile';">
+              <i class="fas fa-id-card text-primary fa-fw"></i> Hospital Profile &amp; Licensure
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item rounded-2 py-2 text-xs fw-semibold d-flex align-items-center gap-2" href="javascript:void(0)" @click="activeTab = 'settings'; settingsTab = 'resources';">
+              <i class="fas fa-bed text-indigo-500 fa-fw"></i> Bed Rates &amp; Resources
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item rounded-2 py-2 text-xs fw-semibold d-flex align-items-center gap-2" href="javascript:void(0)" @click="activeTab = 'doctors';">
+              <i class="fas fa-user-md text-emerald-500 fa-fw"></i> Doctor Directory
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item rounded-2 py-2 text-xs fw-semibold d-flex align-items-center gap-2" href="javascript:void(0)" @click="activeTab = 'beds';">
+              <i class="fas fa-procedures text-cyan-500 fa-fw"></i> Ward &amp; Bed Occupancy
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item rounded-2 py-2 text-xs fw-semibold d-flex align-items-center gap-2" href="javascript:void(0)" @click="activeTab = 'reports';">
+              <i class="fas fa-chart-line text-amber-500 fa-fw"></i> Performance Analytics
+            </a>
+          </li>
+          <li><hr class="dropdown-divider my-1"></li>
+          <li>
+            <a class="dropdown-item rounded-2 py-2 text-xs fw-semibold text-danger d-flex align-items-center gap-2" href="{{ url_for('logout') }}">
+              <i class="fas fa-sign-out-alt fa-fw"></i> Sign Out
+            </a>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </header>
 
   <!-- Main Content Area -->
   <div>
@@ -2208,7 +2662,7 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
     </div>
     <div class="dashboard-card p-4">
       <div class="row g-3 mb-4"><div class="col-md-4"><div class="bg-light p-3 rounded-3"><small class="text-muted">Today's Visits</small><div class="fs-3 fw-bold">{{ opd_appointments|length }}</div></div></div><div class="col-md-4"><div class="bg-light p-3 rounded-3"><small class="text-muted">Confirmed</small><div class="fs-3 fw-bold">{{ opd_appointments|selectattr('status', 'equalto', 'confirmed')|list|length }}</div></div></div><div class="col-md-4"><div class="bg-light p-3 rounded-3"><small class="text-muted">Pending</small><div class="fs-3 fw-bold">{{ opd_appointments|selectattr('status', 'equalto', 'pending')|list|length }}</div></div></div></div>
-      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Patient</th><th>Doctor</th><th>Time</th><th>Status</th></tr></thead><tbody>{% for item in opd_appointments %}<tr><td>{{ item.patient_name }}</td><td>Dr. {{ item.doctor.last_name if item.doctor else 'N/A' }}</td><td>{{ item.appointment_time.strftime('%I:%M %p') if item.appointment_time else 'TBD' }}</td><td>{{ item.status|capitalize }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No OPD visits today.</td></tr>{% endfor %}</tbody></table></div>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Patient</th><th>Doctor</th><th>Time</th><th>Status</th></tr></thead><tbody>{% for item in opd_appointments %}<tr><td>{{ item.patient_name }}</td><td>Dr. {{ item.doctor.last_name if item.doctor else 'N/A' }}</td><td>{{ item.appointment_time.strftime('%I:%M %p') if item.appointment_time and item.appointment_time.strftime is defined else (item.appointment_time or 'TBD') }}</td><td>{{ item.status|capitalize }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No OPD visits today.</td></tr>{% endfor %}</tbody></table></div>
     </div>
   </div>
 
@@ -2229,7 +2683,7 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
   <!-- Telemedicine Tab -->
   <div x-show="activeTab === 'telemedicine'" x-cloak>
     <h3 class="text-2xl font-bold text-slate-800 mb-4">Telemedicine Consultations</h3>
-    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Virtual consultations</span><strong>{{ telemedicine_appointments|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Action</th></tr></thead><tbody>{% for item in telemedicine_appointments %}<tr><td>{{ item.patient_name }}</td><td>Dr. {{ item.doctor.last_name if item.doctor else 'N/A' }}</td><td>{{ item.appointment_date.strftime('%b %d, %Y') }}</td><td>{% if item.status == 'confirmed' %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('telemedicine', appointment_id=item.id) }}">Open Session</a>{% else %}{{ item.status|capitalize }}{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No telemedicine appointments.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Virtual consultations</span><strong>{{ telemedicine_appointments|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Action</th></tr></thead><tbody>{% for item in telemedicine_appointments %}<tr><td>{{ item.patient_name }}</td><td>Dr. {{ item.doctor.last_name if item.doctor else 'N/A' }}</td><td>{{ item.appointment_date.strftime('%b %d, %Y') if item.appointment_date and item.appointment_date.strftime is defined else (item.appointment_date or 'TBD') }}</td><td>{% if item.status == 'confirmed' %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('telemedicine', appointment_id=item.id) }}">Open Session</a>{% else %}{{ item.status|capitalize }}{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No telemedicine appointments.</td></tr>{% endfor %}</tbody></table></div>
     </div>
   </div>
 
@@ -2250,21 +2704,21 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
   <!-- Laboratory Management Tab -->
   <div x-show="activeTab === 'laboratory'" x-cloak>
     <h3 class="text-2xl font-bold text-slate-800 mb-4">Laboratory Management</h3>
-    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Lab requests</span><strong>{{ laboratory_requests|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Doctor</th><th>Status</th><th>Created</th></tr></thead><tbody>{% for item in laboratory_requests %}<tr><td>{{ item.patient_name|default('Patient') }}</td><td>{{ item.doctor_id }}</td><td>{{ item.status|default('Requested')|capitalize }}</td><td>{{ item.created_at.strftime('%b %d, %Y') if item.created_at else 'N/A' }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No laboratory requests.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Lab requests</span><strong>{{ laboratory_requests|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Doctor</th><th>Status</th><th>Created</th></tr></thead><tbody>{% for item in laboratory_requests %}<tr><td>{{ item.patient_name|default('Patient') }}</td><td>{{ item.doctor_id }}</td><td>{{ item.status|default('Requested')|capitalize }}</td><td>{{ item.created_at.strftime('%b %d, %Y') if item.created_at and item.created_at.strftime is defined else (item.created_at or 'N/A') }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No laboratory requests.</td></tr>{% endfor %}</tbody></table></div>
     </div>
   </div>
 
   <!-- Radiology Management Tab -->
   <div x-show="activeTab === 'radiology'" x-cloak>
     <h3 class="text-2xl font-bold text-slate-800 mb-4">Radiology Information System</h3>
-    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Imaging-related appointments</span><strong>{{ radiology_requests|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Date</th><th>Reason</th><th>Status</th></tr></thead><tbody>{% for item in radiology_requests %}<tr><td>{{ item.patient_name }}</td><td>{{ item.appointment_date.strftime('%b %d, %Y') }}</td><td>{{ item.reason }}</td><td>{{ item.status|capitalize }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No radiology requests.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Imaging-related appointments</span><strong>{{ radiology_requests|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Date</th><th>Reason</th><th>Status</th></tr></thead><tbody>{% for item in radiology_requests %}<tr><td>{{ item.patient_name }}</td><td>{{ item.appointment_date.strftime('%b %d, %Y') if item.appointment_date and item.appointment_date.strftime is defined else (item.appointment_date or 'TBD') }}</td><td>{{ item.reason }}</td><td>{{ item.status|capitalize }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No radiology requests.</td></tr>{% endfor %}</tbody></table></div>
     </div>
   </div>
 
   <!-- OT Management Tab -->
   <div x-show="activeTab === 'ot_management'" x-cloak>
     <h3 class="text-2xl font-bold text-slate-800 mb-4">Operation Theatre Management</h3>
-    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Surgical schedule</span><strong>{{ ot_schedule|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Status</th></tr></thead><tbody>{% for item in ot_schedule %}<tr><td>{{ item.patient_name }}</td><td>Dr. {{ item.doctor.last_name if item.doctor else 'N/A' }}</td><td>{{ item.appointment_date.strftime('%b %d, %Y') }}</td><td>{{ item.status|capitalize }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No surgeries scheduled.</td></tr>{% endfor %}</tbody></table></div>
+    <div class="dashboard-card p-4"><div class="d-flex justify-content-between mb-3"><span class="text-muted">Surgical schedule</span><strong>{{ ot_schedule|length }}</strong></div><div class="table-responsive"><table class="table"><thead><tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Status</th></tr></thead><tbody>{% for item in ot_schedule %}<tr><td>{{ item.patient_name }}</td><td>Dr. {{ item.doctor.last_name if item.doctor else 'N/A' }}</td><td>{{ item.appointment_date.strftime('%b %d, %Y') if item.appointment_date and item.appointment_date.strftime is defined else (item.appointment_date or 'TBD') }}</td><td>{{ item.status|capitalize }}</td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">No surgeries scheduled.</td></tr>{% endfor %}</tbody></table></div>
     </div>
   </div>
 
@@ -3481,6 +3935,14 @@ endblock %} {% block header_actions %} {% endblock %} {% block content %}
       bedBookings: config.initialBedBookings || [],
       activityLogs: config.initialActivityLogs || [],
       stats: config.initialStats || {},
+
+      getTabTitle(tab) {
+        return (window.hospitalTabMetadata && window.hospitalTabMetadata[tab] && window.hospitalTabMetadata[tab].title) || 'Hospital Executive Command Center';
+      },
+
+      getTabIcon(tab) {
+        return (window.hospitalTabMetadata && window.hospitalTabMetadata[tab] && window.hospitalTabMetadata[tab].icon) || 'fas fa-th-large';
+      },
       
       // Known ID tracking for Real-time alerts
       knownAppointmentIds: new Set((config.initialAppointments || []).map(a => a.id)),
@@ -4399,5 +4861,677 @@ window.closeHospitalUserProfile = function() {
   }
   document.body.classList.remove('overflow-hidden');
 };
+
+// =========================================================================
+// HOSPITAL TOPBAR & UNIVERSAL OMNISEARCH CONTROLLER
+// =========================================================================
+
+window.hospitalTabMetadata = {
+  'overview': { title: 'Executive Overview & Command Center', icon: 'fas fa-th-large', category: 'tabs', desc: 'Real-time telemetry, bed occupancy, admissions, clinical queue', keywords: 'overview dashboard summary telemetry analytics command center kpi beds' },
+  'appointments': { title: 'Appointments & Consultations', icon: 'fas fa-calendar-check', category: 'tabs', desc: 'Doctor appointments, schedule slots, patient visits', keywords: 'appointments slots consultation calendar booking schedule patient doctor' },
+  'opd': { title: 'Outpatient Department (OPD)', icon: 'fas fa-clinic-medical', category: 'tabs', desc: 'OPD queue, triage flow, doctor consultation desks', keywords: 'opd outpatient clinic consultation queue triage desk walkin' },
+  'ipd': { title: 'Inpatient Department (IPD)', icon: 'fas fa-procedures', category: 'tabs', desc: 'Inpatient ward admissions, recovery status, bed occupancy', keywords: 'ipd inpatient admission ward stay bed recovery nursing' },
+  'emergency': { title: 'Emergency & Trauma Center (ER)', icon: 'fas fa-first-aid', category: 'tabs', desc: 'Code red alerts, emergency admissions, trauma triage', keywords: 'emergency trauma er casualty triage code red critical resus' },
+  'telemedicine': { title: 'Virtual Care & Telemedicine', icon: 'fas fa-video', category: 'tabs', desc: 'Telehealth consultations, video queue, remote diagnostics', keywords: 'telemedicine video virtual remote telehealth consultation call' },
+  'emr': { title: 'Electronic Medical Records (EMR)', icon: 'fas fa-file-medical-alt', category: 'tabs', desc: 'EHR health records, medical documentation, clinical history', keywords: 'emr ehr medical records health charts documentation notes history' },
+  'pharmacy': { title: 'Central Pharmacy & Dispensing', icon: 'fas fa-pills', category: 'tabs', desc: 'Pharmaceutical supplies, drug inventory, prescription fulfillment', keywords: 'pharmacy medicines drugs rx dispensing stock pills inventory dosage' },
+  'laboratory': { title: 'Pathology & Diagnostic Laboratory', icon: 'fas fa-microscope', category: 'tabs', desc: 'Diagnostic assays, pathology specimens, test orders', keywords: 'laboratory pathology lab blood test specimen biopsy diagnostic assay' },
+  'radiology': { title: 'Medical Imaging & Radiology', icon: 'fas fa-x-ray', category: 'tabs', desc: 'X-Ray, CT, MRI scans, ultrasound imaging records', keywords: 'radiology xray ct mri scan ultrasound dicom imaging picture report' },
+  'ot_management': { title: 'Operation Theatres & Surgery', icon: 'fas fa-syringe', category: 'tabs', desc: 'OT suites, surgical rosters, scheduled operations', keywords: 'operation theatre ot surgery surgical surgeon anesthesia schedule suite' },
+  'blood': { title: 'Blood Bank & Transfusion', icon: 'fas fa-tint', category: 'tabs', desc: 'Blood group inventories, donor registry, transfusion units', keywords: 'blood bank donor transfusion units plasma platelets rbc group stock' },
+  'organs': { title: 'Organ Transplantation Network', icon: 'fas fa-hand-holding-heart', category: 'tabs', desc: 'Organ donation register, transplant waitlist, match registry', keywords: 'organs kidney liver cornea heart transplant donor pledge registry' },
+  'doctors': { title: 'Medical Staff & Doctor Directory', icon: 'fas fa-user-md', category: 'tabs', desc: 'Physicians, specialists, consultants, hospital credentials', keywords: 'doctors physicians specialists clinicians surgeons staff faculty department' },
+  'staff': { title: 'Hospital Staff & Human Resources', icon: 'fas fa-users-cog', category: 'tabs', desc: 'Nurses, ward administrators, clinical coordinators', keywords: 'staff hr employees human resources administrators coordinators operators' },
+  'nursing': { title: 'Nursing Station & Wards', icon: 'fas fa-user-nurse', category: 'tabs', desc: 'Nursing duty rosters, patient vitals, shift handovers', keywords: 'nursing nurses station ward shift handovers vitals care' },
+  'departments': { title: 'Clinical Specialties & Units', icon: 'fas fa-sitemap', category: 'tabs', desc: 'Specialized clinical wings, department heads, unit facilities', keywords: 'departments specialties cardiology neurology oncology orthopedics pediatrics units' },
+  'beds': { title: 'Bed Management & Ward Stays', icon: 'fas fa-bed', category: 'tabs', desc: 'General beds, ICU, ventilator capacity, occupancy tracking', keywords: 'beds bed management icu general ventilator ward occupancy admission availability' },
+  'ambulance': { title: 'Emergency Fleet & Ambulances', icon: 'fas fa-ambulance', category: 'tabs', desc: 'Paramedic dispatch, GPS tracked ambulances, ER response', keywords: 'ambulance fleet vehicle paramedic dispatch emergency driver transport response' },
+  'inventory': { title: 'Biomedical & Medical Supplies', icon: 'fas fa-boxes', category: 'tabs', desc: 'Medical consumables, biomedical devices, supply reorders', keywords: 'inventory supplies consumables biomedical equipment stock items reorder' },
+  'billing': { title: 'Billing & Invoicing', icon: 'fas fa-file-invoice-dollar', category: 'tabs', desc: 'Patient invoices, payment receipts, fee statements', keywords: 'billing invoices payments charges fees accounts receipts transactions' },
+  'insurance': { title: 'Insurance (TPA) & Claims', icon: 'fas fa-shield-alt', category: 'tabs', desc: 'Third-party administrators, cashless pre-authorizations', keywords: 'insurance tpa claims cashless policy approval preauth coverage' },
+  'payroll': { title: 'Staff Payroll & Compensation', icon: 'fas fa-money-check-alt', category: 'tabs', desc: 'Clinical payroll disbursement, compensations, salaries', keywords: 'payroll salary compensation pay wage hr disbursement earnings' },
+  'reports': { title: 'Analytics & Compliance Reports', icon: 'fas fa-chart-pie', category: 'tabs', desc: 'Census telemetry, regulatory metrics, financial analytics', keywords: 'reports analytics statistics graphs charts audit kpi performance census' },
+  'ai_intelligence': { title: 'Clinical AI & Diagnostic Models', icon: 'fas fa-brain', category: 'tabs', desc: 'Predictive bed forecasting, risk triage, AI diagnostics', keywords: 'ai intelligence predictive algorithms risk assessment smart clinical machine learning' },
+  'audit_logs': { title: 'Security & System Audit Logs', icon: 'fas fa-history', category: 'tabs', desc: 'System actions, operator audit trail, access timestamps', keywords: 'audit logs security actions history compliance trail system activity' },
+  'settings': { title: 'Hospital Settings & Configuration', icon: 'fas fa-cog', category: 'tabs', desc: 'Facility profile, contact information, bed tariff charges', keywords: 'settings profile hospital name address phone email license password tariffs rates' }
+};
+
+let activeHospitalOmniResults = [];
+let currentHospitalOmniFilter = 'all';
+let selectedHospitalOmniIndex = -1;
+let hospitalSearchDebounceTimer = null;
+
+function getHospitalOmniData() {
+  try {
+    const el = document.getElementById('hospital-omni-data');
+    return el ? JSON.parse(el.textContent) : { doctors: [], staff: [], bedBookings: [], emergencyCases: [], ambulances: [] };
+  } catch(e) {
+    console.error('Error parsing hospital omni data:', e);
+    return { doctors: [], staff: [], bedBookings: [], emergencyCases: [], ambulances: [] };
+  }
+}
+
+function handleHospitalOmniFocus() {
+  const input = document.getElementById('globalHospitalSearchInput');
+  const query = input ? input.value.trim() : '';
+  if (query) {
+    handleHospitalOmniSearch(query);
+  } else {
+    showDefaultHospitalOmniSuggestions();
+  }
+}
+
+function showDefaultHospitalOmniSuggestions() {
+  const dropdown = document.getElementById('hospitalOmniSearchResults');
+  const list = document.getElementById('hospitalOmniResultsList');
+  if (!dropdown || !list) return;
+
+  const defaultTabs = ['overview', 'appointments', 'doctors', 'beds', 'opd', 'emergency', 'blood', 'settings'];
+  activeHospitalOmniResults = defaultTabs.map(tabId => {
+    const meta = window.hospitalTabMetadata[tabId] || {};
+    return {
+      type: 'tab',
+      category: 'tabs',
+      id: tabId,
+      title: meta.title || tabId,
+      subtitle: meta.desc || 'Hospital dashboard section',
+      icon: `${meta.icon || 'fas fa-th-large'} text-primary`,
+      badge: 'TAB'
+    };
+  });
+
+  updateHospitalOmniCounts({
+    all: activeHospitalOmniResults.length,
+    tabs: activeHospitalOmniResults.length,
+    staff: 0,
+    beds: 0,
+    emergency: 0,
+    elements: 0
+  });
+
+  renderHospitalOmniResults();
+  dropdown.classList.remove('d-none');
+}
+
+function handleHospitalOmniSearch(query) {
+  clearTimeout(hospitalSearchDebounceTimer);
+  hospitalSearchDebounceTimer = setTimeout(() => {
+    performHospitalOmniSearch(query);
+  }, 60);
+}
+
+function performHospitalOmniSearch(query) {
+  const q = (query || '').trim().toLowerCase();
+  const dropdown = document.getElementById('hospitalOmniSearchResults');
+  const clearBtn = document.getElementById('hospitalOmniClearBtn');
+
+  if (clearBtn) {
+    clearBtn.classList.toggle('d-none', !q);
+  }
+
+  if (!q) {
+    showDefaultHospitalOmniSuggestions();
+    return;
+  }
+
+  const results = [];
+  const counts = { all: 0, tabs: 0, staff: 0, beds: 0, emergency: 0, elements: 0 };
+  const omniData = getHospitalOmniData();
+
+  // 1. Search Tabs & Tools (All 28 Tabs)
+  Object.keys(window.hospitalTabMetadata).forEach(tabId => {
+    const meta = window.hospitalTabMetadata[tabId];
+    const match = meta.title.toLowerCase().includes(q) ||
+                  meta.desc.toLowerCase().includes(q) ||
+                  meta.keywords.toLowerCase().includes(q) ||
+                  tabId.toLowerCase().includes(q);
+    if (match) {
+      counts.tabs++;
+      results.push({
+        type: 'tab',
+        category: 'tabs',
+        id: tabId,
+        title: meta.title,
+        subtitle: meta.desc,
+        icon: `${meta.icon} text-primary`,
+        badge: 'TAB'
+      });
+    }
+  });
+
+  // 2. Search Doctors & Staff
+  (omniData.doctors || []).forEach(doc => {
+    const match = (doc.name || '').toLowerCase().includes(q) ||
+                  (doc.specialization || '').toLowerCase().includes(q) ||
+                  (doc.department || '').toLowerCase().includes(q) ||
+                  (doc.email || '').toLowerCase().includes(q) ||
+                  (doc.phone || '').toLowerCase().includes(q) ||
+                  (doc.id || '').toLowerCase().includes(q);
+    if (match) {
+      counts.staff++;
+      results.push({
+        type: 'doctor',
+        category: 'doctors',
+        id: doc.id,
+        name: doc.name,
+        title: `${doc.name} (${doc.specialization || doc.department || 'Physician'})`,
+        subtitle: `Dept: ${doc.department || 'General'} • ID: ${doc.id} • ${doc.phone || doc.email || ''}`,
+        icon: 'fas fa-user-md text-emerald-600',
+        badge: 'DOCTOR'
+      });
+    }
+  });
+
+  (omniData.staff || []).forEach(stf => {
+    const match = (stf.name || '').toLowerCase().includes(q) ||
+                  (stf.role || '').toLowerCase().includes(q) ||
+                  (stf.email || '').toLowerCase().includes(q) ||
+                  (stf.phone || '').toLowerCase().includes(q);
+    if (match) {
+      counts.staff++;
+      results.push({
+        type: 'staff',
+        category: 'doctors',
+        id: stf.id,
+        name: stf.name,
+        title: `${stf.name} • ${stf.role}`,
+        subtitle: `Role: ${stf.role} • Contact: ${stf.phone || stf.email || 'Registered Staff'}`,
+        icon: 'fas fa-users-cog text-indigo-600',
+        badge: 'STAFF'
+      });
+    }
+  });
+
+  // 3. Search Beds & Stays
+  (omniData.bedBookings || []).forEach(b => {
+    const match = (b.patient_name || '').toLowerCase().includes(q) ||
+                  (b.bed_type || '').toLowerCase().includes(q) ||
+                  (b.status || '').toLowerCase().includes(q) ||
+                  String(b.id || '').toLowerCase().includes(q);
+    if (match) {
+      counts.beds++;
+      results.push({
+        type: 'bed',
+        category: 'beds',
+        id: b.id,
+        title: `Bed #${b.id}: ${b.patient_name}`,
+        subtitle: `${b.bed_type} Ward • Status: ${b.status} • ${b.date || ''}`,
+        icon: 'fas fa-bed text-cyan-600',
+        badge: 'BED'
+      });
+    }
+  });
+
+  // 4. Search Emergency Cases & Fleet
+  (omniData.emergencyCases || []).forEach(e => {
+    const match = (e.patient_name || '').toLowerCase().includes(q) ||
+                  (e.severity || '').toLowerCase().includes(q) ||
+                  (e.status || '').toLowerCase().includes(q);
+    if (match) {
+      counts.emergency++;
+      results.push({
+        type: 'emergency',
+        category: 'emergency',
+        id: e.id,
+        title: `ER Case: ${e.patient_name}`,
+        subtitle: `Triage: ${e.severity} • Status: ${e.status}`,
+        icon: 'fas fa-first-aid text-rose-600',
+        badge: 'EMERGENCY'
+      });
+    }
+  });
+
+  (omniData.ambulances || []).forEach(a => {
+    const match = (a.vehicle_number || '').toLowerCase().includes(q) ||
+                  (a.driver_name || '').toLowerCase().includes(q) ||
+                  (a.status || '').toLowerCase().includes(q);
+    if (match) {
+      counts.emergency++;
+      results.push({
+        type: 'ambulance',
+        category: 'emergency',
+        id: a.id,
+        title: `Ambulance: ${a.vehicle_number}`,
+        subtitle: `Driver: ${a.driver_name} • Status: ${a.status}`,
+        icon: 'fas fa-ambulance text-amber-600',
+        badge: 'AMBULANCE'
+      });
+    }
+  });
+
+  // 5. In-Page DOM Elements across Dashboard (Headings, buttons, cards, table headers, labels)
+  const elementsMatched = [];
+  const candidateElements = document.querySelectorAll(
+    '.dashboard-card h3, .dashboard-card h4, .dashboard-card h5, .dashboard-card h6, .dashboard-card button, .dashboard-card label, .dashboard-card th, .dashboard-card strong, .dashboard-card .fw-bold'
+  );
+  candidateElements.forEach(el => {
+    const text = el.innerText.trim();
+    if (text && text.length >= 3 && text.length <= 80 && text.toLowerCase().includes(q)) {
+      if (!elementsMatched.includes(text)) {
+        elementsMatched.push(text);
+        counts.elements++;
+
+        let tabId = 'overview';
+        let parentTabContainer = el.closest('[x-show*="activeTab === \'"]');
+        if (parentTabContainer) {
+          const m = parentTabContainer.getAttribute('x-show').match(/activeTab === '([^']+)'/);
+          if (m && m[1]) tabId = m[1];
+        }
+
+        results.push({
+          type: 'element',
+          category: 'elements',
+          title: text,
+          subtitle: `Element in "${(window.hospitalTabMetadata[tabId] && window.hospitalTabMetadata[tabId].title) || tabId}" tab`,
+          icon: 'fas fa-mouse-pointer text-slate-500',
+          badge: 'ELEMENT',
+          targetElement: el,
+          targetTab: tabId
+        });
+      }
+    }
+  });
+
+  counts.all = results.length;
+  activeHospitalOmniResults = results;
+  selectedHospitalOmniIndex = results.length > 0 ? 0 : -1;
+
+  updateHospitalOmniCounts(counts);
+  renderHospitalOmniResults();
+  if (dropdown) dropdown.classList.remove('d-none');
+}
+
+function updateHospitalOmniCounts(counts) {
+  const setVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v || 0;
+  };
+  setVal('hospOmniCountAll', counts.all);
+  setVal('hospOmniCountTabs', counts.tabs);
+  setVal('hospOmniCountStaff', counts.staff);
+  setVal('hospOmniCountBeds', counts.beds);
+  setVal('hospOmniCountEmergency', counts.emergency);
+  setVal('hospOmniCountElements', counts.elements);
+}
+
+function setHospitalOmniFilter(filterType) {
+  currentHospitalOmniFilter = filterType;
+  document.querySelectorAll('#hospitalOmniFilterBar .omni-filter-pill').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${filterType}'`)) {
+      btn.classList.add('active');
+    }
+  });
+  renderHospitalOmniResults();
+}
+
+function renderHospitalOmniResults() {
+  const list = document.getElementById('hospitalOmniResultsList');
+  if (!list) return;
+
+  const filtered = currentHospitalOmniFilter === 'all' 
+    ? activeHospitalOmniResults 
+    : activeHospitalOmniResults.filter(r => r.category === currentHospitalOmniFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="p-4 text-center text-muted">
+        <i class="fas fa-search-minus fs-3 mb-2 opacity-40"></i>
+        <div class="small fw-bold">No results found in this category</div>
+        <div class="text-[11px] text-slate-400 mt-1">Try another keyword or select "All"</div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  filtered.slice(0, 35).forEach((item, idx) => {
+    const isSelected = idx === selectedHospitalOmniIndex;
+    html += `
+      <div class="omni-result-item ${isSelected ? 'selected' : ''}" 
+           data-index="${idx}"
+           onclick="selectHospitalOmniResultByIndex(${idx})">
+        <div class="omni-result-icon bg-light">
+          <i class="${item.icon}"></i>
+        </div>
+        <div class="flex-grow-1 overflow-hidden">
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="fw-bold text-xs text-slate-900 text-truncate">${escapeHtml(item.title)}</span>
+            <span class="badge bg-slate-100 text-slate-600 rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">${item.badge}</span>
+          </div>
+          <div class="text-[11px] text-muted text-truncate mt-0.5">${escapeHtml(item.subtitle)}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  list.innerHTML = html;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
+}
+
+function selectHospitalOmniResultByIndex(index) {
+  const filtered = currentHospitalOmniFilter === 'all' 
+    ? activeHospitalOmniResults 
+    : activeHospitalOmniResults.filter(r => r.category === currentHospitalOmniFilter);
+  const item = filtered[index];
+  if (!item) return;
+
+  closeHospitalOmniSearch();
+
+  if (item.type === 'tab') {
+    window.switchHospitalTab(item.id);
+    showHospitalToast(`Switched to: ${item.title}`, 'info');
+  } else if (item.type === 'doctor') {
+    window.switchHospitalTab('doctors');
+    setTimeout(() => {
+      const elements = document.querySelectorAll('[x-show*="activeTab === \'doctors\'"] .clinician-card, [x-show*="activeTab === \'doctors\'"] tr');
+      let found = false;
+      elements.forEach(el => {
+        if (!found && el.innerText.toLowerCase().includes((item.name || item.id).toLowerCase())) {
+          highlightElementNode(el);
+          found = true;
+        }
+      });
+    }, 250);
+    showHospitalToast(`Opened Doctor: ${item.name}`, 'success');
+  } else if (item.type === 'staff') {
+    window.switchHospitalTab('staff');
+    setTimeout(() => {
+      const elements = document.querySelectorAll('[x-show*="activeTab === \'staff\'"] tr, [x-show*="activeTab === \'staff\'"] .dashboard-card');
+      let found = false;
+      elements.forEach(el => {
+        if (!found && el.innerText.toLowerCase().includes((item.name || item.id).toLowerCase())) {
+          highlightElementNode(el);
+          found = true;
+        }
+      });
+    }, 250);
+    showHospitalToast(`Opened Staff: ${item.name}`, 'success');
+  } else if (item.type === 'bed') {
+    window.switchHospitalTab('beds');
+    setTimeout(() => {
+      const elements = document.querySelectorAll('[x-show*="activeTab === \'beds\'"] tr, [x-show*="activeTab === \'beds\'"] .stat-card');
+      let found = false;
+      elements.forEach(el => {
+        if (!found && el.innerText.toLowerCase().includes((item.title || item.id).toLowerCase())) {
+          highlightElementNode(el);
+          found = true;
+        }
+      });
+    }, 250);
+    showHospitalToast(`Opened Bed: #${item.id}`, 'info');
+  } else if (item.type === 'emergency') {
+    window.switchHospitalTab('emergency');
+    setTimeout(() => {
+      const elements = document.querySelectorAll('[x-show*="activeTab === \'emergency\'"] tr, [x-show*="activeTab === \'emergency\'"] .dashboard-card');
+      let found = false;
+      elements.forEach(el => {
+        if (!found && el.innerText.toLowerCase().includes((item.title).toLowerCase())) {
+          highlightElementNode(el);
+          found = true;
+        }
+      });
+    }, 250);
+    showHospitalToast(`Opened Emergency Case: ${item.title}`, 'warning');
+  } else if (item.type === 'ambulance') {
+    window.switchHospitalTab('ambulance');
+    setTimeout(() => {
+      const elements = document.querySelectorAll('[x-show*="activeTab === \'ambulance\'"] tr, [x-show*="activeTab === \'ambulance\'"] .dashboard-card');
+      let found = false;
+      elements.forEach(el => {
+        if (!found && el.innerText.toLowerCase().includes((item.title).toLowerCase())) {
+          highlightElementNode(el);
+          found = true;
+        }
+      });
+    }, 250);
+    showHospitalToast(`Opened Ambulance Fleet: ${item.title}`, 'info');
+  } else if (item.type === 'element') {
+    if (item.targetTab) {
+      window.switchHospitalTab(item.targetTab);
+    }
+    setTimeout(() => {
+      if (item.targetElement) {
+        highlightElementNode(item.targetElement);
+      }
+    }, item.targetTab ? 250 : 50);
+    showHospitalToast(`Located element: "${item.title.substring(0, 30)}..."`, 'info');
+  }
+}
+
+function highlightElementNode(node) {
+  if (!node) return;
+  node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  node.classList.remove('search-highlight-pulse');
+  void node.offsetWidth;
+  node.classList.add('search-highlight-pulse');
+  setTimeout(() => {
+    node.classList.remove('search-highlight-pulse');
+  }, 2600);
+}
+
+function executeHospitalOmniSearch() {
+  const input = document.getElementById('globalHospitalSearchInput');
+  const query = input ? input.value.trim() : '';
+  if (!query) {
+    showDefaultHospitalOmniSuggestions();
+    return;
+  }
+
+  const filtered = currentHospitalOmniFilter === 'all' 
+    ? activeHospitalOmniResults 
+    : activeHospitalOmniResults.filter(r => r.category === currentHospitalOmniFilter);
+
+  if (filtered.length > 0) {
+    const idx = selectedHospitalOmniIndex >= 0 ? selectedHospitalOmniIndex : 0;
+    selectHospitalOmniResultByIndex(idx);
+  } else {
+    const q = query.toLowerCase();
+    const candidate = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, button, tr, label, strong'))
+      .find(el => el.innerText.toLowerCase().includes(q) && el.offsetParent !== null);
+    if (candidate) {
+      highlightElementNode(candidate);
+      closeHospitalOmniSearch();
+      showHospitalToast(`Highlighted match in current view`, 'info');
+    } else {
+      showHospitalToast(`No matches found for "${query}"`, 'warning');
+    }
+  }
+}
+
+function handleHospitalOmniKeyDown(event) {
+  const dropdown = document.getElementById('hospitalOmniSearchResults');
+  if (!dropdown || dropdown.classList.contains('d-none')) {
+    if (event.key === 'ArrowDown') {
+      handleHospitalOmniFocus();
+      event.preventDefault();
+    }
+    return;
+  }
+
+  const filtered = currentHospitalOmniFilter === 'all' 
+    ? activeHospitalOmniResults 
+    : activeHospitalOmniResults.filter(r => r.category === currentHospitalOmniFilter);
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    selectedHospitalOmniIndex = (selectedHospitalOmniIndex + 1) % filtered.length;
+    renderHospitalOmniResults();
+    scrollOmniSelectedIntoView();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    selectedHospitalOmniIndex = (selectedHospitalOmniIndex - 1 + filtered.length) % filtered.length;
+    renderHospitalOmniResults();
+    scrollOmniSelectedIntoView();
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    executeHospitalOmniSearch();
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    closeHospitalOmniSearch();
+  }
+}
+
+function scrollOmniSelectedIntoView() {
+  const container = document.getElementById('hospitalOmniResultsList');
+  const selectedEl = container ? container.querySelector('.omni-result-item.selected') : null;
+  if (selectedEl && container) {
+    selectedEl.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function clearHospitalOmniSearch() {
+  const input = document.getElementById('globalHospitalSearchInput');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  const clearBtn = document.getElementById('hospitalOmniClearBtn');
+  if (clearBtn) clearBtn.classList.add('d-none');
+  showDefaultHospitalOmniSuggestions();
+}
+
+function closeHospitalOmniSearch() {
+  const dropdown = document.getElementById('hospitalOmniSearchResults');
+  if (dropdown) dropdown.classList.add('d-none');
+  selectedHospitalOmniIndex = -1;
+}
+
+document.addEventListener('click', function(e) {
+  const container = document.querySelector('.omni-search-container');
+  if (container && !container.contains(e.target)) {
+    closeHospitalOmniSearch();
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    const input = document.getElementById('globalHospitalSearchInput');
+    if (input) {
+      input.focus();
+      input.select();
+      handleHospitalOmniFocus();
+    }
+  }
+});
+
+window.switchHospitalTab = function(tabId) {
+  if (!tabId) return;
+  const alpineEl = document.querySelector('[x-data^="hospitalDashboard"]');
+  if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0]) {
+    alpineEl._x_dataStack[0].activeTab = tabId;
+  }
+  const url = new URL(window.location);
+  url.searchParams.set('tab', tabId);
+  window.history.pushState({}, '', url);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  document.querySelectorAll('.hospital-sidebar-link').forEach(link => {
+    const href = link.getAttribute('href') || '';
+    if (href.includes(`tab=${tabId}`)) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
+    }
+  });
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.hospital-sidebar-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+      const href = this.getAttribute('href');
+      if (href && href.includes('tab=')) {
+        e.preventDefault();
+        const tab = new URL(href, window.location.origin).searchParams.get('tab');
+        if (tab && window.switchHospitalTab) {
+          window.switchHospitalTab(tab);
+        }
+      }
+    });
+  });
+});
+
+window.markHospitalNotifsRead = function() {
+  fetch('/hospital/notifications/mark-read', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.querySelectorAll('.hosp-notif-badge-count').forEach(el => el.remove());
+      const notifList = document.getElementById('hospitalTopbarNotifList');
+      if (notifList) {
+        notifList.innerHTML = `
+          <div class="p-4 text-center text-muted">
+            <i class="far fa-bell-slash fs-3 mb-2 opacity-40"></i>
+            <div class="small fw-semibold">No unread alerts</div>
+            <div class="text-xs text-slate-400 mt-1">All facility notifications have been reviewed</div>
+          </div>
+        `;
+      }
+      const markBtn = document.querySelector('button[onclick="markHospitalNotifsRead()"]');
+      if (markBtn) markBtn.remove();
+      showHospitalToast('All alerts marked as read', 'success');
+    }
+  })
+  .catch(err => {
+    console.error('Error marking notifications read:', err);
+  });
+};
+
+function showHospitalToast(message, type = 'info') {
+  let container = document.getElementById('hospital-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'hospital-toast-container';
+    container.className = 'position-fixed top-0 end-0 p-3 p-md-4';
+    container.style.cssText = 'z-index: 999999; max-width: 440px; width: 100%; pointer-events: none;';
+    document.body.appendChild(container);
+  }
+
+  const toastId = 'hosp-toast-' + Date.now();
+  const iconClass = type === 'success' ? 'check-circle' : (type === 'warning' ? 'exclamation-triangle' : (type === 'danger' ? 'shield-alt' : 'info-circle'));
+  const toastCard = document.createElement('div');
+  toastCard.id = toastId;
+  toastCard.className = `card border-0 shadow-2xl rounded-4 mb-3 overflow-hidden position-relative animate__animated animate__fadeInRight hosp-toast-${type}`;
+  toastCard.style.cssText = 'pointer-events: auto; backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.96); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;';
+
+  toastCard.innerHTML = `
+    <div class="hosp-toast-stripe-${type}" style="height: 5px; width: 100%;"></div>
+    <div class="card-body p-3.5 p-md-4">
+      <div class="d-flex align-items-start gap-3">
+        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-sm hosp-toast-icon-${type}" style="width: 42px; height: 42px; font-size: 18px;">
+          <i class="fas fa-${iconClass}"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="badge rounded-pill text-uppercase px-2.5 py-1 fw-bold hosp-toast-badge-${type}" style="font-size: 10px; letter-spacing: 0.5px;">${type.toUpperCase()}</span>
+            <small class="text-muted" style="font-size: 11px;">Just now</small>
+          </div>
+          <h6 class="fw-bold text-dark mb-1" style="font-size: 13.5px;">Dashboard Notice</h6>
+          <p class="text-secondary small mb-2.5 leading-relaxed">${escapeHtml(message)}</p>
+        </div>
+        <button type="button" onclick="document.getElementById('${toastId}').remove()" class="btn-close ms-auto flex-shrink-0" aria-label="Close"></button>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(toastCard);
+  setTimeout(() => {
+    if (toastCard && toastCard.parentNode) {
+      toastCard.remove();
+    }
+  }, 4000);
+}
 </script>
 {% endblock %}

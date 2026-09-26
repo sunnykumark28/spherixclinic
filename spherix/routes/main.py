@@ -21,6 +21,8 @@ import math
 import time as time_module
 import hashlib
 import traceback
+import re
+from spherix.routes.blood_organ import generate_user_id_card_pdf
 from datetime import datetime, date, time, timedelta, timezone
 from io import BytesIO, StringIO
 from functools import wraps
@@ -1745,12 +1747,16 @@ def refresh_captcha(portal_type):
 
 
 @main_bp.route('/staff/reception/walkin-receipt/<int:appt_id>')
+@main_bp.route('/patient/appointment/<int:appt_id>/receipt')
+@main_bp.route('/walkin-receipt-pdf/<int:appt_id>')
 @login_required
 def walkin_receipt_pdf(appt_id):
     """Generate a styled PDF prescription/receipt for a walk-in appointment."""
     appt = TEMP_DATA.get('appointments', {}).get(appt_id)
     if not appt:
         flash("Appointment not found.", "error")
+        if getattr(current_user, 'is_patient', False):
+            return redirect(url_for('patient_dashboard'))
         return redirect(url_for('staff_reception_dashboard'))
 
     hospital_name_str = getattr(current_user, 'hospital_name', '')
@@ -1979,6 +1985,8 @@ def walkin_receipt_pdf(appt_id):
 
     except Exception as e:
         flash(f"Error generating PDF: {str(e)}", "error")
+        if getattr(current_user, 'is_patient', False):
+            return redirect(url_for('patient_dashboard'))
         return redirect(url_for('staff_reception_dashboard'))
 
 

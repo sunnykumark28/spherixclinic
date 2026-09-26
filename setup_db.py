@@ -26,7 +26,7 @@ if sys.platform == 'darwin' and not os.environ.get('ODBCSYSINI'):
 SERVER   = os.getenv('DB_SERVER', 'localhost')
 DATABASE = os.getenv('DB_NAME', 'spherixclinic')
 USERNAME = os.getenv('DB_USER', 'sa')
-PASSWORD = os.getenv('DB_PASSWORD', 'AnupriyaK#1234')
+PASSWORD = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', '')
 DRIVER   = os.getenv('DB_DRIVER', '{ODBC Driver 17 for SQL Server}')
 SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db')
 
@@ -655,8 +655,8 @@ def setup_sqlite_tables():
 
 # ─── 2. SEEDING PRODUCTION & DEMO DATA ────────────────────────────────────────
 def seed_all_database_data():
-    """Seeds doctors, hospitals, patients, staff, appointments, blood donors, and clinical data."""
-    print_banner("🌱  SPHERIX CLINIC — COMPREHENSIVE DATA SEEDING")
+    """Seeds primary system administrator and essential initial reference data."""
+    print_banner("🌱  SPHERIX CLINIC — SYSTEM INITIALIZATION")
 
     conn = get_sql_server_connection(DATABASE)
     is_sqlite = False
@@ -666,137 +666,30 @@ def seed_all_database_data():
         is_sqlite = True
 
     cursor = conn.cursor()
-    default_hash = generate_password_hash("password123")
-    admin_hash = generate_password_hash("Admin@1234")
+    admin_password = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip() or 'Admin@123'
+    admin_hash = generate_password_hash(admin_password)
 
-    # 1. Doctors
-    doctors_data = [
-        ('DOC/2026/001', 'Sunny', 'Kushwaha', 'admin@spherixclinic.com', admin_hash, 'Administration', '+91 933 4325 920', 'Chief Medical Officer', 'Spherix Clinical HQ, Motihari', '15 Years', 'MD, FACC', 'MCI-00192', '1000', 'English, Hindi', 'SMCH', 'Motihari, Bihar', 'available', 1),
-        ('DOC/2026/002', 'Sarah', 'Jenkins', 'doctor@example.com', default_hash, 'Cardiology', '+1 (555) 234-5678', 'Interventional Cardiology', 'Cardiology Wing, Floor 4, Suite 402', '12 Years', 'MD, Harvard Medical School', 'MCI-88492', '750', 'English, Spanish', 'SMCH', 'Motihari, Bihar', 'available', 1),
-        ('DOC/2026/003', 'Robert', 'Chen', 'chen@example.com', default_hash, 'Neurology', '+1 (555) 345-6789', 'Cerebrovascular & Stroke Care', 'Neurology Diagnostic Lab, Suite 201', '14 Years', 'MD, Johns Hopkins University', 'MCI-99234', '800', 'English, Mandarin', 'Metro Health City Hospital', 'New York, NY', 'available', 1),
-        ('DOC/2026/004', 'Marie', 'Curie', 'marie@example.com', default_hash, 'Oncology', '+1 (555) 456-7890', 'Radiation Oncology & Immunotherapy', 'Cancer Care Pavilion, Block B', '18 Years', 'MD, PhD Oncology', 'MCI-54369', '900', 'English, French', 'Apollo Super Speciality Hospital', 'New Delhi, DL', 'available', 1),
-        ('DOC/2026/005', 'Arun', 'Verma', 'arun.verma@example.com', default_hash, 'Orthopedics', '+91 987 6543 210', 'Joint Replacement & Spine Surgery', 'Orthopedic Surgery Center', '10 Years', 'MS (Ortho), AIIMS New Delhi', 'MCI-77312', '600', 'English, Hindi', 'SMCH', 'Motihari, Bihar', 'available', 1)
-    ]
-    for doc in doctors_data:
-        cursor.execute("SELECT id FROM doctors WHERE id = ? OR email = ?", (doc[0], doc[3]))
-        if not cursor.fetchone():
-            cursor.execute("""
-                INSERT INTO doctors (
-                    id, first_name, last_name, email, password, department, phone, specialization, 
-                    address, experience, qualification, license_number, consultation_fee, 
-                    languages_spoken, hospital_name, hospital_address, availability_status, is_verified
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, doc)
-            print(f"  ✓ Added Doctor: Dr. {doc[1]} {doc[2]} ({doc[5]})")
-
-    # 2. Patients
-    patients_data = [
-        ('PAT/2026/001', 'Rahul Sharma', 'patient@example.com', default_hash, 34, 'Male', '+91 944 1234 567', 'Civil Lines, Motihari, Bihar'),
-        ('PAT/2026/002', 'Emily Watson', 'emily.watson@example.com', default_hash, 29, 'Female', '+1 (555) 678-9012', '742 Evergreen Terrace, New York, NY'),
-        ('PAT/2026/003', 'Vikram Patel', 'vikram@example.com', default_hash, 48, 'Male', '+91 982 3456 789', 'Boring Road, Patna, Bihar'),
-        ('PAT/2026/004', 'Anita Roy', 'anita@example.com', default_hash, 52, 'Female', '+91 971 2345 678', 'Park Street, Kolkata, West Bengal')
-    ]
-    for pat in patients_data:
-        cursor.execute("SELECT id FROM patients WHERE id = ? OR email = ?", (pat[0], pat[2]))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO patients (id, name, email, password, age, gender, phone, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", pat)
-            print(f"  ✓ Added Patient: {pat[1]} ({pat[2]})")
-
-    # 3. Hospitals
-    hospitals_data = [
-        ('HPT/2026/001', 'SMCH (Spherix Memorial Care Hospital)', 'hospital@spherixclinic.com', default_hash, 150, 42, 25, 6, 'Available', 'Main Medical Campus, Station Road, Motihari, Bihar', 1),
-        ('HPT/2026/002', 'Metro Health City Hospital', 'metro@example.com', default_hash, 250, 78, 40, 12, 'Available', '450 Lexington Ave, New York, NY', 1),
-        ('HPT/2026/003', 'St. Jude Regional Medical Center', 'stjude@example.com', default_hash, 180, 55, 30, 8, 'Available', '12 Medical Park Blvd, Chicago, IL', 1),
-        ('HPT/2026/004', 'Apollo Super Speciality Hospital', 'apollo@example.com', default_hash, 320, 95, 50, 14, 'Available', 'Mathura Road, Sarita Vihar, New Delhi', 1)
-    ]
-    for hpt in hospitals_data:
-        cursor.execute("SELECT id FROM hospitals WHERE id = ? OR email = ?", (hpt[0], hpt[2]))
-        if not cursor.fetchone():
-            cursor.execute("""
-                INSERT INTO hospitals (
-                    id, name, email, password, total_beds, available_beds, icu_beds, 
-                    available_icu_beds, doctors_available, address, is_verified
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, hpt)
-            print(f"  ✓ Added Hospital: {hpt[1]}")
-
-    # 4. Staff
-    staff_data = [
-        ('STF/2026/001', 'Sumit Kumar', 'sumit@gmail.com', default_hash, 'Blood Donor Management', '9334325921', 'SMCH'),
-        ('STF/2026/002', 'Pooja Sharma', 'pooja.nurse@example.com', default_hash, 'Triage Nursing Officer', '+91 988 7766 554', 'SMCH'),
-        ('STF/2026/003', 'Kevin Vance', 'kevin.reception@example.com', default_hash, 'Front Desk Reception Coordinator', '+1 (555) 443-2211', 'Metro Health City Hospital')
-    ]
-    for stf in staff_data:
-        cursor.execute("SELECT id FROM staff WHERE id = ? OR email = ?", (stf[0], stf[2]))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO staff (id, name, email, password, role, phone, hospital_name) VALUES (?, ?, ?, ?, ?, ?, ?)", stf)
-            print(f"  ✓ Added Staff: {stf[1]} ({stf[4]})")
-
-    # 5. Blood Donors
-    blood_donors_data = [
-        ('BD/2026/001', 'Sunny Kushwaha', 'sunny28skk@gmail.com', '9334325920', 'AB+', 24, 'Motihari', default_hash, '2026-06-15'),
-        ('BD/2026/002', 'David Miller', 'david.m@example.com', '+1 (555) 887-1234', 'O-', 28, 'New York', default_hash, '2026-07-20'),
-        ('BD/2026/003', 'Rohan Gupta', 'rohan.g@example.com', '+91 983 5544 332', 'O+', 31, 'Patna', default_hash, '2026-08-01'),
-        ('BD/2026/004', 'Sarah Lin', 'sarah.lin@example.com', '+1 (555) 776-5544', 'A+', 26, 'Chicago', default_hash, '2026-05-10')
-    ]
-    for bd in blood_donors_data:
-        cursor.execute("SELECT id FROM blood_donors WHERE id = ? OR email = ?", (bd[0], bd[2]))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO blood_donors (id, name, email, phone, blood_group, age, city, password, last_donation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", bd)
-            print(f"  ✓ Added Blood Donor: {bd[1]} ({bd[4]})")
-
-    # 6. Organ Donors
-    organ_donors_data = [
-        ('OD/2026/001', 'Elena Rostova', 'elena@example.com', '+1 (555) 432-1098', 'Heart, Kidneys, Corneas', 'O+', 29, 'New York', default_hash),
-        ('OD/2026/002', 'Ramesh Chandra', 'ramesh.c@example.com', '+91 983 1122 334', 'Kidneys, Liver', 'B+', 42, 'Patna', default_hash)
-    ]
-    for od in organ_donors_data:
-        cursor.execute("SELECT id FROM organ_donors WHERE id = ? OR email = ?", (od[0], od[2]))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO organ_donors (id, name, email, phone, organs, blood_group, age, city, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", od)
-            print(f"  ✓ Added Organ Donor: {od[1]} ({od[4]})")
-
-    # 7. Donation Camps
-    camps_data = [
-        (101, 'Red Cross Central Life Drive 2026', 'Community Medical Grounds, Station Road, Motihari', '2026-09-05', '09:00 AM - 05:00 PM', 'Indian Red Cross Society & SMCH', '+91 933 4325 920'),
-        (102, 'Rotary Club Metropolitan Blood Drive', 'Madison Square Health Arena, New York, NY', '2026-09-12', '08:30 AM - 04:30 PM', 'Rotary International & Metro Health', '+1 (555) 900-1000')
-    ]
-    for camp in camps_data:
-        cursor.execute("SELECT id FROM camps WHERE id = ?", (camp[0],))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO camps (id, name, location, date, time, organizer, contact) VALUES (?, ?, ?, ?, ?, ?, ?)", camp)
-            print(f"  ✓ Added Blood Camp: {camp[1]}")
-
-    # 8. Appointments
-    appointments_data = [
-        (1001, 'Rahul Sharma', 'DOC/2026/002', 'PAT/2026/001', '2026-08-25', '10:30:00', 34, 'PID-9901', '+91 944 1234 567', 'Routine Cardiovascular Health Checkup & ECG Review', 'Confirmed'),
-        (1002, 'Emily Watson', 'DOC/2026/003', 'PAT/2026/002', '2026-08-26', '14:00:00', 29, 'PID-9902', '+1 (555) 678-9012', 'Chronic Migraine & Neurological Screening', 'Confirmed')
-    ]
-    for apt in appointments_data:
-        cursor.execute("SELECT id FROM appointments WHERE id = ?", (apt[0],))
-        if not cursor.fetchone():
-            cursor.execute("""
-                INSERT INTO appointments (
-                    id, patient_name, doctor_id, patient_id, appointment_date, appointment_time, 
-                    patient_age, patient_id_number, patient_phone, reason, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, apt)
-            print(f"  ✓ Added Appointment #{apt[0]}: {apt[1]} -> Dr. ID {apt[2]}")
-
-    # 9. Bed Bookings
-    bed_bookings_data = [
-        (2001, 'HPT/2026/001', 'PAT/2026/001', 'Rahul Sharma', '+91 944 1234 567', 'General Deluxe Ward', 'Post-Op Observation & Fluid Therapy', 'Admitted', 'Ward 304'),
-        (2002, 'HPT/2026/001', 'PAT/2026/003', 'Vikram Patel', '+91 982 3456 789', 'ICU Specialized Unit', 'Acute Cardiac Monitoring', 'Reserved', 'ICU Bed 04')
-    ]
-    for bb in bed_bookings_data:
-        cursor.execute("SELECT id FROM bed_bookings WHERE id = ?", (bb[0],))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO bed_bookings (id, hospital_id, patient_id, patient_name, patient_phone, bed_type, reason, status, room_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", bb)
-            print(f"  ✓ Added Bed Booking #{bb[0]}: {bb[3]}")
+    # 1. Primary Admin Doctor
+    admin_doc = (
+        'DOC/2026/001', 'Sunny', 'Kushwaha', 'admin@spherixclinic.com', admin_hash,
+        'Administration', '+91 933 4325 920', 'Chief Medical Officer & Administrator',
+        'Spherix Clinical HQ, Motihari', '15 Years', 'MD, FACC', 'MCI-00192',
+        '1000', 'English, Hindi', '', '', 'available', 1
+    )
+    cursor.execute("SELECT id FROM doctors WHERE email = ?", ('admin@spherixclinic.com',))
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO doctors (
+                id, first_name, last_name, email, password, department, phone, specialization, 
+                address, experience, qualification, license_number, consultation_fee, 
+                languages_spoken, hospital_name, hospital_address, availability_status, is_verified
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, admin_doc)
+        print(f"  ✓ Added Primary Admin: Dr. {admin_doc[1]} {admin_doc[2]} ({admin_doc[3]})")
 
     conn.commit()
     conn.close()
-    print("🎉 All Master Data Successfully Seeded.")
+    print("🎉 System Database Successfully Initialized with Clean Master Records.")
     return True
 
 # ─── 3. JSON DATA MIGRATION UTILITY ──────────────────────────────────────────

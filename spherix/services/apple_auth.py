@@ -7,8 +7,11 @@ import time
 import json
 import logging
 import urllib.parse
-import requests
-from authlib.jose import jwt, JsonWebKey
+try:
+    from authlib.jose import jwt, JsonWebKey
+except (ImportError, ModuleNotFoundError):
+    jwt = None
+    JsonWebKey = None
 
 logger = logging.getLogger(__name__)
 

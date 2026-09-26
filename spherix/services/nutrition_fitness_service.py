@@ -756,7 +756,7 @@ def get_ai_nutrition_advice(user_question, user_profile=None):
     }
 
     try:
-        resp = requests.post(endpoint, headers=headers, json=payload, timeout=10, verify=False)
+        resp = requests.post(endpoint, headers=headers, json=payload, timeout=10)
         resp.raise_for_status()
         reply_json = resp.json()
         choices = reply_json.get('choices', [])
@@ -950,7 +950,7 @@ Return a valid JSON object with the following exact keys:
         }
 
         try:
-            resp = requests.post(endpoint, headers=headers, json=payload, timeout=15, verify=False)
+            resp = requests.post(endpoint, headers=headers, json=payload, timeout=15)
             if resp.status_code == 200:
                 reply_text = resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
                 parsed = _extract_json_payload(reply_text)

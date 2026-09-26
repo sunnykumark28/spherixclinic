@@ -34,7 +34,7 @@ if __name__ == '__main__':
     use_ssl = os.getenv('USE_SSL', 'True').lower() == 'true'
     host = os.getenv('FLASK_HOST', '0.0.0.0')
     port = int(os.getenv('FLASK_PORT', 5001))
-    debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+    debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
 
     # Auto-generate self-signed SAN SSL certificate if missing
     if use_ssl and (not os.path.exists(ssl_cert) or not os.path.exists(ssl_key)):

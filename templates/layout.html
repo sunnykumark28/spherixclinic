@@ -4080,11 +4080,86 @@
             return "Optimal Atmospheric Parameters: Safe and pleasant biometeorological conditions for cardiovascular and outdoor wellness activities.";
         }
 
-        async function fetchRealTimeWeather(lat, lon, cityName, countryName) {
+        async function reverseGeocodeLocation(lat, lon) {
+            // Priority 1: BigDataCloud (Fast, CORS-free, highly accurate city resolution)
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500);
+                const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const data = await res.json();
+                    const city = data.city || data.locality || data.principalSubdivision || 'Local Area';
+                    const country = data.countryName || data.countryCode || 'India';
+                    return { city, country };
+                }
+            } catch (e) {}
+
+            // Priority 2: OpenStreetMap Nominatim
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500);
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const data = await res.json();
+                    const addr = data.address || {};
+                    const city = addr.city || addr.town || addr.village || addr.suburb || addr.county || addr.state || 'Local Area';
+                    const country = addr.country || 'India';
+                    return { city, country };
+                }
+            } catch (e) {}
+
+            return { city: currentCoords.city || 'Local Area', country: currentCoords.country || 'India' };
+        }
+
+        async function detectLocationViaIP() {
+            // Method 1: ipapi.co
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500);
+                const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.latitude && data.longitude) {
+                        return {
+                            lat: data.latitude,
+                            lon: data.longitude,
+                            city: data.city || currentCoords.city,
+                            country: data.country_name || currentCoords.country
+                        };
+                    }
+                }
+            } catch (e) {}
+
+            // Method 2: geojs.io
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500);
+                const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.latitude && data.longitude) {
+                        return {
+                            lat: parseFloat(data.latitude),
+                            lon: parseFloat(data.longitude),
+                            city: data.city || currentCoords.city,
+                            country: data.country || currentCoords.country
+                        };
+                    }
+                }
+            } catch (e) {}
+
+            return currentCoords;
+        }
+
+        async function fetchRealTimeWeather(lat, lon, cityName, countryName, showNotification = false) {
             try {
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m,surface_pressure&timezone=auto`;
                 const response = await fetch(url);
-                if (!response.ok) throw new Error('Network error');
+                if (!response.ok) throw new Error('Weather API network error');
                 const data = await response.json();
                 
                 currentWeatherData = {
@@ -4092,7 +4167,8 @@
                     city: cityName || currentCoords.city,
                     country: countryName || currentCoords.country,
                     lat: lat,
-                    lon: lon
+                    lon: lon,
+                    updatedAt: Date.now()
                 };
 
                 try {
@@ -4103,9 +4179,16 @@
                 } catch(e){}
 
                 renderWeatherUI();
+
+                if (showNotification) {
+                    const code = data.current.weather_code || 0;
+                    const cond = (WMO_WEATHER_MAP[code] || {}).label || 'Clear';
+                    const temp = formatTemp(data.current.temperature_2m);
+                    showWeatherToast(`Live Weather Updated: ${currentWeatherData.city} (${temp}, ${cond})`, 'fas fa-cloud-sun');
+                }
             } catch (err) {
                 console.warn('Weather fetch error:', err);
-                loadCachedWeatherOrDefault();
+                renderWeatherUI();
             }
         }
 
@@ -4152,7 +4235,7 @@
             const flyUv = document.getElementById('flyout-uv');
             const flyAdvisory = document.getElementById('flyout-health-advisory');
 
-            if (flyCity) flyCity.textContent = `${currentWeatherData.city}, ${currentWeatherData.country}`;
+            if (flyCity) flyCity.textContent = `${currentWeatherData.city}${currentWeatherData.country ? ', ' + currentWeatherData.country : ''}`;
             if (flyBigIcon) flyBigIcon.innerHTML = `<i class="${iconClass}"></i>`;
             if (flyBigTemp) flyBigTemp.textContent = formatTemp(cur.temperature_2m);
             if (flyCondText) flyCondText.textContent = info.label;
@@ -4222,40 +4305,106 @@
             }
         });
 
-        async function detectUserLocationWeather(forceGPS = false) {
-            if (forceGPS && navigator.geolocation) {
+        // Banner and Toast UI Helpers
+        function showLocationWeatherBanner() {
+            const banner = document.getElementById('spherix-location-weather-banner');
+            if (!banner) return;
+            banner.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+            banner.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        }
+
+        function dismissLocationWeatherBanner(remember = true) {
+            const banner = document.getElementById('spherix-location-weather-banner');
+            if (banner) {
+                banner.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                banner.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+            }
+            if (remember) {
+                try {
+                    localStorage.setItem('spherix_location_prompt_seen', Date.now().toString());
+                } catch(e){}
+            }
+        }
+
+        function showWeatherToast(msg, iconClass = 'fas fa-location-dot') {
+            const container = document.getElementById('weather-toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'flex items-center gap-2.5 px-4 py-2.5 bg-slate-900/95 text-white backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 text-xs font-semibold animate-fade-in-up transition-all duration-300';
+            toast.innerHTML = `<i class="${iconClass} text-sky-400"></i><span>${msg}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Primary Location & Weather Requester
+        async function requestUserLocationWeather(isUserAction = false) {
+            const btn = document.getElementById('btn-allow-location-perm');
+            if (btn && isUserAction) {
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin text-white"></i><span>Detecting Location...</span>`;
+                btn.disabled = true;
+            }
+
+            if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     async (pos) => {
                         const lat = pos.coords.latitude;
                         const lon = pos.coords.longitude;
-                        fetchRealTimeWeather(lat, lon, 'Local Area', 'Live GPS');
+                        dismissLocationWeatherBanner(true);
+                        try {
+                            localStorage.setItem('spherix_location_granted', 'true');
+                        } catch(e){}
+
+                        // Reverse geocode to get actual city and country name
+                        const loc = await reverseGeocodeLocation(lat, lon);
+                        currentCoords.lat = lat;
+                        currentCoords.lon = lon;
+                        currentCoords.city = loc.city;
+                        currentCoords.country = loc.country;
+
+                        await fetchRealTimeWeather(lat, lon, loc.city, loc.country, isUserAction);
+                        if (btn) {
+                            btn.innerHTML = `<i class="fas fa-check text-white"></i><span>Location Enabled</span>`;
+                        }
                     },
-                    (err) => {
-                        console.log('GPS denied, falling back to default/IP');
-                        fetchRealTimeWeather(currentCoords.lat, currentCoords.lon, currentCoords.city, currentCoords.country);
+                    async (err) => {
+                        console.warn('Geolocation prompt rejected/unavailable:', err.message);
+                        dismissLocationWeatherBanner(true);
+                        
+                        // Fallback gracefully to IP-based location
+                        const ipLoc = await detectLocationViaIP();
+                        currentCoords = ipLoc;
+                        await fetchRealTimeWeather(ipLoc.lat, ipLoc.lon, ipLoc.city, ipLoc.country, isUserAction);
                     },
-                    { timeout: 8000 }
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
                 );
-                return;
+            } else {
+                dismissLocationWeatherBanner(true);
+                const ipLoc = await detectLocationViaIP();
+                currentCoords = ipLoc;
+                await fetchRealTimeWeather(ipLoc.lat, ipLoc.lon, ipLoc.city, ipLoc.country, isUserAction);
             }
-
-            try {
-                const res = await fetch('https://ipapi.co/json/');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.latitude && data.longitude) {
-                        currentCoords.lat = data.latitude;
-                        currentCoords.lon = data.longitude;
-                        currentCoords.city = data.city || currentCoords.city;
-                        currentCoords.country = data.country_name || currentCoords.country;
-                        fetchRealTimeWeather(currentCoords.lat, currentCoords.lon, currentCoords.city, currentCoords.country);
-                        return;
-                    }
-                }
-            } catch(e){}
-
-            fetchRealTimeWeather(currentCoords.lat, currentCoords.lon, currentCoords.city, currentCoords.country);
         }
+
+        // Backward-compatible alias for existing dropdown buttons
+        window.detectUserLocationWeather = function(forceGPS = false) {
+            requestUserLocationWeather(true);
+        };
+
+        window.handleUserAllowLocation = function() {
+            requestUserLocationWeather(true);
+        };
+
+        window.handleUserIPLocationFallback = async function() {
+            dismissLocationWeatherBanner(true);
+            const ipLoc = await detectLocationViaIP();
+            currentCoords = ipLoc;
+            await fetchRealTimeWeather(ipLoc.lat, ipLoc.lon, ipLoc.city, ipLoc.country, true);
+        };
 
         async function handleCityWeatherSearch() {
             const input = document.getElementById('weather-city-search-input');
@@ -4270,7 +4419,7 @@
                 if (geoData.results && geoData.results.length > 0) {
                     const match = geoData.results[0];
                     input.value = '';
-                    fetchRealTimeWeather(match.latitude, match.longitude, match.name, match.country || match.admin1 || '');
+                    fetchRealTimeWeather(match.latitude, match.longitude, match.name, match.country || match.admin1 || '', true);
                 } else {
                     alert(`City "${q}" not found. Please try another city.`);
                 }
@@ -4279,29 +4428,118 @@
             }
         }
 
-        function loadCachedWeatherOrDefault() {
+        // Main initialization on website visit
+        async function initializeWebsiteWeatherAndLocation() {
+            let hasCached = false;
             try {
                 const cached = localStorage.getItem('spherix_cached_weather');
                 if (cached) {
                     const parsed = JSON.parse(cached);
-                    if (Date.now() - parsed.timestamp < 1000 * 60 * 30) {
+                    // If cached within 20 mins, render immediately for instant UX
+                    if (Date.now() - parsed.timestamp < 1000 * 60 * 20) {
                         currentWeatherData = parsed.data;
                         renderWeatherUI();
-                        return;
+                        hasCached = true;
                     }
                 }
             } catch(e){}
 
-            detectUserLocationWeather(false);
+            // Check Geolocation Permissions
+            if (navigator.permissions && navigator.permissions.query) {
+                try {
+                    const status = await navigator.permissions.query({ name: 'geolocation' });
+                    if (status.state === 'granted') {
+                        // Silently fetch exact GPS location and update real-time weather
+                        requestUserLocationWeather(false);
+                        return;
+                    } else if (status.state === 'prompt') {
+                        // If user hasn't seen the prompt recently, ask for location
+                        const lastPrompt = localStorage.getItem('spherix_location_prompt_seen');
+                        const isRecentlyDismissed = lastPrompt && (Date.now() - parseInt(lastPrompt, 10) < 1000 * 60 * 60 * 24); // 24hr cooldown
+                        
+                        if (!isRecentlyDismissed) {
+                            setTimeout(() => {
+                                showLocationWeatherBanner();
+                            }, 1200);
+                        }
+
+                        // Also request location natively or fallback to IP in the background
+                        if (!hasCached) {
+                            requestUserLocationWeather(false);
+                        }
+                        return;
+                    } else if (status.state === 'denied') {
+                        // Permission denied: fallback to IP location
+                        if (!hasCached) {
+                            const ipLoc = await detectLocationViaIP();
+                            currentCoords = ipLoc;
+                            fetchRealTimeWeather(ipLoc.lat, ipLoc.lon, ipLoc.city, ipLoc.country, false);
+                        }
+                        return;
+                    }
+                } catch(e){}
+            }
+
+            // Fallback initialization if permissions API isn't available
+            if (!hasCached) {
+                const lastPrompt = localStorage.getItem('spherix_location_prompt_seen');
+                if (!lastPrompt) {
+                    setTimeout(() => showLocationWeatherBanner(), 1500);
+                }
+                requestUserLocationWeather(false);
+            }
         }
 
-        // Initialize weather on page load
+        // Initialize immediately when page opens
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadCachedWeatherOrDefault);
+            document.addEventListener('DOMContentLoaded', initializeWebsiteWeatherAndLocation);
         } else {
-            loadCachedWeatherOrDefault();
+            initializeWebsiteWeatherAndLocation();
         }
     </script>
+
+    <!-- Floating Location & Live Weather Prompt Modal / Card -->
+    <div id="spherix-location-weather-banner"
+        class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[1050] max-w-sm w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-sky-100 p-4 sm:p-5 transition-all duration-500 ease-out transform translate-y-24 opacity-0 pointer-events-none text-slate-800 flex flex-col gap-3">
+        
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white text-lg shadow-md shadow-sky-500/20 flex-shrink-0">
+                    <i class="fas fa-location-dot animate-bounce"></i>
+                </div>
+                <div>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-extrabold tracking-wide uppercase font-mono">
+                        <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span> Live Weather Telemetry
+                    </span>
+                    <h4 class="text-sm font-black text-slate-900 leading-tight mt-0.5">Enable Location for Live Weather</h4>
+                </div>
+            </div>
+            <button type="button" onclick="dismissLocationWeatherBanner(true);"
+                class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100 cursor-pointer text-xs"
+                title="Dismiss">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <p class="text-xs text-slate-500 leading-relaxed">
+            Allow location access to detect your city and display real-time weather conditions, temperature, and personalized clinical health advisories.
+        </p>
+
+        <div class="flex items-center gap-2 pt-1">
+            <button type="button" onclick="handleUserAllowLocation();" id="btn-allow-location-perm"
+                class="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-blue-500/25 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98">
+                <i class="fas fa-crosshairs text-sky-200"></i>
+                <span>Allow Location</span>
+            </button>
+            <button type="button" onclick="handleUserIPLocationFallback();"
+                class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer active:scale-98">
+                Auto (IP)
+            </button>
+        </div>
+    </div>
+
+    <!-- Global Toast Notification Container for Live Telemetry Updates -->
+    <div id="weather-toast-container" class="fixed top-20 right-4 z-[1070] flex flex-col gap-2 pointer-events-none max-w-sm"></div>
 
     <style>
         /* System Toast Progress Countdown */

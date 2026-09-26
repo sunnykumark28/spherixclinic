@@ -26,7 +26,7 @@ except ImportError:
 
 try:
     from flask_socketio import SocketIO, emit, join_room
-    socketio = SocketIO(cors_allowed_origins="*")
+    socketio = SocketIO(cors_allowed_origins=[origin.strip() for origin in os.getenv('SOCKETIO_CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()] or None)
 except ImportError:
     socketio = None
     emit = None

@@ -1,6 +1,7 @@
 import os
 import sys
 import random
+import secrets
 from datetime import datetime, timezone
 
 # Automatically configure unixODBC paths on macOS for Homebrew installations
@@ -27,7 +28,12 @@ def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 # Secret Key
-SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_key_spherix_clinic_universal_secret_2026')
+# Production must provide a stable, private key. Local development gets a
+# per-process key so a published default cannot be used to forge sessions.
+_secret_key = os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET')
+if not _secret_key and os.environ.get('FLASK_ENV', '').lower() == 'production':
+    raise RuntimeError('SECRET_KEY must be set in production.')
+SECRET_KEY = _secret_key or secrets.token_hex(32)
 
 # Mail configuration
 MAIL_SERVER = str(os.getenv('MAIL_SERVER', '')).strip(" '\"")
@@ -41,7 +47,7 @@ DATA_FILE = 'data_store.json'
 SERVER = os.getenv('DB_SERVER', 'localhost')
 DATABASE = os.getenv('DB_NAME', 'spherixclinic')
 USERNAME = os.getenv('DB_USER', 'sa')
-PASSWORD = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', 'AnupriyaK#1234')
+PASSWORD = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', '')
 DRIVER = os.getenv('DB_DRIVER', '{ODBC Driver 17 for SQL Server}')
 
 # Global Currency Rates & Symbols

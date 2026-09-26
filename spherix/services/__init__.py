@@ -3,7 +3,7 @@ from spherix.services.database import (
     auto_migrate_local_data, migrate_legacy_schema,
     cleanup_temporary_and_duplicate_data, deduplicate_entities,
     setup_admin_user, setup_hospital_user, setup_international_network,
-    create_notification, get_temp_data_item
+    create_notification, get_temp_data_item, reset_factory_database
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html
@@ -24,7 +24,7 @@ __all__ = [
     'auto_migrate_local_data', 'migrate_legacy_schema',
     'cleanup_temporary_and_duplicate_data', 'deduplicate_entities',
     'setup_admin_user', 'setup_hospital_user', 'setup_international_network',
-    'create_notification', 'get_temp_data_item',
+    'create_notification', 'get_temp_data_item', 'reset_factory_database',
     'send_notification_email', 'send_notification_email_async', 'get_premium_otp_email_html',
     'verify_razorpay_signature', 'create_razorpay_order',
     'SpherixClinicalPrescriptionPDF', 'generate_spherix_clinical_pdf', 'to_latin1_str',

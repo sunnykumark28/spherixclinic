@@ -149,6 +149,7 @@ class Staff(UserMixin):
         self.role = role
         self.phone = kwargs.get('phone')
         self.hospital_name = kwargs.get('hospital_name')
+        self.hospital_id = kwargs.get('hospital_id')
         self.created_at = kwargs.get('created_at', utcnow())
         self.last_login = kwargs.get('last_login')
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or f"STAFF-REG-{datetime.now().year}-{random.randint(10000, 99999)}"
@@ -162,9 +163,26 @@ class Staff(UserMixin):
         self.is_blood_donor = False
         self.is_organ_donor = False
         self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.shift = kwargs.get('shift', 'Day Shift (08:00 - 16:00)')
+        self.department = kwargs.get('department', self.role)
+        self.on_duty = kwargs.get('on_duty', True)
 
     def get_id(self):
         return f"staff-{self.id}"
+
+    @property
+    def hospital(self):
+        from spherix.services.database import TEMP_DATA
+        h_id = getattr(self, 'hospital_id', None)
+        h_name = getattr(self, 'hospital_name', None)
+        if h_id and str(h_id) in TEMP_DATA.get('hospitals', {}):
+            return TEMP_DATA['hospitals'][str(h_id)]
+        if h_id:
+            h = next((h for h in TEMP_DATA.get('hospitals', {}).values() if str(getattr(h, 'id', '')) == str(h_id)), None)
+            if h: return h
+        if h_name:
+            return next((h for h in TEMP_DATA.get('hospitals', {}).values() if (getattr(h, 'name', '') or '').lower().strip() == h_name.lower().strip()), None)
+        return None
 
     @property
     def appointments(self):

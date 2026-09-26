@@ -11,6 +11,8 @@ import math
 import time as time_module
 import hashlib
 import traceback
+import tempfile
+import re
 from datetime import datetime, date, time, timedelta, timezone
 from io import BytesIO, StringIO
 from functools import wraps
@@ -450,17 +452,67 @@ def staff_blood_dashboard():
             
             save_data()
             flash(f"Successfully recorded donation of {quantity} units of {blood_group} blood from {donor_name}.", "success")
+        elif 'fulfill_blood_request' in request.form:
+            req_id = parse_route_id(request.form.get('request_id', ''))
+            req = TEMP_DATA.get('blood_requests', {}).get(req_id)
+            if req and str(req.get('hospital_id', '')) == str(hospital.id):
+                bg = req.get('blood_group')
+                qty = int(req.get('units', 1))
+                current_qty = hospital.blood_stock.get(bg, 0)
+                if current_qty >= qty:
+                    hospital.blood_stock[bg] = current_qty - qty
+                    req['status'] = 'fulfilled'
+                    log_id = max([0] + [int(k) for k in TEMP_DATA.get('activity_logs', {}).keys() if str(k).isdigit()]) + 1
+                    TEMP_DATA['activity_logs'][log_id] = ActivityLog(
+                        id=log_id,
+                        hospital_id=hospital.id,
+                        user_name=current_user.name,
+                        action="Fulfilled Blood Requisition",
+                        details=f"Fulfilled {qty} units of {bg} blood for Patient: {req.get('patient_name')} ({req.get('urgency')})."
+                    )
+                    save_data()
+                    flash(f"Successfully fulfilled {qty} units of {bg} blood for {req.get('patient_name')}.", "success")
+                else:
+                    flash(f"Cannot fulfill request: Insufficient stock of {bg} (Requested: {qty}, Available: {current_qty}).", "error")
+            else:
+                flash("Access Denied: You cannot manage blood requisitions belonging to another hospital.", "error")
+            target_tab = request.form.get('redirect_tab', 'requests')
+            return redirect(url_for('staff_blood_dashboard', tab=target_tab))
+        elif 'reserve_blood_request' in request.form:
+            req_id = parse_route_id(request.form.get('request_id', ''))
+            req = TEMP_DATA.get('blood_requests', {}).get(req_id)
+            if req and str(req.get('hospital_id', '')) == str(hospital.id):
+                req['status'] = 'reserved'
+                save_data()
+                flash(f"Blood units reserved for {req.get('patient_name')}.", "info")
+            else:
+                flash("Access Denied: You cannot manage blood requisitions belonging to another hospital.", "error")
+            target_tab = request.form.get('redirect_tab', 'requests')
+            return redirect(url_for('staff_blood_dashboard', tab=target_tab))
+        elif 'reject_blood_request' in request.form:
+            req_id = parse_route_id(request.form.get('request_id', ''))
+            req = TEMP_DATA.get('blood_requests', {}).get(req_id)
+            if req and str(req.get('hospital_id', '')) == str(hospital.id):
+                req['status'] = 'rejected'
+                save_data()
+                flash(f"Blood requisition rejected.", "warning")
+            else:
+                flash("Access Denied: You cannot manage blood requisitions belonging to another hospital.", "error")
+            target_tab = request.form.get('redirect_tab', 'requests')
+            return redirect(url_for('staff_blood_dashboard', tab=target_tab))
         target_tab = request.form.get('redirect_tab', 'overview')
         return redirect(url_for('staff_blood_dashboard', tab=target_tab))
         
-    blood_donors = [d for d in TEMP_DATA.get('blood_donors', {}).values() if getattr(d, 'hospital_id', None) == hospital.id or not getattr(d, 'hospital_id', None)]
+    blood_donors = [d for d in TEMP_DATA.get('blood_donors', {}).values() if str(getattr(d, 'hospital_id', '')) == str(hospital.id)]
+    blood_requests = [r for r in TEMP_DATA.get('blood_requests', {}).values() if str(r.get('hospital_id', '')) == str(hospital.id)]
     blood_stock = hospital.blood_stock if hasattr(hospital, 'blood_stock') else TEMP_DATA.get('blood_stock', {})
-    camps = [c for c in TEMP_DATA.get('camps', {}).values() if c.get('organizer') == hospital_name]
+    camps = [c for c in TEMP_DATA.get('camps', {}).values() if c.get('organizer') == hospital_name or str(c.get('hospital_id', '')) == str(hospital.id)]
     camp_names = [c['name'] for c in camps]
     camp_registrations = [r for r in TEMP_DATA.get('camp_registrations', {}).values() if r.get('camp_name') in camp_names]
 
     return render_template('staff_blood_dashboard.html', 
                            staff=current_user, hospital=hospital, blood_donors=blood_donors, 
+                           blood_requests=blood_requests,
                            blood_stock=blood_stock, camps=camps, camp_registrations=camp_registrations, 
                            activity_logs=activity_logs, tab=tab)
 
@@ -476,6 +528,9 @@ def staff_organ_dashboard():
         donor_id = parse_route_id(request.form.get('donor_id', ''))
         if 'edit_organ_donor' in request.form and donor_id in TEMP_DATA.get('organ_donors', {}):
             donor = TEMP_DATA['organ_donors'][donor_id]
+            if getattr(donor, 'hospital_id', None) and str(donor.hospital_id) != str(hospital.id):
+                flash("Access denied: This donor belongs to another hospital.", "error")
+                return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
             donor.name, donor.email = request.form.get('name', donor.name), request.form.get('email', donor.email)
             donor.phone, donor.city = request.form.get('phone', donor.phone), request.form.get('city', donor.city)
             donor.blood_group, donor.organs = request.form.get('blood_group', donor.blood_group), request.form.getlist('organs')
@@ -483,17 +538,29 @@ def staff_organ_dashboard():
             flash("Organ donor updated.", "success")
             return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
         elif 'delete_organ_donor' in request.form and donor_id in TEMP_DATA.get('organ_donors', {}):
+            donor = TEMP_DATA['organ_donors'][donor_id]
+            if getattr(donor, 'hospital_id', None) and str(donor.hospital_id) != str(hospital.id):
+                flash("Access denied: This donor belongs to another hospital.", "error")
+                return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
             del TEMP_DATA['organ_donors'][donor_id]
             save_data()
             flash("Organ donor deleted.", "success")
             return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
         elif 'approve_organ_donor' in request.form and donor_id in TEMP_DATA.get('organ_donors', {}):
-            TEMP_DATA['organ_donors'][donor_id].status = 'approved'
+            donor = TEMP_DATA['organ_donors'][donor_id]
+            if getattr(donor, 'hospital_id', None) and str(donor.hospital_id) != str(hospital.id):
+                flash("Access denied: This donor belongs to another hospital.", "error")
+                return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
+            donor.status = 'approved'
             save_data()
             flash("Organ donor pledge approved.", "success")
             return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
         elif 'reject_organ_donor' in request.form and donor_id in TEMP_DATA.get('organ_donors', {}):
-            TEMP_DATA['organ_donors'][donor_id].status = 'rejected'
+            donor = TEMP_DATA['organ_donors'][donor_id]
+            if getattr(donor, 'hospital_id', None) and str(donor.hospital_id) != str(hospital.id):
+                flash("Access denied: This donor belongs to another hospital.", "error")
+                return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
+            donor.status = 'rejected'
             save_data()
             flash("Organ donor pledge rejected.", "success")
             return redirect(url_for('staff_organ_dashboard', tab='donor_registry'))
@@ -544,7 +611,7 @@ def staff_organ_dashboard():
             req = TEMP_DATA.get('organ_requests', {}).get(req_id)
             donor = TEMP_DATA.get('organ_donors', {}).get(donor_id)
             
-            if req and donor and donor.status == 'approved' and req.status == 'active':
+            if req and donor and str(getattr(req, 'hospital_id', '')) == str(hospital.id) and str(getattr(donor, 'hospital_id', '')) == str(hospital.id) and donor.status == 'approved' and req.status == 'active':
                 req.status = 'matched'
                 donor.status = 'matched'
                 
@@ -562,11 +629,13 @@ def staff_organ_dashboard():
                 
                 save_data()
                 flash(f"Organ match successful! Donor {donor.name} linked with Patient {req.patient_name}.", "success")
+            else:
+                flash("Could not complete organ match. Please check donor status and hospital authorization.", "error")
             return redirect(url_for('staff_organ_dashboard', tab='matching_log'))
         return redirect(url_for('staff_organ_dashboard', tab=tab))
 
-    organ_donors = [d for d in TEMP_DATA.get('organ_donors', {}).values() if getattr(d, 'hospital_id', None) == hospital.id or not getattr(d, 'hospital_id', None)]
-    organ_requests = [r for r in TEMP_DATA.get('organ_requests', {}).values() if hospital and r.hospital_id == hospital.id]
+    organ_donors = [d for d in TEMP_DATA.get('organ_donors', {}).values() if str(getattr(d, 'hospital_id', '')) == str(hospital.id)]
+    organ_requests = [r for r in TEMP_DATA.get('organ_requests', {}).values() if hospital and str(getattr(r, 'hospital_id', '')) == str(hospital.id)]
     
     return render_template('staff_organ_dashboard.html', 
                            staff=current_user, hospital=hospital, organ_donors=organ_donors, 
@@ -1696,7 +1765,12 @@ def generate_user_id_card_pdf(user_type, name, user_id, phone, address, blood_gr
     - Contact Number, Address, and clinical vitals (Blood group, pledge, facility)
     - Scannable Code128 Barcode with user card ID at the bottom
     """
-    from PIL import Image, ImageDraw
+    try:
+        from PIL import Image, ImageDraw  # type: ignore
+        has_pil = True
+    except ImportError:
+        has_pil = False
+
     card_w = 54.0
     card_h = 91.8
 
@@ -1728,44 +1802,66 @@ def generate_user_id_card_pdf(user_type, name, user_id, phone, address, blood_gr
         avatar_bg = (13, 148, 136)
 
     # 2. Profile Picture on Top (Circular / Rounded with white border)
-    avatar_size = 240
-    avatar_img = Image.new('RGBA', (avatar_size, avatar_size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(avatar_img)
+    avatar_w = 20.0
+    avatar_x = (card_w - avatar_w) / 2
+    avatar_y = 7.0
+    photo_rendered = False
 
-    photo_loaded = False
-    if photo_filename:
-        photo_path = os.path.join(current_app.root_path, 'static', 'uploads', photo_filename)
-        if not os.path.exists(photo_path):
-            photo_path = os.path.join(current_app.root_path, 'static', photo_filename)
-        if os.path.exists(photo_path):
-            try:
-                user_photo = Image.open(photo_path).convert('RGBA')
-                min_dim = min(user_photo.size)
-                left = (user_photo.width - min_dim) / 2
-                top = (user_photo.height - min_dim) / 2
-                user_photo = user_photo.crop((left, top, left + min_dim, top + min_dim))
-                user_photo = user_photo.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
-                
-                mask = Image.new('L', (avatar_size, avatar_size), 0)
-                mask_draw = ImageDraw.Draw(mask)
-                mask_draw.ellipse((4, 4, avatar_size - 4, avatar_size - 4), fill=255)
-                
-                avatar_img.paste(user_photo, (0, 0), mask)
-                draw.ellipse((4, 4, avatar_size - 4, avatar_size - 4), outline=(245, 245, 245), width=6)
-                photo_loaded = True
-            except Exception as e:
-                print(f"Error loading profile picture for ID card: {e}")
+    if has_pil:
+        try:
+            avatar_size = 240
+            avatar_img = Image.new('RGBA', (avatar_size, avatar_size), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(avatar_img)
 
-    if not photo_loaded:
-        draw.ellipse((4, 4, avatar_size - 4, avatar_size - 4), fill=avatar_bg, outline=(245, 245, 245), width=6)
-        draw.ellipse((avatar_size * 0.35, avatar_size * 0.22, avatar_size * 0.65, avatar_size * 0.52), fill=(255, 255, 255))
-        draw.pieslice((avatar_size * 0.2, avatar_size * 0.55, avatar_size * 0.8, avatar_size * 1.15), 180, 360, fill=(255, 255, 255))
+            photo_loaded = False
+            if photo_filename:
+                photo_path = os.path.join(current_app.root_path, 'static', 'uploads', photo_filename)
+                if not os.path.exists(photo_path):
+                    photo_path = os.path.join(current_app.root_path, 'static', photo_filename)
+                if os.path.exists(photo_path):
+                    try:
+                        user_photo = Image.open(photo_path).convert('RGBA')
+                        min_dim = min(user_photo.size)
+                        left = (user_photo.width - min_dim) / 2
+                        top = (user_photo.height - min_dim) / 2
+                        user_photo = user_photo.crop((left, top, left + min_dim, top + min_dim))
+                        user_photo = user_photo.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
+                        
+                        mask = Image.new('L', (avatar_size, avatar_size), 0)
+                        mask_draw = ImageDraw.Draw(mask)
+                        mask_draw.ellipse((4, 4, avatar_size - 4, avatar_size - 4), fill=255)
+                        
+                        avatar_img.paste(user_photo, (0, 0), mask)
+                        draw.ellipse((4, 4, avatar_size - 4, avatar_size - 4), outline=(245, 245, 245), width=6)
+                        photo_loaded = True
+                    except Exception as e:
+                        print(f"Error loading profile picture for ID card: {e}")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_av:
-        avatar_img.save(tmp_av.name)
-        pdf.image(tmp_av.name, x=(card_w - 20) / 2, y=7, w=20, h=20)
-        try: os.unlink(tmp_av.name)
-        except OSError: pass
+            if not photo_loaded:
+                draw.ellipse((4, 4, avatar_size - 4, avatar_size - 4), fill=avatar_bg, outline=(245, 245, 245), width=6)
+                draw.ellipse((avatar_size * 0.35, avatar_size * 0.22, avatar_size * 0.65, avatar_size * 0.52), fill=(255, 255, 255))
+                draw.pieslice((avatar_size * 0.2, avatar_size * 0.55, avatar_size * 0.8, avatar_size * 1.15), 180, 360, fill=(255, 255, 255))
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_av:
+                avatar_img.save(tmp_av.name)
+                pdf.image(tmp_av.name, x=avatar_x, y=avatar_y, w=avatar_w, h=avatar_w)
+                photo_rendered = True
+                try: os.unlink(tmp_av.name)
+                except OSError: pass
+        except Exception as e:
+            photo_rendered = False
+
+    if not photo_rendered:
+        pdf.set_fill_color(avatar_bg[0], avatar_bg[1], avatar_bg[2])
+        pdf.set_draw_color(245, 245, 245)
+        pdf.set_line_width(0.8)
+        pdf.ellipse(avatar_x, avatar_y, avatar_w, avatar_w, 'FD')
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.set_text_color(255, 255, 255)
+        initial = (str(name).strip()[:1] or 'P').upper()
+        pdf.set_xy(avatar_x, avatar_y + 5.5)
+        pdf.cell(avatar_w, 8, initial, 0, 0, 'C')
+
 
     # 3. Name Below Photo
     pdf.set_xy(3, 29)
