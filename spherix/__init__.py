@@ -29,11 +29,14 @@ def create_app(config_object=None):
     # Configuration
     app.secret_key = SECRET_KEY
     app.config['SECRET_KEY'] = SECRET_KEY
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200 MB
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
     app.config['JWT_DECODE_AUDIENCE'] = None
     app.config['JWT_IDENTITY_CLAIM'] = 'sub'
     app.config['JWT_VERIFY_SUB'] = False
+
 
     if config_object:
         app.config.from_object(config_object)

@@ -64,6 +64,17 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+    /* Medical Record Type Badges & Icons */
+    .rec-icon-box { width: 38px; height: 38px; font-size: 1.1rem; }
+    .rec-icon-pdf { background-color: #ef4444 !important; }
+    .rec-icon-image { background-color: #0ea5e9 !important; }
+    .rec-icon-doc { background-color: #6366f1 !important; }
+    .rec-badge-lab { background-color: #fee2e2 !important; color: #b91c1c !important; }
+    .rec-badge-rad { background-color: #e0f2fe !important; color: #0369a1 !important; }
+    .rec-badge-rx { background-color: #ecfdf5 !important; color: #047857 !important; }
+    .rec-badge-sum { background-color: #fef3c7 !important; color: #b45309 !important; }
+    .rec-badge-def { background-color: #f1f5f9 !important; color: #475569 !important; }
+
     /* Layout Structure */
     .patient-layout {
       display: flex;
@@ -430,13 +441,15 @@
   <!-- ========================================================================== -->
   <aside class="patient-sidebar" id="patientSidebar">
     <a href="{{ url_for('patient_dashboard') }}" class="patient-brand">
-      <div class="brand-logo-box">
-        <i class="fas fa-heartbeat"></i>
+      <div class="brand-logo-box" style="padding: 0; overflow: hidden; background: transparent; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);">
+        <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" alt="Spherix Clinic" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
       </div>
       <div>
-        <div class="fw-bold font-display fs-5 text-slate-900" style="line-height: 1.1; color: #0f172a;">Spherix Clinic</div>
+        <div class="fw-bold font-display fs-5" style="line-height: 1.1;"><span class="spherix-brand-gradient">Spherix</span> <span style="color: #0284c7;">Clinic</span></div>
         <small class="fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px; color: #0284c7;">PATIENT PORTAL</small>
       </div>
+
+
     </a>
 
     <div class="patient-sidebar-menu">
@@ -1269,6 +1282,9 @@
               <tbody>
                 {% if medical_records and medical_records|length > 0 %}
                   {% for rec in medical_records %}
+                  {% set rec_cls = 'rec-icon-pdf' if rec.file_type == 'pdf' else ('rec-icon-image' if rec.file_type == 'image' else 'rec-icon-doc') %}
+                  {% set rec_icon = 'fa-file-pdf' if rec.file_type == 'pdf' else ('fa-file-image' if rec.file_type == 'image' else 'fa-file-alt') %}
+                  {% set badge_cls = 'rec-badge-lab' if rec.record_type == 'Lab Report' else ('rec-badge-rad' if rec.record_type == 'Radiology & Scan' else ('rec-badge-rx' if rec.record_type == 'Prescription' else ('rec-badge-sum' if rec.record_type == 'Discharge Summary' else 'rec-badge-def'))) %}
                   <tr class="pat-record-row" 
                       data-type="{{ rec.record_type }}" 
                       data-shared="{{ 'shared' if rec.shared_with and rec.shared_with|length > 0 else 'private' }}"
@@ -1276,10 +1292,12 @@
                     <!-- Document & File -->
                     <td>
                       <div class="d-flex align-items-center gap-2.5">
-                        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-2xs" 
-                             style="width: 38px; height: 38px; background: {% if rec.file_type == 'pdf' %}#ef4444{% elif rec.file_type == 'image' %}#0ea5e9{% else %}#6366f1{% endif %}; font-size: 1.1rem;">
-                          <i class="fas {% if rec.file_type == 'pdf' %}fa-file-pdf{% elif rec.file_type == 'image' %}fa-file-image{% else %}fa-file-alt{% endif %}"></i>
+                        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-2xs rec-icon-box {{ rec_cls }}">
+                          <i class="fas {{ rec_icon }}"></i>
                         </div>
+                        <span class="badge rounded-pill px-2.5 py-1 {{ badge_cls }}">
+                          {{ rec.record_type }}
+                        </span>
                         <div>
                           <div class="fw-bold text-dark">{{ rec.title }}</div>
                           <div class="small text-muted font-monospace" style="font-size: 0.72rem;">
@@ -1291,8 +1309,7 @@
 
                     <!-- Category Badge -->
                     <td>
-                      <span class="badge rounded-pill px-2.5 py-1" 
-                            style="background-color: {% if rec.record_type == 'Lab Report' %}#fee2e2; color: #b91c1c{% elif rec.record_type == 'Radiology & Scan' %}#e0f2fe; color: #0369a1{% elif rec.record_type == 'Prescription' %}#ecfdf5; color: #047857{% elif rec.record_type == 'Discharge Summary' %}#fef3c7; color: #b45309{% else %}#f1f5f9; color: #475569{% endif %};">
+                      <span class="badge rounded-pill px-2.5 py-1 {{ badge_cls }}">
                         {{ rec.record_type }}
                       </span>
                     </td>

@@ -7,8 +7,11 @@ import time
 import json
 import logging
 import urllib.parse
+import warnings
 try:
-    from authlib.jose import jwt, JsonWebKey
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        from authlib.jose import jwt, JsonWebKey
 except (ImportError, ModuleNotFoundError):
     jwt = None
     JsonWebKey = None

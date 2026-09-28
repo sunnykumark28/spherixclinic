@@ -303,11 +303,13 @@ def doctor_forgot_password():
             otp = str(random.randint(100000, 999999))
             session['doctor_reset_data'] = {'email': email, 'otp': otp}
             
+            doc_full_name = f"{getattr(doctor, 'first_name', '')} {getattr(doctor, 'last_name', '')}".strip() or getattr(doctor, 'last_name', '') or 'Doctor'
             subject = "Reset Your Password - Spherix Clinic Doctor Portal"
             body = get_premium_otp_email_html(
                 title="Password Reset Request",
-                greeting=f"Hello Dr. {doctor.last_name},",
-                message="We received a request to reset your password. Use the following One-Time Password (OTP) to complete the reset process:",
+                user_name=f"Dr. {doc_full_name}",
+                subject_label="Doctor Portal Password Reset Verification",
+                message="We received a request to reset the password for your Spherix Clinic clinician account. Please use the following One-Time Password (OTP) to complete your password reset:",
                 otp=otp,
                 role_color="#2563eb",
                 accent_bg="#eff6ff"
@@ -674,11 +676,12 @@ def hospital_forgot_password():
             otp = str(random.randint(100000, 999999))
             session['hospital_reset_data'] = {'email': email, 'otp': otp}
             
-            subject = "Reset Your Password - Spherix Clinic Hospital"
+            subject = "Reset Your Password - Spherix Clinic Hospital Portal"
             body = get_premium_otp_email_html(
                 title="Password Reset Request",
-                greeting=f"Hello {hospital.name},",
-                message="We received a request to reset your password. Use the following One-Time Password (OTP) to complete the reset process:",
+                user_name=hospital.name,
+                subject_label="Hospital Administrator Password Reset",
+                message="We received a request to reset the password for your Spherix Clinic institutional account. Please use the following One-Time Password (OTP) to proceed:",
                 otp=otp,
                 role_color="#059669",
                 accent_bg="#ecfdf5"
@@ -1134,14 +1137,15 @@ def patient_forgot_password():
             otp = str(random.randint(100000, 999999))
             session['reset_data'] = {'email': email, 'otp': otp}
             
-            subject = "Reset Your Password - Spherix Clinic"
+            subject = "Reset Your Password - Spherix Clinic Patient Portal"
             body = get_premium_otp_email_html(
                 title="Password Reset Request",
-                greeting=f"Hello {patient.name},",
-                message="We received a request to reset your password. Use the following One-Time Password (OTP) to complete the reset process:",
+                user_name=patient.name,
+                subject_label="Patient Account Security & Password Reset",
+                message="We received a request to reset the password associated with your Spherix Clinic patient account. Please enter the 6-digit One-Time Password (OTP) below:",
                 otp=otp,
-                role_color="#0d6efd",
-                accent_bg="#f8f9fa"
+                role_color="#0284c7",
+                accent_bg="#f0f9ff"
             )
             if send_notification_email(email, subject, body, is_html=True):
                 flash("An OTP has been sent to your email.", "info")

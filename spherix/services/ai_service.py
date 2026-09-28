@@ -444,22 +444,36 @@ Required keys:
 
 
 def _extract_groq_text_response(payload_json):
+    if not isinstance(payload_json, dict):
+        return ''
     if 'choices' in payload_json and len(payload_json['choices']) > 0:
-        return payload_json['choices'][0]['message']['content']
+        choice = payload_json['choices'][0]
+        if isinstance(choice, dict):
+            if 'message' in choice and isinstance(choice['message'], dict):
+                msg = choice['message']
+                content = msg.get('content')
+                if content and str(content).strip():
+                    return str(content)
+                reasoning = msg.get('reasoning')
+                if reasoning and str(reasoning).strip():
+                    return str(reasoning)
+            if 'text' in choice and choice['text']:
+                return str(choice['text'])
     output_text = payload_json.get('output_text')
     if not output_text:
         output = payload_json.get('output', [])
         if isinstance(output, list):
             for item in output:
-                if item.get('type') == 'message':
+                if isinstance(item, dict) and item.get('type') == 'message':
                     content = item.get('content', [])
                     if isinstance(content, list):
                         for content_item in content:
-                            if content_item.get('type') == 'output_text':
+                            if isinstance(content_item, dict) and content_item.get('type') == 'output_text':
                                 output_text = content_item.get('text', '')
                                 break
                     break
     return output_text or ''
+
 
 
 def _invoke_groq_symptom_followup(symptoms_context, followup_question, age=None, gender=None):

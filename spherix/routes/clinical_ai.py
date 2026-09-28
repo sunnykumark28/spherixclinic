@@ -342,11 +342,12 @@ from spherix.services.ai_service import (
     _invoke_groq_drug_info, _invoke_groq_symptom_followup,
     _invoke_groq_symptom_finalization, _analyze_image_with_vision,
     _analyze_image_with_groq_vision, _is_vision_configured, _is_groq_configured,
-    _generate_fallback_condition_info, _build_symptom_response,
+    _generate_fallback_condition_info, _build_symptom_response, _extract_groq_text_response,
     analyzer, _derive_risk_level, _build_suggested_tests,
     GROQ_API_KEY, GROQ_API_BASE, GROQ_API_MODEL, AI_PROVIDER, AI_PROVIDER_ACTIVE,
     GOOGLE_VISION_API_KEY, ENABLE_IMAGE_ANALYSIS, OPENFDA_API_KEY
 )
+
 from spherix.routes.decorators import (
     patient_required, doctor_required, admin_required, hospital_required,
     staff_required, hospital_or_staff_role_required, staff_role_required,
