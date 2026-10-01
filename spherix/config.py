@@ -27,6 +27,45 @@ except ImportError:
 def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
+class DateString(str):
+    """A string subclass that supports .strftime() formatting without crashing."""
+    def strftime(self, format_str):
+        clean_val = str(self).strip()
+        for fmt in (
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M',
+            '%Y-%m-%d',
+            '%d %b %Y',
+            '%B %d, %Y',
+            '%b %d, %Y',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S%z',
+            '%Y-%m-%dT%H:%M:%S.%f%z',
+            '%H:%M:%S',
+            '%H:%M',
+            '%I:%M %p'
+        ):
+            try:
+                dt = datetime.strptime(clean_val, fmt)
+                return dt.strftime(format_str)
+            except (ValueError, TypeError):
+                continue
+        try:
+            dt = datetime.fromisoformat(clean_val.replace('Z', '+00:00'))
+            return dt.strftime(format_str)
+        except Exception:
+            return clean_val
+
+def ensure_safe_date(val):
+    if val is None:
+        return val
+    if hasattr(val, 'strftime'):
+        return val
+    if isinstance(val, str):
+        return DateString(val)
+    return val
+
 # Secret Key
 # Production must provide a stable, private key. Local development gets a
 # per-process key so a published default cannot be used to forge sessions.

@@ -1,147 +1,384 @@
 {% extends 'layout.html' %}
 
-{% block title %}Shopping Cart - MediConnect{% endblock %}
+{% block title %}Shopping Cart - Tata 1mg | Spherix Clinic{% endblock %}
+
+{% block head_extra %}
+<!-- Google Fonts & FontAwesome 6 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+{% endblock %}
 
 {% block content %}
-<div class="bg-gray-100 min-h-screen py-8">
-    <div class="container mx-auto px-4">
-        <h1 class="text-4xl font-bold text-center text-teal-700 mb-8">Your Shopping Cart</h1>
+<style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .btn-tata-coral {
+        background-color: #ff6f61;
+        color: #ffffff !important;
+        font-weight: 700;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 4px 12px rgba(255, 111, 97, 0.25);
+    }
+    .btn-tata-coral:hover {
+        background-color: #e55b4f;
+        box-shadow: 0 6px 18px rgba(255, 111, 97, 0.35);
+        transform: translateY(-1px);
+    }
+    .btn-tata-outline {
+        background-color: #ffffff;
+        color: #ff6f61 !important;
+        border: 1.5px solid #ff6f61;
+        font-weight: 700;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-tata-outline:hover {
+        background-color: #fff3f1;
+        border-color: #e55b4f;
+    }
+</style>
+
+<div class="bg-[#f8fafc] min-h-screen text-slate-800 w-full pb-16">
+    
+    <!-- Include Tata 1mg Header -->
+    {% include 'tata_1mg_header.html' %}
+
+    <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Cart Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900">Your Shopping Cart</h1>
+                <p class="text-xs text-slate-500 mt-1">Review your medicines, apply promo coupons, and proceed to checkout.</p>
+            </div>
+            {% if cart %}
+            <a href="{{ url_for('medical_shop') }}" class="text-xs font-black text-[#ff6f61] hover:underline flex items-center gap-1 text-decoration-none">
+                <i class="fas fa-plus text-[10px]"></i> Add More Medicines
+            </a>
+            {% endif %}
+        </div>
 
         {% if not cart %}
-            <div class="text-center py-20">
-                <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
-                <p class="text-2xl text-gray-500">Your cart is empty.</p>
-                <a href="{{ url_for('medical_shop') }}" class="mt-6 inline-block bg-teal-500 text-white font-semibold py-3 px-8 rounded-full hover:bg-teal-600 transition-all duration-300 shadow-lg">
-                    Continue Shopping
-                </a>
+        <!-- Empty Cart State -->
+        <div class="bg-white rounded-3xl border border-slate-200 p-12 sm:p-16 text-center max-w-xl mx-auto shadow-sm">
+            <div class="w-24 h-24 rounded-full bg-rose-50 text-[#ff6f61] flex items-center justify-center text-4xl mx-auto mb-6">
+                <i class="fas fa-cart-shopping"></i>
             </div>
+            <h2 class="text-2xl font-black text-slate-900 mb-2">Your Cart is Empty</h2>
+            <p class="text-sm text-slate-500 mb-8 max-w-md mx-auto">
+                Explore our catalog of 11,800+ medicines, vitamins, and healthcare essentials with 2-hour express delivery.
+            </p>
+            <a href="{{ url_for('medical_shop') }}" class="btn-tata-coral px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider inline-flex items-center gap-2 text-decoration-none shadow-md">
+                <i class="fas fa-pills"></i> Explore Medicines &amp; Healthcare
+            </a>
+        </div>
         {% else %}
-            <div class="flex flex-col md:flex-row gap-8">
-                <!-- Cart Items -->
-                <div class="md:w-3/4">
-                    <div class="bg-white rounded-lg shadow-md p-6 mb-4">
-                        <table class="w-full" id="cart-table">
-                            <thead>
-                                <tr>
-                                    <th class="text-left font-semibold">Product</th>
-                                    <th class="text-left font-semibold">Price</th>
-                                    <th class="text-left font-semibold">Quantity</th>
-                                    <th class="text-left font-semibold">Total</th>
-                                    <th class="text-left font-semibold">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in cart %}
-                                <tr class="border-b">
-                                    <td class="py-4">
-                                        <div class="flex items-center">
-                                            <span class="font-semibold">{{ item.name }}</span>
-                                        </div>
-                                    </td>
-                                    <td class="py-4">₹{{ "%.2f"|format(item.price) }}</td>
-                                    <td class="py-4">
-                                        <div class="flex items-center">
-                                            <button class="cart-action-btn border rounded-md py-1 px-3 mr-2" data-name="{{ item.name }}" data-action="decrease" {% if item.quantity <= 1 %}disabled class="text-gray-400 cursor-not-allowed"{% endif %}>-</button>
-                                            <span class="item-quantity text-center w-8">{{ item.quantity }}</span>
-                                            <button class="cart-action-btn border rounded-md py-1 px-3 ml-2" data-name="{{ item.name }}" data-action="increase">+</button>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 font-semibold">₹{{ "%.2f"|format(item.price * item.quantity) }}</td>
-                                    <td class="py-4">
-                                        <button class="cart-action-btn text-red-500 hover:text-red-700" data-name="{{ item.name }}" data-action="remove">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+
+        <!-- Active Cart 2-Column Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Column: Items, Free Shipping & Care Plan (8 Cols) -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Free Delivery Progress Meter -->
+                <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs">
+                    <div class="flex items-center justify-between text-xs mb-2.5">
+                        <span class="font-extrabold text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-truck-fast text-teal-600 text-sm"></i>
+                            {% if summary.needed_for_free_delivery > 0 %}
+                            Add medicines worth <strong class="text-teal-700 font-black">₹{{ "%.2f"|format(summary.needed_for_free_delivery) }}</strong> more for FREE Delivery!
+                            {% else %}
+                            <strong class="text-emerald-700 font-black">🎉 Congratulations! You have unlocked FREE Express Delivery.</strong>
+                            {% endif %}
+                        </span>
+                        <span class="text-[11px] font-bold text-slate-400">Min. ₹500</span>
+                    </div>
+                    {% set pct = (summary.cart_total_price / 500.0 * 100)|int %}
+                    {% set progress_width = 100 if pct > 100 else pct %}
+                    <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                        <div class="bg-gradient-to-r from-teal-500 to-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ progress_width }}%;"></div>
                     </div>
                 </div>
 
-                <!-- Order Summary -->
-                <div class="md:w-1/4">
-                    <div class="bg-white rounded-lg shadow-md p-6 sticky top-24">
-                        <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
-                        <div class="flex justify-between mb-2">
-                            <span >Subtotal</span>
-                            <span id="cart-subtotal">₹{{ "%.2f"|format(cart_total_price) }}</span>
+                <!-- Prescription Requirement Warning -->
+                {% if summary.requires_rx %}
+                <div class="bg-rose-50/70 p-4 rounded-3xl border border-rose-200 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-rose-100 text-[#ff6f61] flex items-center justify-center text-lg shrink-0">
+                            <i class="fas fa-file-prescription"></i>
                         </div>
-                        <div class="flex justify-between mb-2">
-                            <span>Taxes</span>
-                            <span>₹0.00</span>
+                        <div>
+                            <h4 class="text-xs font-black text-rose-950 uppercase tracking-wider">Prescription Required</h4>
+                            <p class="text-xs text-rose-800 mt-0.5">1 or more items in your cart require a valid doctor prescription. You can upload now or during checkout.</p>
                         </div>
-                        <div class="flex justify-between mb-2">
-                            <span>Shipping</span>
-                            <span>₹0.00</span>
-                        </div>
-                        <hr class="my-2">
-                        <div class="flex justify-between font-bold text-lg">
-                            <span >Total</span>
-                            <span id="cart-total">₹{{ "%.2f"|format(cart_total_price) }}</span>
-                        </div>
-                        <a href="{{ url_for('checkout') }}" class="block text-center bg-teal-500 text-white py-3 px-6 rounded-lg mt-6 w-full hover:bg-teal-600 transition-all">
-                            Proceed to Checkout
-                        </a>
                     </div>
+                    <button type="button" onclick="openPrescriptionSidebar();"
+                        class="px-4 py-2 rounded-xl bg-[#ff6f61] hover:bg-[#e55b4f] text-white text-xs font-black shrink-0 transition-colors shadow-xs cursor-pointer border-0">
+                        Upload Rx
+                    </button>
                 </div>
+                {% endif %}
+
+                <!-- Cart Items Container -->
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
+                    <div class="p-5 bg-slate-50/50 flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        <span>Medicines &amp; Products ({{ summary.cart_item_count }} Items)</span>
+                        <span>Item Subtotal</span>
+                    </div>
+
+                    {% for item in cart %}
+                    <div class="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6" id="cart-row-{{ loop.index }}">
+                        
+                        <!-- Product Info -->
+                        <div class="flex items-center gap-4 flex-1">
+                            <div class="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-2 shrink-0 text-slate-300 text-2xl">
+                                <i class="fas fa-pills text-[#ff6f61]"></i>
+                            </div>
+                            <div class="space-y-1">
+                                <a href="{{ url_for('medicine_detail', medicine_name=item.name) }}" class="text-decoration-none">
+                                    <h3 class="text-sm font-extrabold text-slate-900 hover:text-[#ff6f61] transition-colors line-clamp-1">
+                                        {{ item.name }}
+                                    </h3>
+                                </a>
+                                <div class="text-xs text-slate-400 font-semibold">
+                                    Unit Price: ₹{{ "%.2f"|format(item.price) }}
+                                    <span class="line-through text-slate-300 ml-1">₹{{ "%.2f"|format(item.mrp) }}</span>
+                                </div>
+                                <a href="{{ url_for('substitutes', medicine_name=item.name) }}" class="text-[11px] font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1 text-decoration-none">
+                                    <i class="fas fa-arrows-rotate text-[10px]"></i> Check Cheaper Substitutes
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Stepper & Subtotal -->
+                        <div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                            <!-- Quantity Stepper -->
+                            <div class="inline-flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
+                                <button type="button" onclick="updateItemQuantity('{{ item.name }}', 'decrease');"
+                                    class="w-7 h-7 rounded-lg bg-white text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer border-0 shadow-xs">-</button>
+                                <span class="w-8 text-center font-black text-slate-900 text-xs" id="qty-{{ loop.index }}">{{ item.quantity }}</span>
+                                <button type="button" onclick="updateItemQuantity('{{ item.name }}', 'increase');"
+                                    class="w-7 h-7 rounded-lg bg-white text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer border-0 shadow-xs">+</button>
+                            </div>
+
+                            <!-- Total Price -->
+                            <div class="text-right min-w-[80px]">
+                                <div class="text-base font-black text-slate-900" id="total-{{ loop.index }}">
+                                    ₹{{ "%.2f"|format(item.price * item.quantity) }}
+                                </div>
+                                <button type="button" onclick="updateItemQuantity('{{ item.name }}', 'remove');"
+                                    class="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors bg-transparent border-0 cursor-pointer p-0">
+                                    <i class="fas fa-trash-can mr-1"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Tata 1mg Care Plan Membership Card -->
+                <div class="p-6 rounded-3xl bg-gradient-to-r from-amber-50 via-orange-50/50 to-white border border-amber-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shrink-0 shadow-sm shadow-amber-500/20">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-sm font-black text-amber-950">Tata 1mg Care Plan Membership</h4>
+                                <span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-black uppercase">SAVE 5%</span>
+                            </div>
+                            <p class="text-xs text-amber-800 mt-0.5">
+                                Get FREE 2h Delivery on all orders + 5% cashback on medicines + free health checkup vouchers.
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="toggleCarePlan();"
+                        class="px-5 py-2.5 rounded-xl {% if summary.care_plan_active %}bg-emerald-600 text-white{% else %}bg-amber-500 hover:bg-amber-600 text-white{% endif %} text-xs font-black uppercase tracking-wider shrink-0 transition-colors cursor-pointer border-0 shadow-xs">
+                        {% if summary.care_plan_active %}✓ Care Plan Active{% else %}+ Join for ₹165/3mo{% endif %}
+                    </button>
+                </div>
+
             </div>
+
+            <!-- Right Column: Sticky Bill Details & Checkout CTA (4 Cols) -->
+            <div class="lg:col-span-4 space-y-6 sticky top-28">
+                
+                <!-- Coupons Box -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-percent text-rose-500"></i> Coupons &amp; Offers
+                    </div>
+
+                    {% if summary.applied_coupon %}
+                    <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-circle-check text-emerald-600"></i>
+                            <span class="font-extrabold text-emerald-900">Code {{ summary.applied_coupon }} applied!</span>
+                        </div>
+                        <button type="button" onclick="removeCoupon();" class="text-rose-600 font-bold hover:underline bg-transparent border-0 cursor-pointer">
+                            Remove
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="flex gap-2">
+                        <input type="text" id="couponCodeInput" placeholder="Enter Promo Code" uppercase
+                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold uppercase focus:outline-none focus:border-[#ff6f61]">
+                        <button type="button" onclick="applyCoupon();"
+                            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-black cursor-pointer border-0">
+                            Apply
+                        </button>
+                    </div>
+                    <!-- Quick Promo Chips -->
+                    <div class="flex flex-wrap gap-2 pt-1 text-[11px]">
+                        <button type="button" onclick="applyDirectCode('TATA20');" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-[#ff6f61] font-bold border border-slate-200 cursor-pointer transition-colors">
+                            TATA20 (20% OFF)
+                        </button>
+                        <button type="button" onclick="applyDirectCode('CAREPLAN');" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-[#ff6f61] font-bold border border-slate-200 cursor-pointer transition-colors">
+                            CAREPLAN (10% OFF)
+                        </button>
+                        <button type="button" onclick="applyDirectCode('FIRSTMED');" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-[#ff6f61] font-bold border border-slate-200 cursor-pointer transition-colors">
+                            FIRSTMED (₹100 OFF)
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Bill Summary Box -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-lg space-y-4">
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">
+                        Bill Summary
+                    </h3>
+
+                    <div class="space-y-2.5 text-xs text-slate-600">
+                        <div class="flex justify-between">
+                            <span>Total MRP</span>
+                            <span class="font-bold text-slate-800" id="billTotalMrp">₹{{ "%.2f"|format(summary.total_mrp) }}</span>
+                        </div>
+
+                        <div class="flex justify-between text-emerald-600">
+                            <span>Discount on MRP</span>
+                            <span class="font-bold" id="billMrpDiscount">-₹{{ "%.2f"|format(summary.mrp_discount) }}</span>
+                        </div>
+
+                        {% if summary.coupon_discount > 0 %}
+                        <div class="flex justify-between text-emerald-600">
+                            <span>Coupon Savings ({{ summary.applied_coupon }})</span>
+                            <span class="font-bold" id="billCouponDiscount">-₹{{ "%.2f"|format(summary.coupon_discount) }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if summary.care_plan_discount > 0 %}
+                        <div class="flex justify-between text-amber-600 font-bold">
+                            <span>Care Plan 5% Discount</span>
+                            <span id="billCarePlanDiscount">-₹{{ "%.2f"|format(summary.care_plan_discount) }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="flex justify-between">
+                            <span>Shipping / Delivery Fee</span>
+                            <span class="font-bold {% if summary.delivery_fee == 0 %}text-emerald-600{% else %}text-slate-800{% endif %}" id="billDeliveryFee">
+                                {% if summary.delivery_fee == 0 %}FREE{% else %}₹{{ "%.2f"|format(summary.delivery_fee) }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-baseline justify-between">
+                        <div>
+                            <div class="text-xs font-bold text-slate-400 uppercase">To Pay</div>
+                            <div class="text-2xl font-black text-slate-900" id="billFinalTotal">₹{{ "%.2f"|format(summary.final_total) }}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-black border border-emerald-100 block">
+                                You Save ₹{{ "%.2f"|format(summary.total_savings) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Checkout Button -->
+                    <a href="{{ url_for('checkout') }}"
+                        class="w-full btn-tata-coral py-4 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 text-decoration-none shadow-md mt-4">
+                        <span>PROCEED TO CHECKOUT</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+
+                    <!-- Security Assurance -->
+                    <div class="pt-2 text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
+                        <i class="fas fa-lock text-emerald-600"></i>
+                        <span>100% Safe &amp; Secure Checkout</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
         {% endif %}
+
     </div>
+
+    <!-- Include Tata 1mg Footer -->
+    {% include 'tata_1mg_footer.html' %}
+
 </div>
 
+<!-- Interactive Cart JS -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const cartTable = document.getElementById('cart-table');
-    if (cartTable) {
-        cartTable.addEventListener('click', function(e) {
-            const target = e.target.closest('.cart-action-btn');
-            if (!target) return;
+function updateItemQuantity(productName, action) {
+    fetch("{{ url_for('update_cart_item') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: productName, action: action })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        }
+    })
+    .catch(err => {
+        window.location.reload();
+    });
+}
 
-            const productName = target.dataset.name;
-            const action = target.dataset.action;
+function applyCoupon() {
+    const code = document.getElementById('couponCodeInput').value.trim();
+    if (!code) return;
+    applyDirectCode(code);
+}
 
-            fetch('/update-cart-item', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: productName, action: action })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Update order summary totals first
-                    document.getElementById('cart-subtotal').textContent = '₹' + data.cart_total_price.toFixed(2);
-                    document.getElementById('cart-total').textContent = '₹' + data.cart_total_price.toFixed(2);
+function applyDirectCode(code) {
+    fetch("{{ url_for('apply_coupon') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coupon_code: code })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.message || "Failed to apply coupon.");
+        }
+    });
+}
 
-                    if (data.item_removed) {
-                        // If item was removed completely, remove the row from the table
-                        target.closest('tr').remove();
-                        // If the cart is now empty, show the "empty cart" message.
-                        if (document.getElementById('cart-table').querySelector('tbody').children.length === 0) {
-                            location.reload(); // Easiest way to show the empty cart view
-                        }
-                    } else if (data.item) {
-                        // Update quantity and total for the specific item row
-                        const row = target.closest('tr');
-                        row.querySelector('.item-quantity').textContent = data.item.quantity;
-                        // The 4th td cell holds the item total
-                        const item_total_price = data.item.quantity * data.item.price;
-                        row.children[3].textContent = '₹' + item_total_price.toFixed(2);
+function removeCoupon() {
+    fetch("{{ url_for('remove_coupon') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(r => r.json())
+    .then(() => window.location.reload());
+}
 
-                        // Disable the '-' button if quantity is 1
-                        const decreaseBtn = row.querySelector('button[data-action="decrease"]');
-                        if (data.item.quantity <= 1) {
-                            decreaseBtn.disabled = true;
-                            decreaseBtn.classList.add('text-gray-400', 'cursor-not-allowed', 'opacity-50');
-                        } else {
-                            decreaseBtn.disabled = false;
-                            decreaseBtn.classList.remove('text-gray-400', 'cursor-not-allowed', 'opacity-50');
-                        }
-                    }
-                }
-            });
-        });
-    }
-});
+function toggleCarePlan() {
+    fetch("{{ url_for('toggle_care_plan') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(r => r.json())
+    .then(() => window.location.reload());
+}
 </script>
 {% endblock %}

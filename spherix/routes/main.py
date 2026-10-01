@@ -3021,8 +3021,8 @@ def print_invoice(order_id):
         pdf.set_text_color(71, 85, 105)
         pdf.cell(35, 6, 'Order Date:', 0, 0, 'L')
         pdf.set_font('Helvetica', '', 10)
-        pdf.set_text_color(15, 23, 42)
-        pdf.cell(0, 6, order.order_date.strftime('%B %d, %Y'), 0, 1, 'L')
+        order_date_disp = order.order_date.strftime('%B %d, %Y') if (order.order_date and hasattr(order.order_date, 'strftime')) else str(order.order_date or 'N/A')
+        pdf.cell(0, 6, order_date_disp, 0, 1, 'L')
         
         pdf.ln(5)
         pdf.set_draw_color(229, 231, 235)

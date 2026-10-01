@@ -1,0 +1,553 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ raw_med.name|default(medicine.drug_name) }} - Price, Uses, Side Effects, Substitutes | Tata 1mg{% endblock %}
+
+{% block head_extra %}
+<!-- Google Fonts & FontAwesome 6 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --tata-coral: #ff6f61;
+        --tata-coral-dark: #e55b4f;
+        --tata-teal: #10847e;
+        --tata-dark: #1e293b;
+    }
+    * {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .btn-tata-coral {
+        background-color: var(--tata-coral);
+        color: #ffffff !important;
+        font-weight: 700;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 4px 12px rgba(255, 111, 97, 0.25);
+    }
+    .btn-tata-coral:hover {
+        background-color: var(--tata-coral-dark);
+        box-shadow: 0 6px 18px rgba(255, 111, 97, 0.35);
+        transform: translateY(-1px);
+    }
+    .btn-tata-outline {
+        background-color: #ffffff;
+        color: var(--tata-coral) !important;
+        border: 1.5px solid var(--tata-coral);
+        font-weight: 700;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-tata-outline:hover {
+        background-color: #fff3f1;
+        border-color: var(--tata-coral-dark);
+    }
+</style>
+
+<div class="bg-[#f8fafc] min-h-screen text-slate-800 w-full">
+    
+    <!-- Include Tata 1mg Header -->
+    {% include 'tata_1mg_header.html' %}
+
+    <!-- Main Container -->
+    <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Breadcrumbs -->
+        <nav class="flex items-center text-xs font-semibold text-slate-500 mb-6 space-x-2" aria-label="Breadcrumb">
+            <a href="{{ url_for('medical_shop') }}" class="hover:text-[#ff6f61] transition-colors">Home</a>
+            <i class="fas fa-chevron-right text-[9px] text-slate-400"></i>
+            <a href="{{ url_for('medical_shop') }}#medicines-section" class="hover:text-[#ff6f61] transition-colors">Medicines</a>
+            <i class="fas fa-chevron-right text-[9px] text-slate-400"></i>
+            <span class="hover:text-[#ff6f61] transition-colors">{{ category }}</span>
+            <i class="fas fa-chevron-right text-[9px] text-slate-400"></i>
+            <span class="text-slate-900 font-bold truncate max-w-xs">{{ raw_med.name|default(medicine.drug_name) }}</span>
+        </nav>
+
+        <!-- Product Hero 3-Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Column 1: Image & Trust Badges (4 Cols) -->
+            <div class="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs sticky top-28">
+                <div class="w-full h-80 bg-slate-50 rounded-2xl flex items-center justify-center p-6 relative overflow-hidden mb-6 group border border-slate-100">
+                    {% if raw_med.image_url %}
+                    <img src="{{ raw_med.image_url }}" alt="{{ raw_med.name }}"
+                        class="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'text-slate-300 text-7xl\'><i class=\'fas fa-pills\'></i></div>';">
+                    {% else %}
+                    <div class="text-slate-300 text-7xl">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    {% endif %}
+
+                    {% if raw_med.requires_prescription %}
+                    <span class="absolute top-4 left-4 px-2.5 py-1 rounded-lg bg-rose-50 text-[#ff6f61] text-xs font-black border border-rose-100 uppercase tracking-wider flex items-center gap-1">
+                        <i class="fas fa-file-prescription"></i> Rx Required
+                    </span>
+                    {% else %}
+                    <span class="absolute top-4 left-4 px-2.5 py-1 rounded-lg bg-teal-50 text-[#10847e] text-xs font-black border border-teal-100 uppercase tracking-wider flex items-center gap-1">
+                        <i class="fas fa-check-circle"></i> OTC Medicine
+                    </span>
+                    {% endif %}
+
+                    <span class="absolute top-4 right-4 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-black border border-amber-100 flex items-center gap-1">
+                        <i class="fas fa-bolt text-amber-500"></i> Express 2h
+                    </span>
+                </div>
+
+                <!-- Trust Points -->
+                <div class="space-y-3 pt-2 text-xs border-t border-slate-100">
+                    <div class="flex items-center gap-3 text-slate-700">
+                        <i class="fas fa-certificate text-emerald-600 text-sm"></i>
+                        <span class="font-medium">100% Genuine Medicine Guarantee</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-slate-700">
+                        <i class="fas fa-temperature-half text-sky-600 text-sm"></i>
+                        <span class="font-medium">Stored in temperature-controlled warehouses</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-slate-700">
+                        <i class="fas fa-rotate-left text-slate-500 text-sm"></i>
+                        <span class="font-medium">Easy 7-day hassle-free return policy</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2: Medicine Info, Composition, Substitutes & Clinical Details (5 Cols) -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- Main Header Info -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                        {{ raw_med.manufacturer|default(medicine.manufacturer) }}
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
+                        {{ raw_med.name|default(medicine.drug_name) }}
+                    </h1>
+                    
+                    <div class="text-sm text-slate-500 font-semibold mt-1">
+                        {{ raw_med.packaging|default(medicine.packaging) }}
+                    </div>
+
+                    <!-- Ratings Strip -->
+                    <div class="flex items-center gap-3 mt-3">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-black">
+                            <span>{{ rating }}</span>
+                            <i class="fas fa-star text-[10px]"></i>
+                        </span>
+                        <span class="text-xs text-slate-500 font-semibold">
+                            {{ rating_count }} Ratings &amp; {{ (rating_count * 0.4)|int }} Verified Reviews
+                        </span>
+                    </div>
+
+                    <!-- Salt Composition Badge -->
+                    <div class="mt-4 p-3.5 rounded-2xl bg-teal-50/60 border border-teal-100 flex items-start justify-between gap-3">
+                        <div>
+                            <div class="text-[10px] uppercase font-black tracking-wider text-teal-800">Active Salt Composition</div>
+                            <div class="text-sm font-bold text-teal-950 mt-0.5">
+                                {{ raw_med.salt_composition|default(medicine.salt_composition) }}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('substitutes', medicine_name=raw_med.name|default(medicine.drug_name)) }}"
+                            class="shrink-0 px-3 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition-colors text-decoration-none shadow-xs">
+                            Find Substitutes
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tata 1mg Signature Cheaper Substitutes Box -->
+                {% if substitutes %}
+                {% set top_sub = substitutes[0] %}
+                <div class="bg-gradient-to-br from-amber-50/80 via-orange-50/40 to-white p-5 rounded-3xl border border-amber-200 shadow-xs relative overflow-hidden">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center text-xs font-black">
+                                <i class="fas fa-arrows-rotate"></i>
+                            </span>
+                            <span class="text-xs font-black uppercase tracking-wider text-amber-900">Cheaper Substitute Available</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-black">
+                            {% if top_sub.savings_pct > 0 %}Save {{ top_sub.savings_pct }}%{% else %}Cheaper Alternative{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl border border-amber-100 flex items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="text-sm font-extrabold text-slate-900">{{ top_sub.name }}</div>
+                            <div class="text-[11px] text-slate-500">{{ top_sub.manufacturer }}</div>
+                            <div class="text-xs font-black text-emerald-600">
+                                Price: ₹{{ "%.2f"|format(top_sub.price) }}
+                                {% if top_sub.savings > 0 %}
+                                <span class="text-slate-400 font-normal line-through ml-1.5">₹{{ "%.2f"|format(price) }}</span>
+                                <span class="text-emerald-700 ml-1">(Save ₹{{ "%.2f"|format(top_sub.savings) }})</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-2 shrink-0">
+                            <button type="button" onclick="addToCartDetail('{{ top_sub.id }}', '{{ top_sub.name }}', {{ top_sub.price }});"
+                                class="px-4 py-2 rounded-xl bg-teal-600 text-white text-xs font-black hover:bg-teal-700 transition-colors shadow-xs cursor-pointer border-0">
+                                Switch &amp; Add
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex items-center justify-between text-xs">
+                        <span class="text-slate-600 font-semibold">Identical active salt formulation and clinical efficacy.</span>
+                        <a href="{{ url_for('substitutes', medicine_name=raw_med.name|default(medicine.drug_name)) }}"
+                            class="font-black text-[#ff6f61] hover:underline flex items-center gap-1">
+                            View All {{ substitutes_count }} Substitutes &rarr;
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Detailed Monograph Sections (Tata 1mg Clinical Cards) -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+                    
+                    <!-- Section 1: Overview & Primary Uses -->
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900 mb-2 flex items-center gap-2">
+                            <i class="fas fa-stethoscope text-[#ff6f61]"></i> Uses and Benefits of {{ raw_med.name|default(medicine.drug_name) }}
+                        </h2>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            {{ raw_med.uses|default(medicine.description) }}
+                        </p>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- Section 2: Mechanism of Action -->
+                    <div>
+                        <h3 class="text-base font-black text-slate-900 mb-2 flex items-center gap-2">
+                            <i class="fas fa-dna text-teal-600"></i> How It Works (Mechanism of Action)
+                        </h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            {{ medicine.mechanism_of_action|default('Works systematically by selectively stabilizing target biological pathways and cellular enzymes to reduce clinical symptoms.') }}
+                        </p>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- Section 3: Side Effects -->
+                    <div>
+                        <h3 class="text-base font-black text-slate-900 mb-2 flex items-center gap-2">
+                            <i class="fas fa-triangle-exclamation text-amber-500"></i> Common Side Effects
+                        </h3>
+                        <p class="text-xs text-slate-500 mb-3">Most side effects do not require medical attention and disappear as your body adjusts to the medicine:</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for se in raw_med.common_side_effects|default(medicine.common_side_effects) %}
+                            <span class="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+                                {{ se }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- Section 4: Safety Advice Matrix -->
+                    <div>
+                        <h3 class="text-base font-black text-slate-900 mb-3 flex items-center gap-2">
+                            <i class="fas fa-shield-heart text-rose-500"></i> Safety Advice &amp; Warnings
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-black text-slate-800"><i class="fas fa-wine-glass text-rose-500 mr-1"></i> Alcohol</span>
+                                    <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-black uppercase">Caution</span>
+                                </div>
+                                <p class="text-slate-500 text-[11px]">Avoid or strictly limit alcohol consumption as it may increase drowsiness or liver workload.</p>
+                            </div>
+
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-black text-slate-800"><i class="fas fa-person-pregnant text-amber-500 mr-1"></i> Pregnancy</span>
+                                    <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-black uppercase">Consult Doctor</span>
+                                </div>
+                                <p class="text-slate-500 text-[11px]">Consult your obstetrician before starting this medication during pregnancy.</p>
+                            </div>
+
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-black text-slate-800"><i class="fas fa-baby text-sky-500 mr-1"></i> Breastfeeding</span>
+                                    <span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-black uppercase">Safe if Prescribed</span>
+                                </div>
+                                <p class="text-slate-500 text-[11px]">Use strictly under clinical supervision of your consulting pediatrician.</p>
+                            </div>
+
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-black text-slate-800"><i class="fas fa-car text-emerald-500 mr-1"></i> Driving</span>
+                                    <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">Safe</span>
+                                </div>
+                                <p class="text-slate-500 text-[11px]">Usually does not impair cognitive or driving performance when taken as directed.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- Section 5: Missed Dose & How to Take -->
+                    <div>
+                        <h3 class="text-base font-black text-slate-900 mb-2 flex items-center gap-2">
+                            <i class="fas fa-clock-rotate-left text-blue-600"></i> How to Use &amp; Missed Dose Instructions
+                        </h3>
+                        <p class="text-sm text-slate-600 leading-relaxed mb-2">
+                            Take this medicine in the dose and duration as advised by your doctor. Swallow it as a whole with a glass of water. Do not chew, crush or break it.
+                        </p>
+                        <p class="text-xs text-slate-500">
+                            <strong>Missed dose:</strong> If you miss a dose, take it as soon as possible. However, if it is almost time for your next dose, skip the missed dose and resume your regular dosing schedule. Do not double the dose.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Column 3: Sticky Buy Box & Express Delivery Widget (3 Cols) -->
+            <div class="lg:col-span-3 space-y-6 sticky top-28">
+                
+                <!-- Purchase Box -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-lg space-y-5">
+                    
+                    <!-- Pricing Header -->
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Best Online Price</div>
+                        <div class="flex items-baseline gap-3">
+                            <span class="text-3xl font-black text-slate-900">₹{{ "%.2f"|format(price) }}</span>
+                            <span class="text-sm text-slate-400 line-through">₹{{ "%.2f"|format(mrp_price) }}</span>
+                            <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-xs font-black border border-emerald-100">
+                                20% OFF
+                            </span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 mt-1">Inclusive of all taxes</div>
+                    </div>
+
+                    <!-- Care Plan Pricing Banner -->
+                    <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs flex items-center justify-between">
+                        <div class="space-y-0.5">
+                            <div class="font-extrabold text-amber-900 flex items-center gap-1.5">
+                                <i class="fas fa-crown text-amber-500"></i> Care Plan Price
+                            </div>
+                            <div class="text-[11px] text-amber-700">Save 5% extra cashback</div>
+                        </div>
+                        <span class="text-base font-black text-amber-950">₹{{ "%.2f"|format(care_plan_price) }}</span>
+                    </div>
+
+                    <!-- Quantity Stepper -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Quantity</label>
+                        <div class="flex items-center gap-3">
+                            <div class="inline-flex items-center border border-slate-200 rounded-2xl bg-slate-50 p-1">
+                                <button type="button" onclick="adjustDetailQty(-1);" class="w-8 h-8 rounded-xl bg-white text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold text-sm cursor-pointer border-0 shadow-xs">-</button>
+                                <span id="detailQtyDisplay" class="w-10 text-center font-black text-slate-900 text-sm">1</span>
+                                <button type="button" onclick="adjustDetailQty(1);" class="w-8 h-8 rounded-xl bg-white text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold text-sm cursor-pointer border-0 shadow-xs">+</button>
+                            </div>
+                            <span class="text-xs text-slate-400 font-semibold">{{ raw_med.packaging|default('1 pack') }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-2.5 pt-2">
+                        <button type="button" id="btnAddToCartDetail"
+                            onclick="addToCartDetail('{{ raw_med.id }}', '{{ raw_med.name|default(medicine.drug_name) }}', {{ price }});"
+                            class="w-full btn-tata-coral py-3.5 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer border-0 shadow-md">
+                            <i class="fas fa-cart-shopping"></i>
+                            <span>ADD TO CART</span>
+                        </button>
+
+                        <button type="button"
+                            onclick="buyNowDetail('{{ raw_med.id }}', '{{ raw_med.name|default(medicine.drug_name) }}', {{ price }});"
+                            class="w-full py-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer border-0 shadow-sm transition-all">
+                            <i class="fas fa-bolt"></i>
+                            <span>BUY NOW</span>
+                        </button>
+                    </div>
+
+                    <!-- Express Delivery Checker -->
+                    <div class="pt-4 border-t border-slate-100">
+                        <div class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-truck text-[#ff6f61]"></i> Delivery Availability
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <input type="text" id="pincodeCheckInput" placeholder="Enter Pincode" value="110001" maxlength="6"
+                                class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#ff6f61]">
+                            <button type="button" onclick="checkPincodeDetail();"
+                                class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold cursor-pointer border-0">
+                                Check
+                            </button>
+                        </div>
+                        <div id="pincodeResultBox" class="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5">
+                            <i class="fas fa-circle-check text-emerald-600"></i>
+                            <span>⚡ Express Delivery by Tomorrow, 2:00 PM</span>
+                        </div>
+                    </div>
+
+                    <!-- Free Delivery Progress Notice -->
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
+                        <i class="fas fa-bag-shopping text-teal-600 text-sm"></i>
+                        <span>Free delivery on medicine orders over ₹500.</span>
+                    </div>
+
+                </div>
+
+                <!-- Doctor Teleconsultation Card -->
+                <div class="bg-gradient-to-br from-sky-500 to-blue-600 p-5 rounded-3xl text-white shadow-md space-y-3">
+                    <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-sky-200">
+                        <i class="fas fa-stethoscope"></i> Need Prescription?
+                    </div>
+                    <h4 class="text-sm font-extrabold leading-snug">
+                        Don't have a prescription? Consult our certified doctors online in 5 minutes.
+                    </h4>
+                    <a href="{{ url_for('doctors_list') }}" class="inline-block px-4 py-2 rounded-xl bg-white text-blue-700 font-extrabold text-xs hover:bg-sky-50 transition-colors text-decoration-none shadow-xs">
+                        Consult Doctor Now &rarr;
+                    </a>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Substitutes Comparison Grid (Full Width) -->
+        {% if substitutes %}
+        <div class="mt-16 bg-white p-8 rounded-3xl border border-slate-200 shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <span class="px-2.5 py-0.5 rounded-full bg-teal-50 text-[#10847e] text-[10px] font-black uppercase tracking-wider border border-teal-100">
+                        100% Salt Match
+                    </span>
+                    <h2 class="text-2xl font-black text-slate-900 mt-1">
+                        Cheaper Substitutes for {{ raw_med.name|default(medicine.drug_name) }}
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        These medicines share the identical chemical salt <strong class="text-slate-700">{{ raw_med.salt_composition|default(medicine.salt_composition) }}</strong> and offer identical medical efficacy.
+                    </p>
+                </div>
+                <a href="{{ url_for('substitutes', medicine_name=raw_med.name|default(medicine.drug_name)) }}"
+                    class="btn-tata-outline px-5 py-2.5 rounded-2xl text-xs uppercase tracking-wider flex items-center gap-2 self-start text-decoration-none">
+                    <span>View All {{ substitutes_count }} Substitutes</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {% for sub in substitutes[:4] %}
+                <div class="p-4 rounded-2xl border border-slate-200 hover:border-teal-400 hover:shadow-lg transition-all flex flex-col justify-between bg-white group">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase truncate max-w-[150px]">{{ sub.manufacturer }}</span>
+                            {% if sub.savings_pct > 0 %}
+                            <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-black">
+                                Save {{ sub.savings_pct }}%
+                            </span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('medicine_detail', medicine_name=sub.name) }}" class="text-decoration-none text-slate-900 group-hover:text-[#ff6f61] transition-colors">
+                            <h3 class="text-sm font-extrabold line-clamp-2 min-h-[40px]">{{ sub.name }}</h3>
+                        </a>
+                        <div class="text-[11px] text-slate-500 mt-1">{{ sub.packaging|default('strip of 10 tablets') }}</div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-100">
+                        <div class="flex items-baseline justify-between mb-3">
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-base font-black text-slate-900">₹{{ "%.2f"|format(sub.price) }}</span>
+                                {% if sub.savings > 0 %}
+                                <span class="text-xs text-slate-400 line-through">₹{{ "%.2f"|format(price) }}</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-[10px] font-bold text-emerald-600">
+                                {% if sub.savings > 0 %}Save ₹{{ "%.2f"|format(sub.savings) }}{% else %}Best Price{% endif %}
+                            </span>
+                        </div>
+                        <button type="button" onclick="addToCartDetail('{{ sub.id }}', '{{ sub.name }}', {{ sub.price }});"
+                            class="w-full btn-tata-outline py-2 rounded-xl text-xs uppercase tracking-wider font-bold cursor-pointer">
+                            + ADD SUBSTITUTE
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Include Tata 1mg Footer -->
+    {% include 'tata_1mg_footer.html' %}
+
+</div>
+
+<!-- Interactive Scripts -->
+<script>
+let detailQty = 1;
+
+function adjustDetailQty(delta) {
+    detailQty = Math.max(1, detailQty + delta);
+    document.getElementById('detailQtyDisplay').innerText = detailQty;
+}
+
+function addToCartDetail(id, name, price) {
+    const btn = document.getElementById('btnAddToCartDetail');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+        btn.disabled = true;
+    }
+
+    fetch("{{ url_for('add_to_cart') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: id, name: name, price: price, quantity: detailQty })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-check"></i> ADDED TO CART';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-cart-shopping"></i> ADD TO CART';
+                btn.disabled = false;
+            }, 1800);
+        }
+        const badge = document.getElementById('navCartCount');
+        if (badge && data.cart_item_count !== undefined) {
+            badge.innerText = data.cart_item_count;
+        }
+    })
+    .catch(err => {
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-cart-shopping"></i> ADD TO CART';
+            btn.disabled = false;
+        }
+    });
+}
+
+function buyNowDetail(id, name, price) {
+    fetch("{{ url_for('add_to_cart') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: id, name: name, price: price, quantity: detailQty })
+    })
+    .then(r => r.json())
+    .then(data => {
+        window.location.href = "{{ url_for('checkout') }}";
+    })
+    .catch(err => {
+        window.location.href = "{{ url_for('view_cart') }}";
+    });
+}
+
+function checkPincodeDetail() {
+    const pin = document.getElementById('pincodeCheckInput').value.trim();
+    const resBox = document.getElementById('pincodeResultBox');
+    if (!pin || pin.length < 6) {
+        resBox.innerHTML = '<span class="text-rose-600"><i class="fas fa-circle-xmark"></i> Please enter a valid 6-digit PIN code.</span>';
+        return;
+    }
+    resBox.innerHTML = '<i class="fas fa-spinner fa-spin text-slate-400"></i> Checking delivery speed...';
+    setTimeout(() => {
+        resBox.innerHTML = '<span class="text-emerald-700 font-bold"><i class="fas fa-bolt text-amber-500"></i> ⚡ 2-Hour Express Delivery available for PIN ' + pin + '!</span>';
+    }, 400);
+}
+</script>
+{% endblock %}

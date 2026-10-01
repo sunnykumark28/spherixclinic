@@ -3,7 +3,7 @@ from datetime import datetime
 from flask_login import UserMixin
 from spherix.config import (
     utcnow, GLOBAL_COUNTRY_FLAGS, GLOBAL_COUNTRY_TIMEZONES,
-    format_dual_currency, generate_user_license_id
+    format_dual_currency, generate_user_license_id, ensure_safe_date
 )
 
 class Doctor(UserMixin):
@@ -60,6 +60,10 @@ class Doctor(UserMixin):
 
     def get_id(self):
         return f"doctor-{self.id}"
+
+    @property
+    def name(self):
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def country_flag(self):
@@ -302,9 +306,9 @@ class BloodDonor(UserMixin):
         self.age = age
         self.city = city
         self.password = password
-        self.last_donation = last_donation
+        self.last_donation = ensure_safe_date(last_donation)
         self.profile_picture_url = kwargs.get('profile_picture_url')
-        self.created_at = kwargs.get('created_at', utcnow())
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('donor_card_id') or generate_user_license_id('blood_donor')
         self.license_no = self.license_number
         self.donor_card_id = self.license_number
@@ -344,7 +348,7 @@ class OrganDonor(UserMixin):
         self.city = city
         self.password = password
         self.profile_picture_url = kwargs.get('profile_picture_url')
-        self.created_at = kwargs.get('created_at', utcnow())
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('pledge_id') or generate_user_license_id('organ_donor')
         self.license_no = self.license_number
         self.pledge_id = self.license_number

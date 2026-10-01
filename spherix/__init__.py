@@ -298,6 +298,21 @@ def create_app(config_object=None):
     def render_markdown_filter(text):
         return markdown.markdown(text or '', extensions=['fenced_code', 'tables', 'nl2br'])
 
+    # Safe strftime template filter
+    @app.template_filter('strftime')
+    def render_strftime_filter(val, format_str='%B %d, %Y'):
+        if not val:
+            return ''
+        if hasattr(val, 'strftime'):
+            try:
+                return val.strftime(format_str)
+            except Exception:
+                pass
+        from spherix.config import DateString
+        if isinstance(val, str):
+            return DateString(val).strftime(format_str)
+        return str(val)
+
     # Serve favicon at root
     @app.route('/favicon.ico')
     def favicon():

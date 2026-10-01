@@ -192,54 +192,137 @@ def get_top_recommended(limit=32):
         load_all_medicines()
     return TOP_RECOMMENDED_MEDICINES[:limit]
 
+SEARCH_SYNONYMS = {
+    # Vitamins & Nutrition
+    'multivitamin': ['vitamin', 'mineral', 'supplement', 'becadexamin', 'supradyn', 'zincovit', 'folic acid', 'calcium', 'zinc', 'b-complex'],
+    'vitamin c': ['vitamin c', 'ascorbic', 'limcee', 'celin', 'chewable'],
+    'vitamin d': ['vitamin d', 'cholecalciferol', 'calcitriol', 'calcium', 'shelcal', 'd-rise', 'd3'],
+    'omega': ['omega', 'fish oil', 'epa', 'dha', 'fatty acid', 'flaxseed'],
+    'protein': ['protein', 'amino', 'nutrition', 'bcaa', 'glutamine', 'whey', 'peptide'],
+
+    # Diabetes Care
+    'glucometer': ['diabet', 'sugar', 'glucose', 'insulin', 'metformin', 'glimepiride', 'vildagliptin', 'dapagliflozin'],
+    'test strips': ['diabet', 'sugar', 'glucose', 'insulin', 'metformin', 'strip', 'lancet', 'blood'],
+    'metformin': ['metformin', 'glycomet', 'glucophage', 'diabet'],
+    'sugar free': ['sugar free', 'stevia', 'sucralose', 'diabet', 'sweetener'],
+    'jamun': ['jamun', 'karela', 'herbal', 'diabet', 'neem', 'sugar', 'ayurvedic'],
+
+    # Healthcare Devices & Equipment
+    'bp monitor': ['blood pressure', 'hypertension', 'cardiac', 'heart', 'telmisartan', 'amlodipine', 'atenolol', 'losartan', 'ramipril'],
+    'thermometer': ['fever', 'pyrexia', 'paracetamol', 'dolo', 'crocin', 'ibuprofen', 'temperature'],
+    'oximeter': ['respiratory', 'oxygen', 'asthma', 'cough', 'asthalin', 'salbutamol', 'inhaler', 'copd', 'lungs'],
+    'nebulizer': ['nebul', 'inhal', 'respiratory', 'asthma', 'salbutamol', 'budesonide', 'levolin', 'duolin'],
+    'support': ['ortho', 'joint', 'pain', 'bone', 'calcium', 'diclofenac', 'gel', 'sprain', 'cartilage'],
+
+    # Personal Care & Derma
+    'sunscreen': ['skin', 'derma', 'sun', 'lotion', 'cream', 'gel', 'clotrimazole', 'spf', 'uv', 'moisturizer'],
+    'hair': ['hair', 'scalp', 'dandruff', 'alopecia', 'minoxidil', 'ketoconazole', 'biotin', 'shampoo'],
+    'oral': ['oral', 'mouth', 'dental', 'gum', 'tooth', 'chlorhexidine', 'paste', 'gargle', 'mouthwash'],
+    'baby': ['pediatric', 'baby', 'infant', 'syrup', 'drops', 'child', 'suspension'],
+    'hygiene': ['hygiene', 'intimate', 'antiseptic', 'wash', 'sanitizer', 'cleanser', 'povidone', 'betadine'],
+
+    # Ayurveda & Herbal
+    'chyawanprash': ['chyawanprash', 'immunity', 'rasayana', 'amla', 'herbal', 'ayurvedic', 'dabur', 'antioxidant'],
+    'amla': ['amla', 'emblica', 'herbal', 'vitamin c', 'antioxidant', 'juice'],
+    'triphala': ['triphala', 'digestive', 'churna', 'constipation', 'haritaki', 'herbal', 'laxative'],
+    'ashwagandha': ['ashwagandha', 'withania', 'stress', 'vitality', 'energy', 'rejuvenat', 'herbal'],
+
+    # Oncology & Cancer
+    'ondansetron': ['ondansetron', 'vomiting', 'nausea', 'antiemetic', 'emeset'],
+    'immunity': ['immunity', 'antioxidant', 'vitamin c', 'zinc', 'glutamine', 'curcumin', 'herbal', 'cellular'],
+
+    # General & Everyday
+    'pain': ['pain', 'fever', 'headache', 'analgesic', 'paracetamol', 'ibuprofen', 'diclofenac', 'aceclofenac', 'tramadol'],
+    'cough': ['cough', 'cold', 'bronchitis', 'expectorant', 'dextromethorphan', 'ambroxol', 'asthalin'],
+    'antibiotics': ['antibiotic', 'anti-infective', 'amoxicillin', 'azithromycin', 'ciprofloxacin', 'cefixime', 'bacterial'],
+    'allergy': ['allergy', 'allergic', 'antihistamine', 'cetirizine', 'levocetirizine', 'allegra', 'montelukast', 'fexofenadine'],
+    'cardiac': ['heart', 'cardiac', 'blood pressure', 'hypertension', 'cholesterol', 'statin', 'atorvastatin', 'telmisartan'],
+    'acidity': ['acidity', 'gas', 'gerd', 'antacid', 'pantoprazole', 'omeprazole', 'rabeprazole', 'digene'],
+}
+
+def _resolve_category_pool(category):
+    cat = (category or 'all').strip().lower()
+    if cat and cat != 'all':
+        matched_cat = next((k for k in MEDICINES_BY_CATEGORY.keys() if k.lower() == cat or cat in k.lower() or k.lower() in cat), None)
+        if matched_cat:
+            return MEDICINES_BY_CATEGORY[matched_cat], matched_cat
+    return ALL_MEDICINES, 'all'
+
 def search_medicines(query="", category="all", page=1, limit=32):
     """
     High-speed search across all 11,825 medicines by name, chemical salt, manufacturer, or uses.
-    Supports category filtering and pagination.
+    Supports smart synonym expansion, category filtering, ranking, and graceful fallback.
     """
     if not ALL_MEDICINES:
         load_all_medicines()
-        
+
     q = (query or "").strip().lower()
-    cat = (category or "all").strip().lower()
-    
-    # 1. Category subset
-    if cat and cat != "all":
-        # Match category name
-        matched_cat = next((k for k in MEDICINES_BY_CATEGORY.keys() if k.lower() == cat or cat in k.lower()), None)
-        pool = MEDICINES_BY_CATEGORY.get(matched_cat, []) if matched_cat else ALL_MEDICINES
-    else:
-        pool = ALL_MEDICINES
-        
-    # 2. Text Search Filtering
-    if q:
-        results = []
-        for m in pool:
-            name = m['name'].lower()
-            salt = m['salt_composition'].lower()
-            mfg = m['manufacturer'].lower()
-            uses = m['uses'].lower()
-            
-            # Match score
-            if q in name:
-                results.append((0, m))  # Exact name substring: highest priority
-            elif q in salt:
-                results.append((1, m))  # Chemical salt match: high priority
-            elif q in uses:
-                results.append((2, m))  # Indication match
-            elif q in mfg:
-                results.append((3, m))  # Manufacturer match
-                
-        results.sort(key=lambda x: (x[0], -x[1]['rating'], -x[1]['rating_count']))
-        filtered = [item[1] for item in results]
-    else:
+    pool, matched_cat = _resolve_category_pool(category)
+
+    if not q:
         filtered = pool
-        
+    else:
+        # Build synonym list for consumer and medical terms
+        synonyms = [q]
+        for term, syn_list in SEARCH_SYNONYMS.items():
+            if term == q or term in q or q in term:
+                synonyms.extend(syn_list)
+        synonyms = list(dict.fromkeys(synonyms))
+
+        def _match_pool(p):
+            res = []
+            for m in p:
+                name = m['name'].lower()
+                salt = m['salt_composition'].lower()
+                uses = m['uses'].lower()
+                mfg = m['manufacturer'].lower()
+
+                # Exact query matching (highest priority)
+                if q in name:
+                    res.append((0, m))
+                elif q in salt:
+                    res.append((1, m))
+                elif q in uses:
+                    res.append((2, m))
+                elif q in mfg:
+                    res.append((3, m))
+                else:
+                    # Synonym matching
+                    for idx, s in enumerate(synonyms[1:], start=4):
+                        if s in name:
+                            res.append((idx, m))
+                            break
+                        elif s in salt:
+                            res.append((idx + 10, m))
+                            break
+                        elif s in uses:
+                            res.append((idx + 20, m))
+                            break
+
+            res.sort(key=lambda x: (x[0], -x[1]['rating'], -x[1]['rating_count']))
+            seen = set()
+            out = []
+            for item in res:
+                if item[1]['id'] not in seen:
+                    seen.add(item[1]['id'])
+                    out.append(item[1])
+            return out
+
+        filtered = _match_pool(pool)
+
+        # If 0 results in category pool, try searching across ALL_MEDICINES
+        if not filtered and pool is not ALL_MEDICINES:
+            filtered = _match_pool(ALL_MEDICINES)
+
+        # If still empty, fallback to the pool's top items so user always sees relevant medicines
+        if not filtered:
+            filtered = pool
+
     total_count = len(filtered)
     start_idx = (page - 1) * limit
     end_idx = start_idx + limit
     paginated_items = filtered[start_idx:end_idx]
-    
+
     return {
         'total': total_count,
         'page': page,
@@ -264,5 +347,85 @@ def find_medicine_by_name_or_id(identifier):
             
     return None
 
+def find_substitutes(identifier_or_salt, limit=12):
+    """
+    Finds cheaper generic & branded substitute medicines with identical or matching active salts.
+    Calculates exact price savings and percentage discount compared to the original medicine.
+    """
+    if not ALL_MEDICINES:
+        load_all_medicines()
+
+    orig_med = find_medicine_by_name_or_id(identifier_or_salt)
+    
+    if orig_med:
+        salt_text = orig_med.get('salt_composition', '')
+        orig_price = orig_med.get('price', 100.0)
+        orig_id = orig_med.get('id')
+    else:
+        salt_text = str(identifier_or_salt or '').strip()
+        orig_price = 100.0
+        orig_id = None
+
+    def _norm(s):
+        return re.sub(r'\s+', ' ', (s or '').lower()).strip()
+
+    target_norm = _norm(salt_text)
+    if not target_norm or target_norm == 'active pharmaceutical salt':
+        return {'original': orig_med, 'salt': salt_text, 'substitutes': [], 'total_count': 0}
+
+    # 1. First find exact salt matches
+    exact_matches = [
+        m for m in ALL_MEDICINES
+        if (not orig_id or m['id'] != orig_id) and _norm(m.get('salt_composition', '')) == target_norm
+    ]
+
+    # 2. If fewer than limit, find fuzzy salt token matches (e.g. key ingredients)
+    fuzzy_matches = []
+    if len(exact_matches) < limit:
+        # Extract main chemical names (tokens with length > 3, without mg/ml)
+        tokens = [t for t in re.findall(r'[a-zA-Z]{4,}', target_norm) if t not in ('with', 'plus', 'acid', 'drop', 'syrup', 'tablet', 'capsule')]
+        if tokens:
+            exact_ids = {m['id'] for m in exact_matches}
+            if orig_id:
+                exact_ids.add(orig_id)
+            for m in ALL_MEDICINES:
+                if m['id'] in exact_ids:
+                    continue
+                comp_lower = m.get('salt_composition', '').lower()
+                if all(tok in comp_lower for tok in tokens[:2]):
+                    fuzzy_matches.append(m)
+
+    combined = exact_matches + fuzzy_matches
+    # Sort: cheaper than original first, then lowest price, then highest rating
+    combined.sort(key=lambda m: (0 if m['price'] < orig_price else 1, m['price'], -m['rating']))
+
+    result_substitutes = []
+    seen = set()
+    for m in combined:
+        if m['id'] in seen:
+            continue
+        seen.add(m['id'])
+        item = dict(m)
+        diff = round(orig_price - m['price'], 2)
+        if diff > 0 and orig_price > 0:
+            item['savings'] = diff
+            item['savings_pct'] = round((diff / orig_price) * 100)
+            item['is_cheaper'] = True
+        else:
+            item['savings'] = 0.0
+            item['savings_pct'] = 0
+            item['is_cheaper'] = False
+        result_substitutes.append(item)
+        if len(result_substitutes) >= limit:
+            break
+
+    return {
+        'original': orig_med,
+        'salt': salt_text,
+        'substitutes': result_substitutes,
+        'total_count': len(combined)
+    }
+
 # Initialize on import
 load_all_medicines()
+
