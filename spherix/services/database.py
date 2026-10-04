@@ -219,8 +219,23 @@ def get_db_connection(database_name=None):
     # Fallback to local SQLite database if SQL Server is not reachable or not configured
     try:
         import sqlite3
+        import shutil
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        sqlite_db_path = os.getenv('SQLITE_DB_PATH', os.path.join(project_root, 'spherixclinic.db'))
+        is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+        
+        if is_serverless:
+            tmp_db_path = '/tmp/spherixclinic.db'
+            src_db_path = os.path.join(project_root, 'spherixclinic.db')
+            if not os.path.exists(tmp_db_path):
+                if os.path.exists(src_db_path):
+                    try:
+                        shutil.copy2(src_db_path, tmp_db_path)
+                    except Exception as cp_err:
+                        print(f"⚠️ Error copying DB to /tmp: {cp_err}")
+            sqlite_db_path = tmp_db_path
+        else:
+            sqlite_db_path = os.getenv('SQLITE_DB_PATH', os.path.join(project_root, 'spherixclinic.db'))
+
         if not os.path.exists(sqlite_db_path):
             try:
                 import setup_db
@@ -228,9 +243,13 @@ def get_db_connection(database_name=None):
                 setup_db.seed_production_data()
             except Exception as se:
                 print(f"⚠️ Note during SQLite initial seeding: {se}")
+
         conn = sqlite3.connect(sqlite_db_path, check_same_thread=False, isolation_level=None, timeout=30.0)
         try:
-            conn.execute("PRAGMA journal_mode=WAL;")
+            if not is_serverless:
+                conn.execute("PRAGMA journal_mode=WAL;")
+            else:
+                conn.execute("PRAGMA journal_mode=MEMORY;")
             conn.execute("PRAGMA busy_timeout=30000;")
             conn.execute("PRAGMA synchronous=NORMAL;")
         except Exception:
