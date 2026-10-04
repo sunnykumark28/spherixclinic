@@ -46,7 +46,8 @@ from spherix.services.database import (
     reset_factory_database
 )
 from spherix.services.mail_service import (
-    send_notification_email, send_notification_email_async, get_premium_otp_email_html
+    send_notification_email, send_notification_email_async, get_premium_otp_email_html,
+    send_approval_notification
 )
 from spherix.services.payment_service import (
     verify_razorpay_signature, create_razorpay_order
@@ -290,6 +291,13 @@ def admin_dashboard():
     pending_hospitals = [h for h in all_hospitals if not getattr(h, 'is_verified', False)]
     pending_verifications_count = len(pending_doctors) + len(pending_hospitals)
 
+    try:
+        from spherix.services.diagnostic_db import get_admin_diagnostic_data
+        diagnostic_admin_data = get_admin_diagnostic_data()
+    except Exception as e:
+        print(f"Error fetching admin diagnostic data: {e}")
+        diagnostic_admin_data = {'pending_labs': [], 'all_labs': [], 'recent_bookings': [], 'recent_referrals': [], 'tests': [], 'categories': []}
+
     return render_template('admin_dashboard.html', 
                            doctors=paginated_doctors, 
                            all_doctors_count=len(all_doctors),
@@ -359,6 +367,7 @@ def admin_dashboard():
                            medicines=list(TEMP_DATA.get('medicines', [])),
                            lab_requests=all_lab_requests,
                            lab_catalog=ALL_LAB_ITEMS if 'ALL_LAB_ITEMS' in globals() else [],
+                           diagnostic_admin_data=diagnostic_admin_data,
                            auth_stats=get_auth_telemetry_stats(),
                            auth_logs=list(TEMP_DATA.get('auth_activity_logs', [])))
 
@@ -1209,28 +1218,29 @@ def admin_verify_doctor(doc_id):
     doctor, key = resolve_entity_and_key('doctors', doc_id)
     if doctor:
         doctor.is_verified = True
-        if not getattr(doctor, 'license_number', None):
+        if not getattr(doctor, 'license_number', None) and not getattr(doctor, 'license_no', None):
             import random
             doctor.license_number = f"MCI-{random.randint(10000, 99999)}"
+        license_num = getattr(doctor, 'license_number', None) or getattr(doctor, 'license_no', None) or f"MCI-{doctor.id}"
         save_data()
         
-        # Send verification email
+        # Send automated approval email with Doctor ID and License Number
         if doctor.email:
-            subject = "Account Verified - Spherix Clinic"
-            body = f"""
-Dear Dr. {doctor.first_name} {doctor.last_name},
+            send_approval_notification(
+                entity_type="Doctor",
+                name=f"Dr. {getattr(doctor, 'first_name', '')} {getattr(doctor, 'last_name', '')}".strip(),
+                to_email=doctor.email,
+                account_id=str(doctor.id),
+                license_number=str(license_num),
+                login_url=url_for('doctor_login', _external=True),
+                extra_details={
+                    "Specialization": getattr(doctor, 'specialization', 'General Medicine'),
+                    "Department": getattr(doctor, 'department', 'Clinical Care'),
+                    "Contact Phone": getattr(doctor, 'phone', 'N/A')
+                }
+            )
 
-Your account has been successfully verified by the administration team.
-You now have full access to the Doctor Dashboard.
-
-Login here: {url_for('doctor_login', _external=True)}
-
-Best regards,
-Spherix Clinic Team
-"""
-            send_notification_email(doctor.email, subject, body)
-
-        flash(f"Doctor Dr. {doctor.first_name} {doctor.last_name} has been verified successfully.", "success")
+        flash(f"Doctor Dr. {doctor.first_name} {doctor.last_name} has been verified successfully. Credentials sent to {doctor.email}.", "success")
     else:
         flash("Doctor not found.", "error")
     return redirect(request.referrer or (url_for('admin_dashboard') + '#doctors'))
@@ -1243,47 +1253,32 @@ def admin_verify_hospital(hospital_id):
     hospital, _ = resolve_entity_and_key('hospitals', hospital_id)
     if hospital:
         hospital.is_verified = True
+        if not getattr(hospital, 'license_number', None) and not getattr(hospital, 'license_no', None):
+            import random
+            hospital.license_number = f"HOSP-LIC-{random.randint(10000, 99999)}"
+        license_num = getattr(hospital, 'license_number', None) or getattr(hospital, 'license_no', None) or f"HOSP-LIC-{hospital.id}"
         save_data()
         
+        # Send automated approval email with Hospital ID and License Number
         if hospital.email:
-            subject = "Welcome to Spherix Clinic - Account Verified & Onboarding Steps"
-            body = f"""
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 10px;">
-                <h2 style="color: #059669; text-align: center;">Welcome to Spherix Clinic Network!</h2>
-                <p>Dear <strong>{hospital.name}</strong>,</p>
-                <p>We are thrilled to inform you that your hospital account has been successfully verified by our administration team.</p>
-                
-                <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="color: #1f2937; margin-top: 0;">🚀 Quick Onboarding Guide</h3>
-                    <ol style="padding-left: 20px; line-height: 1.6; color: #4b5563;">
-                        <li><strong>Access Your Dashboard:</strong> Log in to the <a href="{url_for('hospital_login', _external=True)}" style="color: #059669; font-weight: bold; text-decoration: none;">Hospital Portal</a>.</li>
-                        <li><strong>Complete Your Profile:</strong> Navigate to the <em>Settings</em> tab to update your facility's address, contact details, and upload your official logo.</li>
-                        <li><strong>Manage Bed Inventory:</strong> Go to the <em>Bed Management</em> section to configure your total general and ICU beds, along with their pricing.</li>
-                        <li><strong>Add Your Medical Staff:</strong> Register your doctors and support staff so they can start managing appointments and patients.</li>
-                        <li><strong>Organize Blood Camps:</strong> Use the <em>Blood Camps</em> section to schedule and promote upcoming donation drives to our donor network.</li>
-                    </ol>
-                </div>
-                
-                <p>If you need any assistance during the setup process, our support team is available 24/7.</p>
-                
-                <div style="text-align: center; margin-top: 30px;">
-                    <a href="{url_for('hospital_login', _external=True)}" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
-                </div>
-                
-                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-                <p style="font-size: 12px; text-align: center; color: #9ca3af;">
-                    &copy; {datetime.now().year} Spherix Clinic Health Systems. All rights reserved.<br>
-                    This is an automated message, please do not reply directly to this email.
-                </p>
-            </div>
-            """
-            send_notification_email(hospital.email, subject, body, is_html=True)
+            send_approval_notification(
+                entity_type="Hospital",
+                name=hospital.name,
+                to_email=hospital.email,
+                account_id=str(hospital.id),
+                license_number=str(license_num),
+                login_url=url_for('hospital_login', _external=True),
+                extra_details={
+                    "Director / CEO": getattr(hospital, 'president_ceo', getattr(hospital, 'director_name', 'Medical Director')),
+                    "City / Location": f"{getattr(hospital, 'city', '')}, {getattr(hospital, 'state', '')}".strip(' ,'),
+                    "Emergency Contact": getattr(hospital, 'phone', 'N/A')
+                }
+            )
 
-        flash(f"Hospital {hospital.name} has been verified.", "success")
+        flash(f"Hospital {hospital.name} verified successfully. Credentials sent to {hospital.email}.", "success")
     else:
         flash("Hospital not found.", "error")
-    return redirect(request.referrer or url_for('admin_dashboard') + '#hospitals')
-
+    return redirect(request.referrer or (url_for('admin_dashboard') + '#hospitals'))
 
 
 @admin_bp.route('/admin/toggle_status/<string:entity_type>/<string:action>/<path:entity_id>', methods=['POST'])

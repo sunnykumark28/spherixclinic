@@ -1,0 +1,360 @@
+{% extends 'layout.html' %}
+
+{% block title %}Complete Payment - Order #{{ order.id }} | Spherix Meds{% endblock %}
+
+{% block head_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- Razorpay Checkout Official SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .btn-tata-coral {
+        background-color: #ff6f61;
+        color: #ffffff !important;
+        font-weight: 800;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 8px 24px rgba(255, 111, 97, 0.35);
+    }
+    .btn-tata-coral:hover {
+        background-color: #e55b4f;
+        box-shadow: 0 12px 28px rgba(255, 111, 97, 0.45);
+        transform: translateY(-2px);
+    }
+    .btn-rzp-dark {
+        background: linear-gradient(135deg, #0c2340 0%, #1e3a8a 100%);
+        color: #ffffff !important;
+        box-shadow: 0 8px 20px rgba(12, 35, 64, 0.25);
+    }
+    .btn-rzp-dark:hover {
+        background: linear-gradient(135deg, #091a30 0%, #1d4ed8 100%);
+        transform: translateY(-2px);
+    }
+    .pulse-rzp {
+        animation: pulseBorder 2s infinite;
+    }
+    @keyframes pulseBorder {
+        0%, 100% { border-color: rgba(255, 111, 97, 0.4); box-shadow: 0 0 0 0 rgba(255, 111, 97, 0.2); }
+        50% { border-color: rgba(255, 111, 97, 1); box-shadow: 0 0 0 8px rgba(255, 111, 97, 0); }
+    }
+</style>
+
+<div class="bg-slate-50 min-h-screen text-slate-800 w-full pb-20">
+    
+    <!-- Top Secure Header Bar -->
+    <header class="bg-white border-b border-slate-200 py-3.5 sticky top-0 z-30 shadow-xs">
+        <div class="w-full max-w-[1200px] mx-auto px-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{{ url_for('medical_shop') }}" class="flex items-center gap-2 text-decoration-none">
+                    <div class="w-9 h-9 rounded-xl bg-[#ff6f61] flex items-center justify-center text-white text-lg font-black shadow-sm">
+                        <i class="fas fa-prescription-bottle-medical"></i>
+                    </div>
+                    <span class="text-lg font-black tracking-tight text-slate-900 uppercase">SPHERIX <span class="text-[#ff6f61]">PHARMACY</span></span>
+                </a>
+                <span class="hidden sm:inline-block text-xs font-bold text-slate-400">|</span>
+                <span class="hidden sm:inline-block text-xs font-bold text-slate-500">Spherix Meds Gateway</span>
+            </div>
+            <div class="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 text-xs font-bold">
+                <i class="fas fa-shield-halved"></i>
+                <span>256-Bit Razorpay Secured</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="w-full max-w-[1050px] mx-auto px-4 sm:px-6 py-8">
+        
+        <!-- Breadcrumb / Status Pill -->
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-500">
+                <a href="{{ url_for('medical_shop') }}" class="hover:text-slate-800 text-decoration-none">Pharmacy</a>
+                <i class="fas fa-chevron-right text-[10px] text-slate-400"></i>
+                <a href="{{ url_for('checkout') }}" class="hover:text-slate-800 text-decoration-none">Checkout</a>
+                <i class="fas fa-chevron-right text-[10px] text-slate-400"></i>
+                <span class="text-slate-900">Razorpay Payment</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                    Awaiting Payment Verification
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Column: Payment Methods & Gateway Trigger (7 Cols) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Razorpay Master Checkout Card -->
+                <div class="bg-white rounded-3xl border-2 border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 relative overflow-hidden pulse-rzp">
+                    
+                    <div class="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
+                        <div class="space-y-1">
+                            <span class="px-2.5 py-0.5 rounded bg-[#ff6f61]/10 text-[#ff6f61] text-[11px] font-black uppercase tracking-wider">
+                                Instant Digital Clearance
+                            </span>
+                            <h2 class="text-xl font-black text-slate-900">Pay via Razorpay Secure Gateway</h2>
+                            <p class="text-xs text-slate-500">Pay directly using UPI, Instant QR Code, Debit/Credit Card, or Net Banking.</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-[#0c2340] text-sky-400 flex items-center justify-center text-xl shrink-0 shadow-md">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                    </div>
+
+                    <!-- Accepted Methods Badges -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <i class="fab fa-google-pay text-2xl text-slate-700 mb-1"></i>
+                            <span class="text-[11px] font-black text-slate-800">UPI / QR</span>
+                            <span class="text-[9px] text-slate-400">GPay, PhonePe</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <i class="fas fa-credit-card text-2xl text-blue-600 mb-1"></i>
+                            <span class="text-[11px] font-black text-slate-800">All Cards</span>
+                            <span class="text-[9px] text-slate-400">Visa, RuPay, MC</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <i class="fas fa-building-columns text-2xl text-indigo-600 mb-1"></i>
+                            <span class="text-[11px] font-black text-slate-800">Net Banking</span>
+                            <span class="text-[9px] text-slate-400">50+ Banks</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                            <i class="fas fa-wallet text-2xl text-amber-600 mb-1"></i>
+                            <span class="text-[11px] font-black text-slate-800">Wallets</span>
+                            <span class="text-[9px] text-slate-400">Paytm, Mobikwik</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Razorpay Action Button -->
+                    <div class="space-y-3 pt-2">
+                        <button id="rzp-pay-button" type="button"
+                            class="w-full btn-tata-coral py-4 rounded-2xl text-sm uppercase tracking-wider flex items-center justify-center gap-3 cursor-pointer border-0 shadow-lg">
+                            <i class="fas fa-bolt text-amber-200"></i>
+                            <span>PAY ₹{{ "%.2f"|format(amount_inr) }} NOW VIA RAZORPAY</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </button>
+                        <p class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+                            <i class="fas fa-shield-check text-emerald-500"></i>
+                            Automated instant confirmation & pharmacist dispatch immediately after payment
+                        </p>
+                    </div>
+
+                    <!-- Alternate Hosted Portal Option -->
+                    <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <form method="POST" action="{{ url_for('pharmacy.order_payment', order_id=order.id) }}" class="w-full sm:w-auto">
+                            <input type="hidden" name="payment_method" value="razorpay_link">
+                            <button type="submit" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 border-0 cursor-pointer transition-colors">
+                                <i class="fas fa-arrow-up-right-from-square text-[10px]"></i>
+                                <span>Open Razorpay Hosted Checkout Page</span>
+                            </button>
+                        </form>
+
+                        <form method="POST" action="{{ url_for('pharmacy.order_payment', order_id=order.id) }}" class="w-full sm:w-auto">
+                            <input type="hidden" name="action" value="switch_cod">
+                            <button type="submit" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-200 cursor-pointer transition-colors">
+                                <i class="fas fa-hand-holding-dollar text-slate-400"></i>
+                                <span>Switch to Cash on Delivery</span>
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+                <!-- Patient & Delivery Address Preview -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-location-dot text-[#ff6f61]"></i>
+                        <span>Doorstep Delivery Address</span>
+                    </h3>
+                    <div class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <div class="font-extrabold text-slate-900 text-sm mb-1">{{ cust_name }}</div>
+                        <div>{{ order.shipping_address.address if order.shipping_address else 'Primary Patient Address' }}</div>
+                        <div>
+                            {{ order.shipping_address.city if order.shipping_address else 'New Delhi' }},
+                            {{ order.shipping_address.state if order.shipping_address else 'Delhi' }} -
+                            {{ order.shipping_address.pincode if order.shipping_address else '110001' }}
+                        </div>
+                        <div class="mt-2 text-slate-400">
+                            <i class="fas fa-phone text-[10px] mr-1"></i> Contact: <strong class="text-slate-700">{{ cust_phone }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Order Summary & Item Review (5 Cols) -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-md space-y-5">
+                    
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div>
+                            <span class="text-[10px] uppercase font-black text-slate-400 tracking-wider">Medicine Cart</span>
+                            <h3 class="text-sm font-black text-slate-900">Order Summary #{{ order.id }}</h3>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black">
+                            {{ order.items|length }} Item(s)
+                        </span>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                        {% for it in order.items %}
+                        <div class="flex items-start justify-between text-xs gap-3 py-2 border-b border-slate-50 last:border-0">
+                            <div class="flex items-start gap-2.5">
+                                <div class="w-7 h-7 rounded-lg bg-[#ff6f61]/10 text-[#ff6f61] flex items-center justify-center shrink-0 mt-0.5">
+                                    <i class="fas fa-pills text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="font-extrabold text-slate-800 leading-snug">{{ it.name }}</div>
+                                    <div class="text-[11px] text-slate-400">Qty: {{ it.quantity }} × ₹{{ "%.2f"|format(it.price) }}</div>
+                                </div>
+                            </div>
+                            <span class="font-black text-slate-900 shrink-0">₹{{ "%.2f"|format(it.price * it.quantity) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Price Breakdown -->
+                    <div class="space-y-2 pt-3 border-t border-slate-100 text-xs text-slate-600">
+                        <div class="flex justify-between">
+                            <span>Subtotal Items</span>
+                            <span class="font-bold text-slate-800">₹{{ "%.2f"|format(amount_inr) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Pharmacist Dispensing Fee</span>
+                            <span class="font-bold text-emerald-600">FREE</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Express Delivery (2 Hours)</span>
+                            <span class="font-bold text-emerald-600">FREE</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-baseline justify-between">
+                        <div>
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Payable Amount</div>
+                            <div class="text-2xl font-black text-slate-900">₹{{ "%.2f"|format(amount_inr) }}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-xs font-black">
+                                INR (All Taxes Incl.)
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Trust Seal -->
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400">
+                        <i class="fas fa-badge-check text-[#ff6f61]"></i>
+                        <span>100% Genuine Medicines • Sealed Packaging</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Hidden Form for Razorpay Callback Signature Submission -->
+    <form id="razorpay-response-form" method="POST" action="{{ url_for('pharmacy.order_payment', order_id=order.id) }}" style="display: none;">
+        <input type="hidden" name="razorpay_payment_id" id="rzp_payment_id">
+        <input type="hidden" name="razorpay_order_id" id="rzp_order_id">
+        <input type="hidden" name="razorpay_signature" id="rzp_signature">
+        <input type="hidden" name="payment_method" value="razorpay">
+    </form>
+
+    <!-- Tata 1mg Footer -->
+    {% include 'tata_1mg_footer.html' %}
+
+</div>
+
+<!-- Razorpay Script Setup -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const payButton = document.getElementById('rzp-pay-button');
+        if (!payButton) return;
+
+        const razorpayKey = "{{ razorpay_key_id }}";
+        const razorpayOrderId = "{{ razorpay_order.id if razorpay_order else '' }}";
+        const amountPaise = {{ amount_paise }};
+        const orderId = "{{ order.id }}";
+
+        const options = {
+            "key": razorpayKey,
+            "amount": amountPaise,
+            "currency": "INR",
+            "name": "Spherix Clinic Pharmacy",
+            "description": "Medicine Order #" + orderId + " - Spherix Meds Dispensing",
+            "image": "/static/images/logo.png",
+            "order_id": razorpayOrderId || undefined,
+            "prefill": {
+                "name": "{{ cust_name }}",
+                "email": "{{ cust_email }}",
+                "contact": "{{ cust_phone }}"
+            },
+            "notes": {
+                "order_id": orderId,
+                "service": "pharmacy_ecommerce"
+            },
+            "theme": {
+                "color": "#ff6f61"
+            },
+            "handler": function (response) {
+                // Payment Successful: Auto-submit signature to backend for cryptographic verification
+                document.getElementById('rzp_payment_id').value = response.razorpay_payment_id || '';
+                document.getElementById('rzp_order_id').value = response.razorpay_order_id || razorpayOrderId || '';
+                document.getElementById('rzp_signature').value = response.razorpay_signature || '';
+                document.getElementById('razorpay-response-form').submit();
+            },
+            "modal": {
+                "ondismiss": function() {
+                    console.log("Razorpay checkout modal closed by user.");
+                }
+            }
+        };
+
+        let rzp = null;
+        if (typeof Razorpay !== 'undefined' && razorpayKey) {
+            rzp = new Razorpay(options);
+            
+            // Auto open Razorpay modal smoothly after 400ms for optimal UX
+            setTimeout(() => {
+                try {
+                    rzp.open();
+                } catch(e) {
+                    console.warn("Auto-popup blocked or deferred:", e);
+                }
+            }, 450);
+        }
+
+        payButton.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (rzp) {
+                rzp.open();
+            } else if (typeof Razorpay !== 'undefined' && razorpayKey) {
+                const manualRzp = new Razorpay(options);
+                manualRzp.open();
+            } else {
+                // Fallback: Submit hosted payment link
+                const fallbackForm = document.createElement('form');
+                fallbackForm.method = 'POST';
+                fallbackForm.action = "{{ url_for('pharmacy.order_payment', order_id=order.id) }}";
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'payment_method';
+                hiddenInput.value = 'razorpay_link';
+                fallbackForm.appendChild(hiddenInput);
+                document.body.appendChild(fallbackForm);
+                fallbackForm.submit();
+            }
+        });
+    });
+</script>
+{% endblock %}

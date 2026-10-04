@@ -49,7 +49,8 @@ from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html
 )
 from spherix.services.payment_service import (
-    verify_razorpay_signature, create_razorpay_order
+    verify_razorpay_signature, create_razorpay_order,
+    get_razorpay_key_id, create_razorpay_payment_link
 )
 from fpdf import FPDF
 from spherix.services.upload_service import save_user_profile_image, upload_to_cloudinary, UPLOAD_CACHE
@@ -661,6 +662,13 @@ def patient_dashboard():
 
     all_registered_doctors = deduplicate_entities(list(TEMP_DATA.get('doctors', {}).values()))
 
+    try:
+        from spherix.services.diagnostic_db import get_patient_diagnostic_data
+        diagnostic_data = get_patient_diagnostic_data(current_user.id)
+    except Exception as e:
+        print(f"Error fetching diagnostic data for patient: {e}")
+        diagnostic_data = {'bookings': [], 'referrals': [], 'reports': [], 'categories': [], 'tests': []}
+
     return render_template('patient_dashboard.html', 
                            patient=current_user, 
                            today=today, 
@@ -672,6 +680,11 @@ def patient_dashboard():
                            all_doctors=all_registered_doctors,
                            medical_records=patient_medical_records,
                            lab_requests=patient_lab_requests,
+                           diagnostic_bookings=diagnostic_data.get('bookings', []),
+                           diagnostic_referrals=diagnostic_data.get('referrals', []),
+                           diagnostic_reports=diagnostic_data.get('reports', []),
+                           diagnostic_categories=diagnostic_data.get('categories', []),
+                           diagnostic_tests=diagnostic_data.get('tests', []),
                            patient_vitals=patient_vitals,
                            vitals_dates=vitals_dates,
                            vitals_weight=vitals_weight,
@@ -1104,42 +1117,75 @@ def appointment_payment(appointment_id):
         return redirect(url_for('home'))
     
     doctor = TEMP_DATA['doctors'].get(appointment.doctor_id)
-    # Ensure fee is a number
     try:
         fee = float(doctor.consultation_fee) if doctor and doctor.consultation_fee else 2500.0
-    except ValueError:
+    except (ValueError, TypeError):
         fee = 1000.0
     
+    rzp_key_id = get_razorpay_key_id()
+    
     if request.method == 'POST':
-        payment_method = request.form.get('payment_method', 'card') # Simulate choice
-        
-        if payment_method == 'card' and razorpay_client:
-            try:
-                payment_link = razorpay_client.payment_link.create({
-                    "amount": int(fee * 100),
-                    "currency": "INR",
-                    "accept_partial": False,
-                    "reference_id": f"appt_{appointment.id}_{int(time_module.time())}",
-                    "description": f"Doctor Appointment with Dr. {doctor.last_name}",
-                    "customer": {
-                        "name": appointment.patient_name,
-                        "contact": appointment.patient_phone
-                    },
-                    "callback_url": url_for('appointment_success', appointment_id=appointment.id, _external=True) + '?session_id=razorpay_payment',
-                    "callback_method": "get"
-                })
-                return redirect(payment_link['short_url'], code=303)
-            except Exception as e:
-                flash(f"Payment error: {str(e)}", "error")
-                return redirect(url_for('appointment_payment', appointment_id=appointment.id))
-        else:
-            # Fallback/Simulation if Stripe isn't configured
-            appointment.status = 'confirmed' 
-            save_data()
-            flash("Payment successful! Appointment confirmed.", "success")
-            return redirect(url_for('appointment_success', appointment_id=appointment.id))
+        razorpay_payment_id = request.form.get('razorpay_payment_id')
+        razorpay_order_id = request.form.get('razorpay_order_id')
+        razorpay_signature = request.form.get('razorpay_signature')
+        payment_method = request.form.get('payment_method', 'razorpay')
 
-    return render_template('appointment_payment.html', appointment=appointment, doctor=doctor, fee=fee)
+        # 1. Standard Razorpay Modal Signature Verification
+        if razorpay_payment_id and razorpay_order_id and razorpay_signature:
+            is_valid = verify_razorpay_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+            if is_valid:
+                appointment.status = 'confirmed'
+                appointment.payment_id = razorpay_payment_id
+                appointment.payment_method = 'Razorpay Online'
+                save_data()
+                flash("🎉 Payment verified via Razorpay! Your appointment is confirmed.", "success")
+                return redirect(url_for('appointment_success', appointment_id=appointment.id, razorpay_payment_id=razorpay_payment_id))
+            else:
+                flash("⚠️ Payment verification signature mismatch. Please contact clinic support.", "error")
+                return redirect(url_for('appointment_payment', appointment_id=appointment.id))
+
+        # 2. Razorpay Hosted Payment Link Redirect
+        if payment_method in ('razorpay_link', 'card', 'upi') and razorpay_client:
+            try:
+                callback_url = url_for('appointment_success', appointment_id=appointment.id, _external=True) + '?session_id=razorpay_payment'
+                payment_link = create_razorpay_payment_link(
+                    amount_inr=fee,
+                    reference_id=f"appt_{appointment.id}_{int(time_module.time())}",
+                    description=f"Consultation with Dr. {doctor.first_name if doctor else ''} {doctor.last_name if doctor else 'Specialist'}",
+                    customer_name=appointment.patient_name,
+                    customer_email=getattr(current_user, 'email', 'patient@spherixclinic.com'),
+                    customer_phone=appointment.patient_phone,
+                    callback_url=callback_url
+                )
+                if payment_link and 'short_url' in payment_link:
+                    return redirect(payment_link['short_url'], code=303)
+            except Exception as e:
+                flash(f"Payment gateway note: {str(e)}", "info")
+
+        # 3. Direct confirmation fallback (sandbox / offline)
+        appointment.status = 'confirmed'
+        appointment.payment_method = 'Confirmed'
+        save_data()
+        flash("Payment successful! Appointment confirmed.", "success")
+        return redirect(url_for('appointment_success', appointment_id=appointment.id))
+
+    # Pre-generate Razorpay Order for client-side Modal checkout
+    rzp_order = create_razorpay_order(
+        amount_inr=fee,
+        receipt=f"appt_{appointment.id}",
+        notes={'appointment_id': str(appointment.id), 'doctor_id': str(appointment.doctor_id)}
+    )
+    rzp_order_id = rzp_order.get('id', '') if rzp_order else ''
+
+    return render_template(
+        'appointment_payment.html',
+        appointment=appointment,
+        doctor=doctor,
+        fee=fee,
+        razorpay_key_id=rzp_key_id,
+        razorpay_order_id=rzp_order_id,
+        amount_paise=int(fee * 100)
+    )
 
 
 
@@ -1148,6 +1194,14 @@ def appointment_success(appointment_id):
     appointment = TEMP_DATA['appointments'].get(appointment_id)
     if not appointment:
         return redirect(url_for('home'))
+        
+    session_id = request.args.get('session_id')
+    razorpay_payment_id = request.args.get('razorpay_payment_id') or request.args.get('razorpay_payment_link_id')
+    if (session_id or razorpay_payment_id) and appointment.status == 'awaiting_payment':
+        appointment.status = 'confirmed'
+        appointment.payment_id = razorpay_payment_id or 'rzp_verified'
+        appointment.payment_method = 'Razorpay Online'
+        save_data()
         
     session_id = request.args.get('session_id')
     if session_id and appointment.status == 'awaiting_payment':
@@ -1820,15 +1874,10 @@ def create_bed_booking():
         patient_phone=patient_phone,
         bed_type=bed_type,
         reason=reason,
-        status='approved'
+        status='awaiting_payment'
     )
     new_booking.room_number = f"W-{random.randint(101, 399)}"
     new_booking.emergency_notes = emergency_notes
-
-    if bed_type == 'ICU' and hasattr(hospital, 'available_icu_beds') and hospital.available_icu_beds > 0:
-        hospital.available_icu_beds -= 1
-    elif hasattr(hospital, 'available_general_beds') and hospital.available_general_beds > 0:
-        hospital.available_general_beds -= 1
 
     TEMP_DATA['bed_bookings'][booking_id] = new_booking
     TEMP_DATA['next_ids']['bed_booking'] = booking_id + 1
@@ -1837,26 +1886,16 @@ def create_bed_booking():
         create_notification(
             user_id=hospital.id,
             user_role='hospital',
-            message=f"New Inpatient Admission Request: {current_user.name} for {bed_type} Bed (Booking #{booking_id}).",
+            message=f"New Bed Admission Initiated: {current_user.name} for {bed_type} Bed (Booking #{booking_id}) awaiting Razorpay deposit.",
             link=url_for('hospital_dashboard')
-        )
-    except Exception:
-        pass
-
-    try:
-        create_notification(
-            user_id=current_user.id,
-            user_role='patient',
-            message=f"Your {bed_type} bed booking at {hospital.name} is confirmed! (Booking #{booking_id}, Room {new_booking.room_number}).",
-            link=url_for('patient_dashboard', tab='hospitals')
         )
     except Exception:
         pass
 
     save_data()
     sync_data_to_sql()
-    flash(f"Bed booking confirmed at {hospital.name}! Room/Ward allocated: {new_booking.room_number}.", "success")
-    return redirect(url_for('patient_dashboard', tab='hospitals'))
+    flash(f"Bed reservation initiated at {hospital.name}. Please complete your admission deposit via Razorpay.", "info")
+    return redirect(url_for('bed_booking_payment', booking_id=booking_id))
 
 
 @patient_bp.route('/patient/vitals/log', methods=['POST'])

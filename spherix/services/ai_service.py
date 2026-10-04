@@ -3,6 +3,7 @@ import sys
 import json
 import re
 import hashlib
+import base64
 import requests
 import time as time_module
 from datetime import datetime
@@ -561,6 +562,87 @@ Write a concise final result statement that includes the most critical diagnosis
     except Exception as e:
         print(f"⚠️ Groq finalization failed: {e}")
         return result.get('clinical_summary') or result.get('description') or 'Finalized result could not be generated.'
+
+
+def _invoke_groq_soap_generator(raw_text):
+    if not _is_groq_configured():
+        return None
+    endpoint = f"{GROQ_API_BASE.rstrip('/')}/chat/completions"
+    prompt = f"""You are an advanced AI Clinical Scribe. Convert the following unstructured clinical observations/notes into a highly professional, formatted SOAP note (Subjective, Objective, Assessment, Plan). Keep the language formal, medically precise, and clear.
+    
+Unstructured observations:
+"{raw_text}"
+
+Output only the formatted SOAP note in HTML format (using Tailwind CSS class labels or simple markup). Do not include any introductory or concluding text outside the SOAP note. Use headings for S, O, A, P.
+"""
+    payload = {
+        'model': GROQ_API_MODEL,
+        'messages': [
+            {'role': 'system', 'content': 'You are a professional medical assistant.'},
+            {'role': 'user', 'content': prompt}
+        ],
+        'temperature': 0.2
+    }
+    headers = {
+        'Authorization': f'Bearer {GROQ_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    try:
+        resp = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+        resp.raise_for_status()
+        payload_json = resp.json()
+        text = _extract_groq_text_response(payload_json)
+        return text
+    except Exception as e:
+        print(f"⚠️ Groq SOAP generation failed: {e}")
+        return None
+
+
+def mock_soap_note_generator(raw_text):
+    sentences = [s.strip() for s in raw_text.split('.') if s.strip()]
+    
+    subjective = []
+    objective = []
+    assessment = []
+    plan = []
+    
+    for s in sentences:
+        s_lower = s.lower()
+        if any(w in s_lower for w in ["feel", "complain", "pain", "headache", "nausea", "cough", "history", "patient reports", "duration", "days"]):
+            subjective.append(s)
+        elif any(w in s_lower for w in ["bp", "temp", "pulse", "bpm", "oxygen", "spo2", "examination", "exam", "clear", "normal", "heart rate", "lungs"]):
+            objective.append(s)
+        elif any(w in s_lower for w in ["diagnose", "ruling out", "stage", "chronic", "acute", "suspected", "staging"]):
+            assessment.append(s)
+        else:
+            plan.append(s)
+            
+    if not subjective: subjective = ["Patient presents for clinical evaluation. " + raw_text]
+    if not objective: objective = ["Vitals reviewed. Physical exam stable."]
+    if not assessment: assessment = ["Symptomatic evaluation. Differential diagnosis considered based on patient history."]
+    if not plan: plan = ["Follow up as directed. Monitor symptoms and report any red flags."]
+    
+    html = f"""
+    <div class="space-y-3 font-sans text-slate-700 text-xs">
+        <div>
+            <span class="font-bold text-slate-800 text-[10px] uppercase tracking-wider block mb-1">Subjective (S)</span>
+            <p class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 italic">{" ".join(subjective)}</p>
+        </div>
+        <div>
+            <span class="font-bold text-slate-800 text-[10px] uppercase tracking-wider block mb-1">Objective (O)</span>
+            <p class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 italic">{" ".join(objective)}</p>
+        </div>
+        <div>
+            <span class="font-bold text-slate-800 text-[10px] uppercase tracking-wider block mb-1">Assessment (A)</span>
+            <p class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 italic">{" ".join(assessment)}</p>
+        </div>
+        <div>
+            <span class="font-bold text-slate-800 text-[10px] uppercase tracking-wider block mb-1">Plan (P)</span>
+            <p class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 italic">{" ".join(plan)}</p>
+        </div>
+    </div>
+    """
+    return html
 
 
 def _invoke_groq_drug_info(drug_name):

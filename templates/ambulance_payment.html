@@ -1,0 +1,166 @@
+{% extends 'layout.html' %}
+{% block title %}Ambulance Dispatch Payment - Spherix Clinic{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-slate-950 text-slate-100 py-12 px-4 sm:px-6">
+    <div class="max-w-2xl mx-auto">
+        
+        <div class="bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 overflow-hidden">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-rose-950 via-slate-900 to-red-950 px-8 py-7 border-b border-slate-800 text-white relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="flex items-center justify-between relative z-10">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold uppercase tracking-wider border border-rose-500/40 mb-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
+                            Priority Emergency Dispatch
+                        </div>
+                        <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Confirm &amp; Pay Dispatch</h1>
+                        <p class="text-slate-400 text-xs mt-1">Vehicle Unit Locked • Instant Razorpay Checkout</p>
+                    </div>
+                    <div class="hidden sm:block text-right">
+                        <img src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay Secure" class="h-6 filter brightness-0 invert opacity-80 inline-block">
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 sm:p-8 space-y-6">
+                <!-- Vehicle & Patient Card -->
+                <div class="bg-slate-950 rounded-2xl p-5 border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-600/20 text-rose-400 border border-rose-500/30 flex items-center justify-center font-bold text-xl shrink-0">
+                            {% if 'air' in booking.service_category %}
+                            <i class="fas fa-helicopter"></i>
+                            {% else %}
+                            <i class="fas fa-ambulance"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-white">{{ booking.vehicle_name }}</h2>
+                            <p class="text-xs text-rose-400 font-semibold">{{ booking.destination_hospital }}</p>
+                            <p class="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">Pickup: {{ booking.pickup_address }}</p>
+                        </div>
+                    </div>
+                    <div class="text-left sm:text-right font-mono text-xs">
+                        <div class="text-slate-500">Patient</div>
+                        <div class="font-bold text-white mt-0.5">{{ booking.patient_name }}</div>
+                        <div class="text-slate-400">{{ booking.patient_phone }}</div>
+                    </div>
+                </div>
+
+                <!-- Fee Breakdown -->
+                <div class="bg-slate-950 rounded-2xl p-5 border border-slate-800 space-y-2.5">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span>Emergency Vehicle Mobilization &amp; Crew Fee</span>
+                        <span class="font-mono font-semibold text-white">₹{{ "%.2f"|format(fee) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span>Onboard Life-Support &amp; Triage Equipment</span>
+                        <span class="font-mono font-semibold text-emerald-400">INCLUDED</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
+                        <span class="font-bold text-white text-sm">Total Dispatch Fee Payable</span>
+                        <span class="text-2xl font-black text-rose-400 font-mono">₹{{ "%.2f"|format(fee) }}</span>
+                    </div>
+                </div>
+
+                <!-- Razorpay Supported Rails -->
+                <div class="rounded-2xl p-4 bg-slate-950 text-white flex flex-col sm:flex-row items-center justify-between gap-3 border border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl bg-blue-500/20 text-sky-400 flex items-center justify-center text-sm border border-blue-400/30">
+                            <i class="fas fa-qrcode"></i>
+                        </span>
+                        <div>
+                            <div class="text-xs font-bold text-white">Direct Razorpay Gateway</div>
+                            <div class="text-[10px] text-slate-400">UPI, Google Pay, PhonePe, Paytm, RuPay, Visa, NetBanking</div>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950 px-2 py-1 rounded border border-emerald-500/30">
+                        256-BIT ENCRYPTED
+                    </span>
+                </div>
+
+                <!-- Razorpay Submission Form -->
+                <form id="payment-form" method="POST" action="{{ url_for('ambulance_payment', booking_id=booking.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+                    <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+                    <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+
+                    <button type="button" id="rzp-button"
+                        class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black text-sm sm:text-base shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2.5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
+                        <i class="fas fa-lock text-sm"></i>
+                        <span>Pay ₹{{ "%.2f"|format(fee) }} via Razorpay &amp; Dispatch Now</span>
+                    </button>
+                </form>
+
+                <div class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
+                    <i class="fas fa-satellite text-rose-400"></i>
+                    <span>Live GPS radar tracking will activate immediately once payment is verified.</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Razorpay Checkout Integration Script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.getElementById('rzp-button').onclick = function(e){
+    e.preventDefault();
+
+    const keyId = "{{ razorpay_key_id }}";
+    const orderId = "{{ razorpay_order_id }}";
+    const amountPaise = {{ amount_paise }};
+    const patientName = "{{ booking.patient_name }}";
+    const patientPhone = "{{ booking.patient_phone or '' }}";
+
+    if (!keyId) {
+        if (confirm("Razorpay live credentials not configured. Proceed with instant sandbox dispatch confirmation?")) {
+            document.getElementById('payment-form').submit();
+        }
+        return;
+    }
+
+    const options = {
+        "key": keyId,
+        "amount": amountPaise,
+        "currency": "INR",
+        "name": "Spherix Emergency Dispatch",
+        "description": "{{ booking.vehicle_name }} Dispatch",
+        "image": "{{ url_for('static', filename='images/spherixclinic.jpg', _external=True) }}",
+        "order_id": orderId || undefined,
+        "handler": function (response){
+            document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id || '';
+            document.getElementById('razorpay_order_id').value = response.razorpay_order_id || orderId || '';
+            document.getElementById('razorpay_signature').value = response.razorpay_signature || '';
+            document.getElementById('payment-form').submit();
+        },
+        "prefill": {
+            "name": patientName,
+            "contact": patientPhone
+        },
+        "theme": {
+            "color": "#e11d48"
+        },
+        "modal": {
+            "ondismiss": function() {
+                console.log("Razorpay ambulance checkout modal closed.");
+            }
+        }
+    };
+
+    try {
+        const rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function (response){
+            alert("Payment Failed: " + response.error.description);
+        });
+        rzp1.open();
+    } catch(err) {
+        console.error("Razorpay open error:", err);
+        document.getElementById('payment-form').submit();
+    }
+};
+</script>
+{% endblock %}

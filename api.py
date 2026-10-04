@@ -150,42 +150,12 @@ def get_medicines():
     query = request.args.get('q', '').strip().lower()
     limit = min(int(request.args.get('limit', 20)), 100)
     
-    results = []
-    csv_path = os.path.join(os.path.dirname(__file__), 'Medicine_Details.csv')
-    
-    if os.path.exists(csv_path):
-        try:
-            with open(csv_path, 'r', encoding='utf-8', errors='ignore') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    name = row.get('Medicine Name', '')
-                    comp = row.get('Composition', '')
-                    uses = row.get('Uses', '')
-                    
-                    if not query or query in name.lower() or query in comp.lower() or query in uses.lower():
-                        results.append({
-                            "name": name,
-                            "composition": comp,
-                            "uses": uses,
-                            "side_effects": row.get('Side_effects', ''),
-                            "manufacturer": row.get('Manufacturer', ''),
-                            "image_url": row.get('Image URL', '')
-                        })
-                    if len(results) >= limit:
-                        break
-        except Exception as e:
-            return jsonify({"error": f"Failed reading catalog: {str(e)}"}), 500
-    else:
-        try:
-            from medicine_catalog import MEDICINES
-            for med in MEDICINES:
-                name = med.get('name', '')
-                if not query or query in name.lower():
-                    results.append(med)
-                if len(results) >= limit:
-                    break
-        except Exception:
-            pass
+    try:
+        from medicine_catalog import search_medicines
+        search_res = search_medicines(query=query, limit=limit)
+        results = search_res.get('medicines', [])
+    except Exception as e:
+        return jsonify({"error": f"Failed reading catalog: {str(e)}"}), 500
 
     return jsonify({
         "count": len(results),

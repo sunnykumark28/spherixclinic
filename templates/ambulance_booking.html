@@ -1,0 +1,177 @@
+{% extends 'layout.html' %}
+{% block title %}24/7 Road &amp; Air Ambulance Emergency Booking - Spherix Clinic{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <!-- Ambient glowing backdrop -->
+    <div class="absolute -top-32 left-1/4 w-96 h-96 bg-rose-600/15 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute top-1/2 right-10 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-4xl mx-auto relative z-10">
+        
+        <!-- Header Banner -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-mono font-bold uppercase tracking-wider border border-rose-500/30 mb-3 animate-pulse">
+                <i class="fas fa-tower-broadcast text-rose-400"></i> Code Red 24/7 Telemetry Dispatch
+            </div>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white font-sans">
+                Book <span class="bg-gradient-to-r from-rose-500 to-red-400 bg-clip-text text-transparent">Ambulance &amp; Air Evacuation</span>
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base max-w-xl mx-auto mt-2.5">
+                Instant paramedic deployment, ICU on wheels, and critical-care aero-medical charter with live GPS radar tracking and secure Razorpay payment.
+            </p>
+        </div>
+
+        <!-- Service Mode Switcher Tabs -->
+        <div class="flex items-center justify-center gap-3 mb-8">
+            <a href="{{ url_for('ambulance_book') }}" 
+                class="px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all text-decoration-none flex items-center gap-2 {{ 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg shadow-rose-600/30 border border-rose-400/40' if not is_air else 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800' }}">
+                <i class="fas fa-ambulance"></i>
+                <span>Road Ambulances</span>
+            </a>
+            <a href="{{ url_for('ambulance_book') }}?service=air" 
+                class="px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all text-decoration-none flex items-center gap-2 {{ 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg shadow-rose-600/30 border border-rose-400/40' if is_air else 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800' }}">
+                <i class="fas fa-helicopter"></i>
+                <span>Air Ambulance &amp; Aero Jets</span>
+            </a>
+        </div>
+
+        <form method="POST" action="{{ url_for('ambulance_book') }}" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+            
+            <!-- Fleet Selection Cards -->
+            <div class="space-y-3">
+                <label class="block text-xs font-mono font-bold uppercase tracking-wider text-slate-300">
+                    1. Select Vehicle &amp; Life-Support Tier
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {% for key, v in fleet.items() %}
+                    {% if (is_air and v.category == 'air') or (not is_air and v.category == 'road') %}
+                    <label class="relative flex flex-col justify-between p-4 rounded-2xl border transition-all cursor-pointer group bg-slate-900/80 hover:bg-slate-900 border-slate-800 hover:border-rose-500/60 has-checked:border-rose-500 has-checked:ring-2 has-checked:ring-rose-500/30 has-checked:bg-slate-900">
+                        <input type="radio" name="ambulance_type" value="{{ key }}" {{ 'checked' if key == default_type else '' }} class="sr-only">
+                        
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase {{ 'bg-rose-500/20 text-rose-300 border border-rose-500/40' if 'air' in v.category else 'bg-blue-500/20 text-blue-300 border border-blue-500/40' }}">
+                                    {{ v.badge }}
+                                </span>
+                                <span class="text-[11px] font-mono text-emerald-400 font-bold flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> ETA: {{ v.eta }}
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="w-10 h-10 rounded-xl bg-slate-800 text-rose-400 flex items-center justify-center text-lg shrink-0 group-hover:scale-105 transition-transform">
+                                    <i class="{{ v.icon }}"></i>
+                                </span>
+                                <div>
+                                    <div class="text-sm font-bold text-white leading-tight">{{ v.name }}</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">{{ v.specs }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between mt-2">
+                            <span class="text-xs text-slate-400">Dispatch Fee</span>
+                            <span class="text-base font-black text-rose-400 font-mono">₹{{ "%.2f"|format(v.fee) }}</span>
+                        </div>
+                    </label>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Patient & Dispatch Info Card -->
+            <div class="bg-slate-900/90 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl space-y-4">
+                <label class="block text-xs font-mono font-bold uppercase tracking-wider text-slate-300 mb-2">
+                    2. Patient &amp; Emergency Location Details
+                </label>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Patient Full Name *</label>
+                        <input type="text" name="patient_name" required placeholder="Patient name" 
+                            class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-rose-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Emergency Contact Phone *</label>
+                        <input type="tel" name="patient_phone" required placeholder="+91 98765 43210" 
+                            class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-rose-500 transition-colors">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-bold text-slate-300">Exact Pickup Address &amp; Landmarks *</label>
+                        <button type="button" onclick="detectGPSLocation()" class="text-[11px] text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 cursor-pointer">
+                            <i class="fas fa-location-crosshairs"></i> Auto-Detect My Location
+                        </button>
+                    </div>
+                    <input type="text" id="pickup_address" name="pickup_address" required placeholder="Apartment / Flat, Street, Landmark, City, Pincode" 
+                        class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-rose-500 transition-colors">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Destination Hospital</label>
+                        <select name="destination_hospital" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-rose-500 transition-colors">
+                            <option value="Nearest Emergency Trauma Center (Auto-Assigned)">Nearest Emergency Trauma Center (Auto-Assigned)</option>
+                            <option value="AIIMS Trauma &amp; Emergency Center">AIIMS Trauma &amp; Emergency Center</option>
+                            <option value="Apollo Super Specialty Hospital">Apollo Super Specialty Hospital</option>
+                            <option value="Fortis Heart &amp; Neuro Institute">Fortis Heart &amp; Neuro Institute</option>
+                            <option value="Max Healthcare Multi-Specialty">Max Healthcare Multi-Specialty</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Emergency Condition / Symptoms</label>
+                        <input type="text" name="emergency_notes" placeholder="e.g. Chest pain, severe breathlessness, stroke, trauma" 
+                            class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-rose-500 transition-colors">
+                    </div>
+                </div>
+
+                <!-- Razorpay Payment Security Note -->
+                <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fas fa-shield-halved text-emerald-400 text-lg"></i>
+                        <div>
+                            <div class="font-bold text-white">Payment Handled Securely via Razorpay</div>
+                            <div class="text-[11px] text-slate-400">UPI (GPay/PhonePe), QR code, Cards &amp; NetBanking. Dispatched within 60 seconds of payment.</div>
+                        </div>
+                    </div>
+                    <img src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay" class="h-5 filter brightness-0 invert opacity-75 hidden sm:block">
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" 
+                    class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black text-sm sm:text-base shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
+                    <i class="fas fa-truck-medical animate-pulse"></i>
+                    <span>Proceed to Dispatch Payment via Razorpay</span>
+                    <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<script>
+function detectGPSLocation() {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+    }
+    const input = document.getElementById('pickup_address');
+    input.value = "Detecting current coordinates...";
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            const lat = pos.coords.latitude.toFixed(5);
+            const lng = pos.coords.longitude.toFixed(5);
+            input.value = `GPS: ${lat}, ${lng} (Current Emergency Position)`;
+        },
+        function(err) {
+            input.value = "";
+            alert("Unable to retrieve location. Please type your address manually.");
+        }
+    );
+}
+</script>
+{% endblock %}

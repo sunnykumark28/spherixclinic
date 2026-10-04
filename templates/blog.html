@@ -5,11 +5,11 @@
 <!-- 🖋️ Font Imports (Google Fonts) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
     :root {
-        --font-journal: 'Playfair Display', serif;
+        --font-journal: 'Newsreader', serif;
         --font-body: 'Plus Jakarta Sans', sans-serif;
         --font-mono: 'JetBrains Mono', monospace;
     }
@@ -19,8 +19,8 @@
 
     /* Ultra-Smooth Mesh Background */
     .journal-ambient-mesh {
-        background: radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
-                    radial-gradient(circle at 90% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+        background: radial-gradient(circle at 12% 18%, rgba(14, 165, 233, 0.07) 0%, transparent 45%),
+                    radial-gradient(circle at 88% 12%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
                     radial-gradient(circle at 50% 80%, rgba(244, 63, 94, 0.05) 0%, transparent 40%),
                     radial-gradient(circle at 80% 90%, rgba(16, 185, 129, 0.05) 0%, transparent 35%);
     }
@@ -32,7 +32,7 @@
         background-size: 24px 24px;
     }
 
-    /* Shimmer Effect on Article Cards */
+    /* Premium Shimmer & Card Elevation */
     .shimmer-card {
         transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -48,6 +48,7 @@
     }
     .wave-bar {
         animation: wavePulse 1.2s ease-in-out infinite;
+        transform-origin: bottom;
     }
     .wave-bar:nth-child(2) { animation-delay: 0.15s; }
     .wave-bar:nth-child(3) { animation-delay: 0.3s; }
@@ -57,7 +58,7 @@
     .wave-bar:nth-child(7) { animation-delay: 0.5s; }
     .wave-bar:nth-child(8) { animation-delay: 0.1s; }
     .wave-bar.paused {
-        animation-play-state: paused;
+        animation-play-state: paused !important;
         height: 6px !important;
     }
 
@@ -74,6 +75,15 @@
     }
     .journal-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
+    }
+
+    /* Clap Heart Floating Micro-Animation */
+    @keyframes floatUpFade {
+        0% { transform: translateY(0) scale(0.8); opacity: 1; }
+        100% { transform: translateY(-40px) scale(1.4); opacity: 0; }
+    }
+    .clap-sparkle {
+        animation: floatUpFade 0.75s ease-out forwards;
     }
 
     /* Clean Slide-over and hide headers when sidebar is open */
@@ -95,44 +105,55 @@
 </style>
 
 <!-- 🌌 Root Journal Container -->
-<div x-data="journalApp()" class="min-h-screen paper-texture text-slate-800 selection:bg-blue-100 selection:text-blue-900 pb-24 relative overflow-hidden" id="journal-root">
+<div x-data="journalApp()" x-init="init()" class="min-h-screen paper-texture text-slate-800 selection:bg-blue-100 selection:text-blue-900 pb-24 relative overflow-hidden" id="journal-root">
     
+    <!-- Top Global Reading Progress Bar -->
+    <div class="fixed top-0 left-0 right-0 h-1 bg-transparent z-[100] pointer-events-none">
+        <div class="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 transition-all duration-150" :style="`width: ${scrollProgress}%`"></div>
+    </div>
+
     <!-- Ambient Glow Mesh Layer -->
     <div class="fixed inset-0 journal-ambient-mesh pointer-events-none z-0"></div>
 
     <!-- ============================================ -->
     <!-- 1. TOP JOURNAL TELEMETRY BAR                -->
     <!-- ============================================ -->
-    <div class="relative z-10 bg-slate-900 text-slate-300 border-b border-slate-800 text-xs py-2 px-4 sm:px-6">
+    <div class="relative z-10 bg-slate-950 text-slate-300 border-b border-slate-800 text-xs py-2 px-4 sm:px-6">
         <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-4 flex-wrap">
-                <span class="flex items-center gap-1.5 font-mono-code text-[11px] text-cyan-400 font-bold">
-                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-                    SPHERIX CLINICAL REPOSITORY
+                <span class="flex items-center gap-2 font-mono-code text-[11px] text-cyan-400 font-bold">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                    </span>
+                    SPHERIX CLINICAL REPOSITORY • LIVE
                 </span>
-                <span class="hidden md:inline-block text-slate-600">|</span>
-                <span class="text-[11px] text-slate-400 hidden sm:inline-block">
-                    Impact Factor: <strong class="text-white">8.942</strong> (JCR 2026)
+                <span class="hidden md:inline-block text-slate-700">|</span>
+                <span class="text-[11px] text-slate-400 hidden sm:inline-flex items-center gap-1.5">
+                    <span>Clarivate JCR Impact Factor:</span>
+                    <strong class="text-white bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 font-mono-code">9.842</strong>
                 </span>
-                <span class="hidden md:inline-block text-slate-600">|</span>
-                <span class="text-[11px] text-slate-400 hidden md:inline-block">
-                    Indexed in PubMed, MEDLINE &amp; Spherix Clinical Graph
+                <span class="hidden md:inline-block text-slate-700">|</span>
+                <span class="text-[11px] text-slate-400 hidden lg:inline-flex items-center gap-1.5">
+                    <i class="fas fa-certificate text-emerald-400"></i>
+                    <span>Indexed in PubMed, MEDLINE &amp; openFDA Knowledge Graph</span>
                 </span>
             </div>
             
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
                 <!-- Bookmarked Articles Count Button -->
                 <button @click="openBookmarksDrawer = true" 
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition-colors border border-slate-700">
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 text-[11px] font-medium transition-colors border border-slate-800 hover:border-slate-700 cursor-pointer shadow-xs">
                     <i class="fas fa-bookmark text-amber-400 text-[10px]"></i>
-                    <span>Saved Reading (<span x-text="bookmarkedIds.length"></span>)</span>
+                    <span>Reading List</span>
+                    <span class="px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-mono-code font-bold" x-text="bookmarkedIds.length"></span>
                 </button>
                 
                 <!-- Submit Manuscript CTA -->
                 <button @click="openSubmissionModal = true"
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold transition-all shadow-xs cursor-pointer">
+                    class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-[11px] font-bold transition-all shadow-sm hover:shadow-blue-500/20 cursor-pointer">
                     <i class="fas fa-file-arrow-up text-[10px]"></i>
-                    <span>Submit Abstract</span>
+                    <span>Submit Manuscript</span>
                 </button>
             </div>
         </div>
@@ -145,26 +166,26 @@
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div>
                 <div class="flex items-center gap-2 text-xs font-mono-code font-bold uppercase tracking-widest text-blue-700 mb-3">
-                    <i class="fas fa-microscope text-cyan-600"></i>
-                    <span>Official Peer-Reviewed Publication of Spherix Clinic</span>
+                    <span class="p-1 rounded-md bg-blue-100 text-blue-700"><i class="fas fa-microscope text-xs"></i></span>
+                    <span>Official Peer-Reviewed Journal of Spherix Health Intelligence</span>
                 </div>
                 <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold font-journal text-slate-950 tracking-tight leading-[1.05]">
                     Spherix Medical Journal
                 </h1>
                 <p class="text-slate-600 text-sm sm:text-base max-w-2xl mt-3 font-normal leading-relaxed">
-                    Peer-reviewed breakthroughs in autonomous clinical models, precision multi-omics, neural imaging, and preventative longevity algorithms.
+                    Peer-reviewed breakthroughs in autonomous clinical reasoning, multi-omics biomarker telemetry, precision oncology, and preventative longevity algorithms.
                 </p>
             </div>
 
             <!-- Header Quick Stats Card -->
             <div class="grid grid-cols-3 gap-3 sm:gap-4 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm shrink-0">
                 <div class="text-center px-2">
-                    <div class="text-xl sm:text-2xl font-bold text-slate-900 font-mono-code">5,125+</div>
+                    <div class="text-xl sm:text-2xl font-bold text-slate-900 font-mono-code">5,420+</div>
                     <div class="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider">Models Evaluated</div>
                 </div>
                 <div class="text-center px-2 border-x border-slate-100">
-                    <div class="text-xl sm:text-2xl font-bold text-blue-700 font-mono-code">18.4K</div>
-                    <div class="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider">Doctor Readers</div>
+                    <div class="text-xl sm:text-2xl font-bold text-blue-700 font-mono-code">24.8K</div>
+                    <div class="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider">MD Clinicians</div>
                 </div>
                 <div class="text-center px-2">
                     <div class="text-xl sm:text-2xl font-bold text-emerald-600 font-mono-code">100%</div>
@@ -177,15 +198,15 @@
     <!-- ============================================ -->
     <!-- 3. INTERACTIVE SEARCH & CATEGORY FILTER BAR -->
     <!-- ============================================ -->
-    <section class="sticky top-12 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/90 py-3.5 px-4 sm:px-6 shadow-xs">
+    <section class="sticky top-12 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/90 py-3 px-4 sm:px-6 shadow-xs">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
             
             <!-- Category Pills (Horizontal Scrollable) -->
             <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full md:w-auto pb-1 md:pb-0">
                 <template x-for="cat in categories" :key="cat.id">
                     <button @click="activeCategory = cat.id"
-                        class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border"
-                        :class="activeCategory === cat.id ? 'bg-slate-950 text-white border-slate-950 shadow-xs' : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 border-slate-200/80'">
+                        class="px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border"
+                        :class="activeCategory === cat.id ? 'bg-slate-950 text-white border-slate-950 shadow-xs' : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border-slate-200/80'">
                         <i :class="cat.icon" class="text-[10px]"></i>
                         <span x-text="cat.name"></span>
                         <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono-code"
@@ -195,23 +216,36 @@
                 </template>
             </div>
 
-            <!-- Search Input & Sort Selector -->
-            <div class="flex items-center gap-2.5 w-full md:w-auto justify-end">
-                <div class="relative w-full md:w-64">
+            <!-- Search Input, Study Type Filter & View Switcher -->
+            <div class="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
+                <!-- Search Box -->
+                <div class="relative flex-1 md:w-64">
                     <i class="fas fa-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xs"></i>
-                    <input type="text" x-model="searchQuery" placeholder="Search clinical papers, authors, DNA..."
+                    <input type="text" x-model="searchQuery" placeholder="Search clinical papers, DOI, DNA..."
                         class="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl bg-slate-100 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium">
                     <button x-show="searchQuery.length > 0" @click="searchQuery = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
                         <i class="fas fa-times-circle"></i>
                     </button>
                 </div>
 
-                <!-- View Switcher (Grid vs List) -->
+                <!-- Study Type Filter Dropdown -->
+                <select x-model="studyTypeFilter" class="px-2.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-blue-600">
+                    <option value="all">All Study Types</option>
+                    <option value="clinical_trial">Clinical Trial Phase III</option>
+                    <option value="meta_analysis">Systematic Meta-Analysis</option>
+                    <option value="ai_protocol">AI Diagnostic Protocol</option>
+                    <option value="preclinical">Preclinical In-Vivo</option>
+                </select>
+
+                <!-- View Switcher (Grid vs Editorial vs List) -->
                 <div class="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200 shrink-0">
-                    <button @click="viewMode = 'grid'" class="p-1.5 rounded-lg text-xs transition-colors" :class="viewMode === 'grid' ? 'bg-white shadow-2xs text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'">
+                    <button @click="viewMode = 'grid'" class="p-1.5 rounded-lg text-xs transition-colors" :class="viewMode === 'grid' ? 'bg-white shadow-2xs text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'" title="Bento Grid View">
                         <i class="fas fa-grip"></i>
                     </button>
-                    <button @click="viewMode = 'list'" class="p-1.5 rounded-lg text-xs transition-colors" :class="viewMode === 'list' ? 'bg-white shadow-2xs text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'">
+                    <button @click="viewMode = 'editorial'" class="p-1.5 rounded-lg text-xs transition-colors" :class="viewMode === 'editorial' ? 'bg-white shadow-2xs text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'" title="Editorial Magazine View">
+                        <i class="fas fa-newspaper"></i>
+                    </button>
+                    <button @click="viewMode = 'list'" class="p-1.5 rounded-lg text-xs transition-colors" :class="viewMode === 'list' ? 'bg-white shadow-2xs text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'" title="Compact Index List">
                         <i class="fas fa-list"></i>
                     </button>
                 </div>
@@ -227,33 +261,45 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             <!-- Main Hero Spotlight Article (Spans 8 Cols) -->
-            <div class="lg:col-span-8 group relative rounded-3xl overflow-hidden bg-slate-950 text-white border border-slate-800 shadow-xl flex flex-col justify-between min-h-[420px] sm:min-h-[480px]">
+            <div class="lg:col-span-8 group relative rounded-3xl overflow-hidden bg-slate-950 text-white border border-slate-800 shadow-xl flex flex-col justify-between min-h-[440px] sm:min-h-[500px]">
                 
                 <!-- Background Cover Image with Rich Vignette Overlay -->
                 <div class="absolute inset-0 z-0 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=1200&auto=format&fit=crop&q=80" 
+                    <img src="{{ url_for('static', filename='images/blog.png') }}" 
                         alt="Autonomous Clinical AI"
-                        class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-1000 opacity-40">
-                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-transparent"></div>
-                    <div class="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/40 to-transparent"></div>
+                        onerror="this.src='https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=1200&auto=format&fit=crop&q=80'"
+                        class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-1000 opacity-35 filter brightness-90">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/60 to-transparent"></div>
                 </div>
 
                 <!-- Top Badges & Actions -->
                 <div class="relative z-10 p-6 sm:p-8 flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-2">
-                        <span class="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono-code text-[11px] font-bold uppercase tracking-wider">
-                            ★ Editor's Clinical Choice
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono-code text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
+                            <i class="fas fa-star text-amber-400 text-[10px]"></i>
+                            Editor's Clinical Choice
                         </span>
-                        <span class="px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-300 text-[11px] font-medium backdrop-blur-md">
+                        <span class="px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 text-[11px] font-medium backdrop-blur-md">
                             12 min clinical read
+                        </span>
+                        <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-mono-code font-bold uppercase">
+                            Phase III Validation
                         </span>
                     </div>
 
-                    <!-- Bookmark Button -->
-                    <button @click="toggleBookmark(featuredArticle.id)" 
-                        class="w-9 h-9 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 text-slate-300 hover:text-amber-400 hover:border-amber-400/50 flex items-center justify-center transition-all cursor-pointer">
-                        <i :class="isBookmarked(featuredArticle.id) ? 'fas fa-bookmark text-amber-400' : 'far fa-bookmark'"></i>
-                    </button>
+                    <!-- Bookmark & Clap Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button @click="clapArticle(featuredArticle.id, $event)" 
+                            class="relative px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 text-slate-300 hover:text-rose-400 hover:border-rose-400/50 flex items-center gap-1.5 text-xs transition-all cursor-pointer">
+                            <i class="fas fa-hands-clapping text-rose-400"></i>
+                            <span class="font-mono-code" x-text="getClaps(featuredArticle.id)"></span>
+                        </button>
+                        <button @click="toggleBookmark(featuredArticle.id)" 
+                            class="w-9 h-9 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 text-slate-300 hover:text-amber-400 hover:border-amber-400/50 flex items-center justify-center transition-all cursor-pointer" title="Bookmark article">
+                            <i :class="isBookmarked(featuredArticle.id) ? 'fas fa-bookmark text-amber-400' : 'far fa-bookmark'"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Bottom Content & Author Bio -->
@@ -261,7 +307,9 @@
                     <div class="flex items-center gap-2 text-cyan-400 text-xs font-mono-code font-semibold mb-2">
                         <span>VOLUME 14 • CLINICAL AI &amp; ONCOLOGY</span>
                         <span>•</span>
-                        <span>SEPTEMBER 2026</span>
+                        <span>OCTOBER 2026</span>
+                        <span>•</span>
+                        <span>DOI: 10.1016/SPX.2026.048</span>
                     </div>
 
                     <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold font-journal leading-tight text-white mb-3 group-hover:text-cyan-200 transition-colors">
@@ -278,17 +326,19 @@
                             <div>
                                 <div class="text-sm font-bold text-white flex items-center gap-1.5">
                                     <span x-text="featuredArticle.author"></span>
-                                    <i class="fas fa-check-circle text-cyan-400 text-[11px]" title="Verified Clinical Contributor"></i>
+                                    <i class="fas fa-certificate text-cyan-400 text-[11px]" title="Board-Certified Clinical Specialist"></i>
                                 </div>
                                 <div class="text-xs text-slate-400" x-text="featuredArticle.authorTitle"></div>
                             </div>
                         </div>
 
-                        <button @click="openArticle(featuredArticle)" 
-                            class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-cyan-500/20 transition-all flex items-center gap-2 cursor-pointer">
-                            <span>Read Full Clinical Paper</span>
-                            <i class="fas fa-arrow-right text-xs"></i>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button @click="openArticle(featuredArticle)" 
+                                class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-cyan-500/20 transition-all flex items-center gap-2 cursor-pointer">
+                                <span>Read Full Clinical Paper</span>
+                                <i class="fas fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -297,7 +347,7 @@
             <!-- Right Column: Live Breaking Feed & Audio Digest Player (4 Cols) -->
             <div class="lg:col-span-4 flex flex-col gap-6">
                 
-                <!-- Interactive Clinical Audio Podcast Mini-Player -->
+                <!-- Interactive Clinical Audio Podcast Player (100% Workable with Web Audio / Speech Synthesis) -->
                 <div class="rounded-3xl bg-slate-900 text-white p-6 border border-slate-800 shadow-lg relative overflow-hidden flex flex-col justify-between">
                     <div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -307,52 +357,62 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
                                 Clinical Audio Digest #48
                             </span>
-                            <span class="text-xs text-slate-400 font-mono-code" x-text="audioDuration">14:20</span>
+                            <span class="text-xs text-slate-400 font-mono-code" x-text="audioElapsed + ' / ' + audioDuration">0:00 / 3:45</span>
                         </div>
 
                         <h3 class="text-lg font-bold font-journal leading-snug mb-1 text-white">
-                            "Is Immortality Preventative or Algorithmic?"
+                            "Is Cellular Immortality Preventative or Algorithmic?"
                         </h3>
-                        <p class="text-xs text-slate-400">Dr. Elena Rostova, Chair of Bio-Ethics &amp; Multi-Omics</p>
+                        <p class="text-xs text-slate-400">Dr. Elena Rostova • Chair of Bio-Ethics &amp; Multi-Omics</p>
                     </div>
 
-                    <!-- Visual Audio Waveform Simulation -->
-                    <div class="my-5 flex items-center justify-center gap-1.5 h-8">
-                        <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
-                        <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
-                        <div class="w-1 bg-indigo-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
-                        <div class="w-1 bg-indigo-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
-                        <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
-                        <div class="w-1 bg-blue-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
-                        <div class="w-1 bg-blue-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
-                        <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                    <!-- Visual Audio Waveform with scrub simulation -->
+                    <div class="my-5 cursor-pointer" @click="scrubAudio($event)" title="Click to seek audio">
+                        <div class="flex items-center justify-center gap-1.5 h-8">
+                            <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-indigo-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-indigo-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-blue-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-blue-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-indigo-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                            <div class="w-1 bg-cyan-400 rounded-full wave-bar" :class="{ 'paused': !isPlayingAudio }"></div>
+                        </div>
+                        <!-- Progress line -->
+                        <div class="w-full bg-slate-800 h-1 rounded-full mt-2 overflow-hidden">
+                            <div class="bg-cyan-400 h-full transition-all duration-300" :style="`width: ${audioPercent}%`"></div>
+                        </div>
                     </div>
 
                     <!-- Player Controls -->
                     <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
-                        <button @click="togglePlaybackSpeed()" class="text-[11px] font-mono-code font-bold text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800">
+                        <button @click="togglePlaybackSpeed()" class="text-[11px] font-mono-code font-bold text-slate-300 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer">
                             <span x-text="playbackSpeed + 'x'"></span>
                         </button>
 
                         <button @click="toggleAudioPlay()"
-                            class="w-11 h-11 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold flex items-center justify-center shadow-lg shadow-cyan-500/30 transition-transform active:scale-95 cursor-pointer">
+                            class="w-11 h-11 rounded-full bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold flex items-center justify-center shadow-lg shadow-cyan-400/30 transition-transform active:scale-95 cursor-pointer">
                             <i :class="isPlayingAudio ? 'fas fa-pause' : 'fas fa-play ml-0.5'" class="text-sm"></i>
                         </button>
 
-                        <button @click="showToast('Audio summary downloaded to offline cache')" class="text-xs text-slate-400 hover:text-white p-2 rounded-lg" title="Save Audio Offline">
-                            <i class="fas fa-arrow-down-to-line"></i>
+                        <button @click="downloadAudioTranscript()" class="text-xs text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 cursor-pointer" title="Download Audio Transcript">
+                            <i class="fas fa-file-lines text-sm"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Trending Clinical Updates List -->
+                <!-- Fast-Track Breaking News Stream -->
                 <div class="rounded-3xl bg-white p-6 border border-slate-200/90 shadow-sm flex-1 flex flex-col justify-between">
                     <div>
                         <div class="flex items-center justify-between mb-4">
-                            <span class="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-400">
-                                <i class="fas fa-bolt text-amber-500 mr-1"></i> Fast-Track Breakings
+                            <span class="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                <i class="fas fa-bolt text-amber-500"></i> Fast-Track Breakings
                             </span>
-                            <span class="text-[10px] text-emerald-600 font-bold">LIVE TELEMETRY</span>
+                            <span class="text-[10px] text-emerald-600 font-bold font-mono-code flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE DESK
+                            </span>
                         </div>
 
                         <div class="space-y-4">
@@ -363,8 +423,8 @@
                                         <span x-text="trend.timeAgo"></span>
                                     </div>
                                     <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug group-hover/item:text-blue-600 transition-colors" x-text="trend.title"></h4>
-                                    <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-500">
-                                        <span class="bg-slate-100 px-1.5 py-0.5 rounded" x-text="trend.categoryName"></span>
+                                    <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-500 font-mono-code">
+                                        <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700" x-text="trend.categoryName"></span>
                                         <span>•</span>
                                         <span x-text="trend.citations + ' citations'"></span>
                                     </div>
@@ -373,7 +433,7 @@
                         </div>
                     </div>
 
-                    <button @click="searchQuery = 'FDA'" class="mt-4 w-full py-2.5 text-center text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-50 hover:bg-blue-50/50 rounded-xl border border-slate-200 transition-colors">
+                    <button @click="searchQuery = 'FDA'; activeCategory = 'all';" class="mt-4 w-full py-2.5 text-center text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-50 hover:bg-blue-50/50 rounded-xl border border-slate-200 transition-colors cursor-pointer">
                         View All Regulatory Filings &rarr;
                     </button>
                 </div>
@@ -393,81 +453,86 @@
             <div class="md:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm relative overflow-hidden">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-sm">
+                        <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-base">
                             <i class="fas fa-dna"></i>
                         </div>
                         <div>
-                            <h3 class="text-base font-bold text-slate-900">Genomic Variant Explorer</h3>
-                            <p class="text-xs text-slate-500">Instant ClinVar / ACMG classification lookup</p>
+                            <h3 class="text-base font-bold text-slate-900">ClinVar ACMG Variant Explorer</h3>
+                            <p class="text-xs text-slate-500">Interactive molecular diagnostics &amp; targeted therapy classifier</p>
                         </div>
                     </div>
-                    <span class="text-[10px] font-mono-code font-bold bg-purple-50 text-purple-700 px-2 py-1 rounded-md border border-purple-200">
-                        v4.2 Algorithm
+                    <span class="text-[10px] font-mono-code font-bold bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg border border-purple-200">
+                        ACMG v4.2 Engine
                     </span>
                 </div>
 
-                <div class="flex flex-col sm:flex-row gap-2.5 mb-4">
+                <div class="flex flex-col sm:flex-row gap-2.5 mb-3">
                     <div class="relative flex-1">
-                        <input type="text" x-model="genomicSequenceInput" placeholder="Enter gene or HGVS variant (e.g., BRCA1 c.68_69delAG)..."
+                        <input type="text" x-model="genomicSequenceInput" @keyup.enter="analyzeGenomicVariant()" placeholder="Enter gene or HGVS variant (e.g. BRCA1, APOE, EGFR, KRAS)..."
                             class="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono-code focus:outline-none focus:border-purple-600 focus:bg-white transition-all">
                     </div>
-                    <button @click="analyzeGenomicVariant()" class="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer">
-                        <i class="fas fa-magnifying-glass-chart mr-1"></i> Analyze
+                    <button @click="analyzeGenomicVariant()" class="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5">
+                        <i class="fas fa-magnifying-glass-chart"></i>
+                        <span>Classify Variant</span>
                     </button>
                 </div>
 
-                <!-- Quick Samples -->
+                <!-- Quick Preset Variant Buttons -->
                 <div class="flex items-center gap-1.5 text-[11px] text-slate-500 mb-4 flex-wrap">
-                    <span>Quick presets:</span>
-                    <button @click="loadPresetVariant('BRCA1 c.68_69delAG')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 font-mono-code text-[10px] text-slate-700">BRCA1 c.68_69delAG</button>
-                    <button @click="loadPresetVariant('APOE e4/e4')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 font-mono-code text-[10px] text-slate-700">APOE e4</button>
-                    <button @click="loadPresetVariant('EGFR L858R')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 font-mono-code text-[10px] text-slate-700">EGFR L858R</button>
+                    <span class="font-medium">Presets:</span>
+                    <button @click="loadPresetVariant('BRCA1 c.68_69delAG')" class="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-purple-100 hover:text-purple-800 font-mono-code text-[10px] text-slate-700 transition-colors">BRCA1 c.68_69delAG</button>
+                    <button @click="loadPresetVariant('APOE e4/e4')" class="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-purple-100 hover:text-purple-800 font-mono-code text-[10px] text-slate-700 transition-colors">APOE e4/e4</button>
+                    <button @click="loadPresetVariant('EGFR L858R')" class="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-purple-100 hover:text-purple-800 font-mono-code text-[10px] text-slate-700 transition-colors">EGFR L858R</button>
+                    <button @click="loadPresetVariant('KRAS G12D')" class="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-purple-100 hover:text-purple-800 font-mono-code text-[10px] text-slate-700 transition-colors">KRAS G12D</button>
                 </div>
 
-                <!-- Variant Result Output Box -->
-                <div x-show="genomicResult" x-cloak class="p-4 rounded-2xl bg-purple-950 text-purple-100 border border-purple-800/80 transition-all text-xs">
+                <!-- Variant Result Output Card -->
+                <div x-show="genomicResult" x-cloak class="p-4 rounded-2xl bg-slate-950 text-slate-100 border border-purple-800/60 transition-all text-xs">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="font-bold text-white font-mono-code" x-text="genomicResult.gene"></span>
-                        <span class="px-2 py-0.5 rounded font-bold text-[10px] uppercase font-mono-code"
-                            :class="genomicResult.riskLevel === 'High' ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'"
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-circle-check text-purple-400"></i>
+                            <span class="font-bold text-white font-mono-code" x-text="genomicResult.gene"></span>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded font-bold text-[10px] uppercase font-mono-code"
+                            :class="genomicResult.riskLevel === 'High' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'"
                             x-text="genomicResult.classification"></span>
                     </div>
-                    <p class="text-[11px] text-purple-200 mb-2 leading-relaxed" x-text="genomicResult.notes"></p>
-                    <div class="flex items-center justify-between text-[10px] text-purple-300 pt-2 border-t border-purple-800">
-                        <span>ACMG Criteria: <strong class="text-white" x-text="genomicResult.acmg"></strong></span>
-                        <a href="/drug_checker" class="text-cyan-300 hover:underline font-bold">Cross-check with Oncology Protocol &rarr;</a>
+                    <p class="text-[11px] text-slate-300 mb-3 leading-relaxed" x-text="genomicResult.notes"></p>
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400 pt-2.5 border-t border-slate-800 font-mono-code">
+                        <span>ACMG Evidence: <strong class="text-cyan-300" x-text="genomicResult.acmg"></strong></span>
+                        <a href="/drug_checker" class="text-sky-400 hover:text-sky-300 font-bold text-decoration-none">Cross-check with Oncology Protocol &rarr;</a>
                     </div>
                 </div>
             </div>
 
             <!-- Downloadable Peer-Reviewed Whitepaper Matrix (5 Cols) -->
-            <div class="md:col-span-5 rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white border border-blue-800 shadow-md flex flex-col justify-between relative overflow-hidden">
-                <div class="absolute right-0 top-0 w-40 h-40 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="md:col-span-5 rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-blue-950 via-slate-950 to-indigo-950 text-white border border-blue-900/60 shadow-md flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-44 h-44 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div>
                     <div class="flex items-center justify-between mb-4">
                         <span class="px-2.5 py-1 rounded bg-white/10 text-cyan-300 text-[10px] font-mono-code font-bold uppercase">
-                            Q3 2026 Whitepaper
+                            Q4 2026 Special Whitepaper
                         </span>
-                        <span class="text-xs text-slate-300 font-mono-code">DOI: 10.1016/SPX.2026.09</span>
+                        <span class="text-xs text-slate-400 font-mono-code">DOI: 10.1016/SPX.2026.09</span>
                     </div>
 
                     <h3 class="text-xl font-bold font-journal leading-snug mb-2 text-white">
                         "Autonomous Clinical Decision Protocols: Multi-Center ICU Validations"
                     </h3>
                     <p class="text-xs text-blue-100/80 leading-relaxed mb-6 font-normal">
-                        Comprehensive 48-page clinical study evaluating generative diagnosis accuracy across 12,000 trauma cases.
+                        Comprehensive 48-page clinical study evaluating generative diagnosis accuracy across 12,000 multi-center trauma &amp; ICU cohorts. Includes clinical safety rubrics.
                     </p>
                 </div>
 
                 <div class="flex items-center gap-3 pt-4 border-t border-white/10">
                     <button @click="downloadWhitepaper()" 
                         class="flex-1 py-3 px-4 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-400/20 cursor-pointer">
-                        <i class="fas fa-file-pdf"></i>
-                        <span>Download Clinical PDF (4.2 MB)</span>
+                        <i class="fas fa-file-pdf text-sm"></i>
+                        <span>Download Official PDF (4.2 MB)</span>
                     </button>
-                    <button @click="openCitationModal('Autonomous Clinical Decision Protocols (2026)')"
-                        class="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs transition-colors" title="Cite Publication">
+                    <button @click="openCitationModal('Autonomous Clinical Decision Protocols (2026)', '10.1016/SPX.2026.09')"
+                        class="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs transition-colors cursor-pointer" title="Cite Publication">
                         <i class="fas fa-quote-right"></i>
                     </button>
                 </div>
@@ -481,19 +546,22 @@
     <!-- ============================================ -->
     <section class="relative z-10 px-4 sm:px-6 lg:px-8 pt-12 max-w-7xl mx-auto">
         
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
                 <h3 class="text-2xl font-bold font-journal text-slate-900">Peer-Reviewed Research Articles</h3>
-                <p class="text-xs text-slate-500 mt-1">Showing <span class="font-bold text-slate-800" x-text="filteredArticles.length"></span> indexed clinical papers</p>
+                <p class="text-xs text-slate-500 mt-1">
+                    Showing <span class="font-bold text-slate-800" x-text="filteredArticles.length"></span> indexed clinical papers in current view
+                </p>
             </div>
 
-            <!-- Sort dropdown -->
+            <!-- Sort selector -->
             <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-500 font-medium hidden sm:inline">Sort:</span>
+                <span class="text-xs text-slate-500 font-medium">Sort by:</span>
                 <select x-model="sortBy" class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-600 shadow-2xs">
                     <option value="latest">Latest Releases</option>
                     <option value="citations">Most Cited</option>
                     <option value="readTime">Shortest Read</option>
+                    <option value="claps">Highest Peer Claps</option>
                 </select>
             </div>
         </div>
@@ -504,45 +572,48 @@
                 <i class="fas fa-search"></i>
             </div>
             <h4 class="text-base font-bold text-slate-800 mb-1">No clinical papers match your criteria</h4>
-            <p class="text-xs text-slate-500 max-w-md mx-auto mb-4">Try clearing your search query or selecting "All Articles" to explore the full repository.</p>
-            <button @click="searchQuery = ''; activeCategory = 'all';" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs">
+            <p class="text-xs text-slate-500 max-w-md mx-auto mb-4">Try clearing your search query or setting the study type filter back to "All Study Types".</p>
+            <button @click="searchQuery = ''; activeCategory = 'all'; studyTypeFilter = 'all';" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer">
                 Reset All Filters
             </button>
         </div>
 
-        <!-- GRID VIEW MODE -->
+        <!-- 1. GRID VIEW MODE -->
         <div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <template x-for="art in filteredArticles" :key="art.id">
                 <article class="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm shimmer-card flex flex-col justify-between group">
                     
                     <div>
                         <!-- Cover Image & Category Pill -->
-                        <div class="relative h-48 w-full overflow-hidden bg-slate-100">
+                        <div class="relative h-48 w-full overflow-hidden bg-slate-100 cursor-pointer" @click="openArticle(art)">
                             <img :src="art.img" :alt="art.title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent"></div>
                             
                             <!-- Badges Overlay -->
                             <div class="absolute top-3 left-3 right-3 flex items-center justify-between">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md"
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md shadow-xs"
                                     :class="getCategoryColorClass(art.category)"
                                     x-text="art.categoryName">
                                 </span>
                                 
-                                <button @click.stop="toggleBookmark(art.id)" 
-                                    class="w-7 h-7 rounded-full bg-slate-900/70 text-white hover:text-amber-400 flex items-center justify-center text-xs transition-colors backdrop-blur-md">
-                                    <i :class="isBookmarked(art.id) ? 'fas fa-bookmark text-amber-400' : 'far fa-bookmark'"></i>
-                                </button>
+                                <div class="flex items-center gap-1.5">
+                                    <!-- Bookmark -->
+                                    <button @click.stop="toggleBookmark(art.id)" 
+                                        class="w-7 h-7 rounded-full bg-slate-900/70 text-white hover:text-amber-400 flex items-center justify-center text-xs transition-colors backdrop-blur-md">
+                                        <i :class="isBookmarked(art.id) ? 'fas fa-bookmark text-amber-400' : 'far fa-bookmark'"></i>
+                                    </button>
+                                </div>
                             </div>
 
-                            <div class="absolute bottom-3 left-3 text-[10px] text-white/90 font-mono-code flex items-center gap-2">
+                            <div class="absolute bottom-3 left-3 right-3 text-[10px] text-white/90 font-mono-code flex items-center justify-between">
                                 <span x-text="art.date"></span>
-                                <span>•</span>
-                                <span x-text="art.readTime + ' min read'"></span>
+                                <span class="bg-black/40 px-2 py-0.5 rounded backdrop-blur-xs" x-text="art.readTime + ' min read'"></span>
                             </div>
                         </div>
 
                         <!-- Card Body -->
                         <div class="p-5 sm:p-6">
+                            <div class="text-[10px] font-mono-code font-bold uppercase text-slate-400 mb-1" x-text="art.studyTypeLabel"></div>
                             <h4 class="text-base sm:text-lg font-bold font-journal leading-snug text-slate-900 group-hover:text-blue-700 transition-colors mb-2.5">
                                 <a href="javascript:void(0)" @click="openArticle(art)" class="text-slate-900 hover:text-blue-700 text-decoration-none" x-text="art.title"></a>
                             </h4>
@@ -550,16 +621,23 @@
                         </div>
                     </div>
 
-                    <!-- Card Footer: Author Bio & Citations -->
+                    <!-- Card Footer: Author Bio & Interactive Citations / Claps -->
                     <div class="px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-slate-100 flex items-center justify-between">
                         <div class="flex items-center gap-2.5">
                             <img :src="art.authorImg" :alt="art.author" class="w-7 h-7 rounded-full object-cover">
                             <div class="text-[11px] font-bold text-slate-800" x-text="art.author"></div>
                         </div>
 
-                        <div class="flex items-center gap-3 text-[11px] text-slate-400 font-mono-code">
-                            <span title="Citations count"><i class="fas fa-quote-left text-[9px] mr-1"></i><span x-text="art.citations"></span></span>
-                            <button @click="openArticle(art)" class="text-blue-600 hover:text-blue-800 font-bold" title="Read Article">
+                        <div class="flex items-center gap-2.5 text-[11px] text-slate-400 font-mono-code">
+                            <!-- Claps button -->
+                            <button @click="clapArticle(art.id, $event)" class="text-slate-400 hover:text-rose-500 transition-colors flex items-center gap-1 cursor-pointer" title="Peer Claps">
+                                <i class="fas fa-hands-clapping text-rose-400 text-xs"></i>
+                                <span x-text="getClaps(art.id)"></span>
+                            </button>
+                            <!-- Citations -->
+                            <span title="Citations"><i class="fas fa-quote-left text-[9px] mr-1"></i><span x-text="art.citations"></span></span>
+                            <!-- Open -->
+                            <button @click="openArticle(art)" class="text-blue-600 hover:text-blue-800 font-bold ml-1" title="Read Article">
                                 <i class="fas fa-arrow-up-right-from-square text-xs"></i>
                             </button>
                         </div>
@@ -569,32 +647,87 @@
             </template>
         </div>
 
-        <!-- LIST VIEW MODE -->
-        <div x-show="viewMode === 'list'" class="space-y-4">
+        <!-- 2. EDITORIAL MAGAZINE VIEW MODE -->
+        <div x-show="viewMode === 'editorial'" class="space-y-8">
             <template x-for="art in filteredArticles" :key="art.id">
-                <article class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-2xs hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 group cursor-pointer" @click="openArticle(art)">
+                <article class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm shimmer-card flex flex-col md:flex-row gap-6 items-start group">
+                    <div class="w-full md:w-72 h-52 rounded-2xl overflow-hidden shrink-0 relative bg-slate-100 cursor-pointer" @click="openArticle(art)">
+                        <img :src="art.img" :alt="art.title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-white text-[10px] font-mono-code" x-text="art.readTime + ' min read'"></div>
+                    </div>
+                    
+                    <div class="flex-1 flex flex-col justify-between h-full">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" :class="getCategoryColorClass(art.category)" x-text="art.categoryName"></span>
+                                <span class="text-xs text-slate-400 font-mono-code" x-text="art.date"></span>
+                                <span class="text-slate-300">•</span>
+                                <span class="text-xs font-mono-code text-blue-700 font-semibold" x-text="art.studyTypeLabel"></span>
+                            </div>
+                            <h3 class="text-xl sm:text-2xl font-bold font-journal text-slate-900 group-hover:text-blue-700 transition-colors leading-snug mb-3">
+                                <a href="javascript:void(0)" @click="openArticle(art)" class="text-slate-900 hover:text-blue-700 text-decoration-none" x-text="art.title"></a>
+                            </h3>
+                            <p class="text-sm text-slate-600 line-clamp-3 leading-relaxed mb-4" x-text="art.abstract"></p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <img :src="art.authorImg" :alt="art.author" class="w-8 h-8 rounded-full object-cover">
+                                <div>
+                                    <div class="text-xs font-bold text-slate-900" x-text="art.author"></div>
+                                    <div class="text-[10px] text-slate-500" x-text="art.authorTitle"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-3">
+                                <button @click="clapArticle(art.id, $event)" class="text-xs font-mono-code text-slate-500 hover:text-rose-600 flex items-center gap-1 cursor-pointer">
+                                    <i class="fas fa-hands-clapping text-rose-400"></i>
+                                    <span x-text="getClaps(art.id)"></span>
+                                </button>
+                                <button @click="toggleBookmark(art.id)" class="text-xs text-slate-400 hover:text-amber-500">
+                                    <i :class="isBookmarked(art.id) ? 'fas fa-bookmark text-amber-500' : 'far fa-bookmark'"></i>
+                                </button>
+                                <button @click="openArticle(art)" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold transition-colors cursor-pointer">
+                                    Read Article &rarr;
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </template>
+        </div>
+
+        <!-- 3. COMPACT INDEX LIST VIEW MODE -->
+        <div x-show="viewMode === 'list'" class="space-y-3">
+            <template x-for="art in filteredArticles" :key="art.id">
+                <article class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group cursor-pointer" @click="openArticle(art)">
                     
                     <div class="flex items-start gap-4 flex-1">
-                        <img :src="art.img" :alt="art.title" class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0">
+                        <img :src="art.img" :alt="art.title" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0">
                         <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1 text-[10px]">
+                            <div class="flex items-center gap-2 mb-1 text-[10px] flex-wrap">
                                 <span class="font-bold uppercase tracking-wider px-2 py-0.5 rounded" :class="getCategoryColorClass(art.category)" x-text="art.categoryName"></span>
-                                <span class="text-slate-400" x-text="art.date"></span>
+                                <span class="text-slate-400 font-mono-code" x-text="art.date"></span>
                                 <span class="text-slate-400">•</span>
-                                <span class="text-slate-400" x-text="art.readTime + ' min read'"></span>
+                                <span class="text-slate-400 font-mono-code" x-text="art.readTime + 'm read'"></span>
+                                <span class="text-slate-400">•</span>
+                                <span class="text-blue-700 font-mono-code font-bold" x-text="art.studyTypeLabel"></span>
                             </div>
                             <h4 class="text-sm sm:text-base font-bold font-journal text-slate-900 group-hover:text-blue-600 transition-colors leading-snug" x-text="art.title"></h4>
-                            <p class="text-xs text-slate-500 line-clamp-2 mt-1" x-text="art.abstract"></p>
+                            <p class="text-xs text-slate-500 line-clamp-1 mt-0.5" x-text="art.abstract"></p>
                         </div>
                     </div>
 
-                    <div class="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2 shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+                    <div class="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
                         <div class="flex items-center gap-2 text-xs text-slate-700">
                             <img :src="art.authorImg" :alt="art.author" class="w-6 h-6 rounded-full object-cover">
                             <span class="font-bold" x-text="art.author"></span>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-3">
                             <span class="text-[10px] font-mono-code text-slate-400" x-text="art.citations + ' citations'"></span>
+                            <button @click.stop="clapArticle(art.id, $event)" class="text-slate-400 hover:text-rose-500 text-xs">
+                                <i class="fas fa-hands-clapping text-rose-400 text-xs"></i>
+                            </button>
                             <button @click.stop="toggleBookmark(art.id)" class="text-slate-400 hover:text-amber-500 p-1">
                                 <i :class="isBookmarked(art.id) ? 'fas fa-bookmark text-amber-500' : 'far fa-bookmark'"></i>
                             </button>
@@ -619,7 +752,7 @@
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0">
 
-        <div class="w-full max-w-3xl bg-white min-h-screen h-full shadow-2xl flex flex-col justify-between overflow-y-auto journal-scrollbar relative"
+        <div class="w-full max-w-4xl bg-white min-h-screen h-full shadow-2xl flex flex-col justify-between overflow-y-auto journal-scrollbar relative"
             @click.away="activeReadingArticle = null"
             x-transition:enter="transition ease-out duration-300 transform"
             x-transition:enter-start="translate-x-full"
@@ -629,19 +762,27 @@
             x-transition:leave-end="translate-x-full">
             
             <!-- Sticky Article Reader Header -->
-            <div class="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-4">
+            <div class="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 flex items-center justify-between gap-4">
                 <div class="flex items-center gap-2 text-xs font-mono-code text-slate-500">
                     <span class="font-bold text-blue-700" x-text="activeReadingArticle?.categoryName"></span>
                     <span>•</span>
                     <span x-text="activeReadingArticle?.readTime + ' MIN READ'"></span>
+                    <span class="hidden sm:inline-block">•</span>
+                    <span class="hidden sm:inline-block font-bold text-slate-700" x-text="activeReadingArticle?.studyTypeLabel"></span>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <!-- Text to Speech Audio Read -->
+                    <!-- Text to Speech Audio Read Button -->
                     <button @click="toggleSpeechReader()" 
-                        class="px-3 py-1 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+                        class="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-400 text-slate-700 hover:bg-blue-50/50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
                         <i :class="isSpeaking ? 'fas fa-volume-xmark text-rose-600 animate-pulse' : 'fas fa-volume-high text-blue-600'"></i>
-                        <span x-text="isSpeaking ? 'Stop Audio' : 'Listen'"></span>
+                        <span x-text="isSpeaking ? 'Stop Audio' : 'Listen Paper'"></span>
+                    </button>
+
+                    <!-- PDF Download Button -->
+                    <button @click="downloadArticlePDF(activeReadingArticle)" 
+                        class="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs transition-colors cursor-pointer" title="Download Formatted PDF">
+                        <i class="fas fa-file-pdf text-red-600"></i>
                     </button>
 
                     <!-- Bookmark -->
@@ -652,7 +793,7 @@
 
                     <!-- Close Button -->
                     <button @click="activeReadingArticle = null; stopSpeech();" 
-                        class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors">
+                        class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -662,71 +803,204 @@
             <div class="p-6 sm:p-10 flex-1 space-y-8" x-show="activeReadingArticle">
                 
                 <div>
+                    <!-- Title & Header -->
                     <h2 class="text-3xl sm:text-4xl font-bold font-journal text-slate-950 leading-tight mb-4" x-text="activeReadingArticle?.title"></h2>
                     
                     <!-- Author & Metas Row -->
                     <div class="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-100">
                         <div class="flex items-center gap-3">
-                            <img :src="activeReadingArticle?.authorImg" class="w-11 h-11 rounded-full object-cover ring-2 ring-blue-500/20">
+                            <img :src="activeReadingArticle?.authorImg" class="w-12 h-12 rounded-full object-cover ring-2 ring-blue-500/20">
                             <div>
-                                <div class="text-sm font-bold text-slate-900" x-text="activeReadingArticle?.author"></div>
+                                <div class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span x-text="activeReadingArticle?.author"></span>
+                                    <i class="fas fa-certificate text-blue-600 text-xs" title="Board-Certified Clinical Specialist"></i>
+                                </div>
                                 <div class="text-xs text-slate-500" x-text="activeReadingArticle?.authorTitle"></div>
                             </div>
                         </div>
 
                         <div class="text-right text-xs font-mono-code text-slate-400">
                             <div>Published: <strong class="text-slate-700" x-text="activeReadingArticle?.date"></strong></div>
-                            <div>DOI: <strong class="text-slate-700">10.1016/SPX.2026.048</strong></div>
+                            <div>DOI: <strong class="text-slate-700" x-text="activeReadingArticle?.doi || '10.1016/SPX.2026.048'"></strong></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Featured Image -->
-                <div class="rounded-2xl overflow-hidden h-64 sm:h-80 w-full border border-slate-200 shadow-sm">
+                <div class="rounded-2xl overflow-hidden h-64 sm:h-80 w-full border border-slate-200 shadow-sm relative">
                     <img :src="activeReadingArticle?.img" class="w-full h-full object-cover">
                 </div>
 
                 <!-- Structured Clinical Abstract Box -->
                 <div class="p-6 rounded-2xl bg-blue-50/70 border border-blue-200/80">
                     <div class="flex items-center gap-2 text-xs font-bold uppercase font-mono-code text-blue-900 mb-2">
-                        <i class="fas fa-clipboard-list"></i> Clinical Abstract
+                        <i class="fas fa-clipboard-list text-blue-700"></i> Structured Clinical Abstract
                     </div>
                     <p class="text-xs sm:text-sm text-blue-950 font-normal leading-relaxed" x-text="activeReadingArticle?.abstract"></p>
                 </div>
 
-                <!-- In-Depth Full Content Simulation -->
-                <div class="space-y-6 text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
-                    <h3 class="text-xl font-bold font-journal text-slate-900">1. Methodology &amp; Clinical Trials</h3>
+                <!-- Reader Navigation Tabs: [Full Paper, Trial Data, Discussion & Comments] -->
+                <div class="border-b border-slate-200 flex items-center gap-4">
+                    <button @click="readerTab = 'paper'" class="pb-3 text-sm font-bold transition-colors border-b-2"
+                        :class="readerTab === 'paper' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'">
+                        Clinical Manuscript
+                    </button>
+                    <button @click="readerTab = 'metrics'" class="pb-3 text-sm font-bold transition-colors border-b-2"
+                        :class="readerTab === 'metrics' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'">
+                        Biomarker &amp; Cohort Telemetry
+                    </button>
+                    <button @click="readerTab = 'comments'" class="pb-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-1.5"
+                        :class="readerTab === 'comments' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'">
+                        <span>Peer Review Dialogue</span>
+                        <span class="px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 text-xs font-mono-code" x-text="commentsList.length"></span>
+                    </button>
+                </div>
+
+                <!-- TAB 1: FULL CLINICAL MANUSCRIPT -->
+                <div x-show="readerTab === 'paper'" class="space-y-6 text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
+                    <h3 class="text-xl font-bold font-journal text-slate-900">1. Introduction &amp; Hypothesis</h3>
                     <p>
-                        In our multi-site evaluation across 8 tertiary trauma and oncology centers, clinical models were deployed with continuous real-time EHR integration. Over 4,200 biometrical features were tracked per patient hour, including arterial waveforms, multi-omics biomarker telemetry, and neural image reconstruction.
+                        Clinical decision workflows in tertiary healthcare environments encounter unprecedented data dimensionality. With modern patient-monitoring infrastructure generating continuous arterial waveforms, multi-omics biomarker telemetry, and high-frequency EHR event streams, algorithmic clinical triage models offer a proven pathway to reducing diagnostic delay and polypharmacy toxicity.
                     </p>
 
-                    <div class="grid grid-cols-2 gap-4 my-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                    <h3 class="text-xl font-bold font-journal text-slate-900">2. Methodology &amp; Multi-Center Validation Cohort</h3>
+                    <p>
+                        A prospective, multi-institutional clinical trial was executed across 8 academic trauma and oncology centers. Patients presenting with acute clinical deterioration were monitored simultaneously by automated Spherix Clinical Intelligence models and board-certified multidisciplinary attending physician panels.
+                    </p>
+
+                    <!-- Interactive Data Highlights Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-4 p-5 rounded-2xl bg-slate-50 border border-slate-200 text-center font-mono-code">
                         <div>
-                            <div class="text-2xl font-bold font-mono-code text-blue-700">99.42%</div>
+                            <div class="text-2xl font-bold text-blue-700">99.42%</div>
                             <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Sensitivity Index</div>
                         </div>
-                        <div>
-                            <div class="text-2xl font-bold font-mono-code text-emerald-600">p &lt; 0.001</div>
-                            <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Statistical Significance</div>
+                        <div class="border-t sm:border-t-0 sm:border-x border-slate-200 pt-3 sm:pt-0">
+                            <div class="text-2xl font-bold text-emerald-600">p &lt; 0.001</div>
+                            <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Significance</div>
+                        </div>
+                        <div class="border-t sm:border-t-0 border-slate-200 pt-3 sm:pt-0">
+                            <div class="text-2xl font-bold text-purple-700">-64.2%</div>
+                            <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Time to Triage</div>
                         </div>
                     </div>
 
-                    <h3 class="text-xl font-bold font-journal text-slate-900">2. Key Clinical Takeaways</h3>
+                    <h3 class="text-xl font-bold font-journal text-slate-900">3. Primary Clinical Findings</h3>
                     <ul class="list-disc pl-5 space-y-2 text-sm text-slate-700">
-                        <li>Early algorithmic triaging reduces median diagnostic turnaround time by 64.2%.</li>
-                        <li>Automated drug-to-drug polypharmacy flags prevented 820 potential adverse clinical interactions.</li>
-                        <li>High concordance with board-certified multidisciplinary tumor boards across oncology cases.</li>
+                        <li>Automated early triaging reduced median diagnostic turnaround time by 64.2% across emergency and ICU admissions.</li>
+                        <li>Polypharmacy safety safeguards prevented 820 potential adverse drug-to-drug metabolic interactions.</li>
+                        <li>High diagnostic concordance (&gt;98.5%) was demonstrated with board-certified multidisciplinary tumor boards.</li>
                     </ul>
 
-                    <h3 class="text-xl font-bold font-journal text-slate-900">3. Prescribing &amp; Intervention Protocols</h3>
+                    <h3 class="text-xl font-bold font-journal text-slate-900">4. Recommended Clinical Protocol</h3>
                     <p>
                         Clinicians utilizing the Spherix Clinical Suite are advised to cross-reference automated risk stratifications with patient-specific biometric baselines. Further details are accessible via the Spherix Drug Checker and Vitals Telemetry module.
                     </p>
                 </div>
 
+                <!-- TAB 2: BIOMARKER & COHORT TELEMETRY (Interactive SVG Charts) -->
+                <div x-show="readerTab === 'metrics'" class="space-y-6">
+                    <div class="p-6 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-md">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-bold text-sm text-cyan-400 font-mono-code uppercase">Kaplan-Meier Survival Telemetry Curve</h4>
+                            <span class="text-xs text-slate-400 font-mono-code">Log-Rank p = 0.0004</span>
+                        </div>
+                        <!-- SVG Curve -->
+                        <div class="h-44 w-full">
+                            <svg viewBox="0 0 500 150" class="w-full h-full overflow-visible">
+                                <!-- Grid Lines -->
+                                <line x1="40" y1="10" x2="480" y2="10" stroke="#334155" stroke-dasharray="3 3" />
+                                <line x1="40" y1="60" x2="480" y2="60" stroke="#334155" stroke-dasharray="3 3" />
+                                <line x1="40" y1="110" x2="480" y2="110" stroke="#334155" stroke-dasharray="3 3" />
+                                <!-- Axes -->
+                                <line x1="40" y1="10" x2="40" y2="120" stroke="#64748b" stroke-width="1.5" />
+                                <line x1="40" y1="120" x2="480" y2="120" stroke="#64748b" stroke-width="1.5" />
+                                <!-- Cohort A Curve (Model Guided) -->
+                                <path d="M40,20 L120,22 L200,28 L280,35 L360,42 L440,48" fill="none" stroke="#38bdf8" stroke-width="3" />
+                                <!-- Cohort B Curve (Standard of Care) -->
+                                <path d="M40,20 L120,38 L200,58 L280,82 L360,102 L440,115" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4 4" />
+                                <!-- Points -->
+                                <circle cx="440" cy="48" r="4" fill="#38bdf8" />
+                                <circle cx="440" cy="115" r="4" fill="#f43f5e" />
+                            </svg>
+                        </div>
+                        <div class="flex items-center justify-center gap-6 text-xs mt-3 pt-3 border-t border-slate-800">
+                            <span class="flex items-center gap-2"><span class="w-3 h-1 bg-cyan-400"></span> Spherix Algorithmic Protocol (91.2% 180-Day OS)</span>
+                            <span class="flex items-center gap-2"><span class="w-3 h-1 bg-rose-500 border-dashed"></span> Standard of Care Baseline (68.4% 180-Day OS)</span>
+                        </div>
+                    </div>
+
+                    <!-- Clinical Demographics Table -->
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-100 text-slate-700 font-bold uppercase font-mono-code">
+                                <tr>
+                                    <th class="p-3">Baseline Characteristic</th>
+                                    <th class="p-3">Spherix Cohort (n=6,120)</th>
+                                    <th class="p-3">Control Cohort (n=6,080)</th>
+                                    <th class="p-3">p-value</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                <tr>
+                                    <td class="p-3 font-semibold">Mean Age (Years)</td>
+                                    <td class="p-3 font-mono-code">58.4 &plusmn; 11.2</td>
+                                    <td class="p-3 font-mono-code">59.1 &plusmn; 10.8</td>
+                                    <td class="p-3 font-mono-code text-slate-400">0.42 (NS)</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold">Median Time to ICU Discharge</td>
+                                    <td class="p-3 font-mono-code font-bold text-emerald-600">3.8 Days</td>
+                                    <td class="p-3 font-mono-code text-slate-600">6.4 Days</td>
+                                    <td class="p-3 font-mono-code text-emerald-600 font-bold">&lt; 0.001</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold">30-Day Readmission Rate</td>
+                                    <td class="p-3 font-mono-code font-bold text-emerald-600">4.1%</td>
+                                    <td class="p-3 font-mono-code text-slate-600">11.8%</td>
+                                    <td class="p-3 font-mono-code text-emerald-600 font-bold">&lt; 0.001</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PEER REVIEW DIALOGUE & COMMENTS (100% Workable) -->
+                <div x-show="readerTab === 'comments'" class="space-y-6">
+                    <!-- Post new comment form -->
+                    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                        <h4 class="text-xs font-bold text-slate-900 uppercase font-mono-code mb-2">Contribute Clinical Peer Commentary</h4>
+                        <div class="space-y-3">
+                            <input type="text" x-model="newCommentAuthor" placeholder="Your Name & Title (e.g. Dr. John Doe, MD, Intensivist)..."
+                                class="w-full px-3.5 py-2 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-blue-600">
+                            <textarea rows="3" x-model="newCommentText" placeholder="Write clinical inquiry, replication note, or observation..."
+                                class="w-full px-3.5 py-2 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-blue-600"></textarea>
+                            <div class="flex justify-end">
+                                <button @click="postComment()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer">
+                                    Publish Peer Comment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comments List -->
+                    <div class="space-y-3">
+                        <template x-for="c in commentsList" :key="c.id">
+                            <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px]" x-text="c.author.substring(0,2).toUpperCase()"></div>
+                                        <span class="text-xs font-bold text-slate-900" x-text="c.author"></span>
+                                    </div>
+                                    <span class="text-[10px] text-slate-400 font-mono-code" x-text="c.time"></span>
+                                </div>
+                                <p class="text-xs text-slate-600 leading-relaxed" x-text="c.text"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
                 <!-- Citation Box -->
-                <div class="p-5 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="p-5 rounded-2xl bg-slate-950 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                         <div class="text-xs font-mono-code text-cyan-400 font-bold mb-1">CITE THIS JOURNAL ARTICLE</div>
                         <div class="text-xs text-slate-300 font-mono-code" x-text="activeReadingArticle?.author + ' (2026). ' + activeReadingArticle?.title + '. Spherix Medical Journal, 14(3), e1042.'"></div>
@@ -742,11 +1016,11 @@
             <div class="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-3.5 flex items-center justify-between">
                 <span class="text-xs text-slate-500 font-medium">Spherix Clinic Open Clinical Repository</span>
                 <div class="flex items-center gap-2">
-                    <button @click="showToast('Article shared to clipboard')" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                    <button @click="shareArticle(activeReadingArticle)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">
                         <i class="fas fa-share-nodes mr-1"></i> Share
                     </button>
-                    <a href="/drug_checker" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">
-                        Open Clinical Diagnostics &rarr;
+                    <a href="/drug_checker" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold text-decoration-none">
+                        Clinical Drug Diagnostics &rarr;
                     </a>
                 </div>
             </div>
@@ -775,14 +1049,15 @@
                         <i class="fas fa-bookmark text-amber-500 text-base"></i>
                         <h3 class="text-lg font-bold text-slate-900 font-journal">Your Reading List</h3>
                     </div>
-                    <button @click="openBookmarksDrawer = false" class="text-slate-400 hover:text-slate-700">
+                    <button @click="openBookmarksDrawer = false" class="text-slate-400 hover:text-slate-700 cursor-pointer">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
 
                 <div x-show="bookmarkedArticles.length === 0" class="text-center py-12 text-slate-400">
-                    <i class="far fa-bookmark text-3xl mb-3"></i>
+                    <i class="far fa-bookmark text-3xl mb-3 text-slate-300"></i>
                     <p class="text-xs">No bookmarked clinical papers yet.</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Click the bookmark icon on any paper to save it for offline review.</p>
                 </div>
 
                 <div class="space-y-3 max-h-[70vh] overflow-y-auto journal-scrollbar pr-1">
@@ -791,9 +1066,9 @@
                             <div class="flex-1 cursor-pointer" @click="openArticle(b); openBookmarksDrawer = false;">
                                 <span class="text-[9px] font-bold uppercase text-blue-700 font-mono-code" x-text="b.categoryName"></span>
                                 <h5 class="text-xs font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors mt-0.5" x-text="b.title"></h5>
-                                <div class="text-[10px] text-slate-400 mt-1" x-text="b.author + ' • ' + b.readTime + 'm read'"></div>
+                                <div class="text-[10px] text-slate-400 mt-1 font-mono-code" x-text="b.author + ' • ' + b.readTime + 'm read'"></div>
                             </div>
-                            <button @click="toggleBookmark(b.id)" class="text-slate-400 hover:text-rose-600 text-xs p-1" title="Remove bookmark">
+                            <button @click="toggleBookmark(b.id)" class="text-slate-400 hover:text-rose-600 text-xs p-1 cursor-pointer" title="Remove bookmark">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -802,8 +1077,11 @@
             </div>
 
             <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span class="text-slate-500" x-text="bookmarkedArticles.length + ' articles saved'"></span>
-                <button @click="clearBookmarks()" x-show="bookmarkedArticles.length > 0" class="text-rose-600 font-bold hover:underline">Clear All</button>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-500" x-text="bookmarkedArticles.length + ' saved'"></span>
+                    <button @click="exportBibliography()" x-show="bookmarkedArticles.length > 0" class="text-blue-600 font-bold hover:underline cursor-pointer">Export .BIB</button>
+                </div>
+                <button @click="clearBookmarks()" x-show="bookmarkedArticles.length > 0" class="text-rose-600 font-bold hover:underline cursor-pointer">Clear All</button>
             </div>
         </div>
     </div>
@@ -821,67 +1099,170 @@
             <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
                 <div>
                     <h3 class="text-xl font-bold font-journal text-slate-900">Submit Clinical Abstract</h3>
-                    <p class="text-xs text-slate-500">Peer-reviewed submission for Spherix Medical Journal</p>
+                    <p class="text-xs text-slate-500">Double-blind peer-review submission for Spherix Medical Journal</p>
                 </div>
-                <button @click="openSubmissionModal = false" class="text-slate-400 hover:text-slate-700">
+                <button @click="openSubmissionModal = false" class="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <form @submit.prevent="submitManuscript()" class="space-y-4 text-xs">
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">Manuscript Title *</label>
-                    <input type="text" required placeholder="e.g. Deep Learning in Early Cardiac Arrhythmia Detection" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600">
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Submission Form State -->
+            <div x-show="!submissionTicket">
+                <form @submit.prevent="submitManuscript()" class="space-y-4 text-xs">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Lead Author (MD/PhD) *</label>
-                        <input type="text" required placeholder="Dr. Jane Doe, MD" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600">
+                        <label class="block font-bold text-slate-700 mb-1">Manuscript Title *</label>
+                        <input type="text" x-model="subForm.title" required placeholder="e.g. Deep Learning in Early Cardiac Arrhythmia Detection" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600">
                     </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Lead Author (MD/PhD) *</label>
+                            <input type="text" x-model="subForm.author" required placeholder="Dr. Jane Doe, MD" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Affiliation / Institution *</label>
+                            <input type="text" x-model="subForm.institution" required placeholder="Stanford / AIIMS / Charité" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Primary Discipline *</label>
+                            <select x-model="subForm.category" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600 font-medium text-slate-700">
+                                <option value="AI Diagnostics">AI Diagnostics</option>
+                                <option value="Longevity & Omics">Longevity &amp; Multi-Omics</option>
+                                <option value="Oncology">Oncology &amp; Immunotherapy</option>
+                                <option value="Neural Systems">Neural &amp; Cognitive</option>
+                                <option value="Cardiology">Cardiology &amp; Telemetry</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Study Design *</label>
+                            <select x-model="subForm.studyType" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600 font-medium text-slate-700">
+                                <option value="Phase III Trial">Phase III Clinical Trial</option>
+                                <option value="Systematic Meta-Analysis">Systematic Meta-Analysis</option>
+                                <option value="Prospective Cohort">Prospective Cohort Study</option>
+                                <option value="Preclinical In-Vivo">Preclinical In-Vivo Protocol</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Primary Discipline *</label>
-                        <select required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600 font-medium text-slate-700">
-                            <option value="AI Diagnostics">AI Diagnostics</option>
-                            <option value="Longevity & Omics">Longevity &amp; Multi-Omics</option>
-                            <option value="Oncology">Oncology &amp; Immunotherapy</option>
-                            <option value="Neural Systems">Neural &amp; Cognitive</option>
-                            <option value="Cardiology">Cardiology &amp; Telemetry</option>
-                        </select>
+                        <label class="block font-bold text-slate-700 mb-1">Structured Abstract (Max 350 words) *</label>
+                        <textarea rows="4" x-model="subForm.abstract" required placeholder="Background, Methods, Results, and Clinical Conclusion..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600"></textarea>
+                    </div>
+
+                    <!-- Drag & drop mock -->
+                    <div class="p-4 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/50 hover:bg-slate-50 cursor-pointer relative" @click="$refs.manuscriptFile.click()">
+                        <input type="file" x-ref="manuscriptFile" class="hidden" @change="handleFileSelected($event)">
+                        <i class="fas fa-cloud-arrow-up text-xl text-blue-600 mb-1"></i>
+                        <div class="font-bold text-slate-700" x-text="uploadedFileName || 'Attach Manuscript Draft (PDF/DOCX)'"></div>
+                        <div class="text-[10px] text-slate-400">Up to 25 MB • Double-blind review format</div>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end gap-2">
+                        <button type="button" @click="openSubmissionModal = false" class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer">Cancel</button>
+                        <button type="submit" :disabled="isSubmitting" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-xs cursor-pointer flex items-center gap-2">
+                            <span x-show="!isSubmitting">Submit to Editorial Board</span>
+                            <span x-show="isSubmitting"><i class="fas fa-circle-notch animate-spin mr-1"></i> Verifying Format...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Submission Success Ticket State -->
+            <div x-show="submissionTicket" x-cloak class="text-center py-4 space-y-4">
+                <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mx-auto shadow-sm">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h4 class="text-lg font-bold text-slate-900 font-journal">Manuscript Successfully Registered</h4>
+                <p class="text-xs text-slate-600 max-w-sm mx-auto">
+                    Your abstract has been assigned to the Editorial Review Board for double-blind triage.
+                </p>
+
+                <div class="p-4 rounded-2xl bg-slate-900 text-white text-left font-mono-code text-xs space-y-2 border border-slate-800">
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Tracking Code:</span>
+                        <strong class="text-cyan-400" x-text="submissionTicket?.code"></strong>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Lead Author:</span>
+                        <span x-text="submissionTicket?.author"></span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Assigned Triage:</span>
+                        <span class="text-emerald-400">Dr. Marcus Vance (Chief Editor)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Status:</span>
+                        <span class="text-amber-400 font-bold">Under Editorial Review</span>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">Structured Abstract (Max 350 words) *</label>
-                    <textarea rows="4" required placeholder="Background, Methods, Results, and Clinical Conclusion..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-600"></textarea>
+                <div class="flex items-center justify-center gap-3 pt-2">
+                    <button @click="copyTicketCode()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer">
+                        <i class="fas fa-copy mr-1"></i> Copy Code
+                    </button>
+                    <button @click="submissionTicket = null; openSubmissionModal = false;" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs cursor-pointer">
+                        Done
+                    </button>
                 </div>
+            </div>
 
-                <div class="p-4 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/50 hover:bg-slate-50 cursor-pointer">
-                    <i class="fas fa-cloud-arrow-up text-xl text-blue-600 mb-1"></i>
-                    <div class="font-bold text-slate-700">Attach Manuscript Draft (PDF/DOCX)</div>
-                    <div class="text-[10px] text-slate-400">Up to 25 MB • Double-blind review format</div>
-                </div>
-
-                <div class="pt-2 flex items-center justify-end gap-2">
-                    <button type="button" @click="openSubmissionModal = false" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold">Cancel</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-xs">Submit to Editorial Board</button>
-                </div>
-            </form>
         </div>
     </div>
 
     <!-- ============================================ -->
-    <!-- 10. TOAST NOTIFICATION                       -->
+    <!-- 10. CITATION MODAL                           -->
+    <!-- ============================================ -->
+    <div x-show="citationModalData" x-cloak 
+        class="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+        x-transition.opacity>
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200"
+            @click.away="citationModalData = null"
+            x-transition.scale>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <h4 class="font-bold text-base text-slate-900 font-journal">Copy Clinical Citation</h4>
+                <button @click="citationModalData = null" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">AMA Format (American Medical Association)</label>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono-code text-[11px] text-slate-700 select-all" x-text="citationModalData?.ama"></div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">APA 7th Edition</label>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono-code text-[11px] text-slate-700 select-all" x-text="citationModalData?.apa"></div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">BibTeX Entry</label>
+                    <pre class="p-3 bg-slate-900 text-cyan-300 rounded-xl font-mono-code text-[10px] overflow-x-auto select-all" x-text="citationModalData?.bibtex"></pre>
+                </div>
+            </div>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button @click="copyText(citationModalData?.ama); citationModalData = null;" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs cursor-pointer">
+                    Copy AMA Citation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- 11. TOAST NOTIFICATION                      -->
     <!-- ============================================ -->
     <div x-show="toastMessage" x-cloak 
-        class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2.5 animate-fade-in"
+        class="fixed bottom-6 right-6 z-[10000] bg-slate-950 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2.5"
         x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0 translate-y-2"
+        x-transition:enter-start="opacity-0 translate-y-3"
         x-transition:enter-end="opacity-100 translate-y-0"
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 translate-y-2">
-        <i class="fas fa-check-circle text-emerald-400 text-sm"></i>
+        x-transition:leave-end="opacity-0 translate-y-3">
+        <i class="fas fa-circle-check text-emerald-400 text-sm"></i>
         <span x-text="toastMessage"></span>
     </div>
 
@@ -892,29 +1273,39 @@
     function journalApp() {
         return {
             activeCategory: 'all',
+            studyTypeFilter: 'all',
             searchQuery: '',
             viewMode: 'grid',
             sortBy: 'latest',
+            readerTab: 'paper',
+            scrollProgress: 0,
 
-            init() {
-                this.$watch('activeReadingArticle', () => this.updateDrawerLock());
-                this.$watch('openBookmarksDrawer', () => this.updateDrawerLock());
-                this.$watch('openSubmissionModal', () => this.updateDrawerLock());
-            },
-
-            updateDrawerLock() {
-                if (this.activeReadingArticle || this.openBookmarksDrawer || this.openSubmissionModal) {
-                    document.body.classList.add('sidebar-drawer-open', 'overflow-hidden');
-                } else {
-                    document.body.classList.remove('sidebar-drawer-open', 'overflow-hidden');
-                }
-            },
-            
-            // Audio player state
+            // Audio player state (100% Workable with Web Speech & Timer)
             isPlayingAudio: false,
-            audioDuration: '14:20',
+            audioDuration: '3:45',
+            audioElapsed: '0:00',
+            audioPercent: 0,
+            audioTimer: null,
+            audioSeconds: 0,
             playbackSpeed: 1.0,
-            
+
+            // Manuscript submission state
+            openSubmissionModal: false,
+            isSubmitting: false,
+            uploadedFileName: '',
+            subForm: {
+                title: '',
+                author: '',
+                institution: '',
+                category: 'AI Diagnostics',
+                studyType: 'Phase III Trial',
+                abstract: ''
+            },
+            submissionTicket: null,
+
+            // Citation modal
+            citationModalData: null,
+
             // Genomic variant explorer
             genomicSequenceInput: '',
             genomicResult: null,
@@ -922,19 +1313,60 @@
             // Active modals / Drawers
             activeReadingArticle: null,
             openBookmarksDrawer: false,
-            openSubmissionModal: false,
             toastMessage: '',
             isSpeaking: false,
 
+            // Claps in localStorage
+            clapsMap: JSON.parse(localStorage.getItem('spherix_journal_claps') || '{}'),
+
+            // Peer review comments
+            commentsList: [
+                {
+                    id: 1,
+                    author: 'Dr. Katherine Bell, PhD',
+                    time: '3 hours ago',
+                    text: 'Remarkable sensitivity numbers on the trauma triage cohort. Did the research team control for pre-existing diabetic autonomic neuropathy in the physiological waveform streams?'
+                },
+                {
+                    id: 2,
+                    author: 'Dr. Robert Zimmer, MD (Charité)',
+                    time: '1 day ago',
+                    text: 'We independently validated this diffusion framework at Charité Emergency ICU. Repeat artifact scans dropped from 14.2% down to 1.8%. Fully endorses clinical adoption.'
+                }
+            ],
+            newCommentAuthor: '',
+            newCommentText: '',
+
             // Bookmarked IDs in localStorage
             bookmarkedIds: JSON.parse(localStorage.getItem('spherix_journal_bookmarks') || '[]'),
+
+            init() {
+                window.addEventListener('scroll', () => {
+                    const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+                    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                    this.scrollProgress = height > 0 ? (winScroll / height) * 100 : 0;
+                });
+
+                this.$watch('activeReadingArticle', () => this.updateDrawerLock());
+                this.$watch('openBookmarksDrawer', () => this.updateDrawerLock());
+                this.$watch('openSubmissionModal', () => this.updateDrawerLock());
+                this.$watch('citationModalData', () => this.updateDrawerLock());
+            },
+
+            updateDrawerLock() {
+                if (this.activeReadingArticle || this.openBookmarksDrawer || this.openSubmissionModal || this.citationModalData) {
+                    document.body.classList.add('sidebar-drawer-open', 'overflow-hidden');
+                } else {
+                    document.body.classList.remove('sidebar-drawer-open', 'overflow-hidden');
+                }
+            },
 
             categories: [
                 { id: 'all', name: 'All Research', icon: 'fas fa-layer-group' },
                 { id: 'ai_diagnostics', name: 'AI Diagnostics', icon: 'fas fa-brain' },
                 { id: 'longevity', name: 'Longevity & Omics', icon: 'fas fa-dna' },
                 { id: 'oncology', name: 'Oncology', icon: 'fas fa-ribbon' },
-                { id: 'neural', name: 'Neural & Mind', icon: 'fas fa-head-side-virus' },
+                { id: 'neural', name: 'Neural Systems', icon: 'fas fa-head-side-virus' },
                 { id: 'cardiology', name: 'Cardiology', icon: 'fas fa-heart-pulse' }
             ],
 
@@ -943,10 +1375,13 @@
                 title: 'Diffusion-Based MRI Reconstruction: Eliminating Motion Artifacts at 3 Tesla',
                 category: 'ai_diagnostics',
                 categoryName: 'AI Diagnostics',
+                studyType: 'ai_protocol',
+                studyTypeLabel: 'Clinical AI Protocol',
                 author: 'Dr. Marcus Vance, MD, PhD',
                 authorTitle: 'Chief of Neural Imaging, Spherix Clinical Labs',
                 authorImg: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80',
-                date: 'September 10, 2026',
+                date: 'October 02, 2026',
+                doi: '10.1016/SPX.2026.048',
                 readTime: 12,
                 citations: 184,
                 img: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=1000&auto=format&fit=crop&q=80',
@@ -958,7 +1393,9 @@
                     id: 'trend-1',
                     title: "Neuralink's N1 Micro-Electrode Array Receives Accelerated Humanitarian Device Exemption",
                     category: 'neural',
-                    categoryName: 'Neural & Mind',
+                    categoryName: 'Neural Systems',
+                    studyType: 'clinical_trial',
+                    studyTypeLabel: 'Phase III Trial',
                     timeAgo: '2h ago',
                     citations: 94,
                     author: 'Dr. Elena Rostova',
@@ -966,6 +1403,7 @@
                     authorImg: 'https://images.unsplash.com/photo-1594824813589-8d76dbbb982d?w=120&auto=format&fit=crop&q=80',
                     date: 'Today',
                     readTime: 6,
+                    doi: '10.1016/SPX.2026.091',
                     img: 'https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Human clinical trials validate high-bandwidth motor cortex decoding with zero degradation over 180 continuous telemetry days.'
                 },
@@ -974,6 +1412,8 @@
                     title: 'CRISPR-Cas13 mRNA Therapeutics for Rapid Oncology Target Neutralization',
                     category: 'oncology',
                     categoryName: 'Oncology',
+                    studyType: 'preclinical',
+                    studyTypeLabel: 'Preclinical In-Vivo',
                     timeAgo: '5h ago',
                     citations: 142,
                     author: 'Prof. David Chen, PhD',
@@ -981,6 +1421,7 @@
                     authorImg: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=120&auto=format&fit=crop&q=80',
                     date: 'Yesterday',
                     readTime: 8,
+                    doi: '10.1016/SPX.2026.077',
                     img: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Targeted ribonuclease nanoparticles selectively degrade oncogenic KRAS-G12D transcript variants with negligible off-target transcriptomic cleavage.'
                 },
@@ -989,6 +1430,8 @@
                     title: 'Stanford Bio-Engineers Successfully Complete 3D Bioprinted Heart Valve In-Vivo Trial',
                     category: 'cardiology',
                     categoryName: 'Cardiology',
+                    studyType: 'clinical_trial',
+                    studyTypeLabel: 'Phase III Trial',
                     timeAgo: '9h ago',
                     citations: 78,
                     author: 'Dr. Sarah Al-Mansoor, MD',
@@ -996,6 +1439,7 @@
                     authorImg: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&auto=format&fit=crop&q=80',
                     date: '2 days ago',
                     readTime: 7,
+                    doi: '10.1016/SPX.2026.063',
                     img: 'https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Endothelialized autologous hydrogel valve replacements exhibit complete cellular integration and zero calcification at 6 months post-implantation.'
                 }
@@ -1007,12 +1451,15 @@
                     title: 'Diffusion-Based MRI Reconstruction: Eliminating Motion Artifacts at 3 Tesla',
                     category: 'ai_diagnostics',
                     categoryName: 'AI Diagnostics',
+                    studyType: 'ai_protocol',
+                    studyTypeLabel: 'Clinical AI Protocol',
                     author: 'Dr. Marcus Vance, MD',
                     authorTitle: 'Chief of Neural Imaging, Spherix Clinical Labs',
                     authorImg: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80',
-                    date: 'Sept 10, 2026',
+                    date: 'Oct 02, 2026',
                     readTime: 12,
                     citations: 184,
+                    doi: '10.1016/SPX.2026.048',
                     img: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Real-time prospective motion correction utilizing conditioned latent diffusion algorithms reduces repeat scan rates by 88.4% while enhancing tissue contrast resolution across pediatric and trauma cohorts.'
                 },
@@ -1021,12 +1468,15 @@
                     title: 'CRISPR-Cas13 mRNA Therapeutics for Rapid Oncology Target Neutralization',
                     category: 'oncology',
                     categoryName: 'Oncology',
+                    studyType: 'preclinical',
+                    studyTypeLabel: 'Preclinical In-Vivo',
                     author: 'Prof. David Chen, PhD',
                     authorTitle: 'Director of Molecular Oncology',
                     authorImg: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=120&auto=format&fit=crop&q=80',
-                    date: 'Sept 08, 2026',
+                    date: 'Sept 28, 2026',
                     readTime: 8,
                     citations: 142,
+                    doi: '10.1016/SPX.2026.077',
                     img: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Targeted ribonuclease nanoparticles selectively degrade oncogenic KRAS-G12D transcript variants with negligible off-target transcriptomic cleavage.'
                 },
@@ -1035,12 +1485,15 @@
                     title: 'Multi-Omics Longevity Biomarkers: Epigenetic Horvath Clocks & NAD+ Precursors',
                     category: 'longevity',
                     categoryName: 'Longevity & Omics',
+                    studyType: 'clinical_trial',
+                    studyTypeLabel: 'Phase III Trial',
                     author: 'Dr. Katherine Bell, PhD',
                     authorTitle: 'Epigenetics & Cellular Senescence Lab',
                     authorImg: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=120&auto=format&fit=crop&q=80',
-                    date: 'Sept 04, 2026',
+                    date: 'Sept 22, 2026',
                     readTime: 10,
                     citations: 210,
+                    doi: '10.1016/SPX.2026.035',
                     img: 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Analysis of DNA methylation age reversal in 600 participants treated with targeted cyclic senolytics and continuous mitochondrial cofactors.'
                 },
@@ -1049,12 +1502,15 @@
                     title: 'Polypharmacy Drug Interactions in Geriatric Cardiology: Algorithmic Safeguards',
                     category: 'cardiology',
                     categoryName: 'Cardiology',
+                    studyType: 'meta_analysis',
+                    studyTypeLabel: 'Meta-Analysis',
                     author: 'Dr. Arvind Patel, MD, FACC',
                     authorTitle: 'Lead Clinical Pharmacologist',
                     authorImg: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&auto=format&fit=crop&q=80',
-                    date: 'Aug 28, 2026',
+                    date: 'Sept 15, 2026',
                     readTime: 9,
                     citations: 96,
+                    doi: '10.1016/SPX.2026.019',
                     img: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Machine learning prediction of CYP3A4 substrate competition and QTc prolongation risk across 450+ concurrent cardiac prescription regimens.'
                 },
@@ -1062,13 +1518,16 @@
                     id: 'art-5',
                     title: 'Neuralink & Brain-Computer Interfaces: Early Human Trial Safety Protocols',
                     category: 'neural',
-                    categoryName: 'Neural & Mind',
+                    categoryName: 'Neural Systems',
+                    studyType: 'clinical_trial',
+                    studyTypeLabel: 'Phase III Trial',
                     author: 'Dr. Elena Rostova, PhD',
                     authorTitle: 'Bio-Ethicist, MIT & Spherix Advisory',
                     authorImg: 'https://images.unsplash.com/photo-1594824813589-8d76dbbb982d?w=120&auto=format&fit=crop&q=80',
-                    date: 'Aug 22, 2026',
+                    date: 'Sept 08, 2026',
                     readTime: 6,
                     citations: 125,
+                    doi: '10.1016/SPX.2026.012',
                     img: 'https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=800&auto=format&fit=crop&q=80',
                     abstract: 'An exhaustive review of glial scar mitigation and telemetric bandwidth stability in 1,024-channel intracortical neural implants.'
                 },
@@ -1077,12 +1536,15 @@
                     title: 'AI Sepsis Early-Warning Systems: A Multi-Center ICU Telemetry Study',
                     category: 'ai_diagnostics',
                     categoryName: 'AI Diagnostics',
+                    studyType: 'clinical_trial',
+                    studyTypeLabel: 'Phase III Trial',
                     author: 'Dr. Robert Zimmer, MD',
                     authorTitle: 'Intensive Care Medicine, Charité & Spherix',
                     authorImg: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=120&auto=format&fit=crop&q=80',
-                    date: 'Aug 15, 2026',
+                    date: 'Aug 29, 2026',
                     readTime: 11,
                     citations: 312,
+                    doi: '10.1016/SPX.2026.007',
                     img: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Continuous physiological time-series transformer models anticipate septic shock onset 4.8 hours prior to clinical SOFA score elevation.'
                 },
@@ -1091,12 +1553,15 @@
                     title: 'Vedic Adaptogens & Immunomodulation: Bridging Ancient Botany and Modern Omics',
                     category: 'longevity',
                     categoryName: 'Longevity & Omics',
+                    studyType: 'preclinical',
+                    studyTypeLabel: 'Preclinical In-Vivo',
                     author: 'Vaidya Ananya Sharma, BAMS, MD',
                     authorTitle: 'AyurGenix Clinical Research Lead',
                     authorImg: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&auto=format&fit=crop&q=80',
-                    date: 'Aug 10, 2026',
+                    date: 'Aug 20, 2026',
                     readTime: 7,
                     citations: 64,
+                    doi: '10.1016/SPX.2026.004',
                     img: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Withanolide glycosides and curcuminoid nano-emulsions demonstrated significant downregulation of NF-κB and IL-6 inflammatory cascades in clinical trials.'
                 },
@@ -1105,12 +1570,15 @@
                     title: '3D Bioprinted Vascularized Tissue Grafts: Eliminating Donor Waiting Lists',
                     category: 'cardiology',
                     categoryName: 'Cardiology',
+                    studyType: 'clinical_trial',
+                    studyTypeLabel: 'Phase III Trial',
                     author: 'Dr. Sarah Al-Mansoor, MD',
                     authorTitle: 'Cardiothoracic Surgery, Stanford Health',
                     authorImg: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&auto=format&fit=crop&q=80',
-                    date: 'Aug 02, 2026',
+                    date: 'Aug 14, 2026',
                     readTime: 8,
                     citations: 180,
+                    doi: '10.1016/SPX.2026.002',
                     img: 'https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?w=800&auto=format&fit=crop&q=80',
                     abstract: 'High-density stereolithography bioprinting yields microvascular capillary networks capable of supporting 200 million cardiomyocytes in continuous perfusion.'
                 },
@@ -1119,12 +1587,15 @@
                     title: 'Targeted CAR-T Cell Exhaustion Reversal via Epigenetic Reprogramming',
                     category: 'oncology',
                     categoryName: 'Oncology',
+                    studyType: 'meta_analysis',
+                    studyTypeLabel: 'Meta-Analysis',
                     author: 'Prof. David Chen, PhD',
                     authorTitle: 'Director of Molecular Oncology',
                     authorImg: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=120&auto=format&fit=crop&q=80',
-                    date: 'July 25, 2026',
+                    date: 'Aug 05, 2026',
                     readTime: 13,
                     citations: 245,
+                    doi: '10.1016/SPX.2026.001',
                     img: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=800&auto=format&fit=crop&q=80',
                     abstract: 'Inhibition of de novo DNA methyltransferase preserves memory stem-like phenotypes in engineered autologous T-cells, extending tumor eradication efficacy.'
                 }
@@ -1133,19 +1604,23 @@
             get filteredArticles() {
                 let res = this.articles.filter(art => {
                     const matchCategory = this.activeCategory === 'all' || art.category === this.activeCategory;
+                    const matchStudyType = this.studyTypeFilter === 'all' || art.studyType === this.studyTypeFilter;
                     const q = this.searchQuery.toLowerCase().trim();
                     const matchQuery = !q || 
                         art.title.toLowerCase().includes(q) || 
                         art.abstract.toLowerCase().includes(q) ||
                         art.author.toLowerCase().includes(q) ||
-                        art.categoryName.toLowerCase().includes(q);
-                    return matchCategory && matchQuery;
+                        art.categoryName.toLowerCase().includes(q) ||
+                        (art.doi && art.doi.toLowerCase().includes(q));
+                    return matchCategory && matchStudyType && matchQuery;
                 });
 
                 if (this.sortBy === 'citations') {
                     res.sort((a, b) => b.citations - a.citations);
                 } else if (this.sortBy === 'readTime') {
                     res.sort((a, b) => a.readTime - b.readTime);
+                } else if (this.sortBy === 'claps') {
+                    res.sort((a, b) => (this.getClaps(b.id) - this.getClaps(a.id)));
                 }
                 return res;
             },
@@ -1170,6 +1645,28 @@
                 return map[catId] || 'bg-slate-100 text-slate-800';
             },
 
+            // Claps reaction system
+            getClaps(id) {
+                return this.clapsMap[id] || (id === 'feat-1' ? 428 : Math.floor(id.charCodeAt(id.length - 1) * 3 + 45));
+            },
+
+            clapArticle(id, event) {
+                const current = this.getClaps(id);
+                this.clapsMap[id] = current + 1;
+                localStorage.setItem('spherix_journal_claps', JSON.stringify(this.clapsMap));
+
+                // Floating sparkle micro-interaction
+                if (event && event.currentTarget) {
+                    const sparkle = document.createElement('span');
+                    sparkle.innerHTML = '👏';
+                    sparkle.className = 'absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none clap-sparkle text-sm';
+                    event.currentTarget.classList.add('relative');
+                    event.currentTarget.appendChild(sparkle);
+                    setTimeout(() => sparkle.remove(), 800);
+                }
+                this.showToast(`Peer clap added! (${this.clapsMap[id]} claps)`);
+            },
+
             isBookmarked(id) {
                 return this.bookmarkedIds.includes(id);
             },
@@ -1191,16 +1688,75 @@
                 this.showToast('Cleared all saved bookmarks');
             },
 
+            exportBibliography() {
+                let bibtex = `% Spherix Medical Journal Exported Bibliography (${new Date().toLocaleDateString()})\n\n`;
+                this.bookmarkedArticles.forEach(a => {
+                    bibtex += `@article{${a.id},\n  author = {${a.author}},\n  title = {${a.title}},\n  journal = {Spherix Medical Journal},\n  year = {2026},\n  volume = {14},\n  number = {3},\n  pages = {e1042},\n  doi = {${a.doi || '10.1016/SPX.2026.048'}}\n}\n\n`;
+                });
+
+                const blob = new Blob([bibtex], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `spherix_reading_list_${Date.now()}.bib`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast('Exported .BIB bibliography file!');
+            },
+
             openArticle(art) {
                 this.activeReadingArticle = art;
+                this.readerTab = 'paper';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             },
 
+            // Audio Player simulation & Web Audio / Speech Synthesis
             toggleAudioPlay() {
                 this.isPlayingAudio = !this.isPlayingAudio;
                 if (this.isPlayingAudio) {
-                    this.showToast('Playing Clinical Case Review Audio Digest...');
+                    this.startAudioTimer();
+                    this.showToast('Playing Clinical Audio Digest #48');
+                    // Play actual subtle audio narration if available
+                    if ('speechSynthesis' in window && !this.isSpeaking) {
+                        const utterance = new SpeechSynthesisUtterance('Welcome to Spherix Clinical Audio Digest number 48. Is cellular immortality preventative or algorithmic? Dr. Elena Rostova explores bio-ethics and multi-omics.');
+                        utterance.rate = this.playbackSpeed;
+                        window.speechSynthesis.speak(utterance);
+                    }
+                } else {
+                    this.pauseAudioTimer();
+                    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                    this.showToast('Audio paused');
                 }
+            },
+
+            startAudioTimer() {
+                if (this.audioTimer) clearInterval(this.audioTimer);
+                this.audioTimer = setInterval(() => {
+                    this.audioSeconds += 1;
+                    const mins = Math.floor(this.audioSeconds / 60);
+                    const secs = this.audioSeconds % 60;
+                    this.audioElapsed = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                    this.audioPercent = Math.min(100, (this.audioSeconds / 225) * 100);
+                    if (this.audioSeconds >= 225) {
+                        this.isPlayingAudio = false;
+                        clearInterval(this.audioTimer);
+                    }
+                }, 1000 / this.playbackSpeed);
+            },
+
+            pauseAudioTimer() {
+                if (this.audioTimer) clearInterval(this.audioTimer);
+            },
+
+            scrubAudio(e) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                this.audioSeconds = Math.floor(pos * 225);
+                const mins = Math.floor(this.audioSeconds / 60);
+                const secs = this.audioSeconds % 60;
+                this.audioElapsed = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                this.audioPercent = pos * 100;
+                this.showToast(`Seeked to ${this.audioElapsed}`);
             },
 
             togglePlaybackSpeed() {
@@ -1208,6 +1764,22 @@
                 let idx = speeds.indexOf(this.playbackSpeed);
                 this.playbackSpeed = speeds[(idx + 1) % speeds.length];
                 this.showToast(`Playback speed set to ${this.playbackSpeed}x`);
+                if (this.isPlayingAudio) {
+                    this.pauseAudioTimer();
+                    this.startAudioTimer();
+                }
+            },
+
+            downloadAudioTranscript() {
+                const transcript = `SPHERIX MEDICAL JOURNAL - CLINICAL AUDIO DIGEST #48\nTitle: Is Cellular Immortality Preventative or Algorithmic?\nSpeaker: Dr. Elena Rostova, Chair of Bio-Ethics\n\n[00:00] In this digest, we analyze prospective data from 12,000 multi-omics profiles.\n[01:15] Longevity intervention curves indicate that algorithmic mitochondrial co-factor optimization extends senolytic healthspan by 34%.\n[02:45] Regulatory ethics boards have initiated Phase III humanitarian trials.\n\n(c) 2026 Spherix Clinic Clinical Intelligence.`;
+                const blob = new Blob([transcript], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Spherix_Audio_Digest_48_Transcript.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast('Transcript downloaded!');
             },
 
             // Genomic Tool functions
@@ -1229,23 +1801,31 @@
                         classification: 'Pathogenic (Tier 1)',
                         riskLevel: 'High',
                         acmg: 'PVS1, PM2, PP3',
-                        notes: 'Frameshift mutation resulting in premature truncation. Associated with 72% cumulative risk of early-onset hereditary breast and ovarian cancer. PARP-inhibitor therapeutic sensitivity.'
+                        notes: 'Frameshift mutation resulting in premature termination codon. Associated with 72% cumulative risk of early-onset hereditary breast and ovarian cancer. High PARP-inhibitor therapeutic sensitivity (Olaparib, Talazoparib).'
                     };
                 } else if (val.includes('APOE')) {
                     this.genomicResult = {
-                        gene: 'APOE (rs429358 & rs7412 e4 allele)',
+                        gene: 'APOE (rs429358 & rs7412 e4/e4 allele)',
                         classification: 'Risk Factor (Class II)',
                         riskLevel: 'High',
                         acmg: 'PM1, PP4',
-                        notes: 'Homozygous e4/e4 genotype imparts 12-14x relative risk for late-onset Alzheimer lipid dysregulation. Recommended: intensive ApoB lipid lowering and neuro-protective polyphenols.'
+                        notes: 'Homozygous e4/e4 genotype imparts 12-14x relative risk for late-onset Alzheimer lipid dysregulation. Recommended clinical protocol: intensive ApoB lipid lowering, high-dose DHA, and neuro-protective polyphenols.'
                     };
                 } else if (val.includes('EGFR')) {
                     this.genomicResult = {
                         gene: 'EGFR (Exon 21 c.2573T>G p.L858R)',
-                        classification: 'Therapeutic Target',
+                        classification: 'Targeted Therapeutic',
                         riskLevel: 'Moderate',
                         acmg: 'PS1, PM1, PP2',
-                        notes: 'Activating kinase domain mutation in Non-Small Cell Lung Carcinoma (NSCLC). High sensitivity to 3rd generation tyrosine kinase inhibitors (Osimertinib).'
+                        notes: 'Activating kinase domain mutation in Non-Small Cell Lung Carcinoma (NSCLC). Exceptional sensitivity to 3rd generation tyrosine kinase inhibitors (Osimertinib, Tagrisso).'
+                    };
+                } else if (val.includes('KRAS')) {
+                    this.genomicResult = {
+                        gene: 'KRAS (Codon 12 c.35G>A p.G12D)',
+                        classification: 'Oncogenic Driver',
+                        riskLevel: 'High',
+                        acmg: 'PS1, PS3, PM1',
+                        notes: 'Constitutively active GTPase signaling across pancreatic adenocarcinoma & colorectal malignancies. Actionable through targeted MRTX1133 or Pan-KRAS PROTAC inhibitors.'
                     };
                 } else {
                     this.genomicResult = {
@@ -1253,33 +1833,102 @@
                         classification: 'Variant of Uncertain Significance (VUS)',
                         riskLevel: 'Moderate',
                         acmg: 'PM2, BP4',
-                        notes: 'Clinical evidence is currently insufficient for definitive pathogenic classification. Recommend familial segregation testing and transcriptomic RNA-seq cross-referencing.'
+                        notes: 'Clinical evidence is currently insufficient for definitive pathogenic classification. Recommend familial segregation testing, RNA-seq transcriptomic validation, and multidisciplinary tumor board review.'
                     };
                 }
                 this.showToast('Genomic sequence analyzed successfully');
             },
 
+            // 100% Workable PDF generation (Prints or Downloads clean formatted manuscript)
+            downloadArticlePDF(art) {
+                const article = art || this.featuredArticle;
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>${article.title} - Spherix Medical Journal</title>
+                        <style>
+                            body { font-family: 'Newsreader', Georgia, serif; line-height: 1.6; color: #1e293b; padding: 40px; max-width: 800px; margin: auto; }
+                            .header { border-bottom: 2px solid #0284c7; padding-bottom: 15px; margin-bottom: 25px; }
+                            .journal-title { font-size: 20px; font-weight: bold; color: #0369a1; text-transform: uppercase; letter-spacing: 1px; }
+                            .meta { font-family: sans-serif; font-size: 11px; color: #64748b; margin-top: 5px; }
+                            h1 { font-size: 26px; line-height: 1.25; margin-bottom: 10px; }
+                            .author { font-size: 13px; font-weight: bold; color: #334155; margin-bottom: 20px; }
+                            .abstract-box { background: #f0f9ff; border: 1px solid #bae6fd; padding: 15px; border-radius: 8px; margin-bottom: 25px; }
+                            .abstract-title { font-weight: bold; font-size: 12px; text-transform: uppercase; color: #0369a1; margin-bottom: 6px; }
+                            h2 { font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-top: 25px; }
+                            p { font-size: 14px; margin-bottom: 12px; }
+                            .footer { margin-top: 40px; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 11px; color: #94a3b8; text-align: center; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <div class="journal-title">Spherix Medical Journal &bull; Peer-Reviewed Research</div>
+                            <div class="meta">Volume 14 &bull; Issue 3 &bull; DOI: ${article.doi || '10.1016/SPX.2026.048'} &bull; Indexed in PubMed & MEDLINE</div>
+                        </div>
+                        <h1>${article.title}</h1>
+                        <div class="author">Lead Author: ${article.author} &bull; ${article.authorTitle || 'Spherix Clinical Labs'}</div>
+                        <div class="abstract-box">
+                            <div class="abstract-title">Structured Clinical Abstract</div>
+                            <p>${article.abstract}</p>
+                        </div>
+                        <h2>1. Introduction & Methodology</h2>
+                        <p>This study evaluates high-dimensionality clinical predictive algorithms across prospective tertiary ICU, oncology, and surgical cohorts. Over 4,200 continuous biometric features were monitored per patient hour.</p>
+                        <h2>2. Key Findings</h2>
+                        <p>Algorithmic triage achieved a sensitivity index of 99.42% (p &lt; 0.001) while decreasing median time-to-treatment by 64.2%. Adverse drug interaction flags prevented 820 potential polypharmacy toxicities.</p>
+                        <div class="footer">
+                            Published by Spherix Clinic Clinical Intelligence &copy; 2026 &bull; Open Access Under CC-BY 4.0
+                        </div>
+                        <script>
+                            window.onload = function() { window.print(); }
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                this.showToast('Generating official Clinical Paper PDF...');
+            },
+
             downloadWhitepaper() {
-                this.showToast('Downloading "Q3 2026 Autonomous Clinical Decision Protocols" PDF...');
-                setTimeout(() => {
-                    const link = document.createElement('a');
-                    link.href = '#';
-                    link.setAttribute('download', 'Spherix_Clinical_Decision_Protocols_2026.pdf');
-                    document.body.appendChild(link);
-                    this.showToast('Whitepaper saved to your downloads');
-                }, 1200);
+                this.downloadArticlePDF(this.featuredArticle);
             },
 
+            // Citations
             copyCitation(art) {
-                const cite = `${art.author} (2026). ${art.title}. Spherix Medical Journal, 14(3), e1042. https://doi.org/10.1016/SPX.2026.048`;
+                const cite = `${art.author} (2026). ${art.title}. Spherix Medical Journal, 14(3), e1042. https://doi.org/${art.doi || '10.1016/SPX.2026.048'}`;
                 navigator.clipboard.writeText(cite);
-                this.showToast('Citation copied in AMA / APA format!');
+                this.showToast('AMA citation copied to clipboard!');
             },
 
-            openCitationModal(title) {
-                const cite = `Spherix Clinical Labs (2026). ${title}. Spherix Medical Repository. DOI: 10.1016/SPX.2026.09`;
-                navigator.clipboard.writeText(cite);
-                this.showToast('Whitepaper citation copied to clipboard!');
+            openCitationModal(title, doi) {
+                const currentDoi = doi || '10.1016/SPX.2026.09';
+                this.citationModalData = {
+                    ama: `Spherix Clinical Labs. ${title}. Spherix Med J. 2026;14(3):e1042. doi:${currentDoi}`,
+                    apa: `Spherix Clinical Labs. (2026). ${title}. Spherix Medical Journal, 14(3), e1042. https://doi.org/${currentDoi}`,
+                    bibtex: `@article{spherix2026,\n  author = {Spherix Clinical Labs},\n  title = {${title}},\n  journal = {Spherix Medical Journal},\n  year = {2026},\n  volume = {14},\n  pages = {e1042},\n  doi = {${currentDoi}}\n}`
+                };
+            },
+
+            copyText(text) {
+                if (text) {
+                    navigator.clipboard.writeText(text);
+                    this.showToast('Copied to clipboard!');
+                }
+            },
+
+            // Social Share
+            shareArticle(art) {
+                if (navigator.share) {
+                    navigator.share({
+                        title: art.title,
+                        text: art.abstract,
+                        url: window.location.href
+                    }).catch(() => {});
+                } else {
+                    navigator.clipboard.writeText(window.location.href);
+                    this.showToast('Article link copied to clipboard!');
+                }
             },
 
             // Text-to-Speech Web API
@@ -1288,14 +1937,14 @@
                     this.stopSpeech();
                 } else {
                     if ('speechSynthesis' in window && this.activeReadingArticle) {
-                        const text = `${this.activeReadingArticle.title}. By ${this.activeReadingArticle.author}. ${this.activeReadingArticle.abstract}`;
+                        const text = `${this.activeReadingArticle.title}. By ${this.activeReadingArticle.author}. Clinical abstract: ${this.activeReadingArticle.abstract}`;
                         const utter = new SpeechSynthesisUtterance(text);
-                        utter.rate = 0.95;
+                        utter.rate = this.playbackSpeed;
                         utter.onend = () => { this.isSpeaking = false; };
                         utter.onerror = () => { this.isSpeaking = false; };
                         window.speechSynthesis.speak(utter);
                         this.isSpeaking = true;
-                        this.showToast('Listening to article summary...');
+                        this.showToast('Speaking clinical abstract out loud...');
                     } else {
                         this.showToast('Voice reader not supported on this browser');
                     }
@@ -1309,9 +1958,51 @@
                 this.isSpeaking = false;
             },
 
+            // Peer review comments
+            postComment() {
+                if (!this.newCommentText.trim()) {
+                    this.showToast('Please enter comment text');
+                    return;
+                }
+                const author = this.newCommentAuthor.trim() || 'Dr. Clinical Contributor';
+                this.commentsList.unshift({
+                    id: Date.now(),
+                    author: author,
+                    time: 'Just now',
+                    text: this.newCommentText.trim()
+                });
+                this.newCommentText = '';
+                this.showToast('Clinical peer commentary posted!');
+            },
+
+            // Manuscript submission workflow
+            handleFileSelected(e) {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    this.uploadedFileName = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                    this.showToast(`Manuscript attached: ${file.name}`);
+                }
+            },
+
             submitManuscript() {
-                this.openSubmissionModal = false;
-                this.showToast('Manuscript successfully submitted for double-blind peer review!');
+                this.isSubmitting = true;
+                setTimeout(() => {
+                    this.isSubmitting = false;
+                    const code = 'SPX-MS-2026-' + Math.floor(1000 + Math.random() * 9000);
+                    this.submissionTicket = {
+                        code: code,
+                        author: this.subForm.author || 'Dr. Clinical Investigator',
+                        title: this.subForm.title
+                    };
+                    this.showToast('Manuscript submitted for double-blind review!');
+                }, 1400);
+            },
+
+            copyTicketCode() {
+                if (this.submissionTicket) {
+                    navigator.clipboard.writeText(this.submissionTicket.code);
+                    this.showToast('Tracking code copied: ' + this.submissionTicket.code);
+                }
             },
 
             showToast(msg) {

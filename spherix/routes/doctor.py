@@ -660,6 +660,13 @@ def doctor_dashboard():
             'is_today': (target_date == cal_today)
         })
 
+    try:
+        from spherix.services.diagnostic_db import get_doctor_diagnostic_data
+        doctor_diag_data = get_doctor_diagnostic_data(doctor.id)
+    except Exception as e:
+        print(f"Error fetching doctor diagnostic data: {e}")
+        doctor_diag_data = {'referrals': [], 'categories': [], 'tests': []}
+
     return render_template(
         'doctor_dashboard.html',
         doctor=doctor,
@@ -685,6 +692,9 @@ def doctor_dashboard():
         pending_hospital=pending_hospital,
         todays_appointments=todays_appointments,
         lab_requests=lab_requests,
+        diagnostic_referrals=doctor_diag_data.get('referrals', []),
+        diagnostic_categories=doctor_diag_data.get('categories', []),
+        diagnostic_tests=doctor_diag_data.get('tests', []),
         shared_medical_records=shared_medical_records,
         shared_medical_records_json=shared_medical_records_json,
         profile_url=url_for('get_doctor_image', doc_id=doctor.id),

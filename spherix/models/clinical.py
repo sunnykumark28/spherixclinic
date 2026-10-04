@@ -1,22 +1,22 @@
 from datetime import datetime
-from spherix.config import utcnow
+from spherix.config import utcnow, ensure_safe_date
 
 class Appointment:
     def __init__(self, id, patient_name, doctor_id, appointment_date, appointment_time, **kwargs):
         self.id = id
         self.patient_name = patient_name
         self.doctor_id = doctor_id
-        self.appointment_date = appointment_date
-        self.appointment_time = appointment_time
+        self.appointment_date = ensure_safe_date(appointment_date)
+        self.appointment_time = ensure_safe_date(appointment_time)
         self.patient_age = kwargs.get('patient_age')
         self.patient_id_number = kwargs.get('patient_id_number')
         self.patient_phone = kwargs.get('patient_phone')
         self.patient_id = kwargs.get('patient_id')
         self.reason = kwargs.get('reason')
         self.status = kwargs.get('status', 'confirmed')
-        self.created_at = kwargs.get('created_at', utcnow())
-        self.original_appointment_date = kwargs.get('original_appointment_date')
-        self.original_appointment_time = kwargs.get('original_appointment_time')
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
+        self.original_appointment_date = ensure_safe_date(kwargs.get('original_appointment_date'))
+        self.original_appointment_time = ensure_safe_date(kwargs.get('original_appointment_time'))
         self.document_path = kwargs.get('document_path')
         self.prescription_path = kwargs.get('prescription_path')
         self.hospital_id = kwargs.get('hospital_id')
@@ -56,13 +56,7 @@ class PatientVital:
         self.diastolic_bp = int(diastolic_bp) if (diastolic_bp is not None and str(diastolic_bp).strip() != '') else None
         
         dt = recorded_at or kwargs.get('recorded_at', utcnow())
-        if isinstance(dt, str):
-            try:
-                self.recorded_at = datetime.fromisoformat(dt.replace('Z', '+00:00'))
-            except ValueError:
-                self.recorded_at = utcnow()
-        else:
-            self.recorded_at = dt
+        self.recorded_at = ensure_safe_date(dt)
 
     @property
     def patient(self):
@@ -80,14 +74,7 @@ class OrganRequest:
         self.urgency = urgency
         self.status = status
         self.hospital_id = str(hospital_id) if hospital_id else None
-        
-        created_at_val = kwargs.get('created_at', utcnow())
-        if isinstance(created_at_val, str):
-            try:
-                created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
-            except ValueError:
-                created_at_val = utcnow()
-        self.created_at = created_at_val
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
 
 
 class LabRequest:
@@ -99,14 +86,7 @@ class LabRequest:
         self.test_name = test_name
         self.status = status
         self.notes = notes
-        
-        created_at_val = kwargs.get('created_at', utcnow())
-        if isinstance(created_at_val, str):
-            try:
-                created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
-            except ValueError:
-                created_at_val = utcnow()
-        self.created_at = created_at_val
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
 
 
 class BedBooking:
@@ -125,14 +105,7 @@ class BedBooking:
         self.passport_number = kwargs.get('passport_number')
         self.medical_visa_needed = kwargs.get('medical_visa_needed', False)
         self.currency = kwargs.get('currency', 'INR')
-        
-        created_at_val = kwargs.get('created_at', utcnow())
-        if isinstance(created_at_val, str):
-            try:
-                created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
-            except ValueError:
-                created_at_val = utcnow()
-        self.created_at = created_at_val
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
 
     @property
     def hospital(self):

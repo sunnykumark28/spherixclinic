@@ -1,0 +1,184 @@
+{% extends 'layout.html' %}
+
+{% block title %}Pathology & Diagnostic Laboratory Portal | Spherix Clinic{% endblock %}
+
+{% block content %}
+<style>
+    .minimal-input-wrap {
+        position: relative;
+        transition: all 0.2s ease;
+    }
+    .minimal-input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        border-bottom: 1.5px solid #cbd5e1;
+        padding: 0.5rem 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #0f172a;
+        outline: none;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .minimal-input:focus {
+        border-bottom-color: #0d9488;
+        box-shadow: 0 1px 0 0 #0d9488;
+    }
+    .minimal-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #334155;
+        transition: color 0.2s ease;
+    }
+    .minimal-input-wrap:focus-within .minimal-label {
+        color: #0d9488;
+    }
+    .btn-teal-soft {
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+        box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.4);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-teal-soft:hover {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        box-shadow: 0 14px 28px -4px rgba(15, 118, 110, 0.45);
+        transform: translateY(-1px);
+    }
+</style>
+
+<div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-teal-500 selection:text-white"
+     x-data="{ showPassword: false, isSubmitting: false }">
+
+    <div class="w-full max-w-[1500px] bg-white rounded-3xl p-6 sm:p-10 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
+
+        <!-- ================= COLUMN 1: Form ================= -->
+        <div class="w-full lg:col-span-5 max-w-xl mx-auto lg:mx-0 flex flex-col justify-center lg:border-r lg:border-slate-200 lg:pr-12">
+
+            <!-- Switcher Tabs -->
+            <div class="flex items-center gap-6 mb-8 border-b border-slate-200 pb-3">
+                <a href="{{ url_for('pathology.pathology_login') }}" 
+                   class="text-xs font-bold uppercase tracking-wider text-teal-600 border-b-2 border-teal-500 pb-3 -mb-3.5 transition-colors">
+                    <i class="fas fa-microscope me-1.5"></i>Lab Sign In
+                </a>
+                <a href="{{ url_for('pathology.pathology_register') }}" 
+                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors">
+                    Register Laboratory
+                </a>
+                <a href="{{ url_for('login_landing') }}" 
+                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors ml-auto">
+                    All Portals &rarr;
+                </a>
+            </div>
+
+            <!-- Heading & Subtitle -->
+            <div class="mb-8">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold uppercase tracking-wider mb-3">
+                    <i class="fas fa-shield-alt"></i> NABL &amp; Clinical Pathology Network
+                </span>
+                <h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                    Diagnostic Lab <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600">Command Center</span>
+                </h1>
+                <p class="text-slate-600 text-sm font-medium mt-3 leading-relaxed">
+                    Sign in to receive direct patient test bookings, process attending doctor referrals, manage sample barcoding, and publish certified electronic lab reports.
+                </p>
+            </div>
+
+            <!-- Flash Notification Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6 space-y-2.5">
+                        {% for category, message in messages %}
+                            <div class="flex items-center gap-3 text-xs p-3.5 rounded-xl {{ 'bg-emerald-50 text-emerald-900 border border-emerald-300' if category == 'success' else ('bg-amber-50 text-amber-900 border border-amber-300' if category == 'warning' else 'bg-rose-50 text-rose-900 border border-rose-300') }}">
+                                <i class="fas {{ 'fa-check-circle text-emerald-600' if category == 'success' else ('fa-triangle-exclamation text-amber-600' if category == 'warning' else 'fa-circle-exclamation text-rose-600') }} text-sm flex-shrink-0"></i>
+                                <span class="font-bold">{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Sign In Form -->
+            <form action="{{ url_for('pathology.pathology_login') }}" method="POST" class="space-y-6" @submit="isSubmitting = true">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Laboratory Email / Registration Reference -->
+                <div class="minimal-input-wrap">
+                    <label class="minimal-label block">LABORATORY EMAIL ADDRESS</label>
+                    <div class="relative">
+                        <input type="email" name="email" required autocomplete="email"
+                               placeholder="pathology@labnetwork.com"
+                               class="minimal-input pl-0 pr-8">
+                        <i class="fas fa-envelope absolute right-0 bottom-2 text-slate-400 text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="minimal-input-wrap">
+                    <div class="flex items-center justify-between">
+                        <label class="minimal-label block">AUTHENTICATION PASSWORD</label>
+                        <a href="{{ url_for('pathology.pathology_forgot_password') }}" class="text-xs font-bold text-teal-600 hover:text-teal-800 transition-colors">
+                            Forgot password?
+                        </a>
+                    </div>
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" name="password" required autocomplete="current-password"
+                               placeholder="••••••••••••"
+                               class="minimal-input pl-0 pr-8">
+                        <button type="button" @click="showPassword = !showPassword"
+                                class="absolute right-0 bottom-2 text-slate-400 hover:text-slate-700 transition-colors focus:outline-none">
+                            <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember Me & Security Notice -->
+                <div class="flex items-center justify-between text-xs text-slate-600 pt-1">
+                    <label class="flex items-center gap-2 cursor-pointer font-semibold select-none">
+                        <input type="checkbox" name="remember" class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                        <span>Remember credentials</span>
+                    </label>
+                    <span class="flex items-center gap-1 text-slate-400">
+                        <i class="fas fa-lock text-[10px]"></i> 256-Bit TLS Encrypted
+                    </span>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" :disabled="isSubmitting"
+                        class="w-full btn-teal-soft text-white font-extrabold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 text-sm uppercase tracking-wider cursor-pointer disabled:opacity-75">
+                    <template x-if="!isSubmitting">
+                        <span class="flex items-center gap-2">
+                            <span>Sign In to Laboratory Hub</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </span>
+                    </template>
+                    <template x-if="isSubmitting">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-spinner fa-spin text-sm"></i>
+                            <span>Verifying Credentials...</span>
+                        </span>
+                    </template>
+                </button>
+            </form>
+
+            <!-- Bottom Footnote & Registration Link -->
+            <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+                <span>New diagnostic or pathology center?</span>
+                <a href="{{ url_for('pathology.pathology_register') }}" class="font-extrabold text-teal-600 hover:text-teal-800 transition-colors flex items-center gap-1">
+                    Apply for Lab Network Accreditation &rarr;
+                </a>
+            </div>
+
+        </div>
+
+        <!-- ================= COLUMN 2: Art Illustration (Fixed / Sticky in Viewport) ================= -->
+        <div class="w-full lg:col-span-7 lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex items-center justify-center p-0 self-start lg:pl-6">
+            <div class="relative w-full h-full flex items-center justify-center">
+                <img src="{{ url_for('static', filename='images/pathology_lab_art.jpg') }}" 
+                     alt="Diagnostic & Pathology Laboratory Portal" 
+                     class="w-full h-full max-h-[85vh] object-contain select-none pointer-events-none border-0 shadow-none">
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

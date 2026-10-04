@@ -603,7 +603,10 @@
             <i class="fas fa-shopping-bag"></i> Prescriptions & Orders <span class="badge">{{ orders|length }}</span>
         </div>
         <div class="nav-item" data-section="lab" onclick="switchTab('lab', this)">
-            <i class="fas fa-microscope"></i> Lab Diagnostic Reports
+            <i class="fas fa-microscope"></i> Pathology &amp; Diagnostics
+            {% if diagnostic_admin_data and diagnostic_admin_data.pending_labs and diagnostic_admin_data.pending_labs|length > 0 %}
+            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;" title="{{ diagnostic_admin_data.pending_labs|length }} pending lab verifications">{{ diagnostic_admin_data.pending_labs|length }} pending</span>
+            {% endif %}
         </div>
 
         <div class="nav-header">Donation Services</div>
@@ -2397,7 +2400,7 @@
                             <tr>
                                 <td class="fw-bold text-primary">#INV-APT-{{ appt.id }}</td>
                                 <td>{{ appt.patient_name }}</td>
-                                <td>{{ appt.appointment_date.strftime('%b %d, %Y') }}</td>
+                                <td>{{ appt.appointment_date.strftime('%b %d, %Y') if (appt.appointment_date and hasattr(appt.appointment_date, 'strftime')) else (appt.appointment_date or 'N/A') }}</td>
                                 <td class="fw-bold">₹{{ "%.2f"|format(appt.doctor.consultation_fee|float if appt.doctor and appt.doctor.consultation_fee else 1000.0) }}</td>
                                 <td><span class="status-badge bg-green-soft">Paid</span></td>
                                 <td class="text-end">
@@ -2409,7 +2412,7 @@
                             <tr>
                                 <td class="fw-bold text-primary">#INV-ORD-{{ order.id }}</td>
                                 <td>{{ order.shipping_address.name if order.shipping_address else order.patient_id }}</td>
-                                <td>{{ order.order_date.strftime('%b %d, %Y') }}</td>
+                                <td>{{ order.order_date.strftime('%b %d, %Y') if (order.order_date and hasattr(order.order_date, 'strftime')) else (order.order_date or 'N/A') }}</td>
                                 <td class="fw-bold">₹{{ "%.2f"|format(order.total_price) }}</td>
                                 <td><span class="status-badge bg-green-soft">Paid</span></td>
                                 <td class="text-end">
@@ -2443,6 +2446,349 @@
                 </div>
             </div>
 
+            <!-- Master Diagnostic Center Nav Tabs -->
+            <ul class="nav nav-pills gap-2 mb-4 bg-light p-2 rounded-4 border" id="adminDiagNav">
+                <li class="nav-item">
+                    <button class="nav-link active rounded-pill px-3.5 py-2 text-xs fw-bold" id="btnAdminDiagLabs" onclick="switchAdminDiagSubtab('admin-pane-labs')">
+                        <i class="fas fa-clinic-medical text-primary me-1.5"></i> Pathology Labs &amp; Applications
+                        {% if diagnostic_admin_data and diagnostic_admin_data.pending_labs and diagnostic_admin_data.pending_labs|length > 0 %}
+                        <span class="badge bg-warning text-dark rounded-pill ms-1 text-xxs">{{ diagnostic_admin_data.pending_labs|length }} pending</span>
+                        {% endif %}
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-bold text-dark" id="btnAdminDiagCatalog" onclick="switchAdminDiagSubtab('admin-pane-catalog')">
+                        <i class="fas fa-book-medical text-indigo-500 me-1.5"></i> Master Test Catalog ({{ diagnostic_admin_data.tests|default([])|length }})
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-bold text-dark" id="btnAdminDiagBookings" onclick="switchAdminDiagSubtab('admin-pane-bookings')">
+                        <i class="fas fa-network-wired text-purple-600 me-1.5"></i> Live Bookings &amp; Doctor Referrals
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-bold text-dark" id="btnAdminDiagInternal" onclick="switchAdminDiagSubtab('admin-pane-internal')">
+                        <i class="fas fa-vial text-teal-600 me-1.5"></i> Internal Clinic Specimen Lab ({{ lab_requests|length }})
+                    </button>
+                </li>
+            </ul>
+
+            <!-- PANE 1: PATHOLOGY LABS & APPLICATIONS REVIEW -->
+            <div id="admin-pane-labs" class="admin-diag-pane">
+                <!-- 1A: Pending Review Queue -->
+                <div class="card-box border-0 shadow-sm p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-clipboard-check text-warning me-2"></i>Laboratory Registration &amp; Accreditation Queue</h5>
+                            <small class="text-muted">Review compliance, registration licenses, and NABL certifications for new diagnostic laboratory applicants</small>
+                        </div>
+                        <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill fw-bold">
+                            {{ diagnostic_admin_data.pending_labs|default([])|length }} Laboratories Awaiting Verification
+                        </span>
+                    </div>
+
+                    {% if diagnostic_admin_data and diagnostic_admin_data.pending_labs and diagnostic_admin_data.pending_labs|length > 0 %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for lab in diagnostic_admin_data.pending_labs %}
+                        <div class="p-3.5 rounded-3 border bg-light d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-dark text-white font-monospace">{{ lab.id }}</span>
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">PENDING VERIFICATION</span>
+                                        {% if lab.is_nabl_accredited %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill"><i class="fas fa-certificate me-1"></i>NABL Accredited</span>
+                                        {% endif %}
+                                    </div>
+                                    <h5 class="fw-bold text-dark mb-0">{{ lab.legal_name }} ({{ lab.display_name }})</h5>
+                                    <small class="text-muted">
+                                        <i class="fas fa-id-card me-1"></i> Reg #: <strong>{{ lab.registration_number }}</strong> &bull; 
+                                        <i class="fas fa-user me-1"></i> Owner: {{ lab.owner_name or 'Authorized Representative' }} &bull; 
+                                        <i class="fas fa-map-marker-alt me-1"></i> {{ lab.city }}, {{ lab.state }} - {{ lab.pincode }}
+                                    </small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <!-- Approve Form -->
+                                    <form action="{{ url_for('pathology.admin_approve_lab', lab_id=lab.id) }}" method="POST" onsubmit="return confirm('Approve {{ lab.display_name }} to receive patient diagnostic bookings and doctor referrals?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-xs">
+                                            <i class="fas fa-check-circle me-1"></i> Approve Laboratory
+                                        </button>
+                                    </form>
+                                    <!-- Reject Form -->
+                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold" onclick="openLabRejectModal('{{ lab.id }}', '{{ lab.display_name|replace('\'', '\\\'') }}')">
+                                        <i class="fas fa-times-circle me-1"></i> Reject...
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-2.5 rounded-2 bg-white border small text-muted">
+                                <strong>Contact:</strong> Phone: {{ lab.phone }} &bull; Email: {{ lab.email }} &bull; 
+                                <strong>License:</strong> {{ lab.license_number or 'Not provided' }}
+                                {% if lab.nabl_accreditation_number %} &bull; <strong>NABL Accr #:</strong> {{ lab.nabl_accreditation_number }}{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted bg-white rounded-3 border">
+                        <i class="fas fa-check-double fs-2 text-success mb-2 d-block"></i>
+                        <p class="small mb-0">No diagnostic laboratory registration applications pending review.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- 1B: All Registered Pathology Laboratories -->
+                <div class="card-box border-0 shadow-sm p-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-hospital-user text-primary me-2"></i>All Diagnostic &amp; Pathology Laboratories</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover">
+                            <thead class="bg-light text-muted small">
+                                <tr>
+                                    <th>Lab ID</th>
+                                    <th>Laboratory Name</th>
+                                    <th>Registration / License</th>
+                                    <th>Location</th>
+                                    <th>Contact</th>
+                                    <th>Accreditation</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if diagnostic_admin_data and diagnostic_admin_data.all_labs %}
+                                {% for l in diagnostic_admin_data.all_labs %}
+                                <tr>
+                                    <td class="font-monospace text-xs fw-bold">{{ l.id }}</td>
+                                    <td>
+                                        <strong class="text-dark d-block">{{ l.display_name }}</strong>
+                                        <small class="text-muted">{{ l.legal_name }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="font-monospace small">{{ l.registration_number }}</span>
+                                    </td>
+                                    <td>{{ l.city }}, {{ l.state }}</td>
+                                    <td>
+                                        <div class="small">{{ l.phone }}</div>
+                                        <small class="text-muted">{{ l.email }}</small>
+                                    </td>
+                                    <td>
+                                        {% if l.is_nabl_accredited %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">NABL</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted border rounded-pill">Standard</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill px-2.5 py-1 text-xs fw-bold
+                                            {% if l.status == 'APPROVED' %}bg-success text-white
+                                            {% elif l.status == 'PENDING_VERIFICATION' %}bg-warning text-dark
+                                            {% elif l.status == 'SUSPENDED' %}bg-danger text-white
+                                            {% else %}bg-secondary text-white{% endif %}">
+                                            {{ l.status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-1.5">
+                                            {% if l.status == 'APPROVED' %}
+                                            <form action="{{ url_for('pathology.admin_suspend_lab', lab_id=l.id) }}" method="POST" onsubmit="return confirm('Suspend {{ l.display_name }}?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-xs btn-outline-danger rounded-pill px-2.5" title="Suspend Lab">
+                                                    Suspend
+                                                </button>
+                                            </form>
+                                            {% elif l.status in ['SUSPENDED', 'REJECTED'] %}
+                                            <form action="{{ url_for('pathology.admin_reactivate_lab', lab_id=l.id) }}" method="POST" onsubmit="return confirm('Reactivate {{ l.display_name }}?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-xs btn-outline-success rounded-pill px-2.5" title="Reactivate Lab">
+                                                    Reactivate
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">No pathology laboratories registered yet.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANE 2: MASTER TEST CATALOG -->
+            <div id="admin-pane-catalog" class="admin-diag-pane d-none">
+                <div class="card-box border-0 shadow-sm p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-book-medical text-indigo-600 me-2"></i>Global Diagnostic Master Catalog</h5>
+                            <small class="text-muted">Standardized clinical diagnostic catalog verified by Spherix medical directors</small>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover">
+                            <thead class="bg-light text-muted small">
+                                <tr>
+                                    <th>Test Code</th>
+                                    <th>Test Name</th>
+                                    <th>Category</th>
+                                    <th>Specimen</th>
+                                    <th>Fasting</th>
+                                    <th>Turnaround (TAT)</th>
+                                    <th>Prescription</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if diagnostic_admin_data and diagnostic_admin_data.tests %}
+                                {% for t in diagnostic_admin_data.tests %}
+                                <tr>
+                                    <td class="font-monospace fw-bold text-primary">{{ t.test_code }}</td>
+                                    <td>
+                                        <strong class="text-dark">{{ t.test_name }}</strong>
+                                        {% if t.preparation_instructions %}
+                                        <small class="text-muted d-block text-xxs">{{ t.preparation_instructions }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border">{{ t.category_name or t.category_id }}</span></td>
+                                    <td>{{ t.specimen_type or 'Blood' }}</td>
+                                    <td>
+                                        {% if t.fasting_required %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Fasting Required</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted border rounded-pill">Non-Fasting</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ t.turnaround_hours or 24 }} Hours</td>
+                                    <td>
+                                        {% if t.prescription_required %}
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Prescription Required</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted border rounded-pill">Direct Walk-in</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Active</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">No catalog tests found.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANE 3: CROSS-LAB BOOKINGS & REFERRALS OVERSIGHT -->
+            <div id="admin-pane-bookings" class="admin-diag-pane d-none">
+                <!-- Bookings -->
+                <div class="card-box border-0 shadow-sm p-4 mb-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-network-wired text-purple-600 me-2"></i>Live Diagnostic Bookings Across Network</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover">
+                            <thead class="bg-light text-muted small">
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Source</th>
+                                    <th>Patient</th>
+                                    <th>Assigned Laboratory</th>
+                                    <th>Collection</th>
+                                    <th>Scheduled Slot</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if diagnostic_admin_data and diagnostic_admin_data.recent_bookings %}
+                                {% for b in diagnostic_admin_data.recent_bookings %}
+                                <tr>
+                                    <td class="font-monospace fw-bold text-dark">#{{ b.id }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ b.booking_source }}</span></td>
+                                    <td>
+                                        <strong class="text-dark d-block">{{ b.patient_name }}</strong>
+                                        <small class="text-muted">{{ b.patient_phone }}</small>
+                                    </td>
+                                    <td><strong>{{ b.lab_name or b.lab_id }}</strong></td>
+                                    <td>{{ b.collection_type|replace('_', ' ')|title }}</td>
+                                    <td>{{ b.scheduled_date }} <small class="text-muted">({{ b.scheduled_slot }})</small></td>
+                                    <td><strong class="text-dark">₹{{ "%.2f"|format(b.total_amount) }}</strong></td>
+                                    <td>
+                                        <span class="badge rounded-pill px-2.5 py-1 text-xs fw-bold
+                                            {% if b.status in ['REPORT_PUBLISHED', 'COMPLETED'] %}bg-success text-white
+                                            {% elif b.status in ['CANCELLED', 'DECLINED'] %}bg-danger text-white
+                                            {% elif b.status in ['PROCESSING', 'SAMPLE_COLLECTED'] %}bg-info text-white
+                                            {% else %}bg-primary text-white{% endif %}">
+                                            {{ b.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">No diagnostic bookings recorded yet.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Referrals -->
+                <div class="card-box border-0 shadow-sm p-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-clipboard-prescription text-purple-600 me-2"></i>Doctor Diagnostic Referrals</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover">
+                            <thead class="bg-light text-muted small">
+                                <tr>
+                                    <th>Referral #</th>
+                                    <th>Doctor</th>
+                                    <th>Patient</th>
+                                    <th>Selected Lab</th>
+                                    <th>Priority</th>
+                                    <th>Clinical Indication</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if diagnostic_admin_data and diagnostic_admin_data.recent_referrals %}
+                                {% for r in diagnostic_admin_data.recent_referrals %}
+                                <tr>
+                                    <td class="font-monospace fw-bold text-purple-700">{{ r.referral_number }}</td>
+                                    <td><strong>{{ r.doctor_name or 'Specialist Doctor' }}</strong></td>
+                                    <td>{{ r.patient_name or 'Patient' }}</td>
+                                    <td>{{ r.lab_name or 'Patient Choice' }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill px-2 py-0.5 text-xs
+                                            {% if r.priority == 'URGENT' %}bg-warning-subtle text-warning border border-warning-subtle
+                                            {% elif r.priority == 'TIME_SENSITIVE' %}bg-danger-subtle text-danger border border-danger-subtle
+                                            {% else %}bg-light text-dark border{% endif %}">
+                                            {{ r.priority }}
+                                        </span>
+                                    </td>
+                                    <td><small class="text-muted">{{ r.clinical_indication }}</small></td>
+                                    <td><span class="badge bg-light text-dark border">{{ r.status }}</span></td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">No doctor diagnostic referrals recorded.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANE 4: INTERNAL CLINIC SPECIMEN LAB (WRAPS EXISTING CONTENT) -->
+            <div id="admin-pane-internal" class="admin-diag-pane d-none">
             <!-- 4 Quick KPI Summary Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-sm-6 col-xl-3">
@@ -3006,6 +3352,76 @@
                 </div>
             </div>
         </div>
+        </div> <!-- End of admin-pane-internal -->
+
+        <!-- MODAL: REJECT LABORATORY APPLICATION -->
+        <div class="modal fade" id="adminRejectLabModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow-lg">
+                    <form id="adminRejectLabForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-header border-bottom bg-danger text-white px-4 py-3">
+                            <h5 class="modal-title fw-bold mb-0"><i class="fas fa-times-circle me-2"></i>Reject Laboratory Application</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p class="text-muted small mb-3">Please specify the legal, compliance, or document deficiency reasons for declining <strong id="rejectLabNameSpan" class="text-dark">this laboratory</strong>. This explanation will be audited and communicated to the applicant.</p>
+                            <div class="mb-3">
+                                <label class="form-label text-xs fw-bold text-dark">Deficiency / Rejection Reason <span class="text-danger">*</span></label>
+                                <textarea name="rejection_reason" class="form-control rounded-3" rows="4" placeholder="e.g. Incomplete NABL scope documentation, expired medical establishment license, or invalid GPS coordinates..." required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top bg-light px-4 py-3 d-flex justify-content-between">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
+                                <i class="fas fa-ban me-1.5"></i> Confirm Rejection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function switchAdminDiagSubtab(paneId) {
+                document.querySelectorAll('.admin-diag-pane').forEach(p => p.classList.add('d-none'));
+                const target = document.getElementById(paneId);
+                if (target) target.classList.remove('d-none');
+
+                const navBtns = document.querySelectorAll('#adminDiagNav .nav-link');
+                navBtns.forEach(b => {
+                    b.classList.remove('active', 'bg-primary', 'text-white');
+                    b.classList.add('text-dark');
+                });
+
+                if (paneId === 'admin-pane-labs') {
+                    document.getElementById('btnAdminDiagLabs')?.classList.add('active', 'bg-primary', 'text-white');
+                } else if (paneId === 'admin-pane-catalog') {
+                    document.getElementById('btnAdminDiagCatalog')?.classList.add('active', 'bg-primary', 'text-white');
+                } else if (paneId === 'admin-pane-bookings') {
+                    document.getElementById('btnAdminDiagBookings')?.classList.add('active', 'bg-primary', 'text-white');
+                } else if (paneId === 'admin-pane-internal') {
+                    document.getElementById('btnAdminDiagInternal')?.classList.add('active', 'bg-primary', 'text-white');
+                }
+            }
+
+            function openLabRejectModal(labId, labName) {
+                const form = document.getElementById('adminRejectLabForm');
+                if (form) {
+                    form.action = `/admin/diagnostic/lab/${labId}/reject`;
+                }
+                const nameSpan = document.getElementById('rejectLabNameSpan');
+                if (nameSpan) {
+                    nameSpan.textContent = unescape(labName);
+                }
+                const modalEl = document.getElementById('adminRejectLabModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+            }
+        </script>
+        </div> <!-- End of content-section lab -->
 
         <!-- ================= SECTION: SETTINGS ================= -->
         <div id="settings" class="content-section">
@@ -3782,7 +4198,7 @@
                                 <td class="fw-bold text-primary">#APT-{{ appt.id }}</td>
                                 <td>{{ appt.patient_name }}</td>
                                 <td>Dr. {{ appt.doctor.last_name if appt.doctor else 'Unknown' }}</td>
-                                <td>{{ appt.appointment_date.strftime('%Y-%m-%d') }} {{ appt.appointment_time.strftime('%H:%M') if appt.appointment_time else '' }}</td>
+                                <td>{{ appt.appointment_date.strftime('%Y-%m-%d') if (appt.appointment_date and hasattr(appt.appointment_date, 'strftime')) else (appt.appointment_date or '') }} {{ appt.appointment_time.strftime('%H:%M') if (appt.appointment_time and hasattr(appt.appointment_time, 'strftime')) else (appt.appointment_time or '') }}</td>
                                 <td><span class="status-badge {% if appt.status == 'confirmed' %}bg-green-soft{% elif appt.status == 'pending' %}bg-yellow-soft{% else %}bg-red-soft{% endif %}">{{ appt.status|replace('_', ' ')|capitalize }}</span></td>
                             </tr>
                             {% else %}

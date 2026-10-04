@@ -2287,60 +2287,967 @@
       </section>
 
       <!-- ====================================================================== -->
-      <!-- TAB 13: LABORATORY REPORTS                                             -->
+      <!-- TAB 13: DIAGNOSTIC TESTS & PATHOLOGY LABORATORY                       -->
       <!-- ====================================================================== -->
       <section id="tab-laboratory" class="tab-section">
         <div class="pat-card">
-          <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <!-- Header & Quick Diagnostics Metrics -->
+          <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
-              <h4 class="fw-bold text-dark mb-0"><i class="fas fa-vial text-pink-500 me-2"></i>My Diagnostic Lab Reports</h4>
-              <span class="text-secondary small">View and download pathology, biochemistry, and microbiology reports.</span>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-pink-100 text-pink-700 px-3 py-1 rounded-pill fw-bold text-xs uppercase tracking-wider">
+                  <i class="fas fa-microscope me-1"></i> Spherix Diagnostic Network
+                </span>
+                <span class="badge bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                  <i class="fas fa-check-circle me-1"></i> NABL Certified Labs
+                </span>
+              </div>
+              <h3 class="fw-bold text-slate-900 mt-2 mb-1">Diagnostic Pathology &amp; Test Center</h3>
+              <p class="text-secondary small mb-0">Book certified diagnostic tests, compare nearby laboratories, track sample collections in real-time, and download verified digital reports.</p>
             </div>
-            <a href="{{ url_for('medical_shop') }}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
-              <i class="fas fa-vials me-1"></i> Book Diagnostic Package
-            </a>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="switchDiagSubtab('diag-book')">
+                <i class="fas fa-plus-circle me-1.5"></i> Book New Test
+              </button>
+            </div>
           </div>
 
-          {% if lab_requests and lab_requests|length > 0 %}
-          <div class="d-flex flex-column gap-3">
-            {% for req in lab_requests %}
-            <div class="p-3.5 rounded-4 border bg-white d-flex justify-content-between align-items-center flex-wrap gap-3">
-              <div>
-                <div class="d-flex align-items-center gap-2">
-                  <span class="badge bg-primary-subtle text-primary font-monospace px-2.5 py-1 rounded-pill">
-                    REPORT #LAB-{{ req.id }}
-                  </span>
-                  <strong class="text-dark">{{ req.test_name }}</strong>
+          <!-- Quick Metrics Bar -->
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-4 bg-slate-50 border border-slate-200 d-flex align-items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 d-flex align-items-center justify-content-center fs-5 shadow-xs">
+                  <i class="fas fa-calendar-check"></i>
                 </div>
-                <small class="text-muted d-block mt-1">
-                  Ordered by: Dr. {{ req.doctor_name if req.doctor_name else 'Specialist Physician' }} &bull; 
-                  Requested: {{ req.created_at.strftime('%b %d, %Y') if (req.created_at and req.created_at.strftime is defined) else (req.created_at or 'Recently') }}
-                  {% if req.notes %} &bull; <em>Note: {{ req.notes }}</em>{% endif %}
-                </small>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <span class="badge rounded-pill px-3 py-1.5 fw-bold {% if req.status == 'completed' or req.status == 'ready' %}bg-success text-white{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
-                  {{ req.status|replace('_', ' ')|title }}
-                </span>
-                <a href="{{ url_for('patient.download_lab_report_pdf', lab_id=req.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
-                  <i class="fas fa-download me-1"></i> Download PDF
-                </a>
+                <div>
+                  <div class="fs-4 fw-bold text-slate-900 leading-tight">{{ diagnostic_bookings|length }}</div>
+                  <div class="text-xs text-secondary font-medium">Total Bookings</div>
+                </div>
               </div>
             </div>
-            {% endfor %}
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-4 bg-slate-50 border border-slate-200 d-flex align-items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 d-flex align-items-center justify-content-center fs-5 shadow-xs">
+                  <i class="fas fa-vial"></i>
+                </div>
+                <div>
+                  <div class="fs-4 fw-bold text-slate-900 leading-tight">
+                    {{ diagnostic_bookings|selectattr('status', 'in', ['CONFIRMED', 'COLLECTION_SCHEDULED', 'COLLECTOR_ASSIGNED', 'SAMPLE_COLLECTED', 'SAMPLE_RECEIVED', 'PROCESSING'])|list|length }}
+                  </div>
+                  <div class="text-xs text-secondary font-medium">Active Samples</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-4 bg-slate-50 border border-slate-200 d-flex align-items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 d-flex align-items-center justify-content-center fs-5 shadow-xs">
+                  <i class="fas fa-file-medical-alt"></i>
+                </div>
+                <div>
+                  <div class="fs-4 fw-bold text-slate-900 leading-tight">{{ diagnostic_reports|length }}</div>
+                  <div class="text-xs text-secondary font-medium">Ready Reports</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 rounded-4 bg-slate-50 border border-slate-200 d-flex align-items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 d-flex align-items-center justify-content-center fs-5 shadow-xs">
+                  <i class="fas fa-stethoscope"></i>
+                </div>
+                <div>
+                  <div class="fs-4 fw-bold text-slate-900 leading-tight">{{ diagnostic_referrals|length }}</div>
+                  <div class="text-xs text-secondary font-medium">Doctor Referrals</div>
+                </div>
+              </div>
+            </div>
           </div>
-          {% else %}
-          <div class="text-center text-secondary py-5">
-            <i class="fas fa-vial fs-1 text-secondary mb-3 d-block"></i>
-            <h5>No diagnostic lab tests recorded</h5>
-            <p class="text-secondary small">Your diagnostic laboratory requests and official pathology reports from attending doctors will appear here automatically.</p>
-            <a href="{{ url_for('medical_shop') }}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
-              <i class="fas fa-vials me-1"></i> Book Diagnostic Package
-            </a>
+
+          <!-- Diagnostic Portal Subtabs Navigation -->
+          <ul class="nav nav-pills gap-2 p-1.5 bg-slate-100 rounded-4 mb-4 flex-wrap" id="diagSubtabs" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active rounded-pill px-3.5 py-2 text-sm fw-semibold text-slate-700" id="btn-diag-book" onclick="switchDiagSubtab('diag-book')">
+                <i class="fas fa-search me-1.5 text-indigo-500"></i> Book Tests &amp; Compare Labs
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link rounded-pill px-3.5 py-2 text-sm fw-semibold text-slate-700" id="btn-diag-bookings" onclick="switchDiagSubtab('diag-bookings')">
+                <i class="fas fa-tasks me-1.5 text-amber-500"></i> My Bookings &amp; Sample Tracking
+                {% if diagnostic_bookings|length > 0 %}
+                <span class="badge bg-amber-500 text-white rounded-pill ms-1 text-xs">{{ diagnostic_bookings|length }}</span>
+                {% endif %}
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link rounded-pill px-3.5 py-2 text-sm fw-semibold text-slate-700" id="btn-diag-referrals" onclick="switchDiagSubtab('diag-referrals')">
+                <i class="fas fa-clipboard-prescription me-1.5 text-purple-500"></i> Doctor Referrals
+                {% if diagnostic_referrals|length > 0 %}
+                <span class="badge bg-purple-600 text-white rounded-pill ms-1 text-xs">{{ diagnostic_referrals|length }}</span>
+                {% endif %}
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link rounded-pill px-3.5 py-2 text-sm fw-semibold text-slate-700" id="btn-diag-reports" onclick="switchDiagSubtab('diag-reports')">
+                <i class="fas fa-file-pdf me-1.5 text-emerald-500"></i> Published Pathology Reports
+                {% if diagnostic_reports|length > 0 %}
+                <span class="badge bg-emerald-600 text-white rounded-pill ms-1 text-xs">{{ diagnostic_reports|length }}</span>
+                {% endif %}
+              </button>
+            </li>
+            {% if lab_requests and lab_requests|length > 0 %}
+            <li class="nav-item">
+              <button class="nav-link rounded-pill px-3.5 py-2 text-sm fw-semibold text-slate-700" id="btn-diag-legacy" onclick="switchDiagSubtab('diag-legacy')">
+                <i class="fas fa-notes-medical me-1.5 text-sky-500"></i> Consultation Lab Orders ({{ lab_requests|length }})
+              </button>
+            </li>
+            {% endif %}
+          </ul>
+
+          <!-- SUBTAB 1: BOOK TESTS & DISCOVER LABS -->
+          <div id="subtab-diag-book" class="diag-subtab-pane">
+            <div class="row g-4">
+              <!-- Left Column: Master Test Catalog Browser -->
+              <div class="col-lg-7">
+                <div class="p-4 rounded-4 border border-slate-200 bg-white">
+                  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                      <h5 class="fw-bold text-slate-900 mb-0"><i class="fas fa-vials text-indigo-600 me-2"></i>Select Diagnostic Tests</h5>
+                      <small class="text-secondary">Choose individual tests or comprehensive health profiles</small>
+                    </div>
+                    <div class="w-100 w-sm-auto mt-2 mt-sm-0">
+                      <div class="input-group input-group-sm rounded-pill border overflow-hidden">
+                        <span class="input-group-text bg-white border-0"><i class="fas fa-search text-slate-400"></i></span>
+                        <input type="text" id="diagTestSearchInput" class="form-control border-0 ps-1" placeholder="Search FBS, CBC, LFT, Lipid, HbA1c..." oninput="filterDiagnosticTests()">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Category Filter Chips -->
+                  <div class="d-flex gap-2 overflow-x-auto pb-2 mb-3 diag-category-chips" style="scrollbar-width: thin;">
+                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-3 text-xs fw-semibold active-cat-chip" onclick="filterDiagByCategory('ALL', this)">
+                      All Tests ({{ diagnostic_tests|length }})
+                    </button>
+                    {% for cat in diagnostic_categories %}
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 text-xs fw-semibold text-slate-700 whitespace-nowrap" onclick="filterDiagByCategory('{{ cat.id }}', this)">
+                      <i class="{{ cat.icon or 'fas fa-vial' }} me-1 text-indigo-500"></i> {{ cat.name }}
+                    </button>
+                    {% endfor %}
+                  </div>
+
+                  <!-- Tests Grid -->
+                  <div class="row g-2.5 overflow-y-auto" id="diagTestsCatalogGrid" style="max-height: 480px;">
+                    {% for t in diagnostic_tests %}
+                    <div class="col-md-6 diag-test-card" data-cat-id="{{ t.category_id }}" data-test-name="{{ t.test_name|lower }}" data-test-code="{{ (t.test_code or '')|lower }}">
+                      <div class="p-3 rounded-3 border border-slate-200 bg-slate-50 hover-shadow-sm transition-all h-100 d-flex flex-column justify-content-between">
+                        <div>
+                          <div class="d-flex justify-content-between align-items-start gap-2 mb-1.5">
+                            <span class="badge bg-indigo-50 text-indigo-700 border border-indigo-100 font-monospace text-xs px-2 py-0.5 rounded">
+                              {{ t.test_code or 'TEST' }}
+                            </span>
+                            <div class="form-check form-check-inline m-0">
+                              <input class="form-check-input diag-test-checkbox" type="checkbox" id="testCheck_{{ t.id }}" value="{{ t.id }}" data-name="{{ t.test_name }}" data-code="{{ t.test_code }}" onchange="handleDiagTestSelection()">
+                            </div>
+                          </div>
+                          <label role="button" for="testCheck_{{ t.id }}" class="fw-bold text-slate-800 text-sm mb-1 d-block leading-snug">
+                            {{ t.test_name }}
+                          </label>
+                          <div class="d-flex flex-wrap gap-1 mb-2">
+                            <span class="badge bg-white text-slate-600 border text-xxs px-2 py-0.5 rounded-pill">
+                              <i class="fas fa-tint me-1 text-rose-500"></i> {{ t.specimen_type or 'Blood' }}
+                            </span>
+                            {% if t.fasting_required %}
+                            <span class="badge bg-amber-50 text-amber-700 border border-amber-200 text-xxs px-2 py-0.5 rounded-pill">
+                              <i class="fas fa-clock me-1"></i> Fasting Req.
+                            </span>
+                            {% endif %}
+                            <span class="badge bg-white text-slate-600 border text-xxs px-2 py-0.5 rounded-pill">
+                              <i class="fas fa-stopwatch me-1 text-slate-400"></i> {{ t.turnaround_hours or 24 }}h TAT
+                            </span>
+                          </div>
+                        </div>
+                        <div class="small text-slate-500 text-xs">
+                          {{ t.preparation_instructions or 'Standard diagnostic sample collection guidelines apply.' }}
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Matching Engine, Location & Lab Comparison -->
+              <div class="col-lg-5">
+                <div class="p-4 rounded-4 border border-slate-200 bg-white sticky-top" style="top: 20px;">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-slate-900 mb-0"><i class="fas fa-map-marker-alt text-rose-500 me-2"></i>Location &amp; Lab Matching</h5>
+                    <span class="badge bg-indigo-50 text-indigo-700 rounded-pill px-2.5 py-1 text-xs fw-bold" id="selectedTestsCountBadge">0 Tests Selected</span>
+                  </div>
+
+                  <!-- Selected Tests Pills Tray -->
+                  <div class="p-2.5 rounded-3 bg-slate-50 border border-slate-200 mb-3 min-h-[44px]">
+                    <div id="selectedTestsTray" class="d-flex flex-wrap gap-1.5">
+                      <span class="text-slate-400 text-xs py-1">Please select one or more tests from the catalog to match laboratories.</span>
+                    </div>
+                  </div>
+
+                  <!-- Geo-Location Configuration Form -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-12">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label text-xs fw-bold text-slate-700 mb-0">Your Location</label>
+                        <button type="button" class="btn btn-link p-0 text-xs text-indigo-600 fw-bold text-decoration-none" onclick="detectPatientGPS()">
+                          <i class="fas fa-crosshairs me-1"></i> Use My GPS
+                        </button>
+                      </div>
+                      <div class="input-group input-group-sm">
+                        <input type="text" id="patientDiagAddress" class="form-control" placeholder="Street, Landmark, City or PIN" value="{{ patient.address or '' }}">
+                        <input type="hidden" id="patientDiagLat" value="{{ patient.latitude or '0.0' }}">
+                        <input type="hidden" id="patientDiagLng" value="{{ patient.longitude or '0.0' }}">
+                      </div>
+                      <small id="gpsStatusNotice" class="text-xs text-emerald-600 d-none mt-1"><i class="fas fa-check-circle me-1"></i> GPS coordinates locked.</small>
+                    </div>
+
+                    <div class="col-6">
+                      <label class="form-label text-xs fw-bold text-slate-700 mb-1">Collection Mode</label>
+                      <select id="patientDiagCollectionType" class="form-select form-select-sm rounded-3">
+                        <option value="HOME_COLLECTION">Home Sample Collection</option>
+                        <option value="LAB_WALKIN">Visit Laboratory Walk-in</option>
+                      </select>
+                    </div>
+
+                    <div class="col-6">
+                      <label class="form-label text-xs fw-bold text-slate-700 mb-1">Search Radius</label>
+                      <select id="patientDiagRadius" class="form-select form-select-sm rounded-3">
+                        <option value="10">Within 10 km</option>
+                        <option value="15" selected>Within 15 km</option>
+                        <option value="25">Within 25 km</option>
+                        <option value="50">Within 50 km</option>
+                        <option value="100">Within 100 km</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button type="button" id="btnFindMatchingLabs" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm" onclick="findMatchingPathologyLabs()">
+                    <i class="fas fa-compass me-1.5"></i> Match Nearby Approved Laboratories
+                  </button>
+
+                  <!-- Laboratories Matching Results Container -->
+                  <div class="mt-4">
+                    <h6 class="fw-bold text-slate-800 text-xs uppercase tracking-wider mb-2.5">
+                      Eligible Spherix Pathology Centers (<span id="matchedLabsCount">0</span>)
+                    </h6>
+                    <div id="matchedLabsContainer" class="d-flex flex-column gap-2.5 overflow-y-auto" style="max-height: 380px;">
+                      <div class="p-4 text-center text-slate-400 border border-dashed rounded-3">
+                        <i class="fas fa-clinic-medical fs-2 mb-2 text-slate-300"></i>
+                        <p class="small mb-0">Select your tests and click "Match Nearby Approved Laboratories" to view verified providers, transparent prices, real distances, and available slots.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 2: MY BOOKINGS & SAMPLE TRACKING -->
+          <div id="subtab-diag-bookings" class="diag-subtab-pane d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold text-slate-900 mb-0"><i class="fas fa-tasks text-amber-500 me-2"></i>My Diagnostic Appointments &amp; Sample Tracking</h5>
+              <span class="text-secondary small">{{ diagnostic_bookings|length }} records found</span>
+            </div>
+
+            {% if diagnostic_bookings and diagnostic_bookings|length > 0 %}
+            <div class="d-flex flex-column gap-3">
+              {% for b in diagnostic_bookings %}
+              <div class="p-4 rounded-4 border border-slate-200 bg-white shadow-xs">
+                <!-- Top Row -->
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                  <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                      <span class="badge bg-slate-900 text-white font-monospace px-2.5 py-1 rounded">
+                        #{{ b.id }}
+                      </span>
+                      <span class="badge rounded-pill px-3 py-1 fw-bold text-xs
+                        {% if b.status in ['REPORT_PUBLISHED', 'COMPLETED'] %}bg-emerald-100 text-emerald-800 border border-emerald-200
+                        {% elif b.status in ['CANCELLED', 'DECLINED', 'REFUNDED'] %}bg-rose-100 text-rose-800 border border-rose-200
+                        {% elif b.status in ['PROCESSING', 'SAMPLE_RECEIVED'] %}bg-indigo-100 text-indigo-800 border border-indigo-200
+                        {% elif b.status in ['COLLECTION_SCHEDULED', 'COLLECTOR_ASSIGNED', 'SAMPLE_COLLECTED'] %}bg-amber-100 text-amber-800 border border-amber-200
+                        {% else %}bg-slate-100 text-slate-800 border border-slate-200{% endif %}">
+                        {{ b.status|replace('_', ' ') }}
+                      </span>
+                      <span class="badge bg-indigo-50 text-indigo-700 text-xs border border-indigo-100 rounded-pill">
+                        <i class="fas fa-truck-pickup me-1"></i> {{ b.collection_type|replace('_', ' ')|title }}
+                      </span>
+                    </div>
+                    <h5 class="fw-bold text-slate-900 mb-0">{{ b.lab_name or 'Spherix Pathology Lab' }}</h5>
+                    <small class="text-secondary">
+                      <i class="fas fa-map-marker-alt text-slate-400 me-1"></i> {{ b.lab_address or 'Certified Diagnostics Center' }} &bull; 
+                      <i class="fas fa-phone-alt text-slate-400 me-1"></i> {{ b.lab_phone or 'Helpline' }}
+                    </small>
+                  </div>
+
+                  <div class="text-end">
+                    <div class="fs-5 fw-bold text-slate-900">₹{{ "%.2f"|format(b.total_amount) }}</div>
+                    <small class="text-secondary d-block">Scheduled: <strong>{{ b.scheduled_date }}</strong> ({{ b.scheduled_slot }})</small>
+                  </div>
+                </div>
+
+                <!-- Tests in Booking -->
+                <div class="p-3 rounded-3 bg-slate-50 border border-slate-200 mb-3">
+                  <div class="text-xs fw-bold text-slate-500 uppercase tracking-wider mb-2">Booked Diagnostic Tests:</div>
+                  <div class="d-flex flex-wrap gap-2">
+                    {% for it in b['items'] %}
+                    <span class="badge bg-white text-slate-800 border px-3 py-1.5 rounded-pill text-xs fw-semibold">
+                      <i class="fas fa-vial text-pink-500 me-1.5"></i> {{ it.test_name }} &bull; ₹{{ "%.2f"|format(it.price) }}
+                    </span>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <!-- Traceable Sample Barcode / Stepper Progress -->
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-xs fw-bold text-slate-700 uppercase tracking-wider">
+                      <i class="fas fa-barcode text-slate-500 me-1"></i> Sample Collection &amp; Analysis Timeline
+                    </span>
+                    {% if b.samples and b.samples|length > 0 %}
+                    <span class="font-monospace text-xs text-indigo-600 fw-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                      Sample ID: {{ b.samples[0].identifier }}
+                    </span>
+                    {% endif %}
+                  </div>
+
+                  <!-- 5-Step Visual Stepper -->
+                  {% set step = 1 %}
+                  {% if b.status in ['ACCEPTED', 'CONFIRMED'] %}{% set step = 2 %}
+                  {% elif b.status in ['COLLECTION_SCHEDULED', 'COLLECTOR_ASSIGNED'] %}{% set step = 3 %}
+                  {% elif b.status == 'SAMPLE_COLLECTED' %}{% set step = 4 %}
+                  {% elif b.status in ['SAMPLE_RECEIVED', 'PROCESSING', 'REPORT_PENDING_VERIFICATION'] %}{% set step = 5 %}
+                  {% elif b.status in ['REPORT_PUBLISHED', 'COMPLETED'] %}{% set step = 6 %}
+                  {% endif %}
+
+                  <div class="position-relative py-2">
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-indigo-600" role="progressbar" style="width: {{ ((step - 1) / 5) * 100 }}%;"></div>
+                    </div>
+                    <div class="d-flex justify-content-between text-center mt-2">
+                      <div class="small text-xs {{ 'fw-bold text-indigo-600' if step >= 1 else 'text-slate-400' }}">1. Requested</div>
+                      <div class="small text-xs {{ 'fw-bold text-indigo-600' if step >= 2 else 'text-slate-400' }}">2. Accepted</div>
+                      <div class="small text-xs {{ 'fw-bold text-indigo-600' if step >= 3 else 'text-slate-400' }}">3. Collector Assigned</div>
+                      <div class="small text-xs {{ 'fw-bold text-indigo-600' if step >= 4 else 'text-slate-400' }}">4. Sample Collected</div>
+                      <div class="small text-xs {{ 'fw-bold text-indigo-600' if step >= 5 else 'text-slate-400' }}">5. Processing</div>
+                      <div class="small text-xs {{ 'fw-bold text-emerald-600' if step >= 6 else 'text-slate-400' }}">6. Report Ready</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top">
+                  <div>
+                    {% if b.cancellation_reason %}
+                    <span class="text-rose-600 small"><i class="fas fa-info-circle me-1"></i> Cancelled: {{ b.cancellation_reason }}</span>
+                    {% elif b.decline_reason %}
+                    <span class="text-rose-600 small"><i class="fas fa-exclamation-triangle me-1"></i> Declined: {{ b.decline_reason }}</span>
+                    {% endif %}
+                  </div>
+                  <div class="d-flex gap-2">
+                    {% if b.reports and b.reports|length > 0 %}
+                      {% for rep in b.reports %}
+                      <a href="{{ url_for('pathology.download_diagnostic_report', report_id=rep.id) }}" target="_blank" class="btn btn-sm btn-emerald text-white rounded-pill px-3 fw-bold" style="background-color: #059669;">
+                        <i class="fas fa-file-pdf me-1.5"></i> Download Report ({{ rep.version|default('v1') }})
+                      </a>
+                      {% endfor %}
+                    {% endif %}
+
+                    {% if b.status in ['REQUESTED', 'AWAITING_LAB_ACCEPTANCE', 'ACCEPTED', 'CONFIRMED', 'COLLECTION_SCHEDULED'] %}
+                    <form action="{{ url_for('pathology.patient_cancel_diagnostic_booking', booking_id=b.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this diagnostic test booking?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="reason" value="Patient cancelled from dashboard">
+                      <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold">
+                        <i class="fas fa-times me-1"></i> Cancel Booking
+                      </button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 border rounded-4 bg-slate-50">
+              <i class="fas fa-vial fs-1 text-slate-300 mb-3 d-block"></i>
+              <h5 class="fw-bold text-slate-700">No diagnostic bookings found</h5>
+              <p class="text-secondary small mb-3">You have not scheduled any direct or doctor-referred diagnostic tests yet.</p>
+              <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="switchDiagSubtab('diag-book')">
+                <i class="fas fa-search me-1.5"></i> Browse Test Catalog
+              </button>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- SUBTAB 3: DOCTOR REFERRALS -->
+          <div id="subtab-diag-referrals" class="diag-subtab-pane d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h5 class="fw-bold text-slate-900 mb-0"><i class="fas fa-clipboard-prescription text-purple-600 me-2"></i>Doctor Diagnostic Prescriptions &amp; Referrals</h5>
+                <small class="text-secondary">Official test recommendations issued by your attending physicians</small>
+              </div>
+            </div>
+
+            {% if diagnostic_referrals and diagnostic_referrals|length > 0 %}
+            <div class="d-flex flex-column gap-3">
+              {% for ref in diagnostic_referrals %}
+              <div class="p-4 rounded-4 border border-purple-100 bg-purple-50/20 shadow-xs">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                  <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                      <span class="badge bg-purple-700 text-white font-monospace px-2.5 py-1 rounded">
+                        {{ ref.referral_number }}
+                      </span>
+                      <span class="badge rounded-pill px-2.5 py-1 text-xs fw-bold
+                        {% if ref.priority == 'URGENT' %}bg-amber-100 text-amber-800 border border-amber-300
+                        {% elif ref.priority == 'TIME_SENSITIVE' %}bg-rose-100 text-rose-800 border border-rose-300
+                        {% else %}bg-sky-100 text-sky-800 border border-sky-300{% endif %}">
+                        <i class="fas fa-exclamation-circle me-1"></i> {{ ref.priority }} Priority
+                      </span>
+                      <span class="badge bg-white text-slate-700 border text-xs px-2.5 py-1 rounded-pill">
+                        Status: {{ ref.status }}
+                      </span>
+                    </div>
+                    <h5 class="fw-bold text-slate-900 mb-0">Prescribing Doctor: {{ ref.doctor_name or 'Specialist Physician' }}</h5>
+                    <small class="text-secondary">Date Issued: {{ ref.created_at }}</small>
+                  </div>
+
+                  <div>
+                    {% if ref.lab_name %}
+                    <span class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-3 py-1.5 rounded-pill">
+                      <i class="fas fa-clinic-medical me-1"></i> Recommended Lab: {{ ref.lab_name }}
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-3 bg-white border border-slate-200 mb-3">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <strong class="text-xs text-slate-500 uppercase tracking-wider d-block">Clinical Indication:</strong>
+                      <span class="text-sm text-slate-800">{{ ref.clinical_indication }}</span>
+                    </div>
+                    {% if ref.doctor_instructions %}
+                    <div class="col-md-6">
+                      <strong class="text-xs text-slate-500 uppercase tracking-wider d-block">Doctor's Instructions:</strong>
+                      <span class="text-sm text-slate-800">{{ ref.doctor_instructions }}</span>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <strong class="text-xs text-slate-500 uppercase tracking-wider d-block mb-1.5">Recommended Diagnostic Tests:</strong>
+                  <div class="d-flex flex-wrap gap-2">
+                    {% for itm in ref.tests %}
+                    <span class="badge bg-purple-100 text-purple-800 border border-purple-200 px-3 py-1.5 rounded-pill text-xs fw-semibold">
+                      <i class="fas fa-check me-1"></i> {{ itm.test_name }} ({{ itm.test_code }})
+                    </span>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                  {% if ref.status == 'ISSUED' %}
+                  <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold" onclick="selectReferralTestsAndMatch({{ ref.tests|map(attribute='test_id')|list|tojson }}, '{{ ref.selected_lab_id or '' }}')">
+                    <i class="fas fa-check-circle me-1.5"></i> Fulfill Referral &amp; Book Tests
+                  </button>
+                  {% else %}
+                  <span class="badge bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-pill text-xs fw-bold">
+                    <i class="fas fa-check-double me-1"></i> Referral Booked (#{{ ref.booking_id or 'FULFILLED' }})
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 border rounded-4 bg-slate-50">
+              <i class="fas fa-clipboard-prescription fs-1 text-slate-300 mb-3 d-block"></i>
+              <h5 class="fw-bold text-slate-700">No doctor diagnostic referrals</h5>
+              <p class="text-secondary small mb-0">When your attending Spherix physician prescribes laboratory or radiology tests, they will be listed here with prioritized fulfillment.</p>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- SUBTAB 4: PUBLISHED PATHOLOGY REPORTS -->
+          <div id="subtab-diag-reports" class="diag-subtab-pane d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h5 class="fw-bold text-slate-900 mb-0"><i class="fas fa-file-pdf text-emerald-600 me-2"></i>Certified Diagnostic &amp; Pathology Reports</h5>
+                <small class="text-secondary">Official digitally verified diagnostic reports with complete amendment audit logs</small>
+              </div>
+            </div>
+
+            {% if diagnostic_reports and diagnostic_reports|length > 0 %}
+            <div class="table-responsive">
+              <table class="table align-middle border rounded-4 overflow-hidden mb-0">
+                <thead class="bg-slate-50 text-slate-500 text-xs text-uppercase font-semibold">
+                  <tr>
+                    <th>Report #</th>
+                    <th>Test / Panel Name</th>
+                    <th>Issuing Laboratory</th>
+                    <th>Pathologist / Verifier</th>
+                    <th>Published Date</th>
+                    <th>Version</th>
+                    <th class="text-end">Download</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for rep in diagnostic_reports %}
+                  <tr>
+                    <td>
+                      <span class="badge bg-emerald-50 text-emerald-700 border border-emerald-200 font-monospace px-2.5 py-1 rounded">
+                        {{ rep.report_number }}
+                      </span>
+                    </td>
+                    <td>
+                      <strong class="text-slate-900 d-block">{{ rep.test_name }}</strong>
+                      <small class="text-secondary font-monospace">Booking #{{ rep.booking_id }}</small>
+                    </td>
+                    <td>
+                      <span class="text-sm fw-semibold text-slate-800">{{ rep.lab_name or 'Certified Pathology' }}</span>
+                    </td>
+                    <td>
+                      <span class="text-sm text-slate-700">{{ rep.verified_by or 'Consultant Pathologist' }}</span>
+                    </td>
+                    <td>
+                      <span class="text-xs text-secondary">{{ rep.published_at }}</span>
+                    </td>
+                    <td>
+                      {% if rep.version and rep.version > 1 %}
+                      <span class="badge bg-amber-100 text-amber-800 border border-amber-200 rounded-pill px-2.5 py-1 text-xs fw-bold" title="Amended: {{ rep.amendment_reason }}">
+                        v{{ rep.version }} (Amended)
+                      </span>
+                      {% else %}
+                      <span class="badge bg-slate-100 text-slate-700 border rounded-pill px-2.5 py-1 text-xs">
+                        v1 (Original)
+                      </span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">
+                      <a href="{{ url_for('pathology.download_diagnostic_report', report_id=rep.id) }}" target="_blank" class="btn btn-sm btn-outline-emerald rounded-pill px-3 fw-bold" style="color: #059669; border-color: #059669;">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                      </a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 border rounded-4 bg-slate-50">
+              <i class="fas fa-file-pdf fs-1 text-slate-300 mb-3 d-block"></i>
+              <h5 class="fw-bold text-slate-700">No published reports available</h5>
+              <p class="text-secondary small mb-0">Completed and verified diagnostic reports from your pathology providers will appear here for secure download.</p>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- SUBTAB 5: CONSULTATION LAB ORDERS (LEGACY REQUESTS) -->
+          {% if lab_requests and lab_requests|length > 0 %}
+          <div id="subtab-diag-legacy" class="diag-subtab-pane d-none">
+            <h5 class="fw-bold text-slate-900 mb-3"><i class="fas fa-notes-medical text-sky-600 me-2"></i>Consultation Laboratory Orders</h5>
+            <div class="d-flex flex-column gap-3">
+              {% for req in lab_requests %}
+              <div class="p-3.5 rounded-4 border bg-white d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary font-monospace px-2.5 py-1 rounded-pill">
+                      ORDER #LAB-{{ req.id }}
+                    </span>
+                    <strong class="text-dark">{{ req.test_name }}</strong>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Ordered by: Dr. {{ req.doctor_name if req.doctor_name else 'Specialist Physician' }} &bull; 
+                    Requested: {{ req.created_at.strftime('%b %d, %Y') if (req.created_at and req.created_at.strftime is defined) else (req.created_at or 'Recently') }}
+                    {% if req.notes %} &bull; <em>Note: {{ req.notes }}</em>{% endif %}
+                  </small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge rounded-pill px-3 py-1.5 fw-bold {% if req.status == 'completed' or req.status == 'ready' %}bg-success text-white{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+                    {{ req.status|replace('_', ' ')|title }}
+                  </span>
+                  <a href="{{ url_for('patient.download_lab_report_pdf', lab_id=req.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                    <i class="fas fa-download me-1"></i> Download PDF
+                  </a>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
           </div>
           {% endif %}
+
         </div>
       </section>
+
+      <!-- ====================================================================== -->
+      <!-- MODAL: BOOK DIAGNOSTIC TESTS AT SELECTED LABORATORY                    -->
+      <!-- ====================================================================== -->
+      <div class="modal fade" id="diagnosticBookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <form action="{{ url_for('pathology.patient_book_diagnostic') }}" method="POST" enctype="multipart/form-data">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="lab_id" id="modalBookingLabId">
+              <input type="hidden" name="test_ids" id="modalBookingTestIds">
+              <input type="hidden" name="collection_type" id="modalBookingCollectionType">
+              <input type="hidden" name="collection_latitude" id="modalBookingLat">
+              <input type="hidden" name="collection_longitude" id="modalBookingLng">
+
+              <div class="modal-header border-bottom px-4 py-3 text-white" style="background: linear-gradient(135deg, #0d9488, #0f766e);">
+                <div>
+                  <h5 class="modal-title fw-bold mb-0"><i class="fas fa-calendar-check me-2"></i>Schedule Diagnostic Appointment</h5>
+                  <small class="text-teal-100" id="modalBookingLabSubtitle">Confirm tests, slot, and collection details</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+
+              <div class="modal-body p-4">
+                <!-- Summary of Selected Laboratory & Tests -->
+                <div class="p-3 rounded-3 bg-teal-50 border border-teal-200 mb-4">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="text-teal-900" id="modalBookingLabName">Spherix Pathology Lab</strong>
+                    <span class="badge bg-teal-700 text-white font-monospace" id="modalBookingPriceEstimate">Estimated Total: ₹0.00</span>
+                  </div>
+                  <div class="text-xs text-teal-800" id="modalBookingTestsSummary">Selected Tests: ...</div>
+                </div>
+
+                <div class="row g-3">
+                  <!-- Scheduled Date & Slot -->
+                  <div class="col-md-6">
+                    <label class="form-label text-xs fw-bold text-slate-700">Appointment Date *</label>
+                    <input type="date" name="scheduled_date" id="modalBookingDate" class="form-control rounded-3" min="{{ today }}" value="{{ today }}" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-xs fw-bold text-slate-700">Available Time Slot *</label>
+                    <select name="scheduled_slot" id="modalBookingSlotSelect" class="form-select rounded-3" required>
+                      <option value="07:00 AM - 08:00 AM">07:00 AM - 08:00 AM (Early Fasting)</option>
+                      <option value="08:00 AM - 09:00 AM" selected>08:00 AM - 09:00 AM (Fasting Preferred)</option>
+                      <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM</option>
+                      <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                      <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+                      <option value="04:00 PM - 05:00 PM">04:00 PM - 05:00 PM (Post-Prandial / Evening)</option>
+                      <option value="05:00 PM - 06:00 PM">05:00 PM - 06:00 PM</option>
+                    </select>
+                  </div>
+
+                  <!-- Collection Address -->
+                  <div class="col-12" id="modalAddressFieldsRow">
+                    <label class="form-label text-xs fw-bold text-slate-700">Collection Address / Doorstep Location *</label>
+                    <input type="text" name="collection_address" id="modalBookingAddress" class="form-control rounded-3" placeholder="Full street address, flat/house number, landmark" value="{{ patient.address or '' }}" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-xs fw-bold text-slate-700">City *</label>
+                    <input type="text" name="collection_city" id="modalBookingCity" class="form-control rounded-3" placeholder="City" value="{{ patient.city or '' }}" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-xs fw-bold text-slate-700">PIN Code *</label>
+                    <input type="text" name="collection_pincode" id="modalBookingPincode" class="form-control rounded-3" placeholder="6-digit PIN code" value="{{ patient.pincode or '' }}" required>
+                  </div>
+
+                  <!-- Patient Contact & Prescription Upload -->
+                  <div class="col-md-6">
+                    <label class="form-label text-xs fw-bold text-slate-700">Patient Contact Phone *</label>
+                    <input type="text" name="patient_phone" class="form-control rounded-3" value="{{ patient.phone or '' }}" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label text-xs fw-bold text-slate-700">Doctor Prescription (Optional)</label>
+                    <input type="file" name="prescription_file" class="form-control rounded-3" accept=".pdf,image/*">
+                    <small class="text-muted text-xxs">Required for prescription-controlled tests.</small>
+                  </div>
+
+                  <!-- Notes -->
+                  <div class="col-12">
+                    <label class="form-label text-xs fw-bold text-slate-700">Special Instructions / Fasting Notes</label>
+                    <textarea name="patient_notes" class="form-control rounded-3" rows="2" placeholder="e.g. 12-hour fasting observed, patient is elderly, please bring wheelchair..."></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-footer border-top px-4 py-3 d-flex justify-content-between bg-slate-50">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-teal text-white rounded-pill px-4 fw-bold shadow-sm" style="background-color: #0d9488;">
+                  <i class="fas fa-check-circle me-1.5"></i> Confirm &amp; Schedule Booking
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIAGNOSTIC PORTAL JAVASCRIPT LOGIC -->
+      <script>
+        // Diagnostic Subtab Switcher
+        function switchDiagSubtab(subtabId) {
+          const panes = document.querySelectorAll('.diag-subtab-pane');
+          panes.forEach(p => p.classList.add('d-none'));
+
+          const targetPane = document.getElementById('subtab-' + subtabId);
+          if (targetPane) targetPane.classList.remove('d-none');
+
+          const navBtns = document.querySelectorAll('#diagSubtabs .nav-link');
+          navBtns.forEach(b => {
+            b.classList.remove('active', 'bg-white', 'text-slate-900', 'shadow-sm');
+            b.classList.add('text-slate-700');
+          });
+
+          const activeBtn = document.getElementById('btn-' + subtabId);
+          if (activeBtn) {
+            activeBtn.classList.add('active', 'bg-white', 'text-slate-900', 'shadow-sm');
+            activeBtn.classList.remove('text-slate-700');
+          }
+        }
+
+        // Test Filter by Search Text
+        function filterDiagnosticTests() {
+          const query = (document.getElementById('diagTestSearchInput')?.value || '').toLowerCase().trim();
+          const cards = document.querySelectorAll('.diag-test-card');
+          cards.forEach(card => {
+            const name = card.getAttribute('data-test-name') || '';
+            const code = card.getAttribute('data-test-code') || '';
+            const match = !query || name.includes(query) || code.includes(query);
+            card.style.display = match ? 'block' : 'none';
+          });
+        }
+
+        // Test Filter by Category
+        function filterDiagByCategory(catId, btnEl) {
+          const chips = document.querySelectorAll('.diag-category-chips button');
+          chips.forEach(c => {
+            c.classList.remove('btn-dark');
+            c.classList.add('btn-light', 'text-slate-700');
+          });
+          btnEl.classList.remove('btn-light', 'text-slate-700');
+          btnEl.classList.add('btn-dark');
+
+          const cards = document.querySelectorAll('.diag-test-card');
+          cards.forEach(card => {
+            if (catId === 'ALL' || card.getAttribute('data-cat-id') === catId) {
+              card.style.display = 'block';
+            } else {
+              card.style.display = 'none';
+            }
+          });
+        }
+
+        // Handle Test Selection
+        let selectedTestMap = new Map();
+
+        function handleDiagTestSelection() {
+          selectedTestMap.clear();
+          const checkboxes = document.querySelectorAll('.diag-test-checkbox:checked');
+          checkboxes.forEach(cb => {
+            selectedTestMap.set(cb.value, {
+              id: cb.value,
+              name: cb.getAttribute('data-name'),
+              code: cb.getAttribute('data-code')
+            });
+          });
+
+          renderSelectedTestsTray();
+        }
+
+        function renderSelectedTestsTray() {
+          const tray = document.getElementById('selectedTestsTray');
+          const countBadge = document.getElementById('selectedTestsCountBadge');
+          if (!tray) return;
+
+          tray.innerHTML = '';
+          if (selectedTestMap.size === 0) {
+            tray.innerHTML = '<span class="text-slate-400 text-xs py-1">Please select one or more tests from the catalog to match laboratories.</span>';
+            if (countBadge) countBadge.textContent = '0 Tests Selected';
+            return;
+          }
+
+          if (countBadge) countBadge.textContent = `${selectedTestMap.size} Test${selectedTestMap.size > 1 ? 's' : ''} Selected`;
+
+          selectedTestMap.forEach((test, id) => {
+            const chip = document.createElement('span');
+            chip.className = 'badge bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1.5 rounded-pill text-xs d-inline-flex align-items-center gap-1.5 shadow-2xs';
+            chip.innerHTML = `
+              <span>${test.name}</span>
+              <i class="fas fa-times-circle text-slate-400 hover-text-rose-500 cursor-pointer" onclick="removeSelectedTest('${id}')"></i>
+            `;
+            tray.appendChild(chip);
+          });
+        }
+
+        function removeSelectedTest(id) {
+          const cb = document.getElementById(`testCheck_${id}`);
+          if (cb) cb.checked = false;
+          selectedTestMap.delete(id);
+          renderSelectedTestsTray();
+        }
+
+        // GPS Geolocation Detection
+        function detectPatientGPS() {
+          if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser.');
+            return;
+          }
+          const notice = document.getElementById('gpsStatusNotice');
+          if (notice) {
+            notice.classList.remove('d-none');
+            notice.textContent = 'Acquiring high-accuracy GPS coordinates...';
+          }
+
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              document.getElementById('patientDiagLat').value = lat;
+              document.getElementById('patientDiagLng').value = lng;
+              if (notice) {
+                notice.classList.remove('d-none');
+                notice.innerHTML = `<i class="fas fa-check-circle me-1"></i> GPS Coordinates: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+              }
+            },
+            (err) => {
+              if (notice) {
+                notice.classList.remove('d-none');
+                notice.classList.replace('text-emerald-600', 'text-amber-600');
+                notice.textContent = 'GPS permission denied or unavailable. Using manual address.';
+              }
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        }
+
+        // Match Pathology Labs via Real Backend Service
+        async function findMatchingPathologyLabs() {
+          if (selectedTestMap.size === 0) {
+            alert('Please select at least one diagnostic test from the master catalog.');
+            return;
+          }
+
+          const container = document.getElementById('matchedLabsContainer');
+          const countEl = document.getElementById('matchedLabsCount');
+          const testIds = Array.from(selectedTestMap.keys()).join(',');
+          const lat = parseFloat(document.getElementById('patientDiagLat')?.value || '0.0');
+          const lng = parseFloat(document.getElementById('patientDiagLng')?.value || '0.0');
+          const address = document.getElementById('patientDiagAddress')?.value || '';
+          const radius = document.getElementById('patientDiagRadius')?.value || '15';
+          const collectionType = document.getElementById('patientDiagCollectionType')?.value || 'HOME_COLLECTION';
+
+          container.innerHTML = `
+            <div class="text-center py-4">
+              <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+              <p class="text-xs text-slate-500 mb-0">Querying verified Spherix pathology network and computing real distances...</p>
+            </div>
+          `;
+
+          try {
+            const url = `/api/diagnostics/matching-labs?test_ids=${encodeURIComponent(testIds)}&lat=${lat}&lng=${lng}&address=${encodeURIComponent(address)}&radius=${radius}&collection_type=${collectionType}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (!data.success || !data.labs || data.labs.length === 0) {
+              container.innerHTML = `
+                <div class="p-3 text-center text-slate-500 border border-dashed rounded-3">
+                  <i class="fas fa-exclamation-circle text-amber-500 mb-1 fs-5"></i>
+                  <p class="small mb-1 fw-bold text-slate-700">No matching pathology labs found</p>
+                  <p class="text-xs text-slate-500 mb-0">No approved labs within ${radius} km offer all ${selectedTestMap.size} selected tests for ${collectionType.replace('_', ' ').toLowerCase()}. Try expanding the search radius.</p>
+                </div>
+              `;
+              if (countEl) countEl.textContent = '0';
+              return;
+            }
+
+            if (countEl) countEl.textContent = data.labs.length;
+            container.innerHTML = '';
+
+            data.labs.forEach(lab => {
+              const card = document.createElement('div');
+              card.className = 'p-3 rounded-3 border border-slate-200 bg-white hover-border-indigo-400 transition-all shadow-xs';
+              card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                  <div>
+                    <div class="d-flex align-items-center gap-1.5">
+                      <h6 class="fw-bold text-slate-900 mb-0 text-sm">${lab.display_name}</h6>
+                      ${lab.is_nabl_accredited ? '<span class="badge bg-emerald-100 text-emerald-800 text-xxs px-1.5 py-0.5 rounded">NABL</span>' : ''}
+                    </div>
+                    <small class="text-secondary text-xs d-block">
+                      <i class="fas fa-location-arrow text-slate-400 me-1"></i> ${lab.distance_km.toFixed(1)} km away &bull; ${lab.city}
+                    </small>
+                  </div>
+                  <div class="text-end">
+                    <span class="fs-6 fw-bold text-slate-900 d-block">₹${lab.total_price.toFixed(2)}</span>
+                    <small class="text-secondary text-xxs">${collectionType === 'HOME_COLLECTION' ? ('+₹' + lab.collection_fee.toFixed(0) + ' Home Visit') : 'Walk-in'}</small>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                  <span class="text-xxs text-slate-500">
+                    <i class="fas fa-check-circle text-emerald-500 me-1"></i> All ${lab.available_tests_count} tests available
+                  </span>
+                  <button type="button" class="btn btn-xs btn-primary rounded-pill px-3 fw-bold" onclick="openBookingModalForLab('${lab.id}', '${escape(lab.display_name)}', ${lab.total_price}, ${lab.collection_fee})">
+                    Book at this Lab
+                  </button>
+                </div>
+              `;
+              container.appendChild(card);
+            });
+
+          } catch (e) {
+            container.innerHTML = `<div class="p-3 text-center text-rose-500 text-xs">Error communicating with lab matching service: ${e.message}</div>`;
+          }
+        }
+
+        // Open Booking Modal for Selected Lab
+        function openBookingModalForLab(labId, labName, testSubtotal, collectionFee) {
+          const testIds = Array.from(selectedTestMap.keys()).join(',');
+          const collectionType = document.getElementById('patientDiagCollectionType')?.value || 'HOME_COLLECTION';
+          const lat = document.getElementById('patientDiagLat')?.value || '0.0';
+          const lng = document.getElementById('patientDiagLng')?.value || '0.0';
+          const grandTotal = testSubtotal + (collectionType === 'HOME_COLLECTION' ? collectionFee : 0.0);
+
+          document.getElementById('modalBookingLabId').value = labId;
+          document.getElementById('modalBookingTestIds').value = testIds;
+          document.getElementById('modalBookingCollectionType').value = collectionType;
+          document.getElementById('modalBookingLat').value = lat;
+          document.getElementById('modalBookingLng').value = lng;
+          document.getElementById('modalBookingLabName').textContent = unescape(labName);
+          document.getElementById('modalBookingLabSubtitle').textContent = `${collectionType.replace('_', ' ')} &bull; ${selectedTestMap.size} Test(s)`;
+          document.getElementById('modalBookingPriceEstimate').textContent = `Total: ₹${grandTotal.toFixed(2)}`;
+
+          const testNames = Array.from(selectedTestMap.values()).map(t => t.name).join(', ');
+          document.getElementById('modalBookingTestsSummary').textContent = `Tests: ${testNames}`;
+
+          const modalEl = document.getElementById('diagnosticBookingModal');
+          if (modalEl && typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+          }
+        }
+
+        // Shortcut to fulfill Doctor Referral
+        function selectReferralTestsAndMatch(testIdsArray, recommendedLabId) {
+          switchDiagSubtab('diag-book');
+          // uncheck all first
+          document.querySelectorAll('.diag-test-checkbox').forEach(cb => cb.checked = false);
+          selectedTestMap.clear();
+
+          testIdsArray.forEach(tId => {
+            const cb = document.getElementById(`testCheck_${tId}`);
+            if (cb) {
+              cb.checked = true;
+              selectedTestMap.set(cb.value, {
+                id: cb.value,
+                name: cb.getAttribute('data-name'),
+                code: cb.getAttribute('data-code')
+              });
+            }
+          });
+
+          renderSelectedTestsTray();
+          findMatchingPathologyLabs();
+        }
+      </script>
 
       <!-- ====================================================================== -->
       <!-- TAB: HOSPITALS & ADMISSIONS                                            -->

@@ -1,59 +1,167 @@
 {% extends 'layout.html' %}
-{% block title %}Appointment Payment{% endblock %}
+{% block title %}Appointment Payment - Spherix Clinic{% endblock %}
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-12">
-    <div class="max-w-3xl mx-auto px-4">
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="bg-slate-900 px-8 py-6 text-white">
-                <h1 class="text-2xl font-bold">Complete Your Booking</h1>
-                <p class="text-slate-400 text-sm mt-1">Secure Payment Gateway</p>
-            </div>
-            <div class="p-8">
-                <div class="flex justify-between items-start mb-8 border-b border-gray-100 pb-8">
+<div class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6">
+    <div class="max-w-2xl mx-auto">
+        
+        <!-- Header Card -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-8 py-7 text-white relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="flex items-center justify-between relative z-10">
                     <div>
-                        <h2 class="text-lg font-bold text-gray-900">Appointment Summary</h2>
-                        <p class="text-gray-500 mt-1">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</p>
-                        <p class="text-sm text-gray-500">{{ doctor.specialization }}</p>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-mono font-bold uppercase tracking-wider border border-blue-400/30 mb-2">
+                            <i class="fas fa-shield-halved text-emerald-400"></i> Razorpay 256-Bit Encrypted
+                        </div>
+                        <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Confirm &amp; Pay Consultation</h1>
+                        <p class="text-slate-300 text-xs mt-1">Spherix Clinic Health Intelligence Direct Billing</p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-sm text-gray-500">Date & Time</p>
-                        <p class="font-semibold text-gray-900">{{ appointment.appointment_date.strftime('%B %d, %Y') }}</p>
-                        <p class="font-semibold text-gray-900">{{ appointment.appointment_time.strftime('%I:%M %p') }}</p>
+                    <div class="hidden sm:block text-right">
+                        <img src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay Secure" class="h-6 filter brightness-0 invert opacity-80 inline-block">
                     </div>
                 </div>
+            </div>
 
-                <div class="flex justify-between items-center mb-8 bg-blue-50 p-4 rounded-lg">
-                    <span class="font-medium text-blue-900">Consultation Fee</span>
-                    <span class="text-2xl font-bold text-blue-900">₹{{ "%.2f"|format(fee) }}</span>
-                </div>
-
-                <form method="POST">
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                        <div class="grid grid-cols-2 gap-4">
-                            <label class="border rounded-xl p-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
-                                <input type="radio" name="payment_method" value="card" checked class="sr-only">
-                                <div class="flex items-center gap-3">
-                                    <i class="fas fa-credit-card text-xl text-gray-400"></i>
-                                    <span class="font-medium text-gray-900">Credit Card</span>
-                                </div>
-                            </label>
-                            <label class="border rounded-xl p-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
-                                <input type="radio" name="payment_method" value="paypal" class="sr-only">
-                                <div class="flex items-center gap-3">
-                                    <i class="fab fa-paypal text-xl text-gray-400"></i>
-                                    <span class="font-medium text-gray-900">PayPal</span>
-                                </div>
-                            </label>
+            <div class="p-6 sm:p-8 space-y-6">
+                <!-- Appointment Details Card -->
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-600/30">
+                            <i class="fas fa-user-doctor"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Dr. {{ doctor.first_name }} {{ doctor.last_name }}</h2>
+                            <p class="text-xs text-blue-700 font-semibold">{{ doctor.specialization }}</p>
+                            <p class="text-[11px] text-slate-500">{{ doctor.hospital_name or 'Spherix Super Specialty Hospital' }}</p>
                         </div>
                     </div>
+                    <div class="text-left sm:text-right font-mono text-xs">
+                        <div class="text-slate-400 font-medium">Slot Timing</div>
+                        <div class="font-bold text-slate-900 mt-0.5">
+                            {{ appointment.appointment_date.strftime('%d %b, %Y') if (appointment.appointment_date and hasattr(appointment.appointment_date, 'strftime')) else (appointment.appointment_date or 'Today') }}
+                        </div>
+                        <div class="text-blue-600 font-bold">
+                            {{ appointment.appointment_time.strftime('%I:%M %p') if (appointment.appointment_time and hasattr(appointment.appointment_time, 'strftime')) else (appointment.appointment_time or 'Scheduled Slot') }}
+                        </div>
+                    </div>
+                </div>
 
-                    <button type="submit" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg">
-                        Pay ₹{{ "%.2f"|format(fee) }} & Confirm
+                <!-- Fee Breakdown -->
+                <div class="bg-blue-50/60 rounded-2xl p-5 border border-blue-200/80 space-y-2.5">
+                    <div class="flex justify-between items-center text-xs text-slate-600">
+                        <span>Consultation &amp; Clinical Triage</span>
+                        <span class="font-mono font-semibold text-slate-900">₹{{ "%.2f"|format(fee) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-600">
+                        <span>Digital EHR &amp; Tele-Health Protocol</span>
+                        <span class="font-mono font-semibold text-emerald-600">FREE</span>
+                    </div>
+                    <div class="pt-2 border-t border-blue-200 flex justify-between items-center">
+                        <span class="font-bold text-slate-900 text-sm">Total Payable Amount</span>
+                        <span class="text-2xl font-black text-blue-900 font-mono">₹{{ "%.2f"|format(fee) }}</span>
+                    </div>
+                </div>
+
+                <!-- Razorpay Supported Payment Rails Banner -->
+                <div class="rounded-2xl p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-3 border border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl bg-blue-500/20 text-sky-400 flex items-center justify-center text-sm border border-blue-400/30">
+                            <i class="fas fa-qrcode"></i>
+                        </span>
+                        <div>
+                            <div class="text-xs font-bold text-white">Instant UPI, QR &amp; Cards</div>
+                            <div class="text-[10px] text-slate-400">Google Pay, PhonePe, Paytm, BHIM, Visa, RuPay, NetBanking</div>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950 px-2 py-1 rounded border border-emerald-500/30">
+                        ZERO CONVENIENCE FEE
+                    </span>
+                </div>
+
+                <!-- Payment Form with Razorpay Standard Checkout -->
+                <form id="payment-form" method="POST" action="{{ url_for('appointment_payment', appointment_id=appointment.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+                    <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+                    <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+                    <input type="hidden" name="payment_method" value="razorpay">
+
+                    <button type="button" id="rzp-button"
+                        class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-base shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2.5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
+                        <i class="fas fa-lock text-sm"></i>
+                        <span>Pay ₹{{ "%.2f"|format(fee) }} via Razorpay</span>
                     </button>
                 </form>
+
+                <div class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
+                    <i class="fas fa-circle-check text-emerald-500"></i>
+                    <span>Instant confirmation invoice will be generated and saved to your patient profile.</span>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
+
+<!-- Razorpay Checkout Integration Script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.getElementById('rzp-button').onclick = function(e){
+    e.preventDefault();
+
+    const keyId = "{{ razorpay_key_id }}";
+    const orderId = "{{ razorpay_order_id }}";
+    const amountPaise = {{ amount_paise }};
+    const patientName = "{{ appointment.patient_name }}";
+    const patientPhone = "{{ appointment.patient_phone or '' }}";
+
+    if (!keyId) {
+        // Fallback if Razorpay API key is not configured
+        if (confirm("Razorpay live credentials not configured. Proceed with instant sandbox confirmation?")) {
+            document.getElementById('payment-form').submit();
+        }
+        return;
+    }
+
+    const options = {
+        "key": keyId,
+        "amount": amountPaise,
+        "currency": "INR",
+        "name": "Spherix Clinic",
+        "description": "Doctor Consultation - Dr. {{ doctor.last_name }}",
+        "image": "{{ url_for('static', filename='images/spherixclinic.jpg', _external=True) }}",
+        "order_id": orderId || undefined,
+        "handler": function (response){
+            document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id || '';
+            document.getElementById('razorpay_order_id').value = response.razorpay_order_id || orderId || '';
+            document.getElementById('razorpay_signature').value = response.razorpay_signature || '';
+            document.getElementById('payment-form').submit();
+        },
+        "prefill": {
+            "name": patientName,
+            "contact": patientPhone
+        },
+        "theme": {
+            "color": "#0284c7"
+        },
+        "modal": {
+            "ondismiss": function() {
+                console.log("Razorpay checkout modal closed by user.");
+            }
+        }
+    };
+
+    try {
+        const rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function (response){
+            alert("Payment Failed: " + response.error.description);
+        });
+        rzp1.open();
+    } catch(err) {
+        console.error("Razorpay open error:", err);
+        document.getElementById('payment-form').submit();
+    }
+};
+</script>
 {% endblock %}

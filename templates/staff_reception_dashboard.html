@@ -540,32 +540,6 @@
   </div>
 </div>
 
-<!-- Master Reception Navigation Tabs -->
-<div class="bg-white p-2 rounded-4 shadow-sm border mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
-  <div class="nav nav-pills gap-2" id="receptionMasterTabs">
-    <button class="nav-link active rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2" id="tab-btn-opd" onclick="switchMasterTab('opd')">
-      <i class="fas fa-clipboard-list"></i>
-      <span>OPD Queue &amp; Flow</span>
-      <span class="badge bg-primary text-white rounded-pill ms-1 small">{{ appointments|length }}</span>
-    </button>
-    <button class="nav-link rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2" id="tab-btn-patients" onclick="switchMasterTab('patients')">
-      <i class="fas fa-users"></i>
-      <span>Registered Patients</span>
-      <span class="badge bg-emerald-100 text-emerald-800 rounded-pill ms-1 small">{{ patients|length }}</span>
-    </button>
-    <button class="nav-link rounded-pill px-4 py-2 fw-bold d-flex align-items-center gap-2" id="tab-btn-doctors" onclick="switchMasterTab('doctors')">
-      <i class="fas fa-user-md"></i>
-      <span>Doctors &amp; OPD Rosters</span>
-      <span class="badge bg-sky-100 text-sky-800 rounded-pill ms-1 small">{{ doctors|length }}</span>
-    </button>
-  </div>
-  
-  <div class="d-none d-md-flex align-items-center gap-2 text-xs text-muted pe-3">
-    <span class="pulse-dot bg-success"></span>
-    <span class="fw-semibold text-slate-700">Reception Desk Online</span>
-  </div>
-</div>
-
 <!-- TAB PANE 1: OPD APPOINTMENTS & FLOW -->
 <div id="master-pane-opd" class="master-pane">
   <div class="row g-4">
@@ -1891,16 +1865,40 @@
 
   // Master Reception Tab Switching (OPD Queue, Patients, Doctors)
   function switchMasterTab(tabName) {
+    if (!tabName) tabName = 'opd';
     document.querySelectorAll('.master-pane').forEach(p => p.style.display = 'none');
-    document.querySelectorAll('#receptionMasterTabs .nav-link').forEach(b => {
-      b.classList.remove('active');
-    });
 
     const targetPane = document.getElementById('master-pane-' + tabName);
-    const targetBtn = document.getElementById('tab-btn-' + tabName);
     if (targetPane) targetPane.style.display = 'block';
-    if (targetBtn) targetBtn.classList.add('active');
+
+    // Update left sidebar active links
+    document.querySelectorAll('.dashboard-sidebar .sidebar-link').forEach(link => {
+      const href = link.getAttribute('href') || '';
+      if (href.includes('tab=' + tabName) || (tabName === 'opd' && href.endsWith('staff_reception_dashboard'))) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabName);
+      window.history.pushState({ tab: tabName }, '', url);
+    } catch(e) {}
   }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab') || 'opd';
+    switchMasterTab(initialTab);
+  });
+
+  window.addEventListener('popstate', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab') || 'opd';
+    switchMasterTab(tab);
+  });
 
   // Filter Patients Directory
   function filterPatientsDirectory() {

@@ -692,6 +692,8 @@
   {% if current_user.is_authenticated %}
     {% if current_user.email == 'admin@spherixclinic.com' %}
       {% set current_role = 'admin' %}
+    {% elif getattr(current_user, 'is_pathology_lab', False) or (current_user.get_id and (current_user.get_id().startswith('pathology_lab-') or current_user.get_id().startswith('pathology-'))) %}
+      {% set current_role = 'pathology_lab' %}
     {% else %}
       {% set role_parts = current_user.get_id().split('-') %}
       {% set current_role = role_parts[0] %}
@@ -711,7 +713,7 @@
         </div>
         <div class="d-flex flex-column">
           <span class="font-display font-bold"><span class="spherix-brand-gradient">Spherix</span> <span style="color: #0284c7;">Clinic</span></span>
-          <span class="font-mono font-bold uppercase tracking-wider" style="font-size: 10px; color: #0284c7;">{{ current_role|capitalize }} Workspace</span>
+          <span class="font-mono font-bold uppercase tracking-wider" style="font-size: 10px; color: #0284c7;">{{ current_role|replace('_', ' ')|capitalize }} Workspace</span>
         </div>
 
       </a>
@@ -726,8 +728,10 @@
           ('overview', 'fas fa-th-large', 'Overview'),
           ('appointments', 'fas fa-calendar-check', 'My Consultations'),
           ('telemedicine', 'fas fa-video', 'Telemedicine HD'),
+          ('diagnostics', 'fas fa-vial-virus', 'Diagnostic Tests'),
           ('prescriptions', 'fas fa-file-prescription', 'Prescriptions'),
           ('orders', 'fas fa-shopping-bag', 'Pharmacy Orders'),
+          ('medical_records', 'fas fa-file-medical', 'EHR Records'),
           ('messages', 'fas fa-comments', 'Doctor Tele-Chat'),
           ('settings', 'fas fa-user-cog', 'Profile & Settings')
         ] %}
@@ -735,6 +739,11 @@
         {% if id == 'telemedicine' %}
         <a href="{{ url_for('telemedicine') }}"
           class="sidebar-link {% if request.endpoint == 'telemedicine' %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% elif id == 'diagnostics' %}
+        <a href="{{ url_for('patient_dashboard', tab='diagnostics') }}"
+          class="sidebar-link {% if request.endpoint == 'patient_dashboard' and request.args.get('tab') == 'diagnostics' %}active{% endif %}">
           <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
         </a>
         {% else %}
@@ -767,7 +776,7 @@
           ('patient_list', 'fas fa-users', 'Patient List'),
           ('health_tracker', 'fas fa-file-medical-alt', 'EHR Hub'),
           ('prescriptions', 'fas fa-pills', 'Prescriptions'),
-          ('lab_requests', 'fas fa-vial', 'Lab Requests'),
+          ('lab_requests', 'fas fa-vial', 'Diagnostic Referrals'),
           ('ipd_management', 'fas fa-procedures', 'IPD Management'),
           ('surgery_schedule', 'fas fa-syringe', 'Surgery Schedule')
         ] %}
@@ -802,7 +811,60 @@
           class="sidebar-link {% if request.args.get('tab') == 'settings' %}active{% endif %}"><i
             class="fas fa-cog fa-fw"></i> <span>Settings</span></a>
 
-        <!-- ================= 3. HOSPITAL NAVIGATION ================= -->
+        <!-- ================= 3. PATHOLOGY LAB NAVIGATION ================= -->
+        {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
+        <div class="sidebar-section-title">Core Operations</div>
+        {% set lab_ops_nav = [
+          ('overview', 'fas fa-th-large', 'Dashboard'),
+          ('bookings', 'fas fa-calendar-check', 'Bookings & Requests'),
+          ('referrals', 'fas fa-user-md', 'Doctor Referrals')
+        ] %}
+        {% for id, icon, label in lab_ops_nav %}
+        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
+          class="sidebar-link {% if (request.args.get('tab', 'overview') == id) or (id == 'bookings' and request.args.get('tab') in ['bookings', 'requests', 'booking_requests']) %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Diagnostic Services</div>
+        {% set lab_catalog_nav = [
+          ('catalog', 'fas fa-book-medical', 'Test Catalog & Pricing'),
+          ('slots', 'fas fa-clock', 'Appointment Slots')
+        ] %}
+        {% for id, icon, label in lab_catalog_nav %}
+        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
+          class="sidebar-link {% if (request.args.get('tab') == id) or (id == 'catalog' and request.args.get('tab') in ['catalog', 'pricing', 'availability']) %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Clinical Processing</div>
+        {% set lab_clinical_nav = [
+          ('tracking', 'fas fa-barcode', 'Specimens & Processing'),
+          ('reports', 'fas fa-file-signature', 'Report Management'),
+          ('staff', 'fas fa-user-nurse', 'Phlebotomists & Staff')
+        ] %}
+        {% for id, icon, label in lab_clinical_nav %}
+        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
+          class="sidebar-link {% if (request.args.get('tab') == id) or (id == 'tracking' and request.args.get('tab') in ['tracking', 'processing', 'collections', 'collection']) %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Finance & Settings</div>
+        {% set lab_finance_nav = [
+          ('settlements', 'fas fa-wallet', 'Financials & Payouts'),
+          ('analytics', 'fas fa-chart-line', 'Analytics'),
+          ('settings', 'fas fa-cog', 'Profile & Settings')
+        ] %}
+        {% for id, icon, label in lab_finance_nav %}
+        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
+          class="sidebar-link {% if (request.args.get('tab') == id) or (id == 'settlements' and request.args.get('tab') in ['settlements', 'payments', 'refunds']) or (id == 'settings' and request.args.get('tab') in ['settings', 'profile']) %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <!-- ================= 4. HOSPITAL NAVIGATION ================= -->
         {% elif current_role == 'hospital' %}
         <div class="sidebar-section-title">Facility Portal</div>
         {% set hospital_nav = [
@@ -824,7 +886,8 @@
         {% set clinical_nav = [
           ('emr', 'fas fa-file-medical-alt', 'EMR Hub'),
           ('pharmacy', 'fas fa-pills', 'Pharmacy'),
-          ('laboratory', 'fas fa-microscope', 'Laboratory'),
+          ('laboratory', 'fas fa-microscope', 'Laboratory & Pathology'),
+          ('diagnostics', 'fas fa-vial-virus', 'Diagnostic Tests'),
           ('radiology', 'fas fa-x-ray', 'Radiology'),
           ('ot_management', 'fas fa-syringe', 'OT Management'),
           ('blood', 'fas fa-tint', 'Blood Bank'),
@@ -871,7 +934,7 @@
         </a>
         {% endfor %}
 
-        <!-- ================= 4. DONORS & STAFF NAVIGATION ================= -->
+        <!-- ================= 5. DONORS & STAFF NAVIGATION ================= -->
         {% elif current_role == 'blood_donor' %}
         <div class="sidebar-section-title">Blood Donor Portal</div>
         <a href="{{ url_for('blood_donor_dashboard', tab='overview') }}" class="sidebar-link {% if request.endpoint == 'blood_donor_dashboard' and request.args.get('tab', 'overview') == 'overview' %}active{% endif %}">
@@ -914,9 +977,29 @@
         {% elif current_role == 'staff' %}
         <div class="sidebar-section-title">Staff Portal</div>
         {% if current_user.role in ['Receptionist', 'Appointment Management'] %}
-        <a href="{{ url_for('staff_reception_dashboard') }}" class="sidebar-link active"><i class="fas fa-headset"></i> <span>Reception Desk</span></a>
+        {% set rec_nav = [
+          ('opd', 'fas fa-clipboard-list', 'OPD Queue & Flow'),
+          ('patients', 'fas fa-users', 'Registered Patients'),
+          ('doctors', 'fas fa-user-md', 'Doctors & Rosters')
+        ] %}
+        {% for id, icon, label in rec_nav %}
+        <a href="{{ url_for('staff_reception_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if (request.args.get('tab', 'opd') == id) %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
         {% elif current_user.role == 'Bed Management' %}
-        <a href="{{ url_for('staff_bed_dashboard') }}" class="sidebar-link active"><i class="fas fa-bed"></i> <span>Bed Telemetry</span></a>
+        {% set bed_nav = [
+          ('floorplan', 'fas fa-th', 'Ward Floorplan'),
+          ('admissions', 'fas fa-clipboard-list', 'Allocation Requests'),
+          ('history', 'fas fa-history', 'Discharge History')
+        ] %}
+        {% for id, icon, label in bed_nav %}
+        <a href="{{ url_for('staff_bed_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if (request.args.get('tab', 'floorplan') == id) %}active{% endif %}">
+          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
+        </a>
+        {% endfor %}
         {% elif current_user.role == 'Blood Donor Management' %}
         {% set blood_nav = [
           ('overview', 'fas fa-th-large', 'Overview'),
@@ -964,6 +1047,8 @@
           <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital Avatar" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
           {% elif current_user.profile_picture_url %}
           <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+          {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
+          <i class="fas fa-microscope text-sky-600"></i>
           {% else %}
           {{ current_user.name[0] if current_user.name else 'U' }}
           {% endif %}
@@ -977,7 +1062,7 @@
             {% endif %}
           </div>
           <div class="user-role d-flex align-items-center justify-content-between">
-            <span>{{ current_role }}</span>
+            <span>{{ current_role|replace('_', ' ') }}</span>
             {% if current_user.license_number or current_user.license_no %}
             <span style="font-size: 8px; color: #0284c7; font-family: monospace; font-weight: 700; background: #f0f9ff; padding: 1px 4px; border-radius: 4px; border: 1px solid #bae6fd;">
               {{ (current_user.license_number or current_user.license_no)|truncate(14, True, '..') }}
@@ -1089,6 +1174,8 @@
               <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
               {% elif current_user.profile_picture_url %}
               <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+              {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
+              <i class="fas fa-microscope text-sky-600"></i>
               {% else %}
               <span class="font-bold text-sky-600 text-xs">{{ current_user.name[0] if current_user.name else 'U' }}</span>
               {% endif %}
@@ -1099,7 +1186,7 @@
                   {% if current_user.is_doctor %}Dr. {{ current_user.first_name }} {{ current_user.last_name }}{% else %}{{ current_user.name }}{% endif %}
                 </div>
                 <div class="d-flex align-items-center justify-content-between mt-1">
-                  <span class="text-[10px] text-sky-600 font-mono font-semibold text-uppercase">{{ current_role }}</span>
+                  <span class="text-[10px] text-sky-600 font-mono font-semibold text-uppercase">{{ current_role|replace('_', ' ') }}</span>
                   {% if current_user.license_number or current_user.license_no %}
                   <span class="text-[9px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded font-mono font-bold border border-sky-200" title="Verified License / Registration ID">
                     <i class="fas fa-shield-alt me-0.5 text-sky-600"></i>{{ current_user.license_number or current_user.license_no }}
@@ -1111,6 +1198,8 @@
               <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('doctor_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Account Settings</a></li>
               {% elif current_role == 'hospital' %}
               <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('hospital_dashboard', tab='settings') }}"><i class="fas fa-cog me-2 text-muted"></i>Hospital Settings</a></li>
+              {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
+              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('pathology.pathology_dashboard', tab='settings') }}"><i class="fas fa-cog me-2 text-muted"></i>Lab Settings</a></li>
               {% elif current_role == 'patient' %}
               <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('patient_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Profile Settings</a></li>
               {% endif %}

@@ -228,7 +228,13 @@ def get_db_connection(database_name=None):
                 setup_db.seed_production_data()
             except Exception as se:
                 print(f"⚠️ Note during SQLite initial seeding: {se}")
-        conn = sqlite3.connect(sqlite_db_path, check_same_thread=False, isolation_level=None)
+        conn = sqlite3.connect(sqlite_db_path, check_same_thread=False, isolation_level=None, timeout=30.0)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA busy_timeout=30000;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+        except Exception:
+            pass
         return conn
     except Exception as sq_err:
         print(f"⚠️ Error connecting to local SQLite database: {sq_err}")
@@ -1928,8 +1934,11 @@ def load_data():
         # Perform data-safe migration of schema and ensure all tables/columns exist
         migrate_legacy_schema(cursor)
         
-        # Auto-migrate local SQLite or JSON data stores dynamically
-        # auto_migrate_local_data(cursor) # Disabling auto-migration from local files.
+        try:
+            from spherix.services.diagnostic_db import init_diagnostic_schema
+            init_diagnostic_schema()
+        except Exception as diag_err:
+            print(f"⚠️ Diagnostic init note: {diag_err}")
 
         def fetch_dict(query):
             cursor.execute(query)
@@ -1943,6 +1952,14 @@ def load_data():
         # 2. Patients
         pats = fetch_dict("SELECT * FROM patients")
         TEMP_DATA['patients'] = {p['id']: Patient(**p) for p in pats}
+
+        # 2b. Pathology Labs
+        try:
+            from spherix.models.user import PathologyLab
+            labs = fetch_dict("SELECT * FROM diagnostic_labs")
+            TEMP_DATA['pathology_labs'] = {l['id']: PathologyLab(**l) for l in labs}
+        except Exception as l_err:
+            TEMP_DATA['pathology_labs'] = {}
 
         # 3. Hospitals
         hosps = fetch_dict("SELECT * FROM hospitals")

@@ -9,7 +9,9 @@ import uuid
 import hashlib
 import traceback
 import requests
+import base64
 from spherix.services.upload_service import save_user_profile_image, upload_to_cloudinary, UPLOAD_CACHE
+from spherix.routes.gallery_data import load_gallery_metadata, save_gallery_metadata
 AYUR_MONOGRAPH_CACHE = {}
 
 def _generate_fallback_ayurveda_monograph(item):
@@ -381,9 +383,10 @@ except ImportError:
     LAB_TESTS_CATALOG = []
 
 try:
-    from drug_data import DRUG_DATABASE
+    from drug_data import DRUG_DATABASE, KNOWN_INTERACTIONS
 except ImportError:
     DRUG_DATABASE = {}
+    KNOWN_INTERACTIONS = []
 
 try:
     from ayurveda_catalog import AYURVEDA_KNOWLEDGE_BASE
@@ -2055,12 +2058,11 @@ def cancer_care():
 
 @clinical_ai_bp.route("/cancer-care/<cancer_slug>")
 def cancer_detail(cancer_slug):
-    """Displays comprehensive details of a specifically selected cancer."""
-    cancer = CANCER_DATA.get(cancer_slug)
-    if not cancer:
+    """Redirects to cancer care hub and opens side drawer for the selected cancer."""
+    if cancer_slug not in CANCER_DATA:
         flash("Cancer type not found.", "error")
         return redirect(url_for('cancer_care'))
-    return render_template("cancer_detail.html", cancer=cancer, cancer_slug=cancer_slug)
+    return redirect(url_for('cancer_care', cancer=cancer_slug))
 
 
 

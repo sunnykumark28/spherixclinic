@@ -8,7 +8,7 @@ def patient_required(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if current_user.is_doctor:
+        if getattr(current_user, 'is_doctor', False) and getattr(current_user, 'email', '') != 'admin@spherixclinic.com':
             flash("Access denied. This page is for patients only.", "error")
             return redirect(url_for('login_landing'))
         return f(*args, **kwargs)
@@ -50,6 +50,39 @@ def staff_required(f):
     def decorated_function(*args, **kwargs):
         if not getattr(current_user, 'is_staff', False):
             flash("Access denied. This page is for hospital staff only.", "error")
+            return redirect(url_for('login_landing'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def lab_required(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if not getattr(current_user, 'is_pathology_lab', False):
+            flash("Access denied. This section is restricted to registered Pathology Laboratories.", "error")
+            return redirect(url_for('login_landing'))
+        if getattr(current_user, 'status', '') != 'APPROVED':
+            status = getattr(current_user, 'status', 'PENDING_VERIFICATION')
+            if status == 'PENDING_VERIFICATION':
+                flash("Your laboratory application is under administrative review. Full dashboard access will be unlocked upon approval.", "warning")
+            elif status == 'SUSPENDED':
+                flash("Your laboratory account is currently suspended. Please contact Spherix Clinical Administration.", "error")
+            elif status == 'REJECTED':
+                reason = getattr(current_user, 'rejection_reason', '') or 'Verification criteria not met.'
+                flash(f"Laboratory application was not approved. Reason: {reason}", "error")
+            else:
+                flash("Your laboratory account is currently inactive.", "warning")
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_or_lab_required(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        is_admin = hasattr(current_user, 'email') and current_user.email == 'admin@spherixclinic.com'
+        is_lab = getattr(current_user, 'is_pathology_lab', False)
+        if not (is_admin or is_lab):
+            flash("Access denied. Authorized clinical lab or administrator credentials required.", "error")
             return redirect(url_for('login_landing'))
         return f(*args, **kwargs)
     return decorated_function

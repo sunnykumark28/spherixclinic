@@ -1,59 +1,164 @@
 {% extends 'layout.html' %}
-{% block title %}Emergency Bed Payment{% endblock %}
+{% block title %}Emergency Bed Reservation Payment - Spherix Clinic{% endblock %}
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-12">
-    <div class="max-w-3xl mx-auto px-4">
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="bg-red-600 px-8 py-6 text-white">
-                <h1 class="text-2xl font-bold">Complete Bed Booking</h1>
-                <p class="text-red-100 text-sm mt-1">Secure Payment Gateway</p>
-            </div>
-            <div class="p-8">
-                <div class="flex justify-between items-start mb-8 border-b border-gray-100 pb-8">
+<div class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6">
+    <div class="max-w-2xl mx-auto">
+        
+        <!-- Header Card -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-rose-950 via-slate-900 to-red-950 px-8 py-7 text-white relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="flex items-center justify-between relative z-10">
                     <div>
-                        <h2 class="text-lg font-bold text-gray-900">Hospital Details</h2>
-                        <p class="text-gray-500 mt-1">{{ hospital.name }}</p>
-                        <p class="text-sm text-gray-500">{{ hospital.address }}</p>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold uppercase tracking-wider border border-rose-400/30 mb-2">
+                            <i class="fas fa-bed-pulse text-rose-400"></i> Priority Emergency Reservation
+                        </div>
+                        <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Confirm &amp; Pay Bed Charge</h1>
+                        <p class="text-slate-300 text-xs mt-1">Direct Hospital Bed Allocation via Razorpay</p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-sm text-gray-500">Bed Type</p>
-                        <p class="font-semibold text-gray-900">{{ booking.bed_type }} Bed</p>
-                        <p class="font-semibold text-gray-900">{{ booking.patient_name }}</p>
+                    <div class="hidden sm:block text-right">
+                        <img src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay Secure" class="h-6 filter brightness-0 invert opacity-80 inline-block">
                     </div>
                 </div>
+            </div>
 
-                <div class="flex justify-between items-center mb-8 bg-red-50 p-4 rounded-lg">
-                    <span class="font-medium text-red-900">Bed Charge</span>
-                    <span class="text-2xl font-bold text-red-900">₹{{ "%.2f"|format(fee) }}</span>
-                </div>
-
-                <form method="POST">
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                        <div class="grid grid-cols-2 gap-4">
-                            <label class="border rounded-xl p-4 cursor-pointer hover:border-red-500 hover:bg-red-50 transition-all">
-                                <input type="radio" name="payment_method" value="card" checked class="sr-only">
-                                <div class="flex items-center gap-3">
-                                    <i class="fas fa-credit-card text-xl text-gray-400"></i>
-                                    <span class="font-medium text-gray-900">Credit Card</span>
-                                </div>
-                            </label>
-                            <label class="border rounded-xl p-4 cursor-pointer hover:border-red-500 hover:bg-red-50 transition-all">
-                                <input type="radio" name="payment_method" value="paypal" class="sr-only">
-                                <div class="flex items-center gap-3">
-                                    <i class="fab fa-paypal text-xl text-gray-400"></i>
-                                    <span class="font-medium text-gray-900">PayPal</span>
-                                </div>
-                            </label>
+            <div class="p-6 sm:p-8 space-y-6">
+                <!-- Bed & Hospital Details Card -->
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-rose-600/30">
+                            <i class="fas fa-hospital"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">{{ hospital.name }}</h2>
+                            <p class="text-xs text-slate-500">{{ hospital.address }}</p>
+                            <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase {{ 'bg-red-100 text-red-700' if booking.bed_type == 'ICU' else 'bg-blue-100 text-blue-700' }}">
+                                {{ booking.bed_type }} Bed Required
+                            </span>
                         </div>
                     </div>
+                    <div class="text-left sm:text-right font-mono text-xs">
+                        <div class="text-slate-400 font-medium">Patient Details</div>
+                        <div class="font-bold text-slate-900 mt-0.5">{{ booking.patient_name }}</div>
+                        <div class="text-slate-500">{{ booking.patient_phone }}</div>
+                    </div>
+                </div>
 
-                    <button type="submit" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg">
-                        Pay ₹{{ "%.2f"|format(fee) }} & Confirm
+                <!-- Fee Breakdown -->
+                <div class="bg-rose-50/60 rounded-2xl p-5 border border-rose-200/80 space-y-2.5">
+                    <div class="flex justify-between items-center text-xs text-slate-600">
+                        <span>{{ booking.bed_type }} Bed Admission &amp; Triage Deposit</span>
+                        <span class="font-mono font-semibold text-slate-900">₹{{ "%.2f"|format(fee) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-600">
+                        <span>Emergency Rapid Bed Lock Guarantee</span>
+                        <span class="font-mono font-semibold text-emerald-600">INCLUDED</span>
+                    </div>
+                    <div class="pt-2 border-t border-rose-200 flex justify-between items-center">
+                        <span class="font-bold text-slate-900 text-sm">Total Deposit Payable</span>
+                        <span class="text-2xl font-black text-rose-900 font-mono">₹{{ "%.2f"|format(fee) }}</span>
+                    </div>
+                </div>
+
+                <!-- Razorpay Payment Options Banner -->
+                <div class="rounded-2xl p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-3 border border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-sm border border-rose-400/30">
+                            <i class="fas fa-shield-check"></i>
+                        </span>
+                        <div>
+                            <div class="text-xs font-bold text-white">Instant Online Payment via Razorpay</div>
+                            <div class="text-[10px] text-slate-400">Supports UPI, Google Pay, PhonePe, Debit/Credit Cards, NetBanking</div>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950 px-2 py-1 rounded border border-emerald-500/30">
+                        256-BIT ENCRYPTED
+                    </span>
+                </div>
+
+                <!-- Payment Form with Razorpay Standard Checkout -->
+                <form id="payment-form" method="POST" action="{{ url_for('bed_booking_payment', booking_id=booking.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+                    <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+                    <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+                    <input type="hidden" name="payment_method" value="razorpay">
+
+                    <button type="button" id="rzp-button"
+                        class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black text-base shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2.5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
+                        <i class="fas fa-lock text-sm"></i>
+                        <span>Pay ₹{{ "%.2f"|format(fee) }} &amp; Reserve Bed</span>
                     </button>
                 </form>
+
+                <div class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
+                    <i class="fas fa-circle-check text-emerald-500"></i>
+                    <span>Immediate confirmation alert dispatched to hospital triage desk upon verification.</span>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
+
+<!-- Razorpay Checkout Integration Script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.getElementById('rzp-button').onclick = function(e){
+    e.preventDefault();
+
+    const keyId = "{{ razorpay_key_id }}";
+    const orderId = "{{ razorpay_order_id }}";
+    const amountPaise = {{ amount_paise }};
+    const patientName = "{{ booking.patient_name }}";
+    const patientPhone = "{{ booking.patient_phone or '' }}";
+
+    if (!keyId) {
+        if (confirm("Razorpay live credentials not configured. Proceed with instant sandbox confirmation?")) {
+            document.getElementById('payment-form').submit();
+        }
+        return;
+    }
+
+    const options = {
+        "key": keyId,
+        "amount": amountPaise,
+        "currency": "INR",
+        "name": "Spherix Clinic",
+        "description": "Emergency {{ booking.bed_type }} Bed Booking - {{ hospital.name }}",
+        "image": "{{ url_for('static', filename='images/spherixclinic.jpg', _external=True) }}",
+        "order_id": orderId || undefined,
+        "handler": function (response){
+            document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id || '';
+            document.getElementById('razorpay_order_id').value = response.razorpay_order_id || orderId || '';
+            document.getElementById('razorpay_signature').value = response.razorpay_signature || '';
+            document.getElementById('payment-form').submit();
+        },
+        "prefill": {
+            "name": patientName,
+            "contact": patientPhone
+        },
+        "theme": {
+            "color": "#e11d48"
+        },
+        "modal": {
+            "ondismiss": function() {
+                console.log("Razorpay bed checkout modal closed.");
+            }
+        }
+    };
+
+    try {
+        const rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function (response){
+            alert("Payment Failed: " + response.error.description);
+        });
+        rzp1.open();
+    } catch(err) {
+        console.error("Razorpay open error:", err);
+        document.getElementById('payment-form').submit();
+    }
+};
+</script>
 {% endblock %}

@@ -305,3 +305,231 @@ def send_notification_email_async(to_email, subject, body, is_html=False, attach
     )
     t.start()
     return True
+
+
+def get_account_approval_email_html(
+    entity_type="Doctor",
+    name="Valued Partner",
+    account_id="N/A",
+    license_number="N/A",
+    login_url="https://spherixclinic.com",
+    extra_details=None
+):
+    """
+    Generates an ultra-premium HTML email template for sending account approval credentials
+    (including Account ID and License Number) to Doctors, Hospitals, and Pathology Centers.
+    """
+    entity_lower = str(entity_type).strip().lower()
+    if 'hospital' in entity_lower:
+        role_title = "Hospital / Medical Center"
+        badge_text = "🏥 Hospital Network Verified"
+        role_color = "#059669"
+        accent_bg = "#ecfdf5"
+        role_greeting = f"Dear Administration of {name},"
+        welcome_msg = "We are pleased to inform you that your Hospital / Medical Facility account registration has been thoroughly inspected, verified, and officially approved by Spherix Administration. You now have full operational access to the Hospital Management Dashboard."
+        cta_text = "Access Hospital Portal"
+    elif 'pathology' in entity_lower or 'lab' in entity_lower or 'diagnostic' in entity_lower:
+        role_title = "Diagnostic & Pathology Center"
+        badge_text = "🔬 Diagnostic Center Verified"
+        role_color = "#0d9488"
+        accent_bg = "#f0fdfa"
+        role_greeting = f"Dear Medical Team at {name},"
+        welcome_msg = "Congratulations! Your Diagnostic & Pathology Laboratory registration has been verified and approved by Spherix Clinical Administration. Your facility is now active in the diagnostic network to receive doctor referrals, manage patient test bookings, and publish clinical test reports."
+        cta_text = "Access Laboratory Hub"
+    else: # Doctor / Specialist
+        clean_name = str(name).strip()
+        if not clean_name.lower().startswith('dr.'):
+            clean_name = f"Dr. {clean_name}"
+        role_title = "Doctor / Medical Specialist"
+        badge_text = "🩺 Medical Practitioner Verified"
+        role_color = "#2563eb"
+        accent_bg = "#eff6ff"
+        role_greeting = f"Dear {clean_name},"
+        welcome_msg = "We are pleased to inform you that your medical credentials and practitioner profile have been verified and approved by the Spherix Clinical Board. You now have full access to the Doctor Dashboard to manage appointments, issue diagnostic referrals, and conduct teleconsultations."
+        cta_text = "Access Doctor Portal"
+
+    year = datetime.now().year
+
+    # Build extra details table if provided
+    extra_rows = ""
+    if extra_details and isinstance(extra_details, dict):
+        for k, v in extra_details.items():
+            if v:
+                extra_rows += f"""
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 45%;">{k}:</td>
+                    <td style="padding: 6px 0; font-size: 13px; color: #0f172a; font-weight: 700; text-align: right;">{v}</td>
+                </tr>
+                """
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Approved - Spherix Clinic</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #334155; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(180deg, #0b1120 0%, #0f172a 100%); padding: 40px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45); border: 1px solid #e2e8f0;">
+                    
+                    <!-- Header Section -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 36px 32px 30px; text-align: center; border-bottom: 4px solid {role_color};">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 12px;">
+                                <tr>
+                                    <td style="background: linear-gradient(135deg, {role_color} 0%, #38bdf8 100%); width: 46px; height: 46px; border-radius: 14px; text-align: center; vertical-align: middle; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);">
+                                        <span style="font-size: 24px; color: #ffffff; line-height: 46px;">✦</span>
+                                    </td>
+                                    <td style="padding-left: 14px; text-align: left; vertical-align: middle;">
+                                        <div style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.1;">
+                                            SPHERIX<span style="color: #38bdf8;">CLINIC</span>
+                                        </div>
+                                        <div style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-top: 3px;">
+                                            Global Digital Health Network
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div style="display: inline-block; margin-top: 14px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 9999px; padding: 6px 16px;">
+                                <span style="font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 1.5px;">
+                                    {badge_text}
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 36px 32px 28px; background-color: #ffffff;">
+                            
+                            <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.3;">
+                                Account Verification Approved ✅
+                            </h1>
+                            <div style="font-size: 13px; font-weight: 700; color: {role_color}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px;">
+                                {role_title} Registration
+                            </div>
+
+                            <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: 700; color: #1e293b; line-height: 1.5;">
+                                {role_greeting}
+                            </p>
+
+                            <p style="margin: 0 0 24px 0; font-size: 14px; color: #475569; line-height: 1.6;">
+                                {welcome_msg}
+                            </p>
+
+                            <!-- Credentials Box (Account ID & License Number) -->
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(145deg, {accent_bg} 0%, #ffffff 100%); border: 2px solid {role_color}; border-radius: 18px; margin-bottom: 26px; overflow: hidden; box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.06);">
+                                <tr>
+                                    <td style="padding: 22px 24px;">
+                                        <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: {role_color}; margin-bottom: 14px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
+                                            Official Network Credentials &amp; Identifiers
+                                        </div>
+
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td style="padding: 8px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 45%;">Account / Entity ID:</td>
+                                                <td style="padding: 8px 0; text-align: right;">
+                                                    <span style="font-family: 'SFMono-Regular', Consolas, Menlo, monospace; font-size: 14px; font-weight: 800; color: #0f172a; background: #ffffff; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 8px; display: inline-block;">
+                                                        {account_id}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 45%;">Official License / Reg No:</td>
+                                                <td style="padding: 8px 0; text-align: right;">
+                                                    <span style="font-family: 'SFMono-Regular', Consolas, Menlo, monospace; font-size: 14px; font-weight: 800; color: {role_color}; background: #ffffff; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 8px; display: inline-block;">
+                                                        {license_number}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; font-size: 13px; color: #64748b; font-weight: 600;">Status:</td>
+                                                <td style="padding: 8px 0; text-align: right;">
+                                                    <span style="font-size: 12px; font-weight: 800; color: #059669; background: #dcfce7; padding: 3px 10px; border-radius: 9999px; display: inline-block;">
+                                                        ● ACTIVE &amp; APPROVED
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {extra_rows}
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 28px 0;">
+                                <a href="{login_url}" target="_blank" style="background: linear-gradient(135deg, {role_color} 0%, #0f172a 100%); color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 50px; display: inline-block; box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.25); letter-spacing: 0.5px;">
+                                    {cta_text} &rarr;
+                                </a>
+                            </div>
+
+                            <!-- Helpful Tips / Notice -->
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                                <tr>
+                                    <td style="padding: 16px 20px;">
+                                        <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
+                                            💡 Next Steps:
+                                        </div>
+                                        <div style="font-size: 12px; color: #64748b; line-height: 1.6;">
+                                            Log in using your registered email and password. Visit your <strong>Dashboard Settings</strong> to update banking settlement accounts, operating schedules, and medical staff profiles.
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5; text-align: center;">
+                                Need help getting started? Contact our 24/7 dedicated partner onboarding desk at <strong>support@spherixclinic.com</strong>.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #0f172a; padding: 26px 32px; text-align: center; border-top: 1px solid #1e293b;">
+                            <div style="font-size: 13px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px;">
+                                Spherix Clinic Global Health Intelligence
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; line-height: 1.5; margin-bottom: 12px;">
+                                HQ Motihari, Bihar State 845401, India &bull; Support: support@spherixclinic.com &bull; +91 933 4325 920
+                            </div>
+                            <div style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
+                                🔒 256-Bit TLS Encrypted Transmission &bull; &copy; {year} Spherix Clinic. All rights reserved.
+                            </div>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+
+
+def send_approval_notification(entity_type, name, to_email, account_id, license_number, login_url, extra_details=None):
+    """
+    Sends an automated, styled approval email containing the entity's ID number,
+    license number, and direct login URL to their registered email address.
+    """
+    if not to_email:
+        return False
+    
+    subject = f"Account Approved & Activated ({entity_type} ID: {account_id}) - Spherix Clinic"
+    html_content = get_account_approval_email_html(
+        entity_type=entity_type,
+        name=name,
+        account_id=account_id,
+        license_number=license_number,
+        login_url=login_url,
+        extra_details=extra_details
+    )
+    return send_notification_email_async(
+        to_email=to_email,
+        subject=subject,
+        body=html_content,
+        is_html=True
+    )

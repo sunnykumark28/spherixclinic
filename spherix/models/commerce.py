@@ -1,5 +1,5 @@
 from datetime import datetime
-from spherix.config import utcnow
+from spherix.config import utcnow, ensure_safe_date
 
 class Review:
     def __init__(self, id, doctor_id, patient_id, patient_name, rating, comment=None, **kwargs):
@@ -9,7 +9,7 @@ class Review:
         self.patient_name = patient_name
         self.rating = int(rating) if rating is not None else 5
         self.comment = comment
-        self.created_at = kwargs.get('created_at', utcnow())
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
 
     @property
     def doctor(self):
@@ -28,13 +28,7 @@ class Feedback:
         self.target_id = kwargs.get('target_id')
         self.target_name = kwargs.get('target_name')
         dt = kwargs.get('created_at', utcnow())
-        if isinstance(dt, str):
-            try:
-                self.created_at = datetime.fromisoformat(dt.replace('Z', '+00:00'))
-            except ValueError:
-                self.created_at = utcnow()
-        else:
-            self.created_at = dt
+        self.created_at = ensure_safe_date(dt)
 
     @property
     def patient(self):
@@ -55,14 +49,7 @@ class Message:
         self.sender = sender
         self.content = content
         self.attachment_url = kwargs.get('attachment_url')
-        
-        created_at_val = kwargs.get('created_at', utcnow())
-        if isinstance(created_at_val, str):
-            try:
-                created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
-            except ValueError:
-                created_at_val = utcnow()
-        self.created_at = created_at_val
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
 
     @property
     def doctor(self):
@@ -76,14 +63,17 @@ class Message:
 
 
 class Order:
-    def __init__(self, id, patient_id, items, total_price, shipping_address, order_date, status='Processing'):
+    def __init__(self, id, patient_id, items, total_price, shipping_address, order_date, status='Processing', prescription=None, payment_method='cod', **kwargs):
         self.id = id
         self.patient_id = patient_id
         self.items = items
         self.total_price = total_price
         self.shipping_address = shipping_address
-        self.order_date = order_date
+        self.order_date = ensure_safe_date(order_date)
         self.status = status
+        self.prescription = prescription or kwargs.get('prescription')
+        self.payment_method = payment_method or kwargs.get('payment_method', 'cod')
+        self.tracking_code = kwargs.get('tracking_code', f"TRK-{id}-1MG")
 
 
 class ActivityLog:
@@ -93,14 +83,7 @@ class ActivityLog:
         self.user_name = user_name
         self.action = action
         self.details = details
-        
-        created_at_val = kwargs.get('created_at', utcnow())
-        if isinstance(created_at_val, str):
-            try:
-                created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
-            except ValueError:
-                created_at_val = utcnow()
-        self.created_at = created_at_val
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
 
 
 class Referral:
@@ -111,7 +94,7 @@ class Referral:
         self.referred_doctor_id = referred_doctor_id
         self.reason = reason
         self.status = status
-        self.created_at = kwargs.get('created_at', utcnow())
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
 
     @property
     def patient(self):
@@ -137,4 +120,4 @@ class Notification:
         self.message = message
         self.link = link
         self.status = status
-        self.created_at = kwargs.get('created_at', utcnow())
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))

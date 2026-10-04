@@ -3,7 +3,7 @@ from datetime import datetime
 from flask_login import UserMixin
 from spherix.config import (
     utcnow, GLOBAL_COUNTRY_FLAGS, GLOBAL_COUNTRY_TIMEZONES,
-    format_dual_currency, generate_user_license_id
+    format_dual_currency, generate_user_license_id, ensure_safe_date
 )
 
 class Doctor(UserMixin):
@@ -60,6 +60,10 @@ class Doctor(UserMixin):
 
     def get_id(self):
         return f"doctor-{self.id}"
+
+    @property
+    def name(self):
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def country_flag(self):
@@ -302,9 +306,9 @@ class BloodDonor(UserMixin):
         self.age = age
         self.city = city
         self.password = password
-        self.last_donation = last_donation
+        self.last_donation = ensure_safe_date(last_donation)
         self.profile_picture_url = kwargs.get('profile_picture_url')
-        self.created_at = kwargs.get('created_at', utcnow())
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('donor_card_id') or generate_user_license_id('blood_donor')
         self.license_no = self.license_number
         self.donor_card_id = self.license_number
@@ -344,7 +348,7 @@ class OrganDonor(UserMixin):
         self.city = city
         self.password = password
         self.profile_picture_url = kwargs.get('profile_picture_url')
-        self.created_at = kwargs.get('created_at', utcnow())
+        self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('pledge_id') or generate_user_license_id('organ_donor')
         self.license_no = self.license_number
         self.pledge_id = self.license_number
@@ -370,3 +374,67 @@ class OrganDonor(UserMixin):
     @property
     def appointments(self):
         return []
+
+
+class PathologyLab(UserMixin):
+    def __init__(self, id, legal_name, display_name, email, password, **kwargs):
+        self.id = id
+        self.legal_name = legal_name
+        self.display_name = display_name
+        self.name = display_name or legal_name
+        self.email = email
+        self.password = password
+        self.registration_number = kwargs.get('registration_number', '')
+        self.lab_type = kwargs.get('lab_type', 'Independent Pathology Lab')
+        self.owner_name = kwargs.get('owner_name', '')
+        self.phone = kwargs.get('phone', '')
+        self.address = kwargs.get('address', '')
+        self.city = kwargs.get('city', '')
+        self.state = kwargs.get('state', '')
+        self.pincode = kwargs.get('pincode', '')
+        self.latitude = float(kwargs.get('latitude') or 0.0)
+        self.longitude = float(kwargs.get('longitude') or 0.0)
+        self.service_radius_km = float(kwargs.get('service_radius_km') or 15.0)
+        self.license_number = kwargs.get('license_number', '')
+        self.nabl_accreditation_number = kwargs.get('nabl_accreditation_number', '')
+        self.nabl_scope = kwargs.get('nabl_scope', '')
+        self.is_nabl_accredited = bool(kwargs.get('is_nabl_accredited', False))
+        self.home_collection_available = bool(kwargs.get('home_collection_available', True))
+        self.walkin_available = bool(kwargs.get('walkin_available', True))
+        self.operating_hours = kwargs.get('operating_hours', '07:00 AM - 09:00 PM')
+        self.bank_name = kwargs.get('bank_name', '')
+        self.account_number = kwargs.get('account_number', '')
+        self.account_holder = kwargs.get('account_holder', '')
+        self.ifsc_code = kwargs.get('ifsc_code', '')
+        self.status = kwargs.get('status', 'PENDING_VERIFICATION')
+        self.rejection_reason = kwargs.get('rejection_reason', '')
+        self.correction_request = kwargs.get('correction_request', '')
+        self._is_active = bool(kwargs.get('is_active', True))
+        self.is_pathology_lab = True
+        self.is_doctor = False
+        self.is_hospital = False
+        self.is_patient = False
+        self.is_staff = False
+        self.is_blood_donor = False
+        self.is_organ_donor = False
+        self.role = 'Pathology Lab'
+
+    def get_id(self):
+        return f"pathology_lab-{self.id}"
+
+    @property
+    def is_active(self):
+        return self._is_active and (self.status in ['APPROVED', 'PENDING_VERIFICATION'])
+
+    @is_active.setter
+    def is_active(self, val):
+        self._is_active = bool(val)
+
+    @property
+    def is_approved(self):
+        return self.status == 'APPROVED' and self._is_active
+
+    @property
+    def appointments(self):
+        return []
+

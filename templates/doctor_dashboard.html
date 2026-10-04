@@ -2178,90 +2178,419 @@
       </section>
 
       <!-- ============================================================== -->
-      <!-- 12. LAB REPORTS & ORDERS                                       -->
+      <!-- 12. DIAGNOSTIC REFERRAL & PATHOLOGY PORTAL                     -->
       <!-- ============================================================== -->
       <section id="tab-lab_requests" class="tab-section">
-        <div class="row g-4">
-          <div class="col-lg-5">
-            <div class="doc-card">
-              <h5 class="fw-bold text-slate-900 mb-3"><i class="fas fa-flask text-primary me-2"></i>Order New Laboratory Test</h5>
-              <form action="/doctor/lab-request/add" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <div class="mb-3">
-                  <label class="form-label text-xs fw-bold text-muted">Select Patient <span class="text-danger">*</span></label>
-                  <select class="form-select rounded-pill" name="patient_id" required>
-                    <option value="">-- Choose Patient --</option>
-                    {% for pat in patients %}
-                    <option value="{{ pat.id }}">{{ pat.name }} (ID: {{ pat.id }})</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label text-xs fw-bold text-muted">Select Diagnostic Test <span class="text-danger">*</span></label>
-                  <select class="form-select rounded-pill" name="test_name" required>
-                    <option value="">-- Select Diagnostic Test --</option>
-                    <option value="Complete Blood Count (CBC)">Complete Blood Count (CBC)</option>
-                    <option value="Lipid Profile / Cholesterol">Lipid Profile / Cholesterol</option>
-                    <option value="Thyroid Profile (T3, T4, TSH)">Thyroid Profile (T3, T4, TSH)</option>
-                    <option value="Liver Function Test (LFT)">Liver Function Test (LFT)</option>
-                    <option value="Kidney Function Test (KFT)">Kidney Function Test (KFT)</option>
-                    <option value="HbA1c (Glycated Hemoglobin)">HbA1c (Glycated Hemoglobin)</option>
-                    <option value="Urinalysis Routine">Urinalysis Routine</option>
-                    <option value="Serum Electrolytes">Serum Electrolytes</option>
-                  </select>
-                </div>
-                <div class="mb-4">
-                  <label class="form-label text-xs fw-bold text-muted">Clinical Notes & Lab Instructions</label>
-                  <textarea class="form-control rounded-3" name="notes" rows="4" placeholder="Specific clinical parameters or special instructions..."></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary rounded-pill w-100 py-2.5 fw-bold shadow-sm">
-                  <i class="fas fa-paper-plane me-1.5"></i> Submit Diagnostic Order
-                </button>
-              </form>
+        <div class="doc-card mb-4">
+          <!-- Header -->
+          <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 border-bottom pb-3">
+            <div>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-purple-100 text-purple-800 font-monospace text-xs px-2.5 py-1 rounded-pill fw-bold">
+                  <i class="fas fa-stethoscope me-1"></i> Specialist Referral Suite
+                </span>
+                <span class="badge bg-indigo-100 text-indigo-800 text-xs px-2.5 py-1 rounded-pill fw-semibold">
+                  <i class="fas fa-network-wired me-1"></i> Verified Lab Network
+                </span>
+              </div>
+              <h4 class="fw-bold text-slate-900 mb-0">Diagnostic Test Referrals &amp; Laboratory Orders</h4>
+              <p class="text-muted small mb-0">Prescribe diagnostic tests, compare approved local pathology providers, transmit digital referrals, and track verified laboratory results.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-purple rounded-pill px-3.5 py-1.5 text-xs fw-bold" onclick="switchDocDiagTab('tab-referrals-list')">
+                <i class="fas fa-list-check me-1.5"></i> View Issued Referrals ({{ diagnostic_referrals|length }})
+              </button>
+              <button type="button" class="btn btn-primary rounded-pill px-4 py-1.5 text-xs fw-bold shadow-sm" onclick="switchDocDiagTab('tab-new-referral')">
+                <i class="fas fa-plus-circle me-1.5"></i> New Diagnostic Referral
+              </button>
             </div>
           </div>
 
-          <div class="col-lg-7">
-            <div class="doc-card">
-              <h5 class="fw-bold text-slate-900 mb-3"><i class="fas fa-history text-secondary me-2"></i>Ordered Diagnostic History</h5>
-              <div class="table-responsive">
-                <table class="table align-middle table-hover">
-                  <thead class="bg-light">
-                    <tr class="text-muted small">
-                      <th>Order ID</th>
-                      <th>Patient</th>
-                      <th>Diagnostic Test</th>
-                      <th>Ordered Date</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% if lab_requests %}
-                    {% for req in lab_requests %}
-                    <tr>
-                      <td class="fw-bold text-slate-800">#LAB-{{ req.id }}</td>
-                      <td>{{ req.patient_name }}</td>
-                      <td>{{ req.test_name }}</td>
-                      <td>{{ req.created_at.strftime('%d %b, %Y') if req.created_at else 'N/A' }}</td>
-                      <td>
-                        <span class="badge rounded-pill {% if req.status == 'completed' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}">
-                          {{ req.status|capitalize }}
-                        </span>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                    {% else %}
-                    <tr>
-                      <td colspan="5" class="text-center py-5 text-muted">No lab requests issued yet.</td>
-                    </tr>
-                    {% endif %}
-                  </tbody>
-                </table>
+          <!-- Doctor Diagnostic Nav Pills -->
+          <ul class="nav nav-pills gap-2 mb-4 bg-slate-100 p-1.5 rounded-4" id="docDiagNav">
+            <li class="nav-item">
+              <button class="nav-link active rounded-pill px-3.5 py-2 text-xs fw-semibold text-slate-700" id="btnDocDiagNew" onclick="switchDocDiagTab('tab-new-referral')">
+                <i class="fas fa-file-medical text-primary me-1.5"></i> Issue New Referral
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-semibold text-slate-700" id="btnDocDiagList" onclick="switchDocDiagTab('tab-referrals-list')">
+                <i class="fas fa-history text-purple-600 me-1.5"></i> Referral History &amp; Lab Reports
+                {% if diagnostic_referrals|length > 0 %}
+                <span class="badge bg-purple-600 text-white rounded-pill ms-1 text-xxs">{{ diagnostic_referrals|length }}</span>
+                {% endif %}
+              </button>
+            </li>
+            {% if lab_requests and lab_requests|length > 0 %}
+            <li class="nav-item">
+              <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-semibold text-slate-700" id="btnDocDiagLegacy" onclick="switchDocDiagTab('tab-legacy-orders')">
+                <i class="fas fa-notes-medical text-secondary me-1.5"></i> Consultation Orders ({{ lab_requests|length }})
+              </button>
+            </li>
+            {% endif %}
+          </ul>
+
+          <!-- PANE 1: ISSUE NEW DIAGNOSTIC REFERRAL -->
+          <div id="tab-new-referral" class="doc-diag-pane">
+            <form action="{{ url_for('pathology.doctor_create_diagnostic_referral') }}" method="POST" id="doctorReferralForm">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="selected_lab_id" id="docReferralSelectedLabId">
+
+              <div class="row g-4">
+                <!-- Left Column: Patient & Clinical Prescription -->
+                <div class="col-lg-6">
+                  <div class="p-4 rounded-4 border border-slate-200 bg-white">
+                    <h5 class="fw-bold text-slate-900 mb-3"><i class="fas fa-user-injured text-indigo-600 me-2"></i>1. Patient &amp; Priority</h5>
+                    
+                    <!-- Patient Selector -->
+                    <div class="mb-3">
+                      <label class="form-label text-xs fw-bold text-slate-700">Select Patient <span class="text-danger">*</span></label>
+                      <select class="form-select rounded-3" name="patient_id" id="docReferralPatientSelect" required onchange="handleReferralPatientChange()">
+                        <option value="">-- Choose Patient --</option>
+                        {% for pat in patients %}
+                        <option value="{{ pat.id }}" data-name="{{ pat.name }}" data-address="{{ pat.address or '' }}" data-phone="{{ pat.phone or '' }}" data-lat="{{ pat.latitude or '0.0' }}" data-lng="{{ pat.longitude or '0.0' }}">
+                          {{ pat.name }} (ID: {{ pat.id }}) &bull; {{ pat.gender or 'N/A' }}, {{ pat.age or '' }} yrs
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <!-- Priority Selection -->
+                    <div class="mb-3">
+                      <label class="form-label text-xs fw-bold text-slate-700">Referral Clinical Priority <span class="text-danger">*</span></label>
+                      <div class="d-flex gap-2">
+                        <label class="btn btn-outline-primary btn-sm rounded-pill flex-fill text-xs py-2 d-flex align-items-center justify-content-center gap-1.5">
+                          <input type="radio" name="priority" value="ROUTINE" checked class="form-check-input m-0">
+                          <span>ROUTINE</span>
+                        </label>
+                        <label class="btn btn-outline-warning btn-sm rounded-pill flex-fill text-xs py-2 d-flex align-items-center justify-content-center gap-1.5">
+                          <input type="radio" name="priority" value="URGENT" class="form-check-input m-0">
+                          <span>URGENT</span>
+                        </label>
+                        <label class="btn btn-outline-danger btn-sm rounded-pill flex-fill text-xs py-2 d-flex align-items-center justify-content-center gap-1.5">
+                          <input type="radio" name="priority" value="TIME_SENSITIVE" class="form-check-input m-0">
+                          <span>TIME SENSITIVE</span>
+                        </label>
+                      </div>
+                      <small class="text-muted text-xxs mt-1 d-block">Note: Routine diagnostic referrals do not replace emergency department triage.</small>
+                    </div>
+
+                    <!-- Clinical Indication -->
+                    <div class="mb-3">
+                      <label class="form-label text-xs fw-bold text-slate-700">Clinical Indication / Diagnosis Rationale <span class="text-danger">*</span></label>
+                      <textarea class="form-control rounded-3" name="clinical_indication" rows="2" placeholder="e.g. Unexplained fatigue, suspected iron deficiency anemia, baseline monitoring for hypertension..." required></textarea>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="mb-3">
+                      <label class="form-label text-xs fw-bold text-slate-700">Special Instructions to Lab / Pathologist</label>
+                      <textarea class="form-control rounded-3" name="doctor_instructions" rows="2" placeholder="e.g. Please verify peripheral blood smear if platelets &lt; 150,000; observe strict 12hr fasting..."></textarea>
+                    </div>
+
+                    <!-- Patient Location -->
+                    <div class="mb-0">
+                      <label class="form-label text-xs fw-bold text-slate-700">Patient Residence / Search Location</label>
+                      <input type="text" class="form-control rounded-3" name="patient_location" id="docReferralLocationInput" placeholder="Area, Landmark or City for laboratory matching">
+                      <input type="hidden" id="docReferralLat" value="0.0">
+                      <input type="hidden" id="docReferralLng" value="0.0">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right Column: Diagnostic Test Multi-Selector & Lab Matching -->
+                <div class="col-lg-6">
+                  <div class="p-4 rounded-4 border border-slate-200 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h5 class="fw-bold text-slate-900 mb-0"><i class="fas fa-vials text-indigo-600 me-2"></i>2. Prescribe Tests</h5>
+                      <span class="badge bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded-pill fw-bold" id="docSelectedTestsCount">0 Tests Selected</span>
+                    </div>
+
+                    <!-- Test Search Input -->
+                    <div class="input-group input-group-sm mb-2 rounded-pill border overflow-hidden">
+                      <span class="input-group-text bg-white border-0"><i class="fas fa-search text-slate-400"></i></span>
+                      <input type="text" id="docTestSearchInput" class="form-control border-0 ps-1" placeholder="Filter FBS, CBC, LFT, Lipid, HbA1c, Thyroid..." oninput="filterDocDiagnosticTests()">
+                    </div>
+
+                    <!-- Tests Checkbox List -->
+                    <div class="overflow-y-auto border rounded-3 p-2.5 mb-3 bg-slate-50" id="docTestsList" style="max-height: 200px;">
+                      {% for t in diagnostic_tests %}
+                      <div class="form-check py-1 px-2 border-bottom border-slate-200 doc-test-check-item" data-test-name="{{ t.test_name|lower }}" data-test-code="{{ (t.test_code or '')|lower }}">
+                        <input class="form-check-input doc-test-cb" type="checkbox" name="test_ids" value="{{ t.id }}" id="docTest_{{ t.id }}" data-name="{{ t.test_name }}" onchange="updateDocTestSelection()">
+                        <label class="form-check-label text-xs fw-semibold text-slate-800 d-flex justify-content-between align-items-center w-100" for="docTest_{{ t.id }}">
+                          <span>{{ t.test_name }}</span>
+                          <span class="badge bg-white text-indigo-600 border text-xxs font-monospace">{{ t.test_code }}</span>
+                        </label>
+                      </div>
+                      {% endfor %}
+                    </div>
+
+                    <!-- Find Approved Labs Button -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <h6 class="fw-bold text-slate-800 text-xs uppercase tracking-wider mb-0">3. Select Approved Pathology Lab</h6>
+                      <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-3 fw-bold" onclick="matchLabsForDoctorReferral()">
+                        <i class="fas fa-search-location me-1"></i> Match Labs
+                      </button>
+                    </div>
+
+                    <!-- Matched Labs Container -->
+                    <div id="docMatchedLabsBox" class="p-2.5 border rounded-3 bg-slate-50 overflow-y-auto mb-3" style="max-height: 180px;">
+                      <div class="text-center py-3 text-slate-400 text-xs">
+                        <i class="fas fa-hospital-alt mb-1 fs-5 text-slate-300 d-block"></i>
+                        Select tests and click "Match Labs" to view certified pathology centers offering all prescribed tests.
+                      </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary rounded-pill w-100 py-2.5 fw-bold shadow-sm" id="btnSubmitDocReferral">
+                      <i class="fas fa-paper-plane me-1.5"></i> Transmit Certified Referral
+                    </button>
+                  </div>
+                </div>
               </div>
+            </form>
+          </div>
+
+          <!-- PANE 2: REFERRAL HISTORY & VERIFIED REPORTS -->
+          <div id="tab-referrals-list" class="doc-diag-pane d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold text-slate-900 mb-0"><i class="fas fa-history text-purple-600 me-2"></i>Diagnostic Referrals Issued by You</h5>
+              <span class="text-secondary small">{{ diagnostic_referrals|length }} total referrals</span>
+            </div>
+
+            {% if diagnostic_referrals and diagnostic_referrals|length > 0 %}
+            <div class="d-flex flex-column gap-3">
+              {% for ref in diagnostic_referrals %}
+              <div class="p-4 rounded-4 border border-slate-200 bg-white shadow-xs">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                  <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                      <span class="badge bg-purple-900 text-white font-monospace px-2.5 py-1 rounded">
+                        {{ ref.referral_number }}
+                      </span>
+                      <span class="badge rounded-pill px-2.5 py-1 text-xs fw-bold
+                        {% if ref.priority == 'URGENT' %}bg-amber-100 text-amber-800 border border-amber-300
+                        {% elif ref.priority == 'TIME_SENSITIVE' %}bg-rose-100 text-rose-800 border border-rose-300
+                        {% else %}bg-sky-100 text-sky-800 border border-sky-300{% endif %}">
+                        {{ ref.priority }}
+                      </span>
+                      <span class="badge bg-slate-100 text-slate-800 border text-xs px-2.5 py-1 rounded-pill">
+                        Status: {{ ref.status }}
+                      </span>
+                      {% if ref.booking_status %}
+                      <span class="badge bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2.5 py-1 rounded-pill">
+                        Booking: {{ ref.booking_status }}
+                      </span>
+                      {% endif %}
+                    </div>
+                    <h5 class="fw-bold text-slate-900 mb-0">Patient: {{ ref.patient_name or 'Patient' }}</h5>
+                    <small class="text-secondary">Issued: {{ ref.created_at }} &bull; Assigned Lab: <strong>{{ ref.lab_name or 'Unassigned' }}</strong></small>
+                  </div>
+
+                  <div class="d-flex gap-2">
+                    {% if ref.reports and ref.reports|length > 0 %}
+                      {% for rep in ref.reports %}
+                      <a href="{{ url_for('pathology.download_diagnostic_report', report_id=rep.id) }}" target="_blank" class="btn btn-sm btn-emerald text-white rounded-pill px-3 fw-bold" style="background-color: #059669;">
+                        <i class="fas fa-file-pdf me-1"></i> View Report ({{ rep.version|default('v1') }})
+                      </a>
+                      {% endfor %}
+                    {% endif %}
+
+                    {% if ref.status == 'ISSUED' %}
+                    <form action="{{ url_for('pathology.doctor_cancel_diagnostic_referral', referral_id=ref.id) }}" method="POST" onsubmit="return confirm('Cancel this unfulfilled diagnostic referral?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold">
+                        <i class="fas fa-ban me-1"></i> Cancel
+                      </button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-3 bg-slate-50 border border-slate-200 mb-2">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <strong class="text-xs text-slate-500 uppercase tracking-wider d-block">Clinical Indication:</strong>
+                      <span class="text-sm text-slate-800">{{ ref.clinical_indication }}</span>
+                    </div>
+                    {% if ref.doctor_instructions %}
+                    <div class="col-md-6">
+                      <strong class="text-xs text-slate-500 uppercase tracking-wider d-block">Instructions:</strong>
+                      <span class="text-sm text-slate-800">{{ ref.doctor_instructions }}</span>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div>
+                  <strong class="text-xs text-slate-500 uppercase tracking-wider d-block mb-1">Prescribed Tests:</strong>
+                  <div class="d-flex flex-wrap gap-1.5">
+                    {% for itm in ref.tests %}
+                    <span class="badge bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-pill text-xs fw-semibold">
+                      <i class="fas fa-vial text-purple-500 me-1"></i> {{ itm.test_name }} ({{ itm.test_code }})
+                    </span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 border rounded-4 bg-slate-50">
+              <i class="fas fa-clipboard-list fs-1 text-slate-300 mb-2 d-block"></i>
+              <h5 class="fw-bold text-slate-700">No diagnostic referrals issued</h5>
+              <p class="text-secondary small mb-3">You have not issued any laboratory diagnostic referrals yet.</p>
+              <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="switchDocDiagTab('tab-new-referral')">
+                <i class="fas fa-plus-circle me-1.5"></i> Issue First Diagnostic Referral
+              </button>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- PANE 3: CONSULTATION ORDERS (LEGACY) -->
+          {% if lab_requests and lab_requests|length > 0 %}
+          <div id="tab-legacy-orders" class="doc-diag-pane d-none">
+            <h5 class="fw-bold text-slate-900 mb-3"><i class="fas fa-notes-medical text-secondary me-2"></i>Consultation Laboratory Orders</h5>
+            <div class="table-responsive">
+              <table class="table align-middle table-hover">
+                <thead class="bg-light">
+                  <tr class="text-muted small">
+                    <th>Order ID</th>
+                    <th>Patient</th>
+                    <th>Diagnostic Test</th>
+                    <th>Ordered Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for req in lab_requests %}
+                  <tr>
+                    <td class="fw-bold text-slate-800">#LAB-{{ req.id }}</td>
+                    <td>{{ req.patient_name }}</td>
+                    <td>{{ req.test_name }}</td>
+                    <td>{{ req.created_at.strftime('%d %b, %Y') if req.created_at else 'N/A' }}</td>
+                    <td>
+                      <span class="badge rounded-pill {% if req.status == 'completed' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}">
+                        {{ req.status|capitalize }}
+                      </span>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
             </div>
           </div>
+          {% endif %}
         </div>
       </section>
+
+      <!-- DOCTOR DIAGNOSTIC PORTAL JAVASCRIPT -->
+      <script>
+        function switchDocDiagTab(paneId) {
+          document.querySelectorAll('.doc-diag-pane').forEach(p => p.classList.add('d-none'));
+          const target = document.getElementById(paneId);
+          if (target) target.classList.remove('d-none');
+
+          const navBtns = document.querySelectorAll('#docDiagNav .nav-link');
+          navBtns.forEach(b => {
+            b.classList.remove('active', 'bg-white', 'text-slate-900', 'shadow-sm');
+            b.classList.add('text-slate-700');
+          });
+
+          if (paneId === 'tab-new-referral') {
+            document.getElementById('btnDocDiagNew')?.classList.add('active', 'bg-white', 'text-slate-900', 'shadow-sm');
+          } else if (paneId === 'tab-referrals-list') {
+            document.getElementById('btnDocDiagList')?.classList.add('active', 'bg-white', 'text-slate-900', 'shadow-sm');
+          } else if (paneId === 'tab-legacy-orders') {
+            document.getElementById('btnDocDiagLegacy')?.classList.add('active', 'bg-white', 'text-slate-900', 'shadow-sm');
+          }
+        }
+
+        function handleReferralPatientChange() {
+          const select = document.getElementById('docReferralPatientSelect');
+          const opt = select.options[select.selectedIndex];
+          if (!opt || !opt.value) return;
+
+          const address = opt.getAttribute('data-address') || '';
+          const lat = opt.getAttribute('data-lat') || '0.0';
+          const lng = opt.getAttribute('data-lng') || '0.0';
+
+          const locInput = document.getElementById('docReferralLocationInput');
+          if (locInput) locInput.value = address;
+          document.getElementById('docReferralLat').value = lat;
+          document.getElementById('docReferralLng').value = lng;
+        }
+
+        function filterDocDiagnosticTests() {
+          const q = (document.getElementById('docTestSearchInput')?.value || '').toLowerCase().trim();
+          const items = document.querySelectorAll('.doc-test-check-item');
+          items.forEach(it => {
+            const name = it.getAttribute('data-test-name') || '';
+            const code = it.getAttribute('data-test-code') || '';
+            const match = !q || name.includes(q) || code.includes(q);
+            it.style.display = match ? 'block' : 'none';
+          });
+        }
+
+        function updateDocTestSelection() {
+          const selected = document.querySelectorAll('.doc-test-cb:checked');
+          const badge = document.getElementById('docSelectedTestsCount');
+          if (badge) {
+            badge.textContent = `${selected.length} Test${selected.length !== 1 ? 's' : ''} Selected`;
+          }
+        }
+
+        async function matchLabsForDoctorReferral() {
+          const selected = document.querySelectorAll('.doc-test-cb:checked');
+          if (selected.length === 0) {
+            alert('Please select at least one test to prescribe.');
+            return;
+          }
+
+          const box = document.getElementById('docMatchedLabsBox');
+          box.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><div class="text-xs text-muted mt-1">Finding approved laboratories...</div></div>';
+
+          const testIds = Array.from(selected).map(cb => cb.value).join(',');
+          const lat = document.getElementById('docReferralLat')?.value || '0.0';
+          const lng = document.getElementById('docReferralLng')?.value || '0.0';
+          const address = document.getElementById('docReferralLocationInput')?.value || '';
+
+          try {
+            const res = await fetch(`/api/diagnostics/matching-labs?test_ids=${encodeURIComponent(testIds)}&lat=${lat}&lng=${lng}&address=${encodeURIComponent(address)}&radius=50`);
+            const data = await res.json();
+
+            if (!data.success || !data.labs || data.labs.length === 0) {
+              box.innerHTML = '<div class="text-center py-3 text-warning text-xs"><i class="fas fa-exclamation-triangle me-1"></i> No local approved labs found offering all selected tests. You can still transmit referral to Spherix network.</div>';
+              return;
+            }
+
+            box.innerHTML = '';
+            data.labs.forEach((lab, idx) => {
+              const label = document.createElement('label');
+              label.className = 'd-flex justify-content-between align-items-center p-2 rounded-2 border bg-white mb-1.5 cursor-pointer hover-bg-slate-50';
+              label.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                  <input type="radio" name="selected_lab_radio" value="${lab.id}" class="form-check-input m-0" ${idx === 0 ? 'checked' : ''} onchange="document.getElementById('docReferralSelectedLabId').value = this.value">
+                  <div>
+                    <div class="text-xs fw-bold text-slate-800">${lab.display_name}</div>
+                    <small class="text-muted text-xxs">${lab.distance_km.toFixed(1)} km &bull; ${lab.city} ${lab.is_nabl_accredited ? '&bull; NABL' : ''}</small>
+                  </div>
+                </div>
+                <div class="text-end">
+                  <span class="text-xs fw-bold text-slate-900">₹${lab.total_price.toFixed(2)}</span>
+                </div>
+              `;
+              box.appendChild(label);
+            });
+
+            // Set initial selected lab
+            if (data.labs.length > 0) {
+              document.getElementById('docReferralSelectedLabId').value = data.labs[0].id;
+            }
+          } catch (e) {
+            box.innerHTML = `<div class="text-center py-2 text-danger text-xs">Error finding labs: ${e.message}</div>`;
+          }
+        }
+      </script>
 
       <!-- ============================================================== -->
       <!-- 13. TELEMEDICINE & VIRTUAL CONSULTATIONS                       -->

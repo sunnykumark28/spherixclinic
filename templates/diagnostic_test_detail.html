@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ item.name }} • Spherix Lab Diagnostic Test Monograph &amp; Booking</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Razorpay Checkout Official SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spherix: {
+                            50: '#f0f7fc',
+                            100: '#e0f0f9',
+                            500: '#0284c7',
+                            700: '#005691',
+                            800: '#003e6b',
+                            900: '#002d62'
+                        },
+                        amber: {
+                            400: '#fdb813',
+                            500: '#f59e0b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', '-apple-system', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .registered-lab-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            transition: all 0.2s ease;
+            background: #ffffff;
+            cursor: pointer;
+        }
+        .registered-lab-card:hover {
+            border-color: #005691;
+            background: #f8fafc;
+        }
+        .registered-lab-card.selected {
+            border-color: #005691;
+            background: #f0f7fc;
+            box-shadow: 0 4px 14px rgba(0, 86, 145, 0.15);
+        }
+
+        /* Tube Colors */
+        .tube-purple { background-color: #7e22ce; color: #ffffff; }
+        .tube-yellow { background-color: #eab308; color: #000000; }
+        .tube-grey { background-color: #64748b; color: #ffffff; }
+        .tube-blue { background-color: #0284c7; color: #ffffff; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col justify-between selection:bg-[#005691] selection:text-white">
+
+    <!-- ================= 1. STANDALONE TOP HEADER (NO LAYOUT.HTML) ================= -->
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+            
+            <!-- Brand Logo & Badge -->
+            <div class="flex items-center gap-3">
+                <a href="/medical-lab" class="flex items-center gap-2.5 text-decoration-none group">
+                    <img src="{{ url_for('static', filename='images/spherix_lab_logo.png') }}" class="h-10 sm:h-11 w-auto object-contain group-hover:scale-105 transition-transform" alt="Spherix Lab">
+                    <div>
+                        <div class="text-base font-black text-slate-900 tracking-tight leading-none group-hover:text-[#005691] transition-colors">
+                            SPHERIX <span class="text-[#005691]">LAB</span>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Diagnostic Monograph</div>
+                    </div>
+                </a>
+
+                <div class="hidden md:flex items-center gap-2 pl-4 border-l border-slate-200 text-xs font-semibold text-slate-600">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-black border border-emerald-200">
+                        <i class="fas fa-check-circle text-emerald-600"></i> NABL &amp; CAP Certified
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-[#005691] text-[10px] font-black border border-blue-200">
+                        <i class="fas fa-barcode"></i> 100% Barcode Tracking
+                    </span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2.5">
+                <a href="/medical-lab" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5">
+                    <i class="fas fa-arrow-left text-[11px]"></i>
+                    <span class="hidden sm:inline">All Tests &amp; Packages</span>
+                </a>
+
+                {% if current_user.is_authenticated and session.get('user_role') == 'patient' %}
+                <a href="{{ url_for('patient_dashboard') }}" class="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold text-xs transition-colors flex items-center gap-1.5">
+                    <i class="fas fa-user-circle text-emerald-600"></i>
+                    <span class="hidden sm:inline">{{ current_user.name or 'Dashboard' }}</span>
+                </a>
+                {% else %}
+                <a href="{{ url_for('patient_login', next=request.url) }}" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-bold text-xs transition-colors flex items-center gap-1.5">
+                    <i class="fas fa-arrow-right-to-bracket text-slate-600"></i>
+                    <span>Patient Login</span>
+                </a>
+                {% endif %}
+                
+                <button type="button" onclick="window.print();" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5" title="Print Monograph">
+                    <i class="fas fa-print"></i>
+                    <span class="hidden sm:inline">Print</span>
+                </button>
+
+                <a href="#bookingSection" class="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-[#005691] hover:bg-[#003e6b] text-white font-black text-xs shadow-md transition-all flex items-center gap-1.5">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Book Test Now</span>
+                </a>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- ================= 2. HERO MONOGRAPH BANNER ================= -->
+    <section class="bg-gradient-to-b from-blue-50/70 via-white to-slate-50 pt-8 pb-10 px-4 sm:px-6 lg:px-8 border-b border-slate-200">
+        <div class="max-w-7xl mx-auto">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                
+                <!-- Left: Title & Overview (2 cols) -->
+                <div class="lg:col-span-2 space-y-4">
+                    
+                    <!-- Breadcrumbs & Category Badge -->
+                    <div class="flex items-center flex-wrap gap-2 text-xs font-semibold text-slate-500">
+                        <a href="/medical-lab" class="hover:text-[#005691]">Diagnostics</a>
+                        <span>/</span>
+                        <span class="text-[#005691] font-bold">{{ item.category or 'Pathology' }}</span>
+                        <span>/</span>
+                        <span class="text-slate-800 font-extrabold truncate max-w-[200px]">{{ item.name }}</span>
+                    </div>
+
+                    <!-- Test Title -->
+                    <div>
+                        <div class="flex items-center flex-wrap gap-2 mb-2">
+                            <span class="px-3 py-1 rounded-full bg-blue-100 text-[#005691] text-xs font-black uppercase tracking-wider">
+                                {{ item.badge or item.category or 'DIAGNOSTIC TEST' }}
+                            </span>
+                            {% if item.popular %}
+                            <span class="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300">
+                                <i class="fas fa-star text-amber-500 me-1"></i> Popular Test
+                            </span>
+                            {% endif %}
+                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                                <i class="fas fa-shield-check text-emerald-600 me-1"></i> NABL Certified
+                            </span>
+                        </div>
+
+                        <h1 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                            {{ item.name }}
+                        </h1>
+                    </div>
+
+                    <!-- Clinical Description -->
+                    <p class="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                        {{ item.description }}
+                    </p>
+
+                    <!-- Quick Key Clinical Metrics Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        
+                        <div class="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sample Type</div>
+                            <div class="text-xs font-black text-slate-900 mt-1 flex items-center gap-1.5">
+                                <i class="fas fa-vial text-[#005691]"></i>
+                                <span>{{ item.sample_type or 'Whole Blood' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fasting Instruction</div>
+                            <div class="text-xs font-black {% if item.fasting_required %}text-amber-700{% else %}text-emerald-700{% endif %} mt-1 flex items-center gap-1.5">
+                                <i class="fas fa-utensils"></i>
+                                <span>{% if item.fasting_required %}{{ item.fasting_hours }}h Fasting Required{% else %}Non-Fasting (Anytime){% endif %}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Digital Report TAT</div>
+                            <div class="text-xs font-black text-sky-800 mt-1 flex items-center gap-1.5">
+                                <i class="fas fa-clock text-sky-600"></i>
+                                <span>Within {{ item.tat_hours }} Hours</span>
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Parameters Included</div>
+                            <div class="text-xs font-black text-[#005691] mt-1 flex items-center gap-1.5">
+                                <i class="fas fa-list-check"></i>
+                                <span>{{ item.parameters_count }} Tests Included</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Right: Price & Quick Book Card -->
+                <div class="p-6 bg-white rounded-3xl border-2 border-[#005691]/20 shadow-xl space-y-5">
+                    
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                        <div>
+                            <div class="text-xs text-slate-400 font-bold uppercase">Special Diagnostic Price</div>
+                            <div class="flex items-baseline gap-2 mt-0.5">
+                                <span class="text-3xl font-black text-slate-900">₹{{ item.price }}</span>
+                                <span class="text-sm font-semibold text-slate-400 line-through">₹{{ item.mrp }}</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black">
+                            {{ item.discount_percent }}% OFF
+                        </span>
+                    </div>
+
+                    <!-- Value Additions -->
+                    <div class="space-y-2 text-xs font-medium text-slate-600">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-emerald-600 font-bold"></i>
+                            <span>Free Doorstep Sample Collection (&ge; ₹499)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-emerald-600 font-bold"></i>
+                            <span>100% Barcoded Sterile Single-Use Vials</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-emerald-600 font-bold"></i>
+                            <span>Verified by MD Pathologist</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check text-emerald-600 font-bold"></i>
+                            <span>Free Doctor Tele-Consultation on Report</span>
+                        </div>
+                    </div>
+
+                    <!-- Direct Book Button -->
+                    <a href="#bookingSection" class="w-full py-3.5 rounded-2xl bg-[#005691] hover:bg-[#003e6b] text-white font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 text-decoration-none">
+                        <i class="fas fa-calendar-check text-sm"></i>
+                        <span>Select Lab &amp; Schedule Appointment</span>
+                    </a>
+
+                    <div class="text-[11px] text-slate-400 text-center font-medium">
+                        Instant SMS &amp; WhatsApp appointment confirmation
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ================= 3. CLINICAL MONOGRAPH SPECIFICATIONS TABLE ================= -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left 2 Cols: Detailed Clinical Info -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Section A: Test Information Table -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-2xs space-y-4">
+                    <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-[#005691]"></i> Clinical Test Specifications
+                    </h2>
+
+                    <div class="overflow-hidden rounded-2xl border border-slate-200">
+                        <table class="w-full text-xs text-left">
+                            <tbody class="divide-y divide-slate-200">
+                                <tr class="bg-slate-50/50">
+                                    <td class="py-3 px-4 font-bold text-slate-500 w-1/3">Sample Type</td>
+                                    <td class="py-3 px-4 font-black text-slate-800">{{ item.sample_type or 'Whole Blood / Serum' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-bold text-slate-500">Collection Tube (Vacutainer)</td>
+                                    <td class="py-3 px-4 font-black text-slate-800 flex items-center gap-2">
+                                        {% if 'EDTA' in (item.sample_type or '') or 'CBC' in item.id or 'HBA1C' in item.id %}
+                                        <span class="px-2.5 py-0.5 rounded-md tube-purple font-black text-[10px]">Lavender / Purple (EDTA)</span>
+                                        {% elif 'Fluoride' in (item.sample_type or '') or 'FBS' in item.id or 'PPBS' in item.id %}
+                                        <span class="px-2.5 py-0.5 rounded-md tube-grey font-black text-[10px]">Grey (Sodium Fluoride)</span>
+                                        {% elif 'Citrate' in (item.sample_type or '') or 'ESR' in item.id %}
+                                        <span class="px-2.5 py-0.5 rounded-md tube-blue font-black text-[10px]">Light Blue (Sodium Citrate)</span>
+                                        {% else %}
+                                        <span class="px-2.5 py-0.5 rounded-md tube-yellow font-black text-[10px]">Yellow / Gold (SST Gel Clot Activator)</span>
+                                        {% endif %}
+                                        <span class="text-slate-500 font-medium">(Sterile vacuum sealed)</span>
+                                    </td>
+                                </tr>
+                                <tr class="bg-slate-50/50">
+                                    <td class="py-3 px-4 font-bold text-slate-500">Required Sample Volume</td>
+                                    <td class="py-3 px-4 font-black text-slate-800">3 - 5 mL (Lab-defined minimum volume)</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-bold text-slate-500">Fasting Requirement</td>
+                                    <td class="py-3 px-4 font-black text-slate-800">
+                                        {% if item.fasting_required %}
+                                        <span class="text-amber-700 font-extrabold">Strict {{ item.fasting_hours }} hours overnight fasting required</span> (Plain water permitted)
+                                        {% else %}
+                                        <span class="text-emerald-700 font-extrabold">No fasting required</span> (Can be collected at any convenient time)
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr class="bg-slate-50/50">
+                                    <td class="py-3 px-4 font-bold text-slate-500">Test Method &amp; Automation</td>
+                                    <td class="py-3 px-4 font-black text-slate-800">Automated Reference Analyzers (Beckman Coulter / Roche Cobas / Sysmex / HPLC)</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-bold text-slate-500">Report Turnaround Time</td>
+                                    <td class="py-3 px-4 font-black text-slate-800">Within {{ item.tat_hours }} Hours (Digital Smart Report with QR Verification)</td>
+                                </tr>
+                                <tr class="bg-slate-50/50">
+                                    <td class="py-3 px-4 font-bold text-slate-500">Pre-Test Preparation</td>
+                                    <td class="py-3 px-4 font-medium text-slate-700">{{ item.preparation or 'Follow standard physician instructions. Hydrate normally.' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section B: What Does It Measure? (Parameters Breakdown) -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-2xs space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                            <i class="fas fa-list-check text-[#005691]"></i> What Does This Test Measure?
+                        </h2>
+                        <span class="text-xs font-black text-[#005691] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                            {{ item.parameters_count }} Parameters
+                        </span>
+                    </div>
+
+                    {% if item.parameters_breakdown and item.parameters_breakdown|length > 0 %}
+                    <div class="space-y-3">
+                        {% for grp in item.parameters_breakdown %}
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                            <div class="text-xs font-black text-slate-900 flex items-center gap-2">
+                                <i class="fas fa-circle-dot text-[#005691] text-[9px]"></i>
+                                <span>{{ grp.group }}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 pl-3.5">
+                                {% for t in grp.tests %}
+                                <span class="px-2.5 py-1 rounded-xl bg-white text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs">
+                                    {{ t }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed font-medium">
+                        Includes quantitative automated measurement, baseline comparison against clinical reference intervals, and differential analysis for <strong>{{ item.name }}</strong>.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Section C: Why is this test performed? -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-2xs space-y-3">
+                    <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-stethoscope text-[#005691]"></i> Clinical Purpose &amp; Indications
+                    </h2>
+
+                    <div class="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed space-y-2">
+                        <p>{{ item.who_should_take or 'Recommended for adults and children as part of regular diagnostic assessment, pre-operative screening, routine annual wellness, or monitoring underlying conditions.' }}</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                            <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-2">
+                                <i class="fas fa-check-circle text-[#005691] mt-0.5"></i>
+                                <span class="text-xs font-bold text-slate-800">Accurate Disease &amp; Deficiency Screening</span>
+                            </div>
+                            <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-2">
+                                <i class="fas fa-check-circle text-[#005691] mt-0.5"></i>
+                                <span class="text-xs font-bold text-slate-800">Evaluating Symptoms &amp; Clinical Severity</span>
+                            </div>
+                            <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-2">
+                                <i class="fas fa-check-circle text-[#005691] mt-0.5"></i>
+                                <span class="text-xs font-bold text-slate-800">Monitoring Ongoing Medical Treatment</span>
+                            </div>
+                            <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-2">
+                                <i class="fas fa-check-circle text-[#005691] mt-0.5"></i>
+                                <span class="text-xs font-bold text-slate-800">Annual Preventative Health Baseline</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section D: Important Medical Reference Disclaimer -->
+                <div class="p-4 bg-slate-100 rounded-2xl border border-slate-200 text-xs text-slate-500 leading-relaxed space-y-1">
+                    <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                        <i class="fas fa-circle-info text-[#005691]"></i> Important Medical Note &amp; Reference Interval Guidance
+                    </div>
+                    <p>
+                        Reference intervals depend on laboratory methodology, analyzer calibration, patient age, biological sex, and clinical history. Always consult the verified final laboratory report authenticated by certified MD Pathologists rather than relying on generalized values. (NABL &amp; PubMed Standard).
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Right 1 Col: Registered Lab Center Selector & Scheduling Widget -->
+            <div class="space-y-6" id="bookingSection">
+                
+                <div class="bg-white rounded-3xl border-2 border-[#005691] p-6 shadow-xl space-y-5">
+                    
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#005691] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 mb-1">
+                            <i class="fas fa-location-crosshairs"></i> STEP 1: CHOOSE LAB &amp; LOCATION
+                        </div>
+                        <h3 class="text-lg font-black text-slate-900 leading-tight">Schedule Your Diagnostic Test</h3>
+                    </div>
+
+                    <!-- Location Input -->
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-slate-700">Enter Delivery Pincode or City</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="bookingPincodeInput" value="110001" placeholder="e.g. 110001 or New Delhi" class="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#005691]">
+                            <button type="button" onclick="updateLabListForPincode();" class="px-4 py-2.5 rounded-xl bg-[#005691] text-white font-black text-xs cursor-pointer shadow-sm">
+                                Check
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Registered Labs Selection -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-700">Registered Pathology Center in Your Area</label>
+                        <div id="standaloneRegisteredLabsList" class="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scroll">
+                            <div class="text-xs text-slate-400 text-center py-4">Loading registered laboratories...</div>
+                        </div>
+                    </div>
+
+                    <!-- Collection Mode -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-700">Service Mode</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="p-3 rounded-xl border-2 border-[#005691] bg-blue-50/60 cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-900" id="detailModeHomeLabel">
+                                <input type="radio" name="detail_collection_mode" value="HOME_COLLECTION" checked class="text-[#005691]" onchange="toggleDetailAddressBox(true);">
+                                <span>🏠 Home Pickup</span>
+                            </label>
+                            <label class="p-3 rounded-xl border-2 border-slate-200 bg-white cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-900" id="detailModeWalkinLabel">
+                                <input type="radio" name="detail_collection_mode" value="LAB_VISIT" class="text-[#005691]" onchange="toggleDetailAddressBox(false);">
+                                <span>🏥 Walk-In Visit</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Date & Slot -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Date *</label>
+                            <input type="date" id="detailDateInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Slot *</label>
+                            <select id="detailSlotInput" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800">
+                                <option value="06:00 AM - 07:00 AM (Fasting)">06:00 - 07:00 AM</option>
+                                <option value="07:00 AM - 08:00 AM (Fasting)" selected>07:00 - 08:00 AM</option>
+                                <option value="08:00 AM - 09:00 AM (Fasting)">08:00 - 09:00 AM</option>
+                                <option value="09:00 AM - 10:00 AM (Fasting)">09:00 - 10:00 AM</option>
+                                <option value="11:00 AM - 12:00 PM (General)">11:00 AM - 12:00 PM</option>
+                                <option value="04:00 PM - 06:00 PM (Evening)">04:00 - 06:00 PM</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Patient Info -->
+                    <div class="space-y-2">
+                        <input type="text" id="detailPatientName" value="{{ current_user.name if current_user.is_authenticated else '' }}" placeholder="Patient Full Name *" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="tel" id="detailPatientPhone" value="{{ current_user.phone if current_user.is_authenticated and current_user.phone else '' }}" placeholder="Mobile No. *" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800">
+                            <input type="number" id="detailPatientAge" placeholder="Age (e.g. 32) *" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800">
+                        </div>
+                        <div id="detailAddressWrapper">
+                            <input type="text" id="detailPatientAddress" placeholder="Full Address (House, Flat, Street) *" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800">
+                        </div>
+                    </div>
+
+                    <!-- Total Price Box -->
+                    <div class="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200 flex items-center justify-between text-xs">
+                        <div>
+                            <div class="text-slate-500 font-bold">Total Amount</div>
+                            <div class="text-xl font-black text-[#005691]">₹{{ item.price }}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-emerald-700 font-bold">Sample Pickup: FREE</div>
+                            <div class="text-[10px] text-slate-400">Inclusive of all taxes</div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="button" id="detailBookBtn" onclick="submitStandaloneBooking();" class="w-full py-4 rounded-2xl bg-[#005691] hover:bg-[#003e6b] text-white font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer">
+                        <span>Confirm Diagnostic Appointment</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ================= 4. STANDALONE FOOTER ================= -->
+    <footer class="bg-slate-900 text-white py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-800 mt-12">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-[#005691] text-white flex items-center justify-center font-black text-xs">
+                    <i class="fas fa-microscope text-[10px]"></i>
+                </div>
+                <span>&copy; {{ now().year if now else '2026' }} Spherix Lab Diagnostics • Certified NABL &amp; CAP Laboratory Network</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="/medical-lab" class="text-slate-400 hover:text-white transition-colors">Lab Tests Hub</a>
+                <a href="/medical-shop" class="text-slate-400 hover:text-white transition-colors">Pharmacy</a>
+                <a href="/" class="text-slate-400 hover:text-white transition-colors">Spherix Home</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= 5. SCRIPT CONTROLLER ================= -->
+    <script>
+        const IS_PATIENT_LOGGED_IN = {% if current_user.is_authenticated and session.get('user_role') == 'patient' %}true{% else %}false{% endif %};
+        const PATIENT_LOGIN_URL = "{{ url_for('patient_login') }}";
+
+        const currentItem = {
+            id: "{{ item.id }}",
+            name: "{{ item.name }}",
+            price: {{ item.price }},
+            sample_type: "{{ item.sample_type or 'Whole Blood' }}",
+            fasting_required: {{ 'true' if item.fasting_required else 'false' }}
+        };
+
+        let activeSelectedLabId = 'LAB-SPHERIX-DELHI-01';
+        let activeSelectedLabName = 'Spherix Central Reference Pathology Laboratory';
+        let registeredLabs = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set tomorrow date
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const yyyy = tomorrow.getFullYear();
+            const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+            const dd = String(tomorrow.getDate()).padStart(2, '0');
+            const dateInput = document.getElementById('detailDateInput');
+            if (dateInput) {
+                dateInput.value = `${yyyy}-${mm}-${dd}`;
+                dateInput.min = `${yyyy}-${mm}-${dd}`;
+            }
+
+            // Fetch registered labs
+            fetchRegisteredLabsForDetail('110001');
+        });
+
+        function fetchRegisteredLabsForDetail(pin) {
+            const list = document.getElementById('standaloneRegisteredLabsList');
+            fetch(`/api/lab/centers?pincode=${encodeURIComponent(pin || '110001')}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.centers && data.centers.length > 0) {
+                        registeredLabs = data.centers;
+                        activeSelectedLabId = registeredLabs[0].id;
+                        activeSelectedLabName = registeredLabs[0].name;
+                        renderStandaloneLabs(registeredLabs);
+                    }
+                })
+                .catch(console.error);
+        }
+
+        function renderStandaloneLabs(labs) {
+            const list = document.getElementById('standaloneRegisteredLabsList');
+            if (!list) return;
+
+            list.innerHTML = labs.map(lab => {
+                const isSelected = (lab.id === activeSelectedLabId);
+                return `
+                    <div class="registered-lab-card ${isSelected ? 'selected' : ''} p-3" onclick="pickStandaloneLab('${lab.id}', '${lab.name.replace(/'/g, "\\'")}');">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-start gap-2">
+                                <input type="radio" name="standalone_lab_choice" value="${lab.id}" ${isSelected ? 'checked' : ''} class="mt-1 text-[#005691]">
+                                <div>
+                                    <div class="text-xs font-black text-slate-900">${lab.name}</div>
+                                    <div class="text-[10px] text-slate-500">${lab.address}, ${lab.city}</div>
+                                    <div class="text-[10px] font-bold text-emerald-700 mt-0.5">${lab.home_collection_tat || '45 Mins Dispatch'}</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-black text-[#005691] bg-blue-50 px-1.5 py-0.5 rounded shrink-0">${lab.distance_km || '1.5'} km</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function pickStandaloneLab(id, name) {
+            activeSelectedLabId = id;
+            activeSelectedLabName = name;
+            renderStandaloneLabs(registeredLabs);
+        }
+
+        function updateLabListForPincode() {
+            const pin = document.getElementById('bookingPincodeInput').value.trim();
+            fetchRegisteredLabsForDetail(pin);
+        }
+
+        function toggleDetailAddressBox(isHome) {
+            const homeLabel = document.getElementById('detailModeHomeLabel');
+            const walkinLabel = document.getElementById('detailModeWalkinLabel');
+            const addrWrap = document.getElementById('detailAddressWrapper');
+
+            if (isHome) {
+                if (homeLabel) homeLabel.className = 'p-3 rounded-xl border-2 border-[#005691] bg-blue-50/60 cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-900';
+                if (walkinLabel) walkinLabel.className = 'p-3 rounded-xl border-2 border-slate-200 bg-white cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-900';
+                if (addrWrap) addrWrap.classList.remove('hidden');
+            } else {
+                if (homeLabel) homeLabel.className = 'p-3 rounded-xl border-2 border-slate-200 bg-white cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-900';
+                if (walkinLabel) walkinLabel.className = 'p-3 rounded-xl border-2 border-[#005691] bg-blue-50/60 cursor-pointer flex items-center gap-2 text-xs font-bold text-slate-900';
+                if (addrWrap) addrWrap.classList.add('hidden');
+            }
+        }
+
+        function submitStandaloneBooking() {
+            if (!IS_PATIENT_LOGGED_IN) {
+                const nextUrl = encodeURIComponent(window.location.href);
+                window.location.href = `${PATIENT_LOGIN_URL}?next=${nextUrl}`;
+                return;
+            }
+
+            const name = document.getElementById('detailPatientName').value.trim();
+            const phone = document.getElementById('detailPatientPhone').value.trim();
+            const age = document.getElementById('detailPatientAge').value.trim();
+            const date = document.getElementById('detailDateInput').value;
+            const slot = document.getElementById('detailSlotInput').value;
+            const pincode = document.getElementById('bookingPincodeInput').value.trim();
+            const address = document.getElementById('detailPatientAddress').value.trim();
+            const mode = document.querySelector('input[name="detail_collection_mode"]:checked')?.value || 'HOME_COLLECTION';
+
+            if (!name) { alert("Please enter the patient's full name."); return; }
+            if (!phone || phone.length < 10) { alert("Please enter a valid 10-digit mobile number."); return; }
+            if (!age) { alert("Please enter patient age."); return; }
+            if (!date) { alert("Please pick an appointment date."); return; }
+            if (mode === 'HOME_COLLECTION' && !address) { alert("Please provide the full sample pickup address."); return; }
+
+            const btn = document.getElementById('detailBookBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Confirming Appointment...</span>';
+            }
+
+            const payload = {
+                selected_tests: [currentItem],
+                lab_id: activeSelectedLabId,
+                lab_name: activeSelectedLabName,
+                collection_mode: mode,
+                patient_info: {
+                    name: name,
+                    phone: phone,
+                    age: age,
+                    gender: 'Other'
+                },
+                slot_info: {
+                    date: date,
+                    slot: slot
+                },
+                address_info: {
+                    pincode: pincode || '110001',
+                    city: 'New Delhi',
+                    address_line: address || 'Walk-In Center Visit'
+                }
+            };
+
+            fetch('/medical-lab/payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.razorpay_key_id && typeof Razorpay !== 'undefined') {
+                        const rzpOptions = {
+                            key: data.razorpay_key_id,
+                            amount: data.amount,
+                            currency: data.currency || "INR",
+                            name: activeSelectedLabName || "Spherix Lab Diagnostics",
+                            description: "Test Booking #" + data.order_id,
+                            order_id: data.razorpay_order_id || undefined,
+                            prefill: {
+                                name: name,
+                                contact: phone
+                            },
+                            theme: { color: "#005691" },
+                            handler: function(response) {
+                                window.location.href = '/order-success/' + data.order_id + '?session_id=razorpay_payment&razorpay_payment_id=' + (response.razorpay_payment_id || '');
+                            },
+                            modal: {
+                                ondismiss: function() {
+                                    if (data.redirect_url) window.location.href = data.redirect_url;
+                                    else if (btn) {
+                                        btn.disabled = false;
+                                        btn.innerHTML = '<span>Confirm Diagnostic Appointment</span><i class="fas fa-arrow-right"></i>';
+                                    }
+                                }
+                            }
+                        };
+                        try {
+                            const rzp = new Razorpay(rzpOptions);
+                            rzp.open();
+                        } catch(err) {
+                            if (data.redirect_url) window.location.href = data.redirect_url;
+                        }
+                    } else if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    }
+                } else {
+                    alert(data.error || "Failed to confirm appointment. Please check details.");
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<span>Confirm Diagnostic Appointment</span><i class="fas fa-arrow-right"></i>';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error("Booking error:", err);
+                alert("Network error processing booking. Please try again.");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>Confirm Diagnostic Appointment</span><i class="fas fa-arrow-right"></i>';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

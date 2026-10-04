@@ -77,24 +77,6 @@
                 </div>
             </div>
 
-            <!-- Main Navigation Tabs -->
-            <ul class="nav nav-pills mb-4" id="bedNavTabs" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active rounded-pill px-3.5 py-2 font-semibold me-2" id="tab-floorplan-btn" data-bs-toggle="pill" data-bs-target="#tab-floorplan">
-                        <i class="fas fa-th me-1"></i> Ward Floorplan Grid ({{ beds|length }})
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link rounded-pill px-3.5 py-2 font-semibold me-2" id="tab-admissions-btn" data-bs-toggle="pill" data-bs-target="#tab-admissions">
-                        <i class="fas fa-clipboard-list me-1"></i> Allocation Requests ({{ bed_bookings|selectattr('status', 'in', ['pending', 'approved', 'active'])|list|length }})
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link rounded-pill px-3.5 py-2 font-semibold" id="tab-history-btn" data-bs-toggle="pill" data-bs-target="#tab-history">
-                        <i class="fas fa-history me-1"></i> Discharge History
-                    </button>
-                </li>
-            </ul>
 
             <!-- Bed Search & Legend Filter Bar -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 bg-slate-50 p-2.5 rounded-3 border">
@@ -573,7 +555,48 @@ function openBedStatusModal(bedId, bedLabel, currentStatus, patientName) {
     new bootstrap.Modal(document.getElementById('updateBedStatusModal')).show();
 }
 
+function switchBedTab(tabName) {
+    const validTabs = ['floorplan', 'admissions', 'history'];
+    if (!validTabs.includes(tabName)) {
+        tabName = 'floorplan';
+    }
+
+    // Activate tab pane
+    validTabs.forEach(t => {
+        const pane = document.getElementById('tab-' + t);
+        if (pane) {
+            if (t === tabName) {
+                pane.classList.add('show', 'active');
+            } else {
+                pane.classList.remove('show', 'active');
+            }
+        }
+    });
+
+    // Update URL query parameter without page reload
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tabName);
+        window.history.replaceState({ bedTab: tabName }, '', url.toString());
+    } catch(e) {}
+
+    // Synchronize left sidebar active classes
+    document.querySelectorAll('.dashboard-sidebar .sidebar-link').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (href.includes('tab=' + tabName)) {
+            link.classList.add('active');
+        } else if (href.includes('tab=')) {
+            link.classList.remove('active');
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Read tab from URL or default to 'floorplan'
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab') || 'floorplan';
+    switchBedTab(initialTab);
+
     // Client-side search filtering across both floorplan cards and booking table rows
     const searchInput = document.getElementById('bedSearchInput');
     if (searchInput) {
