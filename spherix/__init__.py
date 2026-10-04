@@ -392,7 +392,17 @@ def create_app(config_object=None):
     except Exception as e:
         print(f"⚠️ api_bp could not be loaded: {e}")
 
-    # Initial Data Load
-    load_data()
+    @app.errorhandler(500)
+    def handle_internal_error(error):
+        try:
+            return render_template('500.html'), 500
+        except Exception:
+            return "Internal Server Error", 500
+
+    # Initial Data Load (Fail-safe for serverless cold start)
+    try:
+        load_data()
+    except Exception as e:
+        print(f"⚠️ Non-blocking warning during initial data load: {e}")
 
     return app
