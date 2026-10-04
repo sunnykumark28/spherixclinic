@@ -187,10 +187,14 @@ def load_all_medicines():
     by_cat = {}
 
     is_updated_format = ('updated_indian_medicine_data' in csv_path)
+    is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+    max_rows = 5000 if is_serverless else None
 
     with open(csv_path, 'r', encoding='utf-8', errors='ignore') as f:
         reader = csv.DictReader(f)
         for idx, row in enumerate(reader, start=1):
+            if max_rows and idx > max_rows:
+                break
             if is_updated_format:
                 name = _clean_text(row.get('name', ''))
                 if not name:
