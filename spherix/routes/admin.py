@@ -43,7 +43,9 @@ from spherix.services.database import (
     sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item,
     deduplicate_entities, setup_admin_user, setup_hospital_user,
     init_auth_telemetry, log_auth_activity, get_auth_telemetry_stats,
-    reset_factory_database
+    reset_factory_database, get_hospital_types, get_hospital_type_by_id,
+    add_hospital_type, update_hospital_type, toggle_hospital_type_status,
+    delete_hospital_type
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html,
@@ -298,6 +300,14 @@ def admin_dashboard():
         print(f"Error fetching admin diagnostic data: {e}")
         diagnostic_admin_data = {'pending_labs': [], 'all_labs': [], 'recent_bookings': [], 'recent_referrals': [], 'tests': [], 'categories': []}
 
+    # Master hospital classification categories
+    admin_hospital_types = get_hospital_types(active_only=False)
+    for ht in admin_hospital_types:
+        ht.registered_hospitals_count = sum(
+            1 for h in all_hospitals
+            if str(getattr(h, 'hospital_type_id', 1)) == str(ht.id) or (getattr(h, 'hospital_type', '') or '').lower() == ht.name.lower()
+        )
+
     return render_template('admin_dashboard.html', 
                            doctors=paginated_doctors, 
                            all_doctors_count=len(all_doctors),
@@ -305,6 +315,7 @@ def admin_dashboard():
                            hospitals=paginated_hospitals,
                            all_hospitals=all_hospitals,
                            all_hospitals_count=len(all_hospitals),
+                           hospital_types=admin_hospital_types,
                            pending_hospitals=pending_hospitals,
                            pending_verifications_count=pending_verifications_count,
                            patients=paginated_patients, 
@@ -2373,3 +2384,86 @@ def resolve_entity_and_key(collection_name, entity_id):
         if str(k) == str(entity_id) or str(getattr(v, 'id', '')) == str(entity_id):
             return v, k
     return None, None
+
+
+# =========================================================================
+# 🏥 ADMIN HOSPITAL TYPE CLASSIFICATION MANAGEMENT ROUTES
+# =========================================================================
+
+@admin_bp.route('/admin/hospital-types/add', methods=['POST'])
+@admin_required
+def admin_add_hospital_type():
+    """Adds a new hospital classification category."""
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+    icon = request.form.get('icon', 'fa-hospital').strip()
+    color = request.form.get('color', '#0284c7').strip()
+    
+    if not name or not description:
+        flash("Hospital type name and description are required.", "error")
+        return redirect(url_for('admin_dashboard') + '?tab=hospital_types')
+        
+    new_type = add_hospital_type(name=name, description=description, icon=icon, color=color, is_active=True)
+    flash(f"Hospital category '{new_type.name}' created successfully with ID #{new_type.id}.", "success")
+    return redirect(url_for('admin_dashboard') + '?tab=hospital_types')
+
+
+@admin_bp.route('/admin/hospital-types/edit/<int:type_id>', methods=['POST'])
+@admin_required
+def admin_edit_hospital_type(type_id):
+    """Updates an existing hospital classification category."""
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+    icon = request.form.get('icon', '').strip() or None
+    color = request.form.get('color', '').strip() or None
+    is_active_raw = request.form.get('is_active')
+    is_active = is_active_raw in ['1', 'true', 'on', True] if is_active_raw is not None else None
+    
+    if not name or not description:
+        flash("Hospital type name and description are required.", "error")
+        return redirect(url_for('admin_dashboard') + '?tab=hospital_types')
+        
+    updated = update_hospital_type(
+        type_id=type_id,
+        name=name,
+        description=description,
+        icon=icon,
+        color=color,
+        is_active=is_active
+    )
+    if updated:
+        flash(f"Hospital classification '{updated.name}' updated successfully.", "success")
+    else:
+        flash(f"Hospital classification #{type_id} not found.", "error")
+    return redirect(url_for('admin_dashboard') + '?tab=hospital_types')
+
+
+@admin_bp.route('/admin/hospital-types/toggle/<int:type_id>', methods=['POST'])
+@admin_required
+def admin_toggle_hospital_type(type_id):
+    """Toggles active/inactive status of a hospital classification category."""
+    updated = toggle_hospital_type_status(type_id)
+    if updated:
+        status_str = "activated" if updated.is_active else "deactivated"
+        flash(f"Hospital classification '{updated.name}' has been {status_str}.", "success")
+    else:
+        flash(f"Hospital classification #{type_id} not found.", "error")
+    return redirect(url_for('admin_dashboard') + '?tab=hospital_types')
+
+
+@admin_bp.route('/admin/hospital-types/delete/<int:type_id>', methods=['POST'])
+@admin_required
+def admin_delete_hospital_type(type_id):
+    """Safely deletes a hospital category with reassignment check."""
+    reassign_id_val = request.form.get('reassign_to_id')
+    reassign_to_id = None
+    if reassign_id_val and reassign_id_val.strip() and reassign_id_val.strip().isdigit():
+        reassign_to_id = int(reassign_id_val.strip())
+        
+    success, message = delete_hospital_type(type_id=type_id, reassign_to_id=reassign_to_id)
+    if success:
+        flash(message, "success")
+    else:
+        flash(message, "error")
+    return redirect(url_for('admin_dashboard') + '?tab=hospital_types')
+

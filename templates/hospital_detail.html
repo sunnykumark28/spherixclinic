@@ -67,18 +67,80 @@
 
                 <!-- Info -->
                 <div class="flex-grow">
-                    <div class="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+                    <div class="flex flex-col md:flex-row md:items-center gap-3 mb-3">
                         <h1 class="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight">{{ hospital.name }}</h1>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide">
-                            <i class="fas fa-check-circle mr-1.5"></i> Verified
-                        </span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Primary Type Badge -->
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold shadow-xs border"
+                                  style="background-color: {{ hospital.type_badge_bg }}; color: {{ hospital.type_color }}; border-color: {{ hospital.type_color }}40;">
+                                <i class="fa-solid {{ hospital.type_icon }}"></i>
+                                <span>{{ hospital.type_name }}</span>
+                            </span>
+
+                            {% if hospital.is_verified %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide">
+                                <i class="fas fa-check-circle mr-1.5"></i> Verified
+                            </span>
+                            {% endif %}
+
+                            {% if hospital.emergency_services %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-extrabold uppercase tracking-wide">
+                                <i class="fas fa-truck-medical mr-1.5"></i> 24/7 ER
+                            </span>
+                            {% endif %}
+                        </div>
                     </div>
+
+                    <!-- Hospital Type Description Tooltip / Subtitle -->
+                    <p class="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5">
+                        <i class="fas fa-circle-info text-sky-500"></i>
+                        <span>{{ hospital.type_description }}</span>
+                    </p>
+
+                    <!-- Secondary Specialties Pills -->
+                    {% if hospital.specialties %}
+                    <div class="flex flex-wrap items-center gap-1.5 mb-4">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Specialties:</span>
+                        {% for spec in hospital.specialties %}
+                        <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">
+                            {{ spec }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     
-                    <div class="flex flex-wrap justify-center md:justify-start gap-6 text-slate-500 mb-8">
+                    <div class="flex flex-wrap justify-center md:justify-start gap-6 text-slate-500 mb-6 text-xs sm:text-sm font-medium">
                         <span class="flex items-center gap-2"><i class="fas fa-envelope text-emerald-500"></i> {{ hospital.email }}</span>
+                        <span class="flex items-center gap-2"><i class="fas fa-phone text-emerald-500"></i> {{ hospital.phone }}</span>
+                        {% if hospital.emergency_phone %}
+                        <a href="tel:{{ hospital.emergency_phone }}" class="flex items-center gap-2 text-rose-600 font-bold hover:underline">
+                            <i class="fas fa-phone-volume text-rose-500"></i> ER: {{ hospital.emergency_phone }}
+                        </a>
+                        {% endif %}
                         <span class="flex items-center gap-2"><i class="fas fa-map-marker-alt text-emerald-500"></i> {{ hospital.address or 'Main Campus' }}</span>
                         <span class="flex items-center gap-2"><i class="fas fa-user-md text-emerald-500"></i> {{ doctors|length }} Specialists</span>
                     </div>
+
+                    {% if hospital.about %}
+                    <div class="mb-6 p-4 rounded-2xl bg-white/80 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                        <p class="font-bold text-slate-900 mb-1 flex items-center gap-1.5"><i class="fas fa-hospital-user text-sky-600"></i> About {{ hospital.name }}:</p>
+                        <p>{{ hospital.about }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if hospital.facilities %}
+                    <div class="mb-6">
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Clinical Facilities & Diagnostic Infrastructure:</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for fac in hospital.facilities %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-sky-50 text-sky-800 border border-sky-200 text-xs font-semibold shadow-2xs">
+                                <i class="fas fa-check-circle text-sky-600 text-[11px]"></i>
+                                <span>{{ fac }}</span>
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <!-- Stats Grid with Dual Currency Rates -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto md:mx-0">

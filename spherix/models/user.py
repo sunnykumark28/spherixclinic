@@ -203,6 +203,8 @@ class Hospital(UserMixin):
         self.password = password
         self.logo_url = kwargs.get('logo_url')
         self.phone = kwargs.get('phone')
+        self.emergency_phone = kwargs.get('emergency_phone') or self.phone or '102'
+        self.ambulance_phone = kwargs.get('ambulance_phone') or self.phone or '108'
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('licenseNo') or generate_user_license_id('hospital')
         self.license_no = self.license_number
         self.president_ceo = kwargs.get('president_ceo', kwargs.get('director_name', kwargs.get('md_name', f"Dr. {self.name.split()[0]} MD, Chief Executive")))
@@ -224,9 +226,9 @@ class Hospital(UserMixin):
         self.address = kwargs.get('address')
         self.general_bed_fee = float(kwargs.get('general_bed_fee') or 1000.0)
         self.icu_bed_fee = float(kwargs.get('icu_bed_fee') or 2500.0)
-        self.is_verified = kwargs.get('is_verified', False)
-        self.is_blocked = kwargs.get('is_blocked', False)
-        self.is_hidden = kwargs.get('is_hidden', False)
+        self.is_verified = bool(kwargs.get('is_verified', False))
+        self.is_blocked = bool(kwargs.get('is_blocked', False))
+        self.is_hidden = bool(kwargs.get('is_hidden', False))
         self.is_doctor = False
         self.is_hospital = True
         self.is_patient = False
@@ -247,8 +249,107 @@ class Hospital(UserMixin):
             "A+": 0, "A-": 0, "B+": 0, "B-": 0, "AB+": 0, "AB-": 0, "O+": 0, "O-": 0
         })
 
+        # Hospital Type Classification & Advanced Attributes
+        from spherix.hospital_types import get_hospital_types_master_dict, get_default_hospital_type
+        
+        type_id_raw = kwargs.get('hospital_type_id')
+        if type_id_raw is not None and str(type_id_raw).isdigit():
+            self.hospital_type_id = int(type_id_raw)
+        else:
+            default_t = get_default_hospital_type(self.name)
+            self.hospital_type_id = default_t.id
+
+        self.hospital_type = kwargs.get('hospital_type') or kwargs.get('facility_type') or (get_hospital_types_master_dict().get(self.hospital_type_id).name if self.hospital_type_id in get_hospital_types_master_dict() else 'General Hospital')
+        
+        # Parse Specialties
+        raw_specs = kwargs.get('specialties')
+        if isinstance(raw_specs, list):
+            self.specialties = raw_specs
+        elif isinstance(raw_specs, str) and raw_specs.strip():
+            import json
+            try:
+                self.specialties = json.loads(raw_specs)
+            except Exception:
+                self.specialties = [s.strip() for s in raw_specs.split(',') if s.strip()]
+        else:
+            default_spec = get_hospital_types_master_dict().get(self.hospital_type_id)
+            self.specialties = list(default_spec.common_specialties) if default_spec else ["General Medicine", "Emergency Care"]
+
+        # Parse Facilities
+        raw_facs = kwargs.get('facilities')
+        if isinstance(raw_facs, list):
+            self.facilities = raw_facs
+        elif isinstance(raw_facs, str) and raw_facs.strip():
+            import json
+            try:
+                self.facilities = json.loads(raw_facs)
+            except Exception:
+                self.facilities = [f.strip() for f in raw_facs.split(',') if f.strip()]
+        else:
+            default_spec = get_hospital_types_master_dict().get(self.hospital_type_id)
+            self.facilities = list(default_spec.default_facilities) if default_spec else ["24x7 Emergency", "ICU", "Blood Bank", "Pathology Lab", "Pharmacy", "Ambulance"]
+
+        self.emergency_services = bool(kwargs.get('emergency_services', True))
+        self.about = kwargs.get('about') or kwargs.get('bio') or f"{self.name} is a premier healthcare institution providing comprehensive clinical care, 24x7 emergency response, modern inpatient suites, and advanced diagnostics."
+        
+        # Geolocation Coordinates
+        try:
+            self.latitude = float(kwargs.get('latitude')) if kwargs.get('latitude') is not None else None
+            self.longitude = float(kwargs.get('longitude')) if kwargs.get('longitude') is not None else None
+        except (ValueError, TypeError):
+            self.latitude = None
+            self.longitude = None
+
     def get_id(self):
         return f"hospital-{self.id}"
+
+    @property
+    def primary_type_obj(self):
+        from spherix.hospital_types import get_hospital_types_master_dict, get_default_hospital_type
+        types_dict = get_hospital_types_master_dict()
+        if self.hospital_type_id in types_dict:
+            return types_dict[self.hospital_type_id]
+        return get_default_hospital_type(self.name)
+
+    @property
+    def type_name(self):
+        return getattr(self.primary_type_obj, 'name', self.hospital_type or 'General Hospital')
+
+    @property
+    def type_description(self):
+        return getattr(self.primary_type_obj, 'description', '')
+
+    @property
+    def type_icon(self):
+        return getattr(self.primary_type_obj, 'icon', 'fa-solid fa-hospital')
+
+    @property
+    def type_color(self):
+        return getattr(self.primary_type_obj, 'color', 'emerald')
+
+    @property
+    def type_badge_bg(self):
+        return getattr(self.primary_type_obj, 'badge_bg', 'bg-emerald-50')
+
+    @property
+    def type_badge_text(self):
+        return getattr(self.primary_type_obj, 'badge_text', 'text-emerald-700')
+
+    @property
+    def type_badge_border(self):
+        return getattr(self.primary_type_obj, 'badge_border', 'border-emerald-200')
+
+    def has_facility(self, facility_name: str) -> bool:
+        if not self.facilities:
+            return False
+        fn = facility_name.lower().strip()
+        return any(fn in f.lower() for f in self.facilities)
+
+    def has_specialty(self, specialty_name: str) -> bool:
+        if not self.specialties:
+            return False
+        sn = specialty_name.lower().strip()
+        return any(sn in s.lower() for s in self.specialties)
 
     @property
     def country_flag(self):

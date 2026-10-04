@@ -495,6 +495,9 @@ def logout():
 @auth_bp.route('/hospital-register', methods=['GET', 'POST'])
 def hospital_register():
     """Handles the registration process for new hospitals."""
+    from spherix.hospital_types import MASTER_FACILITIES_LIST
+    from spherix.services.database import get_hospital_types, get_hospital_type_by_id
+    
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         email = request.form.get('email', '').strip()
@@ -505,10 +508,45 @@ def hospital_register():
         state = request.form.get('state', '').strip()
         address = request.form.get('address', '').strip()
         phone = request.form.get('phone', '').strip()
+        emergency_phone = request.form.get('emergency_phone', '').strip() or phone or '102'
+        ambulance_phone = request.form.get('ambulance_phone', '').strip() or phone or '108'
         license_no = request.form.get('license_no', '').strip() or request.form.get('license_number', '').strip() or generate_user_license_id('hospital')
         total_beds = request.form.get('total_beds', '50')
         icu_beds = request.form.get('icu_beds', '10')
         accreditation = request.form.get('accreditation', 'NABH Accredited').strip()
+        
+        # Hospital Type & Classification
+        hospital_type_id_raw = request.form.get('hospital_type_id') or request.form.get('facility_type_id')
+        hospital_type_obj = get_hospital_type_by_id(hospital_type_id_raw) if hospital_type_id_raw else None
+        
+        # If not found by ID, try matching by facility_type string
+        if not hospital_type_obj:
+            fac_type_str = request.form.get('facility_type', '').strip()
+            if fac_type_str:
+                for ht in get_hospital_types():
+                    if ht.name.lower() == fac_type_str.lower() or ht.slug == fac_type_str.lower():
+                        hospital_type_obj = ht
+                        break
+                        
+        if not hospital_type_obj:
+            hospital_type_obj = get_hospital_type_by_id(1) # Default General Hospital
+            
+        hospital_type_id = hospital_type_obj.id
+        hospital_type_name = hospital_type_obj.name
+        
+        # Additional Specialties & Facilities
+        selected_specialties = request.form.getlist('specialties')
+        if not selected_specialties and request.form.get('specialties_custom'):
+            selected_specialties = [s.strip() for s in request.form.get('specialties_custom').split(',') if s.strip()]
+        if not selected_specialties:
+            selected_specialties = list(hospital_type_obj.common_specialties)
+
+        selected_facilities = request.form.getlist('facilities')
+        if not selected_facilities:
+            selected_facilities = list(hospital_type_obj.default_facilities)
+
+        emergency_services = request.form.get('emergency_services') in ['1', 'true', 'on', 'yes', True]
+        about_text = request.form.get('about', '').strip() or f"{name} is an accredited {hospital_type_name} in {city}, offering comprehensive clinical care, inpatient wards, critical care ICU, and diagnostics."
 
         if not all([name, email, password, confirm_password]):
             flash('Please fill out all mandatory facility fields.', 'error')
@@ -554,6 +592,8 @@ def hospital_register():
             'state': state,
             'address': address,
             'phone': phone,
+            'emergency_phone': emergency_phone,
+            'ambulance_phone': ambulance_phone,
             'license_no': license_no,
             'license_number': license_no,
             'total_beds': total_beds_int,
@@ -561,6 +601,12 @@ def hospital_register():
             'icu_beds': icu_beds_int,
             'available_icu_beds': max(1, int(icu_beds_int * 0.3)),
             'accreditation': accreditation,
+            'hospital_type_id': hospital_type_id,
+            'hospital_type': hospital_type_name,
+            'specialties': selected_specialties,
+            'facilities': selected_facilities,
+            'emergency_services': emergency_services,
+            'about': about_text,
             'otp': otp,
             'logo_url': logo_filename
         }
@@ -584,7 +630,12 @@ def hospital_register():
         
         return redirect(url_for('hospital_verify_otp'))
 
-    return render_template('hospital_register.html')
+    hospital_types = get_hospital_types(active_only=True)
+    return render_template(
+        'hospital_register.html', 
+        hospital_types=hospital_types,
+        master_facilities=MASTER_FACILITIES_LIST
+    )
 
 
 
@@ -615,12 +666,20 @@ def hospital_verify_otp():
                 state=stored_data.get('state', ''),
                 address=stored_data.get('address', ''),
                 phone=stored_data.get('phone', ''),
+                emergency_phone=stored_data.get('emergency_phone', ''),
+                ambulance_phone=stored_data.get('ambulance_phone', ''),
                 license_number=h_license,
                 total_beds=stored_data.get('total_beds', 50),
                 available_beds=stored_data.get('available_beds', 20),
                 icu_beds=stored_data.get('icu_beds', 10),
                 available_icu_beds=stored_data.get('available_icu_beds', 3),
                 accreditation=stored_data.get('accreditation', 'NABH Accredited'),
+                hospital_type_id=stored_data.get('hospital_type_id', 1),
+                hospital_type=stored_data.get('hospital_type', 'General Hospital'),
+                specialties=stored_data.get('specialties', []),
+                facilities=stored_data.get('facilities', []),
+                emergency_services=stored_data.get('emergency_services', True),
+                about=stored_data.get('about', ''),
                 logo_url=stored_data.get('logo_url'),
                 is_international=is_intl,
                 is_verified=False # Must be verified by Spherix Clinic Admin before login
@@ -631,7 +690,7 @@ def hospital_verify_otp():
             save_data()
             
             session.pop('hospital_signup_data', None)
-            flash(f'Registration successful for "{new_hospital.name}"! Your facility account (ID: {new_id} | License: {new_hospital.license_number}) is currently pending administrative verification by Spherix Clinic. Once approved by our compliance team, you will be authorized to log in.', 'info')
+            flash(f'Registration successful for "{new_hospital.name}" ({new_hospital.type_name})! Your facility account (ID: {new_id} | License: {new_hospital.license_number}) is currently pending administrative verification by Spherix Clinic. Once approved by our compliance team, you will be authorized to log in.', 'info')
             return redirect(url_for('hospital_login'))
         else:
             flash("Invalid OTP verification code. Please check and try again.", "error")

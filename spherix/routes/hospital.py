@@ -43,7 +43,11 @@ from spherix.models import (
 from spherix.services.database import (
     TEMP_DATA, get_db_connection, save_data, load_data,
     sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item,
-    deduplicate_entities
+    deduplicate_entities, filter_hospitals_advanced, get_hospital_types,
+    get_hospital_type_by_id, calculate_haversine_distance
+)
+from spherix.hospital_types import (
+    HOSPITAL_TYPE_MASTER_DATA, MASTER_FACILITIES_LIST, HospitalType
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html
@@ -110,66 +114,99 @@ hospital_bp = Blueprint('hospital', __name__)
 
 @hospital_bp.route('/hospitals')
 def hospitals_list():
-    """Displays a list of registered hospitals with global and domestic filtering."""
-    all_hospitals = deduplicate_entities([h for h in TEMP_DATA['hospitals'].values() if not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)])
+    """Displays a list of registered hospitals with advanced multi-dimensional filtering."""
+    all_hospitals = deduplicate_entities([
+        h for h in TEMP_DATA.get('hospitals', {}).values() 
+        if not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)
+    ])
     
-    search_query = request.args.get('q', '').lower().strip()
-    city_query = request.args.get('city', '').lower().strip()
+    # Query parameters
+    search_query = request.args.get('q', '').strip()
+    type_param = request.args.get('type', request.args.get('type_id', request.args.get('hospital_type', ''))).strip()
+    specialty_query = request.args.get('specialty', '').strip()
+    city_query = request.args.get('city', '').strip()
+    state_query = request.args.get('state', '').strip()
+    locality_query = request.args.get('locality', '').strip()
     country_filter = request.args.get('country', '').strip()
-    scope = request.args.get('scope', '').strip() # 'all', 'domestic', 'international'
+    scope = request.args.get('scope', '').strip()
     
-    filtered_hospitals = []
-    for h in all_hospitals:
-        # Filter by country
-        h_country = getattr(h, 'country', 'India')
-        if country_filter and country_filter.lower() != 'all' and h_country.lower() != country_filter.lower():
-            continue
-            
-        if scope == 'domestic' and h_country not in ['India', 'IN']:
-            continue
-        elif scope == 'international' and h_country in ['India', 'IN']:
-            continue
-
-        # Filter by city (checking city, country, and address fields)
-        if city_query and city_query not in (h.city or '').lower() and city_query not in (h.address or '').lower() and city_query not in h_country.lower():
-            continue
+    verified_raw = request.args.get('verified', '').strip().lower()
+    verified_only = verified_raw in ['true', '1', 'yes', 'on']
+    
+    emergency_raw = request.args.get('emergency', '').strip().lower()
+    emergency_only = emergency_raw in ['true', '1', 'yes', 'on']
+    
+    # Facilities multi-select list
+    facilities_list = request.args.getlist('facilities') or request.args.getlist('facilities[]') or request.args.getlist('facility')
+    if not facilities_list and request.args.get('facilities_csv'):
+        facilities_list = [f.strip() for f in request.args.get('facilities_csv').split(',') if f.strip()]
         
-        # Filter by search query (name, country, or doctor specialties)
-        if search_query:
-            match_name = search_query in h.name.lower() or search_query in h_country.lower()
-            
-            # Check doctors in this hospital to match specialties like "cancer" or "heart surgery"
-            hospital_doctors = [d for d in TEMP_DATA['doctors'].values() if d.hospital_name == h.name]
-            match_specialty = any(
-                search_query in (d.department or '').lower() or 
-                search_query in (d.specialization or '').lower() 
-                for d in hospital_doctors
-            )
-            
-            if not (match_name or match_specialty):
-                continue
-                
-        filtered_hospitals.append(h)
+    nearby_raw = request.args.get('nearby', '').strip().lower()
+    nearby_only = nearby_raw in ['true', '1', 'yes', 'on']
+    
+    user_lat = request.args.get('lat', None, type=float)
+    user_lng = request.args.get('lng', None, type=float)
+    max_distance_km = request.args.get('distance', 50.0, type=float)
+    view_mode = request.args.get('view', 'grid').strip().lower()
+    if view_mode not in ['grid', 'list']:
+        view_mode = 'grid'
+        
+    # Execute advanced filter engine
+    filtered_hospitals = filter_hospitals_advanced(
+        search_query=search_query,
+        type_id=type_param,
+        specialty=specialty_query,
+        city=city_query,
+        state=state_query,
+        locality=locality_query,
+        country=country_filter,
+        scope=scope,
+        verified_only=verified_only,
+        emergency_only=emergency_only,
+        facilities_filter=facilities_list,
+        user_lat=user_lat,
+        user_lng=user_lng,
+        nearby_only=nearby_only,
+        max_distance_km=max_distance_km
+    )
+    
+    # Master types catalog and counts
+    hospital_types = get_hospital_types(active_only=True)
+    type_counts = {'all': len(all_hospitals)}
+    for ht in hospital_types:
+        type_counts[str(ht.id)] = sum(1 for h in all_hospitals if str(getattr(h, 'hospital_type_id', 1)) == str(ht.id) or (getattr(h, 'hospital_type', '') or '').lower() == ht.name.lower())
 
-    # Sort hospitals according to ID
-    def parse_id(h):
-        val = h.id
-        if isinstance(val, int):
-            return (0, val)
-        if isinstance(val, str):
-            if val.isdigit():
-                return (0, int(val))
-            import re
-            m = re.search(r'\d+', val)
-            if m:
-                return (0, int(m.group(0)))
-            return (1, val)
-        return (2, str(val))
-    filtered_hospitals.sort(key=parse_id)
+    # Active Type Object if filtered
+    active_type_obj = None
+    if type_param and type_param.lower() != 'all':
+        try:
+            t_id = int(type_param)
+            active_type_obj = get_hospital_type_by_id(t_id)
+        except (ValueError, TypeError):
+            active_type_obj = next((ht for ht in hospital_types if ht.slug == type_param.lower() or ht.name.lower() == type_param.lower()), None)
+
+    # Distinct specialties across hospitals and doctors for filter dropdown
+    distinct_specialties = set()
+    for h in all_hospitals:
+        if getattr(h, 'specialties', None):
+            for s in h.specialties:
+                if s and s.strip():
+                    distinct_specialties.add(s.strip())
+    for d in TEMP_DATA.get('doctors', {}).values():
+        if getattr(d, 'specialization', None):
+            distinct_specialties.add(d.specialization.strip())
+        if getattr(d, 'department', None):
+            distinct_specialties.add(d.department.strip())
+    all_specialties = sorted(list(distinct_specialties))
+
+    # Distinct cities and states
+    all_cities = sorted(list(set(h.city.strip() for h in all_hospitals if getattr(h, 'city', None) and h.city.strip())))
+    all_states = sorted(list(set(h.state.strip() for h in all_hospitals if getattr(h, 'state', None) and h.state.strip())))
+    available_countries = sorted(list(set(getattr(h, 'country', 'India') for h in all_hospitals if getattr(h, 'country', None))))
 
     # Pagination
     page = request.args.get('page', 1, type=int)
-    per_page = 9
+    per_page = 9 if view_mode == 'grid' else 10
     total_filtered = len(filtered_hospitals)
     total_pages = (total_filtered + per_page - 1) // per_page
     page = max(1, min(page, total_pages)) if total_pages > 0 else 1
@@ -177,7 +214,7 @@ def hospitals_list():
     end_idx = start_idx + per_page
     paginated_hospitals = filtered_hospitals[start_idx:end_idx]
 
-    # Real-time network telemetry statistics
+    # Telemetry statistics
     total_partner_hospitals = len(all_hospitals)
     total_avail_icu_beds = sum(int(getattr(h, 'available_icu_beds', 0) or 0) for h in all_hospitals)
     total_avail_gen_beds = sum(int(getattr(h, 'available_beds', 0) or 0) for h in all_hospitals)
@@ -186,15 +223,66 @@ def hospitals_list():
     verified_hospitals_count = sum(1 for h in all_hospitals if getattr(h, 'is_verified', True))
     verified_percent = round((verified_hospitals_count / max(total_partner_hospitals, 1)) * 100)
 
-    available_countries = sorted(list(set(getattr(h, 'country', 'India') for h in all_hospitals if getattr(h, 'country', None))))
+    # Return JSON for AJAX requests
+    if request.args.get('format') == 'json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'total_filtered': total_filtered,
+            'total_pages': total_pages,
+            'current_page': page,
+            'hospitals': [
+                {
+                    'id': h.id,
+                    'name': h.name,
+                    'hospital_type': getattr(h, 'type_name', 'General Hospital'),
+                    'hospital_type_id': getattr(h, 'hospital_type_id', 1),
+                    'type_icon': getattr(h, 'type_icon', 'fa-hospital'),
+                    'type_color': getattr(h, 'type_color', '#0284c7'),
+                    'city': h.city or '',
+                    'state': h.state or '',
+                    'country': getattr(h, 'country', 'India'),
+                    'address': h.address or '',
+                    'is_verified': getattr(h, 'is_verified', True),
+                    'emergency_services': getattr(h, 'emergency_services', True),
+                    'total_beds': getattr(h, 'total_beds', 0),
+                    'available_beds': getattr(h, 'available_beds', 0),
+                    'available_icu_beds': getattr(h, 'available_icu_beds', 0),
+                    'specialties': getattr(h, 'specialties', []),
+                    'facilities': getattr(h, 'facilities', []),
+                    'distance_km': getattr(h, 'distance_km', None),
+                    'logo_url': getattr(h, 'logo_url', None) or getattr(h, 'profile_picture_url', None),
+                    'url': url_for('hospital.hospital_detail', hospital_id=h.id)
+                }
+                for h in paginated_hospitals
+            ]
+        })
 
     return render_template(
         'hospitals.html', 
-        hospitals=paginated_hospitals, 
+        hospitals=paginated_hospitals,
+        total_filtered=total_filtered,
+        hospital_types=hospital_types,
+        type_counts=type_counts,
+        active_type_id=type_param,
+        active_type_obj=active_type_obj,
+        master_facilities=MASTER_FACILITIES_LIST,
+        selected_facilities=facilities_list,
+        all_specialties=all_specialties,
+        active_specialty=specialty_query,
+        all_cities=all_cities,
+        all_states=all_states,
         q=search_query, 
         city=city_query,
+        state=state_query,
+        locality=locality_query,
         active_country=country_filter,
         active_scope=scope,
+        verified_only=verified_only,
+        emergency_only=emergency_only,
+        nearby_only=nearby_only,
+        user_lat=user_lat,
+        user_lng=user_lng,
+        view_mode=view_mode,
         available_countries=available_countries,
         country_flags=GLOBAL_COUNTRY_FLAGS,
         page=page,
@@ -1877,6 +1965,55 @@ def hospital_dashboard():
             current_user.city = request.form.get('city')
             current_user.state = request.form.get('state')
             current_user.zip_code = request.form.get('zip_code')
+
+            # Classification & Specialization Updates
+            hosp_type_id = request.form.get('hospital_type_id')
+            if hosp_type_id:
+                try:
+                    current_user.hospital_type_id = int(hosp_type_id)
+                    ht_obj = get_hospital_type_by_id(current_user.hospital_type_id)
+                    if ht_obj:
+                        current_user.hospital_type = ht_obj.name
+                except (ValueError, TypeError):
+                    pass
+            elif request.form.get('facility_type'):
+                current_user.hospital_type = request.form.get('facility_type')
+
+            # Specialties
+            spec_list = request.form.getlist('specialties')
+            if not spec_list and request.form.get('specialties_csv'):
+                spec_list = [s.strip() for s in request.form.get('specialties_csv').split(',') if s.strip()]
+            if spec_list:
+                current_user.specialties = spec_list
+
+            # Facilities
+            fac_list = request.form.getlist('facilities')
+            if not fac_list and request.form.get('facilities_csv'):
+                fac_list = [f.strip() for f in request.form.get('facilities_csv').split(',') if f.strip()]
+            if fac_list:
+                current_user.facilities = fac_list
+
+            # Emergency Services
+            if 'emergency_services' in request.form:
+                current_user.emergency_services = request.form.get('emergency_services') in ['on', 'true', '1', True]
+            if request.form.get('emergency_phone'):
+                current_user.emergency_phone = request.form.get('emergency_phone').strip()
+            if request.form.get('ambulance_phone'):
+                current_user.ambulance_phone = request.form.get('ambulance_phone').strip()
+
+            # About & Geolocation Coordinates
+            if 'about' in request.form:
+                current_user.about = request.form.get('about', '').strip()
+            if request.form.get('latitude'):
+                try:
+                    current_user.latitude = float(request.form.get('latitude'))
+                except (ValueError, TypeError):
+                    pass
+            if request.form.get('longitude'):
+                try:
+                    current_user.longitude = float(request.form.get('longitude'))
+                except (ValueError, TypeError):
+                    pass
             
             # Handle Logo / Profile Image Upload (Base64 cropped or raw file)
             logo_input = request.form.get('cropped_profile_image') or request.form.get('logo_base64')
@@ -1910,10 +2047,20 @@ def hospital_dashboard():
                 hosp_mem.city = current_user.city
                 hosp_mem.state = current_user.state
                 hosp_mem.zip_code = current_user.zip_code
+                hosp_mem.hospital_type_id = getattr(current_user, 'hospital_type_id', 1)
+                hosp_mem.hospital_type = getattr(current_user, 'hospital_type', 'General Hospital')
+                hosp_mem.specialties = getattr(current_user, 'specialties', [])
+                hosp_mem.facilities = getattr(current_user, 'facilities', [])
+                hosp_mem.emergency_services = getattr(current_user, 'emergency_services', True)
+                hosp_mem.emergency_phone = getattr(current_user, 'emergency_phone', None)
+                hosp_mem.ambulance_phone = getattr(current_user, 'ambulance_phone', None)
+                hosp_mem.about = getattr(current_user, 'about', '')
+                hosp_mem.latitude = getattr(current_user, 'latitude', None)
+                hosp_mem.longitude = getattr(current_user, 'longitude', None)
                 hosp_mem.logo_url = getattr(current_user, 'logo_url', None)
             
             save_data()
-            flash('Hospital profile updated successfully.', 'success')
+            flash('Hospital profile and clinical classification updated successfully.', 'success')
             return redirect(url_for('hospital_dashboard') + '#settings')
 
         # --- Update Security ---
@@ -2394,7 +2541,9 @@ def hospital_dashboard():
                            patient_vitals=hospital_patient_vitals,
                            reports=hospital_reports,
                            unread_notifications=unread_notifications,
-                           hospital_notifications=hospital_notifications)
+                           hospital_notifications=hospital_notifications,
+                           hospital_types=get_hospital_types(active_only=True),
+                           master_facilities=MASTER_FACILITIES_LIST)
 
 
 

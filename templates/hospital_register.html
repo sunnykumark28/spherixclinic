@@ -68,12 +68,22 @@
         isSubmitting: false,
         stepError: '',
         logoPreview: null,
+        hospitalTypesMap: {
+            {% if hospital_types %}
+                {% for ht in hospital_types %}
+                    '{{ ht.id }}': { name: '{{ ht.name }}', description: '{{ ht.description }}', icon: '{{ ht.icon }}', color: '{{ ht.color }}' },
+                {% endfor %}
+            {% endif %}
+        },
         formData: {
             name: '{{ request.form.name or '' }}',
+            hospital_type_id: '{{ request.form.hospital_type_id or '1' }}',
             facility_type: 'General Hospital',
+            selected_type_desc: 'Provides treatment for common medical conditions',
             license_no: '{{ request.form.license_no or '' }}',
             email: '{{ request.form.email or '' }}',
             phone: '{{ request.form.phone or '' }}',
+            emergency_phone: '{{ request.form.emergency_phone or '' }}',
             address: '{{ request.form.address or '' }}',
             city: '{{ request.form.city or '' }}',
             state: '{{ request.form.state or '' }}',
@@ -82,9 +92,18 @@
             total_beds: 150,
             icu_beds: 30,
             emergency_beds: 20,
+            emergency_services: true,
+            about: '{{ request.form.about or '' }}',
             password: '',
             confirm_password: '',
             terms: true
+        },
+        onTypeChange(e) {
+            const selectedId = this.formData.hospital_type_id;
+            if (this.hospitalTypesMap[selectedId]) {
+                this.formData.facility_type = this.hospitalTypesMap[selectedId].name;
+                this.formData.selected_type_desc = this.hospitalTypesMap[selectedId].description;
+            }
         },
         handleLogo(event) {
             const file = event.target.files[0];
@@ -299,33 +318,38 @@
                                @keydown.enter.prevent="goToNextStep()">
                     </div>
 
-                    <!-- Institutional Category & Registration License -->
+                    <!-- Institutional Primary Category & Registration License -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="minimal-input-wrap">
-                            <label for="facilityType" class="minimal-label block">Facility Classification *</label>
-                            <select name="facility_type" id="facilityType" x-model="formData.facility_type" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
-                                <option value="General Hospital">General Hospital</option>
-                                <option value="Multispecialty Hospital">Multispecialty Hospital</option>
-                                <option value="Super-Specialty Hospital">Super-Specialty Hospital</option>
-                                <option value="Specialty Hospital">Specialty Hospital</option>
-                                <option value="Community Hospital">Community Hospital</option>
-                                <option value="Government Hospital">Government Hospital</option>
-                                <option value="Private Hospital">Private Hospital</option>
-                                <option value="Teaching Hospital">Teaching Hospital</option>
-                                <option value="Medical College Hospital">Medical College Hospital</option>
-                                <option value="Trauma & Emergency Center">Trauma & Emergency Center</option>
-                                <option value="Maternity & Women's Hospital">Maternity & Women's Hospital</option>
-                                <option value="Children's Hospital">Children's Hospital</option>
-                                <option value="Cancer Hospital">Cancer Hospital</option>
-                                <option value="Cardiac Hospital">Cardiac Hospital</option>
-                                <option value="Psychiatric Hospital">Psychiatric Hospital</option>
-                                <option value="Rehabilitation Center">Rehabilitation Center</option>
-                                <option value="Diagnostic & Imaging Center">Diagnostic & Imaging Center</option>
-                                <option value="Day Care Hospital">Day Care Hospital</option>
-                                <option value="Nursing Home">Nursing Home</option>
-                                <option value="Primary Health Center (PHC)">Primary Health Center (PHC)</option>
-                                <option value="Community Health Center (CHC)">Community Health Center (CHC)</option>
+                            <label for="hospitalTypeId" class="minimal-label block">Primary Hospital Classification *</label>
+                            <select name="hospital_type_id" id="hospitalTypeId" x-model="formData.hospital_type_id" @change="onTypeChange($event)" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
+                                {% if hospital_types %}
+                                    {% for ht in hospital_types %}
+                                    <option value="{{ ht.id }}">{{ ht.name }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="1">General Hospital</option>
+                                    <option value="2">Multispecialty Hospital</option>
+                                    <option value="3">Super Specialty Hospital</option>
+                                    <option value="4">Cardiology Hospital</option>
+                                    <option value="5">Oncology Hospital</option>
+                                    <option value="6">Neurology Hospital</option>
+                                    <option value="7">Orthopedic Hospital</option>
+                                    <option value="8">Maternity Hospital</option>
+                                    <option value="9">Pediatric Hospital</option>
+                                    <option value="10">Psychiatric Hospital</option>
+                                    <option value="11">Eye Hospital</option>
+                                    <option value="12">Dental Hospital</option>
+                                    <option value="13">ENT Hospital</option>
+                                    <option value="14">Nephrology Hospital</option>
+                                    <option value="15">Rehabilitation Hospital</option>
+                                    <option value="16">Infectious Disease Hospital</option>
+                                    <option value="17">Burns and Plastic Surgery Hospital</option>
+                                    <option value="18">Emergency and Trauma Hospital</option>
+                                    <option value="19">Other</option>
+                                {% endif %}
                             </select>
+                            <input type="hidden" name="facility_type" :value="formData.facility_type">
                         </div>
                         <div class="minimal-input-wrap">
                             <label for="licenseNo" class="minimal-label block">Establishment License / Reg. ID *</label>
@@ -334,6 +358,43 @@
                                    placeholder="e.g., MED-REG-2024-9981"
                                    class="minimal-input placeholder:text-slate-400"
                                    @keydown.enter.prevent="goToNextStep()">
+                        </div>
+                    </div>
+
+                    <!-- Category Description Helper Card -->
+                    <div class="p-3 bg-sky-50/70 border border-sky-100 rounded-xl flex items-start gap-2.5">
+                        <i class="fas fa-circle-info text-sky-600 text-xs mt-0.5 flex-shrink-0"></i>
+                        <p class="text-[11px] text-slate-700 font-medium" x-text="formData.selected_type_desc || 'Select your primary hospital specialization'"></p>
+                    </div>
+
+                    <!-- Secondary Specialties (Multi-Select Pills) -->
+                    <div class="minimal-input-wrap pt-1" x-data="{
+                        availableSpecialties: [
+                            'Cardiology', 'Oncology', 'Neurology', 'Orthopedics', 'Pediatrics',
+                            'Nephrology', 'Gastroenterology', 'Dermatology', 'Urology', 'Pulmonology',
+                            'Gynecology & Obstetrics', 'Ophthalmology', 'ENT', 'Psychiatry',
+                            'Emergency Medicine', 'General Surgery', 'Plastic Surgery', 'Anesthesiology'
+                        ],
+                        selectedSpecialties: [],
+                        toggleSpecialty(spec) {
+                            if (this.selectedSpecialties.includes(spec)) {
+                                this.selectedSpecialties = this.selectedSpecialties.filter(s => s !== spec);
+                            } else {
+                                this.selectedSpecialties.push(spec);
+                            }
+                        }
+                    }">
+                        <label class="minimal-label block mb-1.5">Additional Clinical Specialties (Optional)</label>
+                        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 bg-slate-50 border border-slate-200 rounded-xl">
+                            <template x-for="spec in availableSpecialties" :key="spec">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all"
+                                       :class="selectedSpecialties.includes(spec) ? 'bg-sky-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'">
+                                    <input type="checkbox" name="specialties" :value="spec" class="hidden" 
+                                           @change="toggleSpecialty(spec)" :checked="selectedSpecialties.includes(spec)">
+                                    <i class="fas fa-check text-[9px]" x-show="selectedSpecialties.includes(spec)"></i>
+                                    <span x-text="spec"></span>
+                                </label>
+                            </template>
                         </div>
                     </div>
 
@@ -459,6 +520,53 @@
                                    placeholder="20"
                                    class="minimal-input placeholder:text-slate-400">
                         </div>
+                    </div>
+
+                    <!-- 24/7 Emergency & Critical Care Toggle -->
+                    <div class="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-2xl flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                                <i class="fas fa-truck-medical"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 block">24/7 Emergency & Trauma Services</span>
+                                <span class="text-[11px] text-slate-600">Enables urgent patient admission and ambulance dispatch</span>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="emergency_services" value="on" class="sr-only peer" x-model="formData.emergency_services">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                        </label>
+                    </div>
+
+                    <!-- Available Clinical Facilities Checklist -->
+                    <div class="minimal-input-wrap pt-1">
+                        <label class="minimal-label block mb-1.5">Available Clinical & Diagnostic Facilities</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px]">
+                            {% if master_facilities %}
+                                {% for fac in master_facilities %}
+                                <label class="cursor-pointer flex items-center gap-2 p-1.5 rounded-lg bg-white border border-slate-200 hover:border-sky-300 transition-colors font-medium text-slate-800">
+                                    <input type="checkbox" name="facilities" value="{{ fac }}" class="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5">
+                                    <span class="truncate">{{ fac }}</span>
+                                </label>
+                                {% endfor %}
+                            {% else %}
+                                {% for fac in ['24/7 Pharmacy', 'Emergency Room (ER)', 'Intensive Care Unit (ICU)', 'Blood Bank', 'MRI & CT Scan', 'Dialysis Center', 'Cath Lab (Cardiac)', 'Neonatal ICU (NICU)', 'Ambulance Service', 'Pathology Laboratory'] %}
+                                <label class="cursor-pointer flex items-center gap-2 p-1.5 rounded-lg bg-white border border-slate-200 hover:border-sky-300 transition-colors font-medium text-slate-800">
+                                    <input type="checkbox" name="facilities" value="{{ fac }}" class="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5" checked>
+                                    <span class="truncate">{{ fac }}</span>
+                                </label>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- About / Hospital Overview -->
+                    <div class="minimal-input-wrap">
+                        <label for="hospitalAbout" class="minimal-label block">About Hospital / Clinical Overview (Optional)</label>
+                        <textarea name="about" id="hospitalAbout" rows="2" x-model="formData.about" 
+                                  placeholder="Provide a brief clinical summary, center of excellence, or mission..."
+                                  class="minimal-input placeholder:text-slate-400 resize-none"></textarea>
                     </div>
 
                     <!-- Logo / Brand Emblem Upload -->

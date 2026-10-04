@@ -2466,11 +2466,78 @@
                 </div>
                 <div class="col-md-6">
                   <div class="form-group">
-                    <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">Contact Phone</label>
-                    <input type="text" name="phone" value="{{ current_user.phone or '' }}" class="form-control" style="border-radius: 8px; height: 45px;" placeholder="+91 11 2658 8500" />
+                    <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">Primary Hospital Classification *</label>
+                    <select name="hospital_type_id" class="form-control" style="border-radius: 8px; height: 45px;">
+                      {% if hospital_types %}
+                        {% for ht in hospital_types %}
+                        <option value="{{ ht.id }}" {% if current_user.hospital_type_id == ht.id or current_user.hospital_type == ht.name %}selected{% endif %}>
+                          {{ ht.name }}
+                        </option>
+                        {% endfor %}
+                      {% else %}
+                        <option value="1">General Hospital</option>
+                        <option value="2">Multispecialty Hospital</option>
+                        <option value="3">Super Specialty Hospital</option>
+                        <option value="4">Cardiology Hospital</option>
+                        <option value="5">Oncology Hospital</option>
+                      {% endif %}
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">Emergency Dispatch Helpline</label>
+                    <input type="text" name="emergency_phone" value="{{ current_user.emergency_phone or '' }}" class="form-control" style="border-radius: 8px; height: 45px;" placeholder="+91 11 2658 8888" />
                   </div>
                 </div>
               </div>
+
+              <!-- Secondary Specialties -->
+              <div class="form-group">
+                <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">Clinical Specialties (Comma Separated)</label>
+                <input type="text" name="specialties_csv" value="{{ current_user.specialties|join(', ') if current_user.specialties else '' }}" class="form-control" style="border-radius: 8px; height: 45px;" placeholder="e.g. Cardiology, Oncology, Neurology, Orthopedics, Pediatrics" />
+                <small class="text-slate-400 text-xs">Specify clinical departments and center of excellence specialties.</small>
+              </div>
+
+              <!-- Emergency Services & Critical Care Checkbox -->
+              <div class="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-xs">
+                    <i class="fas fa-truck-medical"></i>
+                  </div>
+                  <div>
+                    <span class="text-xs font-bold text-slate-900 block">24/7 Emergency &amp; Trauma Admissions</span>
+                    <span class="text-[11px] text-slate-600">Activate live emergency routing in network registry</span>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer mb-0">
+                  <input type="checkbox" name="emergency_services" value="on" class="h-4 w-4 text-rose-600 rounded" {% if current_user.emergency_services %}checked{% endif %}>
+                </label>
+              </div>
+
+              <!-- Available Facilities -->
+              <div class="form-group">
+                <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">Available Facilities &amp; Infrastructure</label>
+                <div class="row g-2 p-2 bg-slate-50 border rounded-xl" style="max-height: 140px; overflow-y: auto;">
+                  {% if master_facilities %}
+                    {% for fac in master_facilities %}
+                    <div class="col-sm-4 col-6">
+                      <label class="d-flex align-items-center gap-1.5 text-xs text-slate-700 cursor-pointer mb-0 p-1 rounded hover:bg-white">
+                        <input type="checkbox" name="facilities" value="{{ fac }}" {% if current_user.has_facility(fac) %}checked{% endif %}>
+                        <span class="text-truncate">{{ fac }}</span>
+                      </label>
+                    </div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- About Hospital -->
+              <div class="form-group">
+                <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">About Hospital / Clinical Mission</label>
+                <textarea name="about" rows="2" class="form-control" style="border-radius: 8px;" placeholder="Brief clinical background, patient intake protocol, or medical accolades...">{{ current_user.about or '' }}</textarea>
+              </div>
+
               <div class="form-group">
                 <label class="text-xs font-bold text-slate-500 text-uppercase mb-1">Full Address</label>
                 <input type="text" name="address" value="{{ current_user.address }}" class="form-control" style="border-radius: 8px; height: 45px;" required />

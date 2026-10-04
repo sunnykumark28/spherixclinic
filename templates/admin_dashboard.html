@@ -594,6 +594,9 @@
             <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;" title="{{ pending_hospitals|length }} pending verification">{{ pending_hospitals|length }} pending</span>
             {% endif %}
         </div>
+        <div class="nav-item" data-section="hospital_types" onclick="switchTab('hospital_types', this)">
+            <i class="fas fa-tags"></i> Hospital Classification <span class="badge bg-primary text-white">{{ hospital_types|length }}</span>
+        </div>
 
         <div class="nav-header">Pharmacy & Diagnostics</div>
         <div class="nav-item" data-section="pharmacy" onclick="switchTab('pharmacy', this)">
@@ -1732,6 +1735,267 @@
                 </div>
             </div>
         </div>
+
+        <!-- ================= SECTION: HOSPITAL CLASSIFICATION & TYPES ================= -->
+        <div id="hospital_types" class="content-section">
+            <div class="card-box">
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-tags text-primary"></i>
+                            <span>Hospital Type Master Catalog ({{ hospital_types|length }})</span>
+                        </h5>
+                        <small class="text-muted">Centralized 18 healthcare categories &amp; custom facility classifications with live registry mappings</small>
+                    </div>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addHospitalTypeModal">
+                        <i class="fas fa-plus"></i>
+                        <span>Add Hospital Type</span>
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="custom-table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th>Category Name &amp; Icon</th>
+                                <th>Clinical Scope &amp; Description</th>
+                                <th>Registered Hospitals</th>
+                                <th>Status</th>
+                                <th class="text-end">Manage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if hospital_types %}
+                                {% for ht in hospital_types %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-light text-dark border font-mono">#{{ ht.id }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-lg d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-2xs"
+                                                 style="background-color: {{ ht.color }}; width: 32px; height: 32px; border-radius: 8px;">
+                                                <i class="fa-solid {{ ht.icon }} text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ ht.name }}</div>
+                                                <small class="text-muted font-mono" style="font-size: 0.72rem;">slug: {{ ht.slug }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-slate-700 small" style="max-width: 380px;">
+                                            {{ ht.description }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set h_count = ht.registered_hospitals_count|default(0) %}
+                                        {% if h_count > 0 %}
+                                        <a href="{{ url_for('hospitals_list', type=ht.id) }}" target="_blank" 
+                                           class="badge bg-primary text-white text-decoration-none shadow-2xs d-inline-flex align-items-center gap-1.5 py-1.5 px-2.5">
+                                            <i class="fas fa-hospital text-xs"></i>
+                                            <span>{{ h_count }} Facility{% if h_count > 1 %}s{% endif %}</span>
+                                        </a>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted border py-1.5 px-2.5">0 Facilities</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ht.is_active %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 font-semibold">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1 px-2 font-semibold">
+                                            <i class="fas fa-ban me-1"></i>Inactive
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <!-- Edit Modal Trigger -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold me-1"
+                                                onclick="openEditHospitalTypeModal('{{ ht.id }}', '{{ ht.name|e }}', '{{ ht.description|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', {{ 'true' if ht.is_active else 'false' }})"
+                                                title="Edit Category Description &amp; Details">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+
+                                        <!-- Toggle Status Form -->
+                                        <form method="POST" action="{{ url_for('admin.admin_toggle_hospital_type', type_id=ht.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {% if ht.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %} rounded-pill px-2.5 py-1 fw-semibold me-1"
+                                                    title="{% if ht.is_active %}Deactivate Category{% else %}Activate Category{% endif %}">
+                                                <i class="fas {% if ht.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- Delete / Safe Reassign Trigger -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 fw-semibold"
+                                                onclick="openDeleteHospitalTypeModal('{{ ht.id }}', '{{ ht.name|e }}', {{ h_count }})"
+                                                title="Delete Category">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="6" class="text-center py-5 text-muted">No hospital categories configured.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: ADD HOSPITAL TYPE ================= -->
+        <div class="modal fade" id="addHospitalTypeModal" tabindex="-1" aria-labelledby="addHospitalTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow-xl">
+                    <form method="POST" action="{{ url_for('admin.admin_add_hospital_type') }}">
+                        <div class="modal-header border-bottom p-4">
+                            <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="addHospitalTypeModalLabel">
+                                <i class="fas fa-plus-circle text-primary"></i>
+                                <span>Create Hospital Classification</span>
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4 space-y-3">
+                            <div class="mb-3">
+                                <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">Category Name *</label>
+                                <input type="text" name="name" required placeholder="e.g. Geriatric Care Hospital" class="form-control" style="border-radius: 10px; height: 44px;">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">Description &amp; Medical Scope *</label>
+                                <textarea name="description" rows="3" required placeholder="Describe clinical treatments and target medical conditions..." class="form-control" style="border-radius: 10px;"></textarea>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">FontAwesome Icon Class</label>
+                                    <input type="text" name="icon" value="fa-hospital" placeholder="fa-hospital" class="form-control" style="border-radius: 10px; height: 44px;">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">Badge Brand Color</label>
+                                    <input type="color" name="color" value="#0284c7" class="form-control form-control-color w-100" style="border-radius: 10px; height: 44px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top p-3 d-flex justify-content-between">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">Save Classification</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: EDIT HOSPITAL TYPE ================= -->
+        <div class="modal fade" id="editHospitalTypeModal" tabindex="-1" aria-labelledby="editHospitalTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow-xl">
+                    <form method="POST" id="editHospitalTypeForm" action="">
+                        <div class="modal-header border-bottom p-4">
+                            <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="editHospitalTypeModalLabel">
+                                <i class="fas fa-edit text-primary"></i>
+                                <span>Edit Hospital Classification</span>
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4 space-y-3">
+                            <div class="mb-3">
+                                <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">Category Name *</label>
+                                <input type="text" name="name" id="editTypeName" required class="form-control" style="border-radius: 10px; height: 44px;">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">Description &amp; Medical Scope *</label>
+                                <textarea name="description" id="editTypeDescription" rows="3" required class="form-control" style="border-radius: 10px;"></textarea>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">FontAwesome Icon</label>
+                                    <input type="text" name="icon" id="editTypeIcon" class="form-control" style="border-radius: 10px; height: 44px;">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label text-xs fw-bold text-uppercase text-slate-600 mb-1">Brand Color</label>
+                                    <input type="color" name="color" id="editTypeColor" class="form-control form-control-color w-100" style="border-radius: 10px; height: 44px;">
+                                </div>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editTypeActive">
+                                <label class="form-check-label text-xs fw-bold text-dark" for="editTypeActive">Active in Discovery &amp; Registration Dropdowns</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top p-3 d-flex justify-content-between">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">Update Category</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: DELETE / REASSIGN HOSPITAL TYPE ================= -->
+        <div class="modal fade" id="deleteHospitalTypeModal" tabindex="-1" aria-labelledby="deleteHospitalTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow-xl">
+                    <form method="POST" id="deleteHospitalTypeForm" action="">
+                        <div class="modal-header border-bottom p-4 bg-danger-subtle text-danger">
+                            <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="deleteHospitalTypeModalLabel">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                <span>Delete Hospital Classification</span>
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p class="text-dark small mb-3">
+                                Are you sure you want to delete category <strong id="deleteTypeName" class="text-danger"></strong>?
+                            </p>
+                            
+                            <div id="deleteWarningWithHospitals" class="alert alert-warning d-none">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                <span id="deleteHospitalCountText"></span>
+                                <div class="mt-2.5">
+                                    <label class="form-label text-xs fw-bold text-uppercase text-dark mb-1">Reassign Affected Hospitals To:</label>
+                                    <select name="reassign_to_id" id="deleteReassignSelect" class="form-select text-xs">
+                                        <option value="1">1. General Hospital (Recommended Default)</option>
+                                        <option value="2">2. Multispecialty Hospital</option>
+                                        <option value="19">19. Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top p-3 d-flex justify-content-between">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Confirm Delete</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function openEditHospitalTypeModal(id, name, desc, icon, color, isActive) {
+            document.getElementById('editHospitalTypeForm').action = `/admin/hospital-types/edit/${id}`;
+            document.getElementById('editTypeName').value = name;
+            document.getElementById('editTypeDescription').value = desc;
+            document.getElementById('editTypeIcon').value = icon || 'fa-hospital';
+            document.getElementById('editTypeColor').value = color || '#0284c7';
+            document.getElementById('editTypeActive').checked = isActive;
+            new bootstrap.Modal(document.getElementById('editHospitalTypeModal')).show();
+        }
+
+        function openDeleteHospitalTypeModal(id, name, count) {
+            document.getElementById('deleteHospitalTypeForm').action = `/admin/hospital-types/delete/${id}`;
+            document.getElementById('deleteTypeName').innerText = name;
+            const warningEl = document.getElementById('deleteWarningWithHospitals');
+            const countText = document.getElementById('deleteHospitalCountText');
+            if (count > 0) {
+                warningEl.classList.remove('d-none');
+                countText.innerText = `There are ${count} hospital(s) currently classified under this type. You must select a fallback category below:`;
+            } else {
+                warningEl.classList.add('d-none');
+            }
+            new bootstrap.Modal(document.getElementById('deleteHospitalTypeModal')).show();
+        }
+        </script>
 
 
         <!-- ================= SECTION: CAMP REGISTRATIONS ================= -->
@@ -5976,6 +6240,7 @@
         'dashboard': 'Analytics Overview',
         'doctors': 'Doctor Management',
         'hospitals': 'Hospital Network',
+        'hospital_types': 'Hospital Classification & Categories',
         'patients': 'Patient Directory',
         'staff': 'Staff Management',
         'appointments': 'Appointments Scheduling',

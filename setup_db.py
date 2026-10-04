@@ -181,7 +181,37 @@ def setup_database_schema(force_sqlite=False):
                         is_international BIT DEFAULT 0,
                         is_verified BIT DEFAULT 1,
                         is_blocked BIT DEFAULT 0,
-                        is_hidden BIT DEFAULT 0
+                        is_hidden BIT DEFAULT 0,
+                        hospital_type_id INT NULL,
+                        hospital_type NVARCHAR(255) NULL,
+                        specialties NVARCHAR(MAX) NULL,
+                        facilities NVARCHAR(MAX) NULL,
+                        emergency_services BIT DEFAULT 1,
+                        about NVARCHAR(MAX) NULL,
+                        latitude FLOAT NULL,
+                        longitude FLOAT NULL,
+                        emergency_phone NVARCHAR(50) NULL,
+                        ambulance_phone NVARCHAR(50) NULL
+                    )"""),
+                    ("hospital_types", """CREATE TABLE hospital_types (
+                        id INT PRIMARY KEY,
+                        name NVARCHAR(255) NOT NULL UNIQUE,
+                        slug VARCHAR(100) NOT NULL UNIQUE,
+                        description NVARCHAR(MAX) NULL,
+                        icon NVARCHAR(100) DEFAULT 'fa-solid fa-hospital',
+                        color NVARCHAR(50) DEFAULT 'emerald',
+                        badge_bg NVARCHAR(50) DEFAULT 'bg-emerald-50',
+                        badge_text NVARCHAR(50) DEFAULT 'text-emerald-700',
+                        badge_border NVARCHAR(50) DEFAULT 'border-emerald-200',
+                        is_active BIT DEFAULT 1,
+                        created_at DATETIME DEFAULT GETDATE()
+                    )"""),
+                    ("hospital_type_mappings", """CREATE TABLE hospital_type_mappings (
+                        id INT IDENTITY(1,1) PRIMARY KEY,
+                        hospital_id VARCHAR(50) NOT NULL,
+                        hospital_type_id INT NOT NULL,
+                        is_primary BIT DEFAULT 0,
+                        created_at DATETIME DEFAULT GETDATE()
                     )"""),
                     ("staff", """CREATE TABLE staff (
                         id VARCHAR(50) PRIMARY KEY,
@@ -606,7 +636,9 @@ def setup_sqlite_tables():
     sqlite_tables = [
         "CREATE TABLE IF NOT EXISTS doctors (id TEXT PRIMARY KEY, first_name TEXT, last_name TEXT, email TEXT UNIQUE, password TEXT, department TEXT, phone TEXT, specialization TEXT, address TEXT, profile_picture_url TEXT, bio TEXT, hospital_name TEXT, hospital_address TEXT, country TEXT DEFAULT 'India', city TEXT, state TEXT, district TEXT, pincode TEXT, qualification TEXT, license_number TEXT, experience TEXT, consultation_type TEXT, consultation_fee TEXT, currency TEXT DEFAULT 'INR', timezone TEXT DEFAULT 'IST (UTC+5:30)', working_hours TEXT, languages_spoken TEXT, international_accreditation TEXT, telemedicine_modes TEXT, social_links TEXT, is_international INTEGER DEFAULT 0, is_verified INTEGER DEFAULT 1, is_blocked INTEGER DEFAULT 0, is_hidden INTEGER DEFAULT 0, availability_status TEXT DEFAULT 'available')",
         "CREATE TABLE IF NOT EXISTS patients (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password TEXT, age INTEGER, gender TEXT, phone TEXT, country TEXT DEFAULT 'India', address TEXT, profile_picture_url TEXT, profile_picture_data BLOB, profile_picture_content_type TEXT)",
-        "CREATE TABLE IF NOT EXISTS hospitals (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password TEXT, logo_url TEXT, country TEXT DEFAULT 'India', city TEXT, state TEXT, address TEXT, phone TEXT, currency TEXT DEFAULT 'INR', timezone TEXT DEFAULT 'IST (UTC+5:30)', total_beds INTEGER DEFAULT 0, available_beds INTEGER DEFAULT 0, icu_beds INTEGER DEFAULT 0, available_icu_beds INTEGER DEFAULT 0, general_bed_fee REAL DEFAULT 1000.0, icu_bed_fee REAL DEFAULT 2500.0, doctors_available TEXT DEFAULT 'Available', accreditation TEXT DEFAULT 'NABH Accredited', international_services TEXT, is_international INTEGER DEFAULT 0, is_verified INTEGER DEFAULT 1, is_blocked INTEGER DEFAULT 0, is_hidden INTEGER DEFAULT 0)",
+        "CREATE TABLE IF NOT EXISTS hospitals (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password TEXT, logo_url TEXT, country TEXT DEFAULT 'India', city TEXT, state TEXT, address TEXT, phone TEXT, currency TEXT DEFAULT 'INR', timezone TEXT DEFAULT 'IST (UTC+5:30)', total_beds INTEGER DEFAULT 0, available_beds INTEGER DEFAULT 0, icu_beds INTEGER DEFAULT 0, available_icu_beds INTEGER DEFAULT 0, general_bed_fee REAL DEFAULT 1000.0, icu_bed_fee REAL DEFAULT 2500.0, doctors_available TEXT DEFAULT 'Available', accreditation TEXT DEFAULT 'NABH Accredited', international_services TEXT, is_international INTEGER DEFAULT 0, is_verified INTEGER DEFAULT 1, is_blocked INTEGER DEFAULT 0, is_hidden INTEGER DEFAULT 0, hospital_type_id INTEGER, hospital_type TEXT, specialties TEXT, facilities TEXT, emergency_services INTEGER DEFAULT 1, about TEXT, latitude REAL, longitude REAL, emergency_phone TEXT, ambulance_phone TEXT)",
+        "CREATE TABLE IF NOT EXISTS hospital_types (id INTEGER PRIMARY KEY, name TEXT UNIQUE, slug TEXT UNIQUE, description TEXT, icon TEXT DEFAULT 'fa-solid fa-hospital', color TEXT DEFAULT 'emerald', badge_bg TEXT DEFAULT 'bg-emerald-50', badge_text TEXT DEFAULT 'text-emerald-700', badge_border TEXT DEFAULT 'border-emerald-200', is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+        "CREATE TABLE IF NOT EXISTS hospital_type_mappings (id INTEGER PRIMARY KEY AUTOINCREMENT, hospital_id TEXT, hospital_type_id INTEGER, is_primary INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
         "CREATE TABLE IF NOT EXISTS staff (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password TEXT, role TEXT, phone TEXT, hospital_name TEXT, last_login TIMESTAMP, created_at TIMESTAMP, profile_picture_data BLOB, profile_picture_content_type TEXT)",
         "CREATE TABLE IF NOT EXISTS appointments (id INTEGER PRIMARY KEY, patient_name TEXT, doctor_id TEXT, patient_id TEXT, appointment_date DATE, appointment_time TIME, patient_age INTEGER, patient_id_number TEXT, patient_phone TEXT, patient_country TEXT DEFAULT 'India', doctor_country TEXT, doctor_timezone TEXT, currency TEXT DEFAULT 'INR', fee_amount TEXT, telemedicine_room_id TEXT, consultation_type TEXT, reason TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, original_appointment_date DATE, original_appointment_time TIME, document_path TEXT, prescription_path TEXT)",
         "CREATE TABLE IF NOT EXISTS bed_bookings (id INTEGER PRIMARY KEY, hospital_id TEXT, patient_id TEXT, patient_name TEXT, patient_phone TEXT, patient_country TEXT DEFAULT 'India', passport_number TEXT, medical_visa_needed INTEGER DEFAULT 0, bed_type TEXT, reason TEXT, status TEXT, currency TEXT DEFAULT 'INR', is_international INTEGER DEFAULT 0, room_number TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
@@ -650,9 +682,15 @@ def setup_sqlite_tables():
         stock_data = [('A+', 15), ('A-', 5), ('B+', 12), ('B-', 4), ('AB+', 8), ('AB-', 3), ('O+', 25), ('O-', 10)]
         cursor.executemany("INSERT OR IGNORE INTO blood_stock (blood_group, quantity) VALUES (?, ?)", stock_data)
 
+    # Seed Hospital Types in SQLite
+    from spherix.hospital_types import HOSPITAL_TYPE_MASTER_DATA
+    for ht in HOSPITAL_TYPE_MASTER_DATA:
+        cursor.execute("INSERT OR IGNORE INTO hospital_types (id, name, slug, description, icon, color, badge_bg, badge_text, badge_border, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       (ht['id'], ht['name'], ht['slug'], ht['description'], ht['icon'], ht['color'], ht['badge_bg'], ht['badge_text'], ht['badge_border'], ht.get('is_active', 1)))
+
     conn.commit()
     conn.close()
-    print(f"🎉 Local SQLite Database '{SQLITE_DB_PATH}' (24 Tables) Created & Verified Successfully.")
+    print(f"🎉 Local SQLite Database '{SQLITE_DB_PATH}' (26 Tables) Created & Verified Successfully.")
 
 # ─── 2. SEEDING PRODUCTION & DEMO DATA ────────────────────────────────────────
 def seed_all_database_data():

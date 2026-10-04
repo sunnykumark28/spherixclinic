@@ -332,46 +332,11 @@
         </div>
     </section>
 
-    <!-- ================= 2. HOSPITAL TYPE MASTER CATEGORY PILLS BAR ================= -->
-    <div class="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-xs">
-        <div class="max-w-[1850px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-3">
-            <div class="flex items-center justify-between gap-4">
-                <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none no-scrollbar flex-1 text-xs">
-                    <!-- 'All Hospitals' Pill -->
-                    <a href="{{ url_for('hospitals_list', q=q, city=city, specialty=active_specialty, scope=active_scope, view=view_mode) }}" 
-                       class="shrink-0 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-2 {% if not active_type_id or active_type_id == 'all' %}bg-slate-900 text-white shadow-sm{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
-                        <i class="fa-solid fa-hospital-user text-xs"></i>
-                        <span>All Facilities</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] {% if not active_type_id or active_type_id == 'all' %}bg-slate-700 text-white{% else %}bg-slate-200 text-slate-700{% endif %} font-semibold">{{ type_counts.get('all', total_partner_hospitals) }}</span>
-                    </a>
+    <!-- ================= 2. DIRECTORY & SIDEBAR FILTER SUITE ================= -->
+    <div class="max-w-[1850px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 pt-10 grid grid-cols-1 lg:grid-cols-12 gap-7">
 
-                    <!-- 18 Master Hospital Categories + Other -->
-                    {% if hospital_types %}
-                        {% for ht in hospital_types %}
-                        {% set is_ht_active = (active_type_id|string == ht.id|string or active_type_id|string == ht.slug or (active_type_obj and active_type_obj.id == ht.id)) %}
-                        <a href="{{ url_for('hospitals_list', type=ht.id, q=q, city=city, specialty=active_specialty, scope=active_scope, view=view_mode) }}" 
-                           class="shrink-0 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-2 border {% if is_ht_active %}bg-sky-600 text-white border-sky-600 shadow-sm{% else %}bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300{% endif %}"
-                           title="{{ ht.description }}">
-                            <i class="fa-solid {{ ht.icon }} text-xs {% if is_ht_active %}text-white{% else %}text-sky-600{% endif %}"></i>
-                            <span>{{ ht.name }}</span>
-                            {% set count_for_type = type_counts.get(ht.id|string, 0) %}
-                            {% if count_for_type > 0 %}
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] {% if is_ht_active %}bg-sky-700 text-white{% else %}bg-slate-100 text-slate-600{% endif %} font-semibold">{{ count_for_type }}</span>
-                            {% endif %}
-                        </a>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= 3. ADVANCED MULTI-FILTER CONTROL CONSOLE ================= -->
-    <div class="max-w-[1850px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 pt-8">
-        
-        <!-- Filter Controls Container (Collapsible / Responsive Card) -->
-        <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm mb-8" x-data="{
-            showAdvancedFilters: {% if active_specialty or verified_only or emergency_only or selected_facilities or city or state or nearby_only %}true{% else %}false{% endif %},
+        <!-- LEFT SIDEBAR: FILTERS CONSOLE (lg:col-span-3 xl:col-span-2) -->
+        <aside class="lg:col-span-3 xl:col-span-2" x-data="{
             userLat: '{{ user_lat or '' }}',
             userLng: '{{ user_lng or '' }}',
             isGettingLocation: false,
@@ -399,46 +364,63 @@
                 );
             }
         }">
-            
-            <form method="GET" action="{{ url_for('hospitals_list') }}" id="advancedFilterForm">
-                {% if active_scope %}<input type="hidden" name="scope" value="{{ active_scope }}">{% endif %}
-                {% if active_country %}<input type="hidden" name="country" value="{{ active_country }}">{% endif %}
-                <input type="hidden" name="view" value="{{ view_mode or 'grid' }}">
-                <input type="hidden" name="lat" :value="userLat">
-                <input type="hidden" name="lng" :value="userLng">
+            <div class="sticky top-20 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex items-center justify-between pb-3.5 border-b border-slate-100">
+                    <h3 class="text-sm font-display font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-emerald-600 text-xs"></i>
+                        <span>Facility Filters</span>
+                    </h3>
+                    {% if active_type_id or active_specialty or q or city or verified_only or emergency_only or nearby_only or selected_facilities %}
+                    <a href="{{ url_for('hospitals_list') }}"
+                        class="text-[10px] font-bold text-rose-600 hover:text-rose-800 uppercase tracking-wider flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-left text-[9px]"></i>
+                        <span>Reset</span>
+                    </a>
+                    {% else %}
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Active</span>
+                    {% endif %}
+                </div>
 
-                <!-- Row 1: Primary Controls (Hospital Type, Specialty, City, State, Search) -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    
+                <!-- Scope Selection Tabs -->
+                <div>
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Network Scope</span>
+                    <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
+                        <a href="{{ url_for('hospitals_list', q=q, city=city, type=active_type_id, specialty=active_specialty, view=view_mode) }}"
+                           class="py-1.5 text-center rounded-lg transition-all {% if not active_scope or active_scope == 'all' %}bg-white text-slate-900 shadow-xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                           All
+                        </a>
+                        <a href="{{ url_for('hospitals_list', q=q, city=city, type=active_type_id, specialty=active_specialty, scope='domestic', view=view_mode) }}"
+                           class="py-1.5 text-center rounded-lg transition-all {% if active_scope == 'domestic' %}bg-emerald-600 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                           🇮🇳 India
+                        </a>
+                        <a href="{{ url_for('hospitals_list', q=q, city=city, type=active_type_id, specialty=active_specialty, scope='international', view=view_mode) }}"
+                           class="py-1.5 text-center rounded-lg transition-all {% if active_scope == 'international' %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                           🌍 Global
+                        </a>
+                    </div>
+                </div>
+
+                <form method="GET" action="{{ url_for('hospitals_list') }}" id="sidebarFilterForm" class="space-y-3.5">
+                    {% if active_scope %}<input type="hidden" name="scope" value="{{ active_scope }}">{% endif %}
+                    {% if active_country %}<input type="hidden" name="country" value="{{ active_country }}">{% endif %}
+                    <input type="hidden" name="view" value="{{ view_mode or 'grid' }}">
+                    <input type="hidden" name="lat" :value="userLat">
+                    <input type="hidden" name="lng" :value="userLng">
+
                     <!-- Search Input -->
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Search Keywords</label>
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Search Facilities</label>
                         <div class="relative">
                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                            <input type="text" name="q" value="{{ q or '' }}" placeholder="Name, condition, doc..." 
-                                   class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 outline-none transition-all">
+                            <input type="text" name="q" value="{{ q or '' }}" placeholder="Name, doctor..."
+                                   class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 outline-none transition-all">
                         </div>
-                    </div>
-
-                    <!-- Hospital Type Classification Dropdown -->
-                    <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Hospital Type</label>
-                        <select name="type" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 outline-none transition-all cursor-pointer">
-                            <option value="">All Hospital Types (18 Standard + Other)</option>
-                            {% if hospital_types %}
-                                {% for ht in hospital_types %}
-                                <option value="{{ ht.id }}" {% if active_type_id|string == ht.id|string or (active_type_obj and active_type_obj.id == ht.id) %}selected{% endif %}>
-                                    {{ ht.name }} ({{ type_counts.get(ht.id|string, 0) }})
-                                </option>
-                                {% endfor %}
-                            {% endif %}
-                        </select>
                     </div>
 
                     <!-- Medical Specialty Dropdown -->
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Medical Specialty</label>
-                        <select name="specialty" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 outline-none transition-all cursor-pointer">
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Medical Specialty</label>
+                        <select name="specialty" onchange="this.form.submit()" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 outline-none transition-all cursor-pointer">
                             <option value="">All Specialties</option>
                             {% if all_specialties %}
                                 {% for spec in all_specialties %}
@@ -455,148 +437,167 @@
                         </select>
                     </div>
 
-                    <!-- City / Metro Filter -->
+                    <!-- City / Metro Dropdown -->
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">City / Metro</label>
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">City / Metro</label>
                         <div class="relative">
                             <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                            <input list="cities-list" name="city" value="{{ city or '' }}" placeholder="City (e.g., Delhi, Mumbai)..." 
-                                   class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-sky-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 outline-none transition-all">
-                            <datalist id="cities-list">
+                            <input list="sidebar-cities-list" name="city" value="{{ city or '' }}" placeholder="City (e.g. Delhi, Patna)..." 
+                                   class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 outline-none transition-all">
+                            <datalist id="sidebar-cities-list">
                                 {% for c in all_cities %}
                                 <option value="{{ c }}"></option>
                                 {% endfor %}
                             </datalist>
                         </div>
                     </div>
-                </div>
 
-                <!-- Toggle to reveal Facilities, Verification, and Proximity filters -->
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs">
-                    <button type="button" @click="showAdvancedFilters = !showAdvancedFilters" 
-                            class="inline-flex items-center gap-1.5 font-bold text-sky-600 hover:text-sky-800 transition-colors cursor-pointer">
-                        <i class="fa-solid" :class="showAdvancedFilters ? 'fa-sliders' : 'fa-filter'"></i>
-                        <span x-text="showAdvancedFilters ? 'Hide Advanced Filters' : 'More Filters (Facilities, Verified, GPS Proximity)'"></span>
-                        <i class="fa-solid fa-chevron-down text-[10px] transition-transform" :class="showAdvancedFilters ? 'rotate-180' : ''"></i>
-                    </button>
-
-                    <div class="flex items-center gap-2">
-                        <a href="{{ url_for('hospitals_list') }}" 
-                           class="px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold transition-all flex items-center gap-1">
-                            <i class="fa-solid fa-rotate-left text-xs"></i>
-                            <span>Clear Filters</span>
-                        </a>
-                        <button type="submit" 
-                                class="px-5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-filter text-xs"></i>
-                            <span>Apply Filters</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Row 2: Advanced Facilities, Verified, 24/7 Emergency, and Geolocation -->
-                <div x-show="showAdvancedFilters" x-transition class="mt-4 pt-4 border-t border-slate-200 space-y-4">
-                    
-                    <!-- Checkbox Pills: Verified, 24/7 Emergency, Nearby GPS -->
-                    <div class="flex flex-wrap items-center gap-3">
-                        <label class="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border {% if verified_only %}bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs{% else %}bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100{% endif %}">
-                            <input type="checkbox" name="verified" value="true" class="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4" {% if verified_only %}checked{% endif %} onchange="this.form.submit()">
-                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                            <span>Verified Hospitals Only</span>
-                        </label>
-
-                        <label class="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border {% if emergency_only %}bg-rose-50 text-rose-800 border-rose-300 shadow-xs{% else %}bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100{% endif %}">
-                            <input type="checkbox" name="emergency" value="true" class="rounded text-rose-600 focus:ring-rose-500 h-4 w-4" {% if emergency_only %}checked{% endif %} onchange="this.form.submit()">
-                            <i class="fa-solid fa-truck-medical text-rose-600"></i>
-                            <span>24/7 Emergency & Trauma</span>
-                        </label>
-
-                        <!-- Nearby GPS Location Trigger -->
-                        <button type="button" @click="getCurrentLocation()" :disabled="isGettingLocation"
-                                class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all border {% if nearby_only %}bg-teal-50 text-teal-800 border-teal-300 shadow-xs{% else %}bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100{% endif %} flex items-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-location-crosshairs text-teal-600" :class="isGettingLocation ? 'animate-spin' : ''"></i>
-                            <span x-text="isGettingLocation ? 'Detecting Location...' : '{% if nearby_only %}📍 Sorting by Proximity{% else %}Find Nearby Hospitals (GPS){% endif %}'"></span>
-                        </button>
-                    </div>
-
-                    <!-- Available Facilities Checklist -->
+                    <!-- Hospital Types Category List -->
                     <div>
-                        <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2">Filter by Available Facilities & Telemetry</span>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-xs">
-                            {% for fac in master_facilities %}
-                            <label class="cursor-pointer flex items-center gap-2 p-2 rounded-xl border {% if fac in selected_facilities %}bg-sky-50 text-sky-900 border-sky-300 font-bold{% else %}bg-slate-50 text-slate-700 border-slate-200 hover:bg-white font-medium{% endif %} transition-colors">
-                                <input type="checkbox" name="facilities" value="{{ fac }}" class="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5" {% if fac in selected_facilities %}checked{% endif %}>
-                                <span class="truncate text-[11px]">{{ fac }}</span>
-                            </label>
-                            {% endfor %}
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Classifications</label>
+                        <div class="space-y-1 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                            <!-- 'All Facilities' Pill -->
+                            <a href="{{ url_for('hospitals_list', q=q, city=city, specialty=active_specialty, scope=active_scope, view=view_mode) }}" 
+                               class="flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition-all {% if not active_type_id or active_type_id == 'all' %}bg-slate-900 text-white shadow-xs{% else %}bg-slate-50 hover:bg-slate-100 text-slate-700{% endif %}">
+                                <span class="flex items-center gap-2 truncate">
+                                    <i class="fa-solid fa-hospital-user text-[10px]"></i>
+                                    <span class="truncate">All Facilities</span>
+                                </span>
+                                <span class="text-[9.5px] font-mono px-2 py-0.5 rounded-full {% if not active_type_id or active_type_id == 'all' %}bg-slate-800 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">
+                                    {{ type_counts.get('all', total_partner_hospitals) }}
+                                </span>
+                            </a>
+
+                            {% if hospital_types %}
+                                {% for ht in hospital_types %}
+                                {% set is_ht_active = (active_type_id|string == ht.id|string or active_type_id|string == ht.slug or (active_type_obj and active_type_obj.id == ht.id)) %}
+                                <a href="{{ url_for('hospitals_list', type=ht.id, q=q, city=city, specialty=active_specialty, scope=active_scope, view=view_mode) }}" 
+                                   class="flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-semibold transition-all {% if is_ht_active %}bg-sky-600 text-white font-bold shadow-xs{% else %}hover:bg-slate-100 text-slate-700{% endif %}"
+                                   title="{{ ht.description }}">
+                                    <span class="flex items-center gap-2 truncate">
+                                        <i class="fa-solid {{ ht.icon }} text-[10px] {% if is_ht_active %}text-white{% else %}text-sky-600{% endif %}"></i>
+                                        <span class="truncate">{{ ht.name }}</span>
+                                    </span>
+                                    {% set count_for_type = type_counts.get(ht.id|string, 0) %}
+                                    {% if count_for_type > 0 %}
+                                    <span class="text-[9.5px] font-mono px-1.5 py-0.2 rounded-full {% if is_ht_active %}bg-sky-700 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">
+                                        {{ count_for_type }}
+                                    </span>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                            {% endif %}
                         </div>
                     </div>
-                </div>
 
-            </form>
-        </div>
+                    <!-- Quick Toggles: 24/7 ER, Verified, Nearby GPS -->
+                    <div class="space-y-1.5 pt-2 border-t border-slate-100">
+                        <label class="cursor-pointer flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all border {% if emergency_only %}bg-rose-50 text-rose-800 border-rose-300 shadow-xs{% else %}bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100{% endif %}">
+                            <span class="flex items-center gap-2">
+                                <i class="fa-solid fa-truck-medical text-rose-600 text-xs"></i>
+                                <span>24/7 ER Trauma</span>
+                            </span>
+                            <input type="checkbox" name="emergency" value="true" class="rounded text-rose-600 focus:ring-rose-500 h-3.5 w-3.5" {% if emergency_only %}checked{% endif %} onchange="this.form.submit()">
+                        </label>
 
-        <!-- ================= ACTIVE CATEGORY SPOTLIGHT BANNER ================= -->
-        {% if active_type_obj %}
-        <div class="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-sky-500/10 via-teal-500/10 to-emerald-500/10 border border-sky-200/80 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div class="flex items-start gap-4">
-                <div class="w-12 h-12 rounded-2xl bg-white text-sky-600 border border-sky-200 shadow-md flex items-center justify-center text-xl shrink-0">
-                    <i class="fa-solid {{ active_type_obj.icon }}"></i>
-                </div>
-                <div>
-                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[10px] font-extrabold uppercase tracking-wider mb-1">
-                        <span>Classification #{{ active_type_obj.id }}</span>
+                        <label class="cursor-pointer flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all border {% if verified_only %}bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs{% else %}bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100{% endif %}">
+                            <span class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check text-emerald-600 text-xs"></i>
+                                <span>Verified Only</span>
+                            </span>
+                            <input type="checkbox" name="verified" value="true" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5" {% if verified_only %}checked{% endif %} onchange="this.form.submit()">
+                        </label>
+
+                        <button type="button" @click="getCurrentLocation()" :disabled="isGettingLocation"
+                                class="w-full p-2 rounded-xl text-xs font-bold transition-all border {% if nearby_only %}bg-teal-50 text-teal-800 border-teal-300 shadow-xs{% else %}bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100{% endif %} flex items-center justify-between cursor-pointer">
+                            <span class="flex items-center gap-2">
+                                <i class="fa-solid fa-location-crosshairs text-teal-600 text-xs" :class="isGettingLocation ? 'animate-spin' : ''"></i>
+                                <span x-text="isGettingLocation ? 'Detecting...' : '{% if nearby_only %}📍 Nearby Active{% else %}Nearby (GPS){% endif %}'"></span>
+                            </span>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+                        </button>
                     </div>
-                    <h2 class="text-xl font-display font-extrabold text-slate-900 leading-tight">
-                        {{ active_type_obj.name }}
-                    </h2>
-                    <p class="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
-                        {{ active_type_obj.description }}
+
+                    <!-- Submit & Clear Buttons -->
+                    <div class="pt-2 flex items-center gap-2">
+                        <button type="submit" 
+                                class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-filter text-xs"></i>
+                            <span>Apply</span>
+                        </button>
+                        <a href="{{ url_for('hospitals_list') }}" 
+                           class="py-2 px-3 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center">
+                            <i class="fa-solid fa-rotate-left text-xs"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <!-- RIGHT CONTENT: (lg:col-span-9 xl:col-span-10) -->
+        <div class="lg:col-span-9 xl:col-span-10">
+
+            <!-- Active Classification Spotlight Banner -->
+            {% if active_type_obj %}
+            <div class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500/10 via-teal-500/10 to-emerald-500/10 border border-sky-200/80 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-start gap-3.5">
+                    <div class="w-10 h-10 rounded-2xl bg-white text-sky-600 border border-sky-200 shadow-sm flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid {{ active_type_obj.icon }}"></i>
+                    </div>
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-[9.5px] font-extrabold uppercase tracking-wider mb-0.5">
+                            <span>Classification #{{ active_type_obj.id }}</span>
+                        </div>
+                        <h2 class="text-lg font-display font-extrabold text-slate-900 leading-tight">
+                            {{ active_type_obj.name }}
+                        </h2>
+                        <p class="text-xs text-slate-600 mt-0.5 max-w-2xl leading-relaxed">
+                            {{ active_type_obj.description }}
+                        </p>
+                    </div>
+                </div>
+                <a href="{{ url_for('hospitals_list', q=q, city=city, specialty=active_specialty, scope=active_scope, view=view_mode) }}" 
+                   class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-xs">
+                    <i class="fa-solid fa-xmark text-xs text-slate-400"></i>
+                    <span>Clear Filter</span>
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Directory Header Bar with View Toggle -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-slate-200 gap-4">
+                <div>
+                    <h3 class="text-xl font-display font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                        <span>Verified Facilities</span>
+                        <span class="text-xs px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full font-bold">{{ total_filtered }} Found</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Showing verified healthcare facilities with real-time bed & ICU telemetry.
                     </p>
                 </div>
-            </div>
-            <a href="{{ url_for('hospitals_list', q=q, city=city, specialty=active_specialty, scope=active_scope, view=view_mode) }}" 
-               class="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-xs">
-                <i class="fa-solid fa-xmark text-xs text-slate-400"></i>
-                <span>Show All Types</span>
-            </a>
-        </div>
-        {% endif %}
 
-        <!-- Directory Header Bar with View Toggle -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-slate-200 gap-4">
-            <div>
-                <h3 class="text-xl font-display font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                    <span>Verified Facilities</span>
-                    <span class="text-xs px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full font-bold">{{ total_filtered }} Found</span>
-                </h3>
-                <p class="text-xs text-slate-500 mt-0.5">
-                    Showing verified healthcare facilities with real-time bed & ICU telemetry.
-                </p>
-            </div>
-
-            <!-- View Mode Switcher (Grid vs List) -->
-            <div class="flex items-center gap-2">
-                <div class="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1">
-                    <a href="{{ url_for('hospitals_list', q=q, city=city, state=state, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view='grid') }}" 
-                       class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 {% if view_mode != 'list' %}bg-white text-slate-900 shadow-xs{% else %}text-slate-500 hover:text-slate-800{% endif %}"
-                       title="Grid View">
-                        <i class="fa-solid fa-grip text-xs"></i>
-                        <span class="hidden sm:inline">Grid</span>
-                    </a>
-                    <a href="{{ url_for('hospitals_list', q=q, city=city, state=state, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view='list') }}" 
-                       class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 {% if view_mode == 'list' %}bg-white text-slate-900 shadow-xs{% else %}text-slate-500 hover:text-slate-800{% endif %}"
-                       title="List View">
-                        <i class="fa-solid fa-list text-xs"></i>
-                        <span class="hidden sm:inline">List</span>
-                    </a>
+                <!-- View Mode Switcher (Grid vs List) -->
+                <div class="flex items-center gap-2">
+                    <div class="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1">
+                        <a href="{{ url_for('hospitals_list', q=q, city=city, state=state, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view='grid') }}" 
+                           class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 {% if view_mode != 'list' %}bg-white text-slate-900 shadow-xs{% else %}text-slate-500 hover:text-slate-800{% endif %}"
+                           title="Grid View">
+                            <i class="fa-solid fa-grip text-xs"></i>
+                            <span class="hidden sm:inline">Grid</span>
+                        </a>
+                        <a href="{{ url_for('hospitals_list', q=q, city=city, state=state, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view='list') }}" 
+                           class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 {% if view_mode == 'list' %}bg-white text-slate-900 shadow-xs{% else %}text-slate-500 hover:text-slate-800{% endif %}"
+                           title="List View">
+                            <i class="fa-solid fa-list text-xs"></i>
+                            <span class="hidden sm:inline">List</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- ================= HOSPITAL CARDS: GRID VIEW (4 CARDS PER ROW) ================= -->
-        {% if hospitals and view_mode != 'list' %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-6">
+            <!-- ================= HOSPITAL CARDS: GRID VIEW (4 CARDS PER ROW) ================= -->
+            {% if hospitals and view_mode != 'list' %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5.5">
             {% for hospital in hospitals %}
             <!-- HOSPITAL CARD (GRID) -->
             <div class="hospital-card rounded-3xl overflow-hidden flex flex-col justify-between group border-2 border-slate-200 bg-white">
