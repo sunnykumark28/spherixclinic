@@ -8,6 +8,7 @@ import re
 import copy
 import traceback
 from datetime import datetime, timezone, timedelta, date
+from typing import List, Dict, Any, Optional, Union, Set, Tuple
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from spherix.config import (
@@ -88,6 +89,7 @@ TEMP_DATA = {
     "doctors": {},
     "patients": {},
     "hospitals": {},
+    "hospital_types": {},
     "staff": {},
     "appointments": {},
     "messages": {},
@@ -126,6 +128,7 @@ TEMP_DATA = {
         "doctor": 1,
         "patient": 1,
         "hospital": 1,
+        "hospital_type": 20,
         "appointment": 1,
         "staff": 1,
         "message": 1,
@@ -142,7 +145,6 @@ TEMP_DATA = {
         "referral": 1,
         "patient_vital": 1,
         "medical_record": 1,
-
         "notification": 1,
     }
 }
@@ -299,13 +301,26 @@ def ensure_sqlite_columns(cursor):
         ('doctors_available', "TEXT DEFAULT 'Available'"), ('accreditation', "TEXT DEFAULT 'NABH / ISO 9001 Certified'"),
         ('international_services', 'TEXT'), ('is_international', 'INTEGER DEFAULT 0'),
         ('is_verified', 'INTEGER DEFAULT 1'), ('is_blocked', 'INTEGER DEFAULT 0'), ('is_hidden', 'INTEGER DEFAULT 0'),
-        ('blood_stock', 'TEXT'), ('president_ceo', 'TEXT'), ('superintendent_name', 'TEXT'), ('zip_code', 'TEXT')
+        ('blood_stock', 'TEXT'), ('president_ceo', 'TEXT'), ('superintendent_name', 'TEXT'), ('zip_code', 'TEXT'),
+        ('hospital_type_id', 'INTEGER'), ('hospital_type', 'TEXT'), ('specialties', 'TEXT'), ('facilities', 'TEXT'),
+        ('emergency_services', 'INTEGER DEFAULT 1'), ('about', 'TEXT'), ('latitude', 'REAL'), ('longitude', 'REAL'),
+        ('emergency_phone', 'TEXT'), ('ambulance_phone', 'TEXT')
     ]
     for col, col_def in hosp_cols:
         try:
             cursor.execute(f"ALTER TABLE hospitals ADD COLUMN {col} {col_def}")
         except Exception:
             pass
+
+    # Hospital Types master table in SQLite
+    try:
+        cursor.execute("CREATE TABLE IF NOT EXISTS hospital_types (id INTEGER PRIMARY KEY, name TEXT UNIQUE, slug TEXT UNIQUE, description TEXT, icon TEXT DEFAULT 'fa-solid fa-hospital', color TEXT DEFAULT 'emerald', badge_bg TEXT DEFAULT 'bg-emerald-50', badge_text TEXT DEFAULT 'text-emerald-700', badge_border TEXT DEFAULT 'border-emerald-200', is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    except Exception:
+        pass
+    try:
+        cursor.execute("CREATE TABLE IF NOT EXISTS hospital_type_mappings (id INTEGER PRIMARY KEY AUTOINCREMENT, hospital_id TEXT, hospital_type_id INTEGER, is_primary INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    except Exception:
+        pass
 
     # Staff table columns
     try:
@@ -521,6 +536,63 @@ def migrate_legacy_schema(cursor):
                     print(f"✅  Added '{col}' column to 'patients'.")
     except Exception as pat_err:
         print(f"⚠️  Error checking/updating patient columns: {pat_err}")
+
+    # 5b. Check & Ensure Hospital Classification Columns and Hospital Types Tables
+    hospital_type_columns = [
+        ('hospital_type_id', 'INT NULL'),
+        ('hospital_type', 'NVARCHAR(255) NULL'),
+        ('specialties', 'NVARCHAR(MAX) NULL'),
+        ('facilities', 'NVARCHAR(MAX) NULL'),
+        ('emergency_services', 'BIT DEFAULT 1'),
+        ('about', 'NVARCHAR(MAX) NULL'),
+        ('latitude', 'FLOAT NULL'),
+        ('longitude', 'FLOAT NULL'),
+        ('emergency_phone', 'NVARCHAR(50) NULL'),
+        ('ambulance_phone', 'NVARCHAR(50) NULL')
+    ]
+    try:
+        cursor.execute("IF OBJECT_ID('hospitals', 'U') IS NOT NULL SELECT 1 ELSE SELECT 0")
+        if cursor.fetchone()[0] == 1:
+            cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'hospitals'")
+            existing_hosp_cols = {col[0] for col in cursor.fetchall()}
+            for col, col_def in hospital_type_columns:
+                if col not in existing_hosp_cols:
+                    print(f"⚠️  Adding missing '{col}' column to 'hospitals' table...")
+                    cursor.execute(f"ALTER TABLE hospitals ADD {col} {col_def}")
+                    print(f"✅  Added '{col}' column to 'hospitals'.")
+    except Exception as hosp_col_err:
+        print(f"⚠️  Error checking/updating hospital columns in SQL Server: {hosp_col_err}")
+
+    # Ensure hospital_types table exists in SQL Server
+    try:
+        cursor.execute("""
+            IF OBJECT_ID('hospital_types', 'U') IS NULL
+            CREATE TABLE hospital_types (
+                id INT PRIMARY KEY,
+                name NVARCHAR(255) NOT NULL UNIQUE,
+                slug VARCHAR(100) NOT NULL UNIQUE,
+                description NVARCHAR(MAX) NULL,
+                icon NVARCHAR(100) DEFAULT 'fa-solid fa-hospital',
+                color NVARCHAR(50) DEFAULT 'emerald',
+                badge_bg NVARCHAR(50) DEFAULT 'bg-emerald-50',
+                badge_text NVARCHAR(50) DEFAULT 'text-emerald-700',
+                badge_border NVARCHAR(50) DEFAULT 'border-emerald-200',
+                is_active BIT DEFAULT 1,
+                created_at DATETIME DEFAULT GETDATE()
+            )
+        """)
+        cursor.execute("""
+            IF OBJECT_ID('hospital_type_mappings', 'U') IS NULL
+            CREATE TABLE hospital_type_mappings (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                hospital_id VARCHAR(50) NOT NULL,
+                hospital_type_id INT NOT NULL,
+                is_primary BIT DEFAULT 0,
+                created_at DATETIME DEFAULT GETDATE()
+            )
+        """)
+    except Exception as ht_err:
+        print(f"⚠️  Error ensuring hospital_types tables in SQL Server: {ht_err}")
 
     # Patient Vitals Table Columns
     try:
@@ -915,6 +987,17 @@ def save_data():
         
         for h_id, h in TEMP_DATA['hospitals'].items():
             h_id_str = str(h_id)
+            specs_json = json.dumps(getattr(h, 'specialties', [])) if isinstance(getattr(h, 'specialties', None), list) else getattr(h, 'specialties', None)
+            facs_json = json.dumps(getattr(h, 'facilities', [])) if isinstance(getattr(h, 'facilities', None), list) else getattr(h, 'facilities', None)
+            ht_id = getattr(h, 'hospital_type_id', 1)
+            ht_name = getattr(h, 'type_name', getattr(h, 'hospital_type', 'General Hospital'))
+            emerg_svc = 1 if getattr(h, 'emergency_services', True) else 0
+            about_txt = getattr(h, 'about', '')
+            lat = getattr(h, 'latitude', None)
+            lng = getattr(h, 'longitude', None)
+            emerg_phone = getattr(h, 'emergency_phone', getattr(h, 'phone', '102'))
+            amb_phone = getattr(h, 'ambulance_phone', getattr(h, 'phone', '108'))
+
             if h_id_str in db_hosp_str_ids:
                 try:
                     cursor.execute("""
@@ -924,7 +1007,10 @@ def save_data():
                             total_beds=?, available_beds=?, icu_beds=?, available_icu_beds=?, 
                             general_bed_fee=?, icu_bed_fee=?, doctors_available=?, 
                             is_verified=?, blood_stock=?,
-                            president_ceo=?, superintendent_name=?, zip_code=?
+                            president_ceo=?, superintendent_name=?, zip_code=?,
+                            hospital_type_id=?, hospital_type=?, specialties=?, facilities=?,
+                            emergency_services=?, about=?, latitude=?, longitude=?,
+                            emergency_phone=?, ambulance_phone=?
                         WHERE id=?
                     """, (
                         h.name, h.email, h.password, h.logo_url,
@@ -933,6 +1019,9 @@ def save_data():
                         getattr(h, 'general_bed_fee', 1000.0), getattr(h, 'icu_bed_fee', 2500.0), getattr(h, 'doctors_available', 'Available'),
                         getattr(h, 'is_verified', True), json_safe(getattr(h, 'blood_stock', {})),
                         getattr(h, 'president_ceo', None), getattr(h, 'superintendent_name', None), getattr(h, 'zip_code', None),
+                        ht_id, ht_name, specs_json, facs_json,
+                        emerg_svc, about_txt, lat, lng,
+                        emerg_phone, amb_phone,
                         h_id_str
                     ))
                 except Exception:
@@ -943,7 +1032,8 @@ def save_data():
                                 country=?, city=?, state=?, address=?, phone=?, currency=?, timezone=?,
                                 total_beds=?, available_beds=?, icu_beds=?, available_icu_beds=?, 
                                 general_bed_fee=?, icu_bed_fee=?, doctors_available=?, 
-                                is_verified=?, blood_stock=?
+                                is_verified=?, blood_stock=?,
+                                president_ceo=?, superintendent_name=?, zip_code=?
                             WHERE id=?
                         """, (
                             h.name, h.email, h.password, h.logo_url,
@@ -951,6 +1041,7 @@ def save_data():
                             h.total_beds, h.available_beds, h.icu_beds, h.available_icu_beds,
                             getattr(h, 'general_bed_fee', 1000.0), getattr(h, 'icu_bed_fee', 2500.0), getattr(h, 'doctors_available', 'Available'),
                             getattr(h, 'is_verified', True), json_safe(getattr(h, 'blood_stock', {})),
+                            getattr(h, 'president_ceo', None), getattr(h, 'superintendent_name', None), getattr(h, 'zip_code', None),
                             h_id_str
                         ))
                     except Exception:
@@ -968,26 +1059,97 @@ def save_data():
                             country, city, state, address, phone, currency, timezone,
                             total_beds, available_beds, icu_beds, available_icu_beds, 
                             general_bed_fee, icu_bed_fee, doctors_available, 
-                            is_verified, president_ceo, superintendent_name, zip_code
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            is_verified, president_ceo, superintendent_name, zip_code,
+                            hospital_type_id, hospital_type, specialties, facilities,
+                            emergency_services, about, latitude, longitude,
+                            emergency_phone, ambulance_phone
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         h_id_str, h.name, h.email, h.password, h.logo_url,
                         getattr(h, 'country', 'India'), getattr(h, 'city', None), getattr(h, 'state', None), getattr(h, 'address', None), getattr(h, 'phone', None), getattr(h, 'currency', 'INR'), getattr(h, 'timezone', 'IST (UTC+5:30)'),
                         h.total_beds, h.available_beds, h.icu_beds, h.available_icu_beds,
                         getattr(h, 'general_bed_fee', 1000.0), getattr(h, 'icu_bed_fee', 2500.0), getattr(h, 'doctors_available', 'Available'),
-                        getattr(h, 'is_verified', True), getattr(h, 'president_ceo', None), getattr(h, 'superintendent_name', None), getattr(h, 'zip_code', None)
+                        getattr(h, 'is_verified', True), getattr(h, 'president_ceo', None), getattr(h, 'superintendent_name', None), getattr(h, 'zip_code', None),
+                        ht_id, ht_name, specs_json, facs_json,
+                        emerg_svc, about_txt, lat, lng,
+                        emerg_phone, amb_phone
                     ))
                 except Exception:
                     try:
-                        cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address, icu_beds, available_icu_beds, doctors_available, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                       (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available, getattr(h, 'is_verified', True)))
+                        cursor.execute("""
+                            INSERT INTO hospitals (
+                                id, name, email, password, logo_url, 
+                                country, city, state, address, phone, currency, timezone,
+                                total_beds, available_beds, icu_beds, available_icu_beds, 
+                                general_bed_fee, icu_bed_fee, doctors_available, 
+                                is_verified, president_ceo, superintendent_name, zip_code
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            h_id_str, h.name, h.email, h.password, h.logo_url,
+                            getattr(h, 'country', 'India'), getattr(h, 'city', None), getattr(h, 'state', None), getattr(h, 'address', None), getattr(h, 'phone', None), getattr(h, 'currency', 'INR'), getattr(h, 'timezone', 'IST (UTC+5:30)'),
+                            h.total_beds, h.available_beds, h.icu_beds, h.available_icu_beds,
+                            getattr(h, 'general_bed_fee', 1000.0), getattr(h, 'icu_bed_fee', 2500.0), getattr(h, 'doctors_available', 'Available'),
+                            getattr(h, 'is_verified', True), getattr(h, 'president_ceo', None), getattr(h, 'superintendent_name', None), getattr(h, 'zip_code', None)
+                        ))
                     except Exception:
-                        cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                                       (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address))
+                        try:
+                            cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address, icu_beds, available_icu_beds, doctors_available, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                           (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address, h.icu_beds, h.available_icu_beds, h.doctors_available, getattr(h, 'is_verified', True)))
+                        except Exception:
+                            cursor.execute("INSERT INTO hospitals (id, name, email, password, logo_url, total_beds, available_beds, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                           (h_id_str, h.name, h.email, h.password, h.logo_url, h.total_beds, h.available_beds, h.address))
             try:
                 cursor.execute("UPDATE hospitals SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(h, 'is_blocked', False), getattr(h, 'is_hidden', False), h_id_str))
             except Exception:
                 pass
+
+        # 3b. Sync Hospital Types
+        try:
+            for ht_id, ht in TEMP_DATA.get('hospital_types', {}).items():
+                is_act = 1 if getattr(ht, 'is_active', True) else 0
+                is_sqlite_conn = hasattr(cursor, 'connection') and getattr(cursor.connection, '__module__', '').startswith('sqlite3')
+                if is_sqlite_conn:
+                    cursor.execute("""
+                        INSERT INTO hospital_types (id, name, slug, description, icon, color, badge_bg, badge_text, badge_border, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET
+                            name=excluded.name, slug=excluded.slug, description=excluded.description,
+                            icon=excluded.icon, color=excluded.color, badge_bg=excluded.badge_bg,
+                            badge_text=excluded.badge_text, badge_border=excluded.badge_border,
+                            is_active=excluded.is_active
+                    """, (
+                        ht.id, ht.name, ht.slug, getattr(ht, 'description', ''),
+                        getattr(ht, 'icon', 'fa-solid fa-hospital'), getattr(ht, 'color', 'emerald'),
+                        getattr(ht, 'badge_bg', 'bg-emerald-50'), getattr(ht, 'badge_text', 'text-emerald-700'),
+                        getattr(ht, 'badge_border', 'border-emerald-200'), is_act
+                    ))
+                else:
+                    cursor.execute("SELECT id FROM hospital_types WHERE id = ?", (ht.id,))
+                    if cursor.fetchone():
+                        cursor.execute("""
+                            UPDATE hospital_types SET 
+                                name=?, slug=?, description=?, icon=?, color=?, 
+                                badge_bg=?, badge_text=?, badge_border=?, is_active=?
+                            WHERE id=?
+                        """, (
+                            ht.name, ht.slug, getattr(ht, 'description', ''),
+                            getattr(ht, 'icon', 'fa-solid fa-hospital'), getattr(ht, 'color', 'emerald'),
+                            getattr(ht, 'badge_bg', 'bg-emerald-50'), getattr(ht, 'badge_text', 'text-emerald-700'),
+                            getattr(ht, 'badge_border', 'border-emerald-200'), is_act,
+                            ht.id
+                        ))
+                    else:
+                        cursor.execute("""
+                            INSERT INTO hospital_types (id, name, slug, description, icon, color, badge_bg, badge_text, badge_border, is_active)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            ht.id, ht.name, ht.slug, getattr(ht, 'description', ''),
+                            getattr(ht, 'icon', 'fa-solid fa-hospital'), getattr(ht, 'color', 'emerald'),
+                            getattr(ht, 'badge_bg', 'bg-emerald-50'), getattr(ht, 'badge_text', 'text-emerald-700'),
+                            getattr(ht, 'badge_border', 'border-emerald-200'), is_act
+                        ))
+        except Exception as ht_save_err:
+            pass
 
         # 4. Staff
         cursor.execute("SELECT id FROM staff")
@@ -1980,7 +2142,35 @@ def load_data():
         except Exception as l_err:
             TEMP_DATA['pathology_labs'] = {}
 
-        # 3. Hospitals
+        # 3a. Hospital Types Master
+        from spherix.hospital_types import HospitalType, HOSPITAL_TYPE_MASTER_DATA, get_hospital_types_master_dict
+        try:
+            ensure_table_schema(
+                cursor, 'hospital_types',
+                "id INTEGER PRIMARY KEY, name TEXT UNIQUE, slug TEXT UNIQUE, description TEXT, icon TEXT, color TEXT, badge_bg TEXT, badge_text TEXT, badge_border TEXT, is_active INTEGER DEFAULT 1, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, name NVARCHAR(255) NOT NULL UNIQUE, slug VARCHAR(100) NOT NULL UNIQUE, description NVARCHAR(MAX) NULL, icon NVARCHAR(100) DEFAULT 'fa-solid fa-hospital', color NVARCHAR(50) DEFAULT 'emerald', badge_bg NVARCHAR(50) DEFAULT 'bg-emerald-50', badge_text NVARCHAR(50) DEFAULT 'text-emerald-700', badge_border NVARCHAR(50) DEFAULT 'border-emerald-200', is_active BIT DEFAULT 1, created_at DATETIME DEFAULT GETDATE()"
+            )
+            ht_rows = fetch_dict("SELECT * FROM hospital_types")
+            if ht_rows:
+                TEMP_DATA['hospital_types'] = {int(ht['id']): HospitalType(**ht) for ht in ht_rows}
+            else:
+                TEMP_DATA['hospital_types'] = get_hospital_types_master_dict()
+                # Seed into DB
+                for ht in HOSPITAL_TYPE_MASTER_DATA:
+                    try:
+                        cursor.execute("INSERT INTO hospital_types (id, name, slug, description, icon, color, badge_bg, badge_text, badge_border, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                       (ht['id'], ht['name'], ht['slug'], ht['description'], ht['icon'], ht['color'], ht['badge_bg'], ht['badge_text'], ht['badge_border'], ht.get('is_active', 1)))
+                    except Exception:
+                        pass
+        except Exception as ht_load_err:
+            TEMP_DATA['hospital_types'] = get_hospital_types_master_dict()
+
+        # Update next ID for hospital types
+        if TEMP_DATA.get('hospital_types'):
+            max_ht_id = max(int(k) for k in TEMP_DATA['hospital_types'].keys())
+            TEMP_DATA['next_ids']['hospital_type'] = max_ht_id + 1
+
+        # 3b. Hospitals
         hosps = fetch_dict("SELECT * FROM hospitals")
         for h in hosps:
             # Ensure fees are read safely, defaulting to standard if NULL in DB
@@ -1991,6 +2181,14 @@ def load_data():
                 except: h['blood_stock'] = { "A+": 0, "A-": 0, "B+": 0, "B-": 0, "AB+": 0, "AB-": 0, "O+": 0, "O-": 0 }
             elif not h.get('blood_stock'):
                 h['blood_stock'] = { "A+": 0, "A-": 0, "B+": 0, "B-": 0, "AB+": 0, "AB-": 0, "O+": 0, "O-": 0 }
+
+            # Parse specialties and facilities JSON
+            if isinstance(h.get('specialties'), str):
+                try: h['specialties'] = json.loads(h['specialties'])
+                except Exception: h['specialties'] = [s.strip() for s in h['specialties'].split(',') if s.strip()]
+            if isinstance(h.get('facilities'), str):
+                try: h['facilities'] = json.loads(h['facilities'])
+                except Exception: h['facilities'] = [f.strip() for f in h['facilities'].split(',') if f.strip()]
             
         TEMP_DATA['hospitals'] = {h['id']: Hospital(**h) for h in hosps}
 
@@ -3573,4 +3771,453 @@ def reset_factory_database():
     save_data()
     print("✅ [FACTORY RESET] System successfully reset to clean factory state.")
     return True
+
+
+# ==============================================================================
+# Hospital Type Management & Advanced Hospital Filtering Services
+# ==============================================================================
+
+def get_hospital_types(active_only: bool = False) -> List[Any]:
+    """Returns list of all hospital types, optionally filtering for active only."""
+    from spherix.hospital_types import HospitalType, get_hospital_types_master_dict
+    
+    if 'hospital_types' not in TEMP_DATA or not TEMP_DATA['hospital_types']:
+        TEMP_DATA['hospital_types'] = get_hospital_types_master_dict()
+        
+    all_types = list(TEMP_DATA['hospital_types'].values())
+    if active_only:
+        all_types = [ht for ht in all_types if getattr(ht, 'is_active', True)]
+        
+    return sorted(all_types, key=lambda t: t.id)
+
+
+def get_hospital_type_by_id(type_id: int) -> Optional[Any]:
+    """Retrieves a specific hospital type by integer ID."""
+    if not type_id:
+        return None
+    try:
+        type_id_int = int(type_id)
+    except (ValueError, TypeError):
+        return None
+        
+    types_dict = TEMP_DATA.get('hospital_types', {})
+    if type_id_int in types_dict:
+        return types_dict[type_id_int]
+        
+    # Check string key fallback
+    if str(type_id_int) in types_dict:
+        return types_dict[str(type_id_int)]
+        
+    return None
+
+
+def add_hospital_type(name: str, description: str = "", icon: str = "fa-solid fa-hospital", color: str = "emerald", is_active: bool = True) -> Any:
+    """Creates a new hospital classification category."""
+    from spherix.hospital_types import HospitalType
+    
+    name_clean = str(name).strip()
+    if not name_clean:
+        raise ValueError("Hospital category name cannot be empty.")
+        
+    # Check for duplicate name
+    existing = next((ht for ht in TEMP_DATA.get('hospital_types', {}).values() if ht.name.lower() == name_clean.lower()), None)
+    if existing:
+        raise ValueError(f"Hospital category '{name_clean}' already exists.")
+        
+    # Generate ID
+    if 'hospital_types' not in TEMP_DATA:
+        TEMP_DATA['hospital_types'] = {}
+    if 'next_ids' not in TEMP_DATA:
+        TEMP_DATA['next_ids'] = {}
+        
+    max_id = max([0] + [int(k) for k in TEMP_DATA['hospital_types'].keys() if str(k).isdigit()])
+    new_id = max_id + 1
+    TEMP_DATA['next_ids']['hospital_type'] = new_id + 1
+    
+    slug = name_clean.lower().replace(" ", "-").replace("&", "and")
+    
+    color_map = {
+        "emerald": ("bg-emerald-50", "text-emerald-700", "border-emerald-200"),
+        "teal": ("bg-teal-50", "text-teal-700", "border-teal-200"),
+        "blue": ("bg-blue-50", "text-blue-700", "border-blue-200"),
+        "rose": ("bg-rose-50", "text-rose-700", "border-rose-200"),
+        "purple": ("bg-purple-50", "text-purple-700", "border-purple-200"),
+        "indigo": ("bg-indigo-50", "text-indigo-700", "border-indigo-200"),
+        "amber": ("bg-amber-50", "text-amber-800", "border-amber-200"),
+        "cyan": ("bg-cyan-50", "text-cyan-800", "border-cyan-200"),
+        "violet": ("bg-violet-50", "text-violet-700", "border-violet-200"),
+        "sky": ("bg-sky-50", "text-sky-700", "border-sky-200"),
+        "red": ("bg-red-50", "text-red-700", "border-red-200"),
+        "green": ("bg-green-50", "text-green-800", "border-green-200"),
+        "orange": ("bg-orange-50", "text-orange-800", "border-orange-200"),
+        "pink": ("bg-pink-50", "text-pink-700", "border-pink-200"),
+        "slate": ("bg-slate-100", "text-slate-700", "border-slate-300"),
+    }
+    badge_bg, badge_text, badge_border = color_map.get(color, color_map["emerald"])
+    
+    new_ht = HospitalType(
+        id=new_id,
+        name=name_clean,
+        slug=slug,
+        description=description.strip(),
+        icon=icon.strip() if icon else "fa-solid fa-hospital",
+        color=color.strip() if color else "emerald",
+        badge_bg=badge_bg,
+        badge_text=badge_text,
+        badge_border=badge_border,
+        is_active=1 if is_active else 0
+    )
+    
+    TEMP_DATA['hospital_types'][new_id] = new_ht
+    save_data()
+    return new_ht
+
+
+def update_hospital_type(type_id: int, name: str = None, description: str = None, 
+                         icon: str = None, color: str = None, is_active: bool = None) -> Any:
+    """Updates an existing hospital type classification."""
+    ht = get_hospital_type_by_id(type_id)
+    if not ht:
+        raise ValueError(f"Hospital type ID {type_id} not found.")
+        
+    if name is not None:
+        name_clean = str(name).strip()
+        if not name_clean:
+            raise ValueError("Hospital category name cannot be empty.")
+        # Check uniqueness with other categories
+        existing = next((o for o in TEMP_DATA.get('hospital_types', {}).values() if o.id != ht.id and o.name.lower() == name_clean.lower()), None)
+        if existing:
+            raise ValueError(f"Another category named '{name_clean}' already exists.")
+        ht.name = name_clean
+        ht.slug = name_clean.lower().replace(" ", "-").replace("&", "and")
+        
+    if description is not None:
+        ht.description = str(description).strip()
+        
+    if icon is not None:
+        ht.icon = str(icon).strip() or "fa-solid fa-hospital"
+        
+    if color is not None:
+        ht.color = str(color).strip() or "emerald"
+        color_map = {
+            "emerald": ("bg-emerald-50", "text-emerald-700", "border-emerald-200"),
+            "teal": ("bg-teal-50", "text-teal-700", "border-teal-200"),
+            "blue": ("bg-blue-50", "text-blue-700", "border-blue-200"),
+            "rose": ("bg-rose-50", "text-rose-700", "border-rose-200"),
+            "purple": ("bg-purple-50", "text-purple-700", "border-purple-200"),
+            "indigo": ("bg-indigo-50", "text-indigo-700", "border-indigo-200"),
+            "amber": ("bg-amber-50", "text-amber-800", "border-amber-200"),
+            "cyan": ("bg-cyan-50", "text-cyan-800", "border-cyan-200"),
+            "violet": ("bg-violet-50", "text-violet-700", "border-violet-200"),
+            "sky": ("bg-sky-50", "text-sky-700", "border-sky-200"),
+            "red": ("bg-red-50", "text-red-700", "border-red-200"),
+            "green": ("bg-green-50", "text-green-800", "border-green-200"),
+            "orange": ("bg-orange-50", "text-orange-800", "border-orange-200"),
+            "pink": ("bg-pink-50", "text-pink-700", "border-pink-200"),
+            "slate": ("bg-slate-100", "text-slate-700", "border-slate-300"),
+        }
+        ht.badge_bg, ht.badge_text, ht.badge_border = color_map.get(ht.color, color_map["emerald"])
+        
+    if is_active is not None:
+        ht.is_active = bool(is_active)
+        
+    save_data()
+    return ht
+
+
+def toggle_hospital_type_status(type_id: int):
+    """Toggles active/inactive status of a hospital type."""
+    ht = get_hospital_type_by_id(type_id)
+    if not ht:
+        return None
+    ht.is_active = not getattr(ht, 'is_active', True)
+    save_data()
+    return ht
+
+
+def delete_hospital_type(type_id: int, safe_reassign_to_id: int = None) -> tuple:
+    """
+    Safely deletes a hospital category.
+    Fails if any hospital is assigned to it unless reassign_to_id is provided.
+    Returns (success: bool, message: str)
+    """
+    ht = get_hospital_type_by_id(type_id)
+    if not ht:
+        return False, "Hospital category not found."
+        
+    # Count assigned hospitals
+    assigned_hospitals = [
+        h for h in TEMP_DATA.get('hospitals', {}).values() 
+        if getattr(h, 'hospital_type_id', None) == ht.id or (getattr(h, 'hospital_type', '') or '').lower() == ht.name.lower()
+    ]
+    
+    if assigned_hospitals:
+        if safe_reassign_to_id:
+            reassign_target = get_hospital_type_by_id(safe_reassign_to_id)
+            if not reassign_target or reassign_target.id == ht.id:
+                return False, f"Invalid reassignment target category."
+            for h in assigned_hospitals:
+                h.hospital_type_id = reassign_target.id
+                h.hospital_type = reassign_target.name
+        else:
+            return False, f"Cannot delete '{ht.name}' because {len(assigned_hospitals)} hospital(s) are currently classified under it. Please reassign them first."
+
+    # Perform deletion
+    type_id_int = int(ht.id)
+    if type_id_int in TEMP_DATA.get('hospital_types', {}):
+        del TEMP_DATA['hospital_types'][type_id_int]
+    if str(type_id_int) in TEMP_DATA.get('hospital_types', {}):
+        del TEMP_DATA['hospital_types'][str(type_id_int)]
+        
+    # Delete from DB
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM hospital_types WHERE id = ?", (type_id_int,))
+            cursor.execute("DELETE FROM hospital_type_mappings WHERE hospital_type_id = ?", (type_id_int,))
+            conn.commit()
+            conn.close()
+    except Exception as e:
+        print(f"⚠️ Error deleting hospital_type from DB: {e}")
+        
+    save_data()
+    return True, f"Category '{ht.name}' deleted successfully."
+
+
+def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates great-circle distance between two geographic coordinates in kilometers."""
+    import math
+    if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+        return float('inf')
+    R = 6371.0  # Earth's radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2.0) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2.0) ** 2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return round(R * c, 1)
+
+
+# Geolocation Fallback Coordinates Dictionary for Top Global & Domestic Healthcare Hubs
+CITY_COORDINATES_MAP = {
+    'delhi': (28.6139, 77.2090),
+    'new delhi': (28.6139, 77.2090),
+    'mumbai': (19.0760, 72.8777),
+    'bangalore': (12.9716, 77.5946),
+    'bengaluru': (12.9716, 77.5946),
+    'hyderabad': (17.3850, 78.4867),
+    'chennai': (13.0827, 80.2707),
+    'kolkata': (22.5726, 88.3639),
+    'pune': (18.5204, 73.8567),
+    'ahmedabad': (23.0225, 72.5714),
+    'jaipur': (26.9124, 75.7873),
+    'lucknow': (26.8467, 80.9462),
+    'chandigarh': (30.7333, 76.7794),
+    'noida': (28.5355, 77.3910),
+    'gurgaon': (28.4595, 77.0266),
+    'gurugram': (28.4595, 77.0266),
+    'kochi': (9.9312, 76.2673),
+    'indore': (22.7196, 75.8577),
+    'bhopal': (23.2599, 77.4126),
+    'patna': (25.5941, 85.1376),
+    'motihari': (26.6469, 84.9127),
+    'varanasi': (25.3176, 82.9739),
+    'surat': (21.1702, 72.8311),
+    'nagpur': (21.1458, 79.0882),
+    'new york': (40.7128, -74.0060),
+    'london': (51.5074, -0.1278),
+    'dubai': (25.2048, 55.2708),
+    'singapore': (1.3521, 103.8198),
+    'tokyo': (35.6762, 139.6503),
+    'sydney': (-33.8688, 151.2093),
+    'toronto': (43.6532, -79.3832),
+    'chicago': (41.8781, -87.6298)
+}
+
+
+def filter_hospitals_advanced(
+    search_query: str = "",
+    type_id: Any = None,
+    specialty: str = "",
+    city: str = "",
+    state: str = "",
+    locality: str = "",
+    country: str = "",
+    scope: str = "",
+    verified_only: bool = False,
+    emergency_only: bool = False,
+    facilities_filter: List[str] = None,
+    user_lat: float = None,
+    user_lng: float = None,
+    nearby_only: bool = False,
+    max_distance_km: float = 50.0
+) -> List[Any]:
+    """
+    Advanced multi-parameter hospital search and filtering engine.
+    Supports combined criteria without resetting unrelated state.
+    """
+    all_hospitals = deduplicate_entities([
+        h for h in TEMP_DATA.get('hospitals', {}).values() 
+        if not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)
+    ])
+    
+    q_clean = (search_query or '').lower().strip()
+    city_clean = (city or '').lower().strip()
+    state_clean = (state or '').lower().strip()
+    locality_clean = (locality or '').lower().strip()
+    country_clean = (country or '').lower().strip()
+    specialty_clean = (specialty or '').lower().strip()
+    
+    # Parse target hospital type ID if provided
+    type_id_target = None
+    if type_id is not None and str(type_id).strip() and str(type_id).lower() != 'all':
+        try:
+            type_id_target = int(type_id)
+        except (ValueError, TypeError):
+            # Check by category name / slug
+            t_str = str(type_id).lower().strip()
+            for ht in get_hospital_types():
+                if ht.slug == t_str or ht.name.lower() == t_str:
+                    type_id_target = ht.id
+                    break
+
+    filtered = []
+    
+    for h in all_hospitals:
+        h_country = getattr(h, 'country', 'India') or 'India'
+        h_city = getattr(h, 'city', '') or ''
+        h_state = getattr(h, 'state', '') or ''
+        h_address = getattr(h, 'address', '') or ''
+        h_type_id = getattr(h, 'hospital_type_id', 1)
+        h_type_name = getattr(h, 'type_name', getattr(h, 'hospital_type', '')) or ''
+        h_specialties = getattr(h, 'specialties', []) or []
+        h_facilities = getattr(h, 'facilities', []) or []
+        
+        # 1. Scope / Country Filter
+        if country_clean and country_clean != 'all' and h_country.lower() != country_clean:
+            continue
+        if scope == 'domestic' and h_country.lower() not in ['india', 'in']:
+            continue
+        elif scope == 'international' and h_country.lower() in ['india', 'in']:
+            continue
+            
+        # 2. Hospital Type Filter
+        if type_id_target is not None and h_type_id != type_id_target:
+            # Check if name matches as fallback
+            target_obj = get_hospital_type_by_id(type_id_target)
+            if not target_obj or target_obj.name.lower() != h_type_name.lower():
+                # Also check secondary specialties list
+                if not (target_obj and any(target_obj.name.lower() in s.lower() for s in h_specialties)):
+                    continue
+
+        # 3. Specialty Filter
+        if specialty_clean:
+            # Check hospital type, specialties, doctor departments, doctor specializations
+            spec_matched = (
+                specialty_clean in h_type_name.lower() or
+                any(specialty_clean in s.lower() for s in h_specialties)
+            )
+            if not spec_matched:
+                hospital_doctors = [d for d in TEMP_DATA.get('doctors', {}).values() if d.hospital_name == h.name or str(getattr(d, 'hospital_id', '')) == str(h.id)]
+                spec_matched = any(
+                    specialty_clean in (d.department or '').lower() or 
+                    specialty_clean in (d.specialization or '').lower()
+                    for d in hospital_doctors
+                )
+            if not spec_matched:
+                continue
+
+        # 4. State & City & Locality Filters
+        if city_clean:
+            if city_clean not in h_city.lower() and city_clean not in h_address.lower():
+                continue
+        if state_clean:
+            if state_clean not in h_state.lower() and state_clean not in h_address.lower():
+                continue
+        if locality_clean:
+            if locality_clean not in h_address.lower() and locality_clean not in h_city.lower():
+                continue
+
+        # 5. Verified Status Filter
+        if verified_only and not getattr(h, 'is_verified', False):
+            continue
+
+        # 6. Emergency 24x7 Service Filter
+        if emergency_only:
+            is_emerg = bool(getattr(h, 'emergency_services', False)) or (h.has_facility('emergency') if hasattr(h, 'has_facility') else False)
+            if not is_emerg:
+                continue
+
+        # 7. Available Facilities Filter (Must match all selected facilities)
+        if facilities_filter:
+            facility_match_failed = False
+            for fac in facilities_filter:
+                if not fac: continue
+                fac_clean = fac.lower().strip()
+                if not h.has_facility(fac_clean):
+                    # Also check specific bed counters for ICU / Blood Bank
+                    if fac_clean in ['icu', 'icu_beds'] and int(getattr(h, 'icu_beds', 0) or 0) > 0:
+                        continue
+                    elif fac_clean in ['blood_bank', 'blood'] and bool(getattr(h, 'blood_stock', None)):
+                        continue
+                    facility_match_failed = True
+                    break
+            if facility_match_failed:
+                continue
+
+        # 8. General Search Text Query (Name, City, Address, Specialty, Hospital Type, Doctors)
+        if q_clean:
+            name_match = q_clean in h.name.lower()
+            loc_match = q_clean in h_city.lower() or q_clean in h_state.lower() or q_clean in h_address.lower() or q_clean in h_country.lower()
+            type_match = q_clean in h_type_name.lower() or any(q_clean in s.lower() for s in h_specialties)
+            
+            doc_match = False
+            if not (name_match or loc_match or type_match):
+                hospital_doctors = [d for d in TEMP_DATA.get('doctors', {}).values() if d.hospital_name == h.name or str(getattr(d, 'hospital_id', '')) == str(h.id)]
+                doc_match = any(
+                    q_clean in (d.name or '').lower() or
+                    q_clean in (d.department or '').lower() or 
+                    q_clean in (d.specialization or '').lower()
+                    for d in hospital_doctors
+                )
+                
+            if not (name_match or loc_match or type_match or doc_match):
+                continue
+
+        # Calculate Distance if user location is available
+        h_lat = getattr(h, 'latitude', None)
+        h_lng = getattr(h, 'longitude', None)
+        if (h_lat is None or h_lng is None) and h_city:
+            coords = CITY_COORDINATES_MAP.get(h_city.lower().strip())
+            if coords:
+                h_lat, h_lng = coords
+
+        distance_km = None
+        if user_lat is not None and user_lng is not None and h_lat is not None and h_lng is not None:
+            distance_km = calculate_haversine_distance(user_lat, user_lng, h_lat, h_lng)
+            
+        h.calculated_distance_km = distance_km
+        
+        if nearby_only and distance_km is not None and distance_km > max_distance_km:
+            continue
+
+        filtered.append(h)
+
+    # Sort: If user location is active, sort by nearest distance first; otherwise sort by ID
+    if user_lat is not None and user_lng is not None:
+        filtered.sort(key=lambda x: (x.calculated_distance_km if x.calculated_distance_km is not None else 999999, str(x.id)))
+    else:
+        def parse_hosp_id(item):
+            val = item.id
+            if isinstance(val, int): return (0, val)
+            if isinstance(val, str):
+                import re
+                m = re.search(r'\d+', val)
+                if m: return (0, int(m.group(0)))
+                return (1, val)
+            return (2, str(val))
+        filtered.sort(key=parse_hosp_id)
+
+    return filtered
+
 
