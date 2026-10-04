@@ -350,12 +350,18 @@ def load_all_medicines():
                 if len(curated) >= 32:
                     break
 
-    ALL_MEDICINES = all_meds
-    MEDICINES_BY_ID = by_id
-    MEDICINES_BY_CATEGORY = by_cat
-    TOP_RECOMMENDED_MEDICINES = curated
-    MEDICINES_CATALOG = all_meds
-    MEDICINES = all_meds
+    ALL_MEDICINES.clear()
+    ALL_MEDICINES.extend(all_meds)
+    MEDICINES_BY_ID.clear()
+    MEDICINES_BY_ID.update(by_id)
+    MEDICINES_BY_CATEGORY.clear()
+    MEDICINES_BY_CATEGORY.update(by_cat)
+    TOP_RECOMMENDED_MEDICINES.clear()
+    TOP_RECOMMENDED_MEDICINES.extend(curated)
+    MEDICINES_CATALOG.clear()
+    MEDICINES_CATALOG.extend(all_meds)
+    MEDICINES.clear()
+    MEDICINES.extend(all_meds)
 
     # Save to disk cache for fast future startup
     try:

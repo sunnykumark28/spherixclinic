@@ -181,10 +181,14 @@ def load_all_diseases():
         by_name[name.lower()] = dis_obj
         by_cat[category].append(dis_obj)
         
-    ALL_DISEASES = compiled_list
-    DISEASES_BY_ID = by_id
-    DISEASES_BY_NAME = by_name
-    DISEASES_BY_CATEGORY = by_cat
+    ALL_DISEASES.clear()
+    ALL_DISEASES.extend(compiled_list)
+    DISEASES_BY_ID.clear()
+    DISEASES_BY_ID.update(by_id)
+    DISEASES_BY_NAME.clear()
+    DISEASES_BY_NAME.update(by_name)
+    DISEASES_BY_CATEGORY.clear()
+    DISEASES_BY_CATEGORY.update(by_cat)
     
     # Curate high-value flagship conditions for instant initial rendering
     flagship_names = [

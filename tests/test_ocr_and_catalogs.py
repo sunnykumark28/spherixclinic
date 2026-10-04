@@ -1,12 +1,14 @@
 import pytest
 from prescription_ocr import parse_medicines_with_groq, extract_text_from_image
-from disease_catalog import ALL_DISEASES, DISEASES_BY_NAME
+from disease_catalog import ALL_DISEASES, DISEASES_BY_NAME, load_all_diseases
 from ayurveda_catalog import ALL_AYUR_DISEASES, AYUR_DISEASES_BY_ID
-from medicine_catalog import ALL_MEDICINES, MEDICINES_BY_ID
+from medicine_catalog import ALL_MEDICINES, MEDICINES_BY_ID, load_all_medicines
 from lab_catalog import HEALTH_PACKAGES, INDIVIDUAL_TESTS
 
 def test_disease_catalog_loaded():
     """Verify disease catalog contains structured disease entries."""
+    if not ALL_DISEASES:
+        load_all_diseases()
     assert isinstance(ALL_DISEASES, list)
     assert len(ALL_DISEASES) > 0
 
@@ -17,8 +19,9 @@ def test_ayurveda_catalog_loaded():
 
 def test_medicine_catalog_loaded():
     """Verify medicine catalog contains medication entries."""
-    assert isinstance(ALL_MEDICINES, list)
-    assert len(ALL_MEDICINES) > 0
+    meds = load_all_medicines()
+    assert isinstance(meds, list)
+    assert len(meds) > 0
 
 def test_lab_catalog_loaded():
     """Verify lab tests catalog contains diagnostic health packages and tests."""
