@@ -298,5 +298,3 @@ def find_disease_by_name_or_id(identifier):
             
     return None
 
-# Load on import
-load_all_diseases()

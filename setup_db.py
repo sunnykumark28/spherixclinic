@@ -28,7 +28,8 @@ DATABASE = os.getenv('DB_NAME', 'spherixclinic')
 USERNAME = os.getenv('DB_USER', 'sa')
 PASSWORD = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', '')
 DRIVER   = os.getenv('DB_DRIVER', '{ODBC Driver 17 for SQL Server}')
-SQLITE_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db')
+is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+SQLITE_DB_PATH = '/tmp/spherixclinic.db' if is_serverless else os.getenv('SQLITE_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db'))
 
 # ─── PyODBC Import with site-packages fallback ───────────────────────────────
 try:

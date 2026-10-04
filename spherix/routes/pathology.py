@@ -47,8 +47,16 @@ from spherix.extensions import csrf, limiter, razorpay_client
 pathology_bp = Blueprint('pathology', __name__)
 
 ALLOWED_REPORT_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'uploads', 'diagnostic_reports')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+if is_serverless:
+    UPLOAD_FOLDER = '/tmp/diagnostic_reports'
+else:
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'uploads', 'diagnostic_reports')
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except Exception:
+    pass
 
 def allowed_report_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_REPORT_EXTENSIONS

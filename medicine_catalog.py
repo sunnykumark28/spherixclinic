@@ -621,6 +621,4 @@ def find_substitutes(identifier_or_salt, limit=12):
         'total_count': len(combined)
     }
 
-# Initialize on import
-load_all_medicines()
 
