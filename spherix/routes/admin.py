@@ -421,6 +421,66 @@ def admin_mark_notifications_read():
 
 
 
+@admin_bp.route('/api/admin/classification/<int:type_id>/hospitals')
+@admin_required
+def api_admin_classification_hospitals(type_id):
+    """Returns all hospitals belonging to a specific classification category."""
+    ht_obj = get_hospital_type_by_id(type_id)
+    if not ht_obj:
+        return jsonify({'error': 'Classification not found'}), 404
+        
+    all_hospitals = list(TEMP_DATA.get('hospitals', {}).values())
+    matched = []
+    
+    for h in all_hospitals:
+        h_type_id = getattr(h, 'hospital_type_id', None)
+        h_type_name = str(getattr(h, 'hospital_type', '') or '').strip().lower()
+        target_name = str(ht_obj.name or '').strip().lower()
+        target_slug = str(getattr(ht_obj, 'slug', '') or '').strip().lower()
+        
+        is_match = False
+        if h_type_id == type_id:
+            is_match = True
+        elif h_type_name in [target_name, target_slug]:
+            is_match = True
+        elif type_id == 19 and (h_type_id == 19 or getattr(h, 'custom_hospital_type', None)):
+            is_match = True
+
+        if is_match:
+            logo_src = url_for('static', filename='uploads/hospital_logos/' + h.logo_url) if getattr(h, 'logo_url', None) else f"https://ui-avatars.com/api/?name={h.name}&background=random"
+            matched.append({
+                'id': h.id,
+                'name': h.name,
+                'email': h.email,
+                'city': getattr(h, 'city', '') or 'Main Center',
+                'state': getattr(h, 'state', ''),
+                'hospital_type': getattr(h, 'hospital_type', ht_obj.name),
+                'custom_hospital_type': getattr(h, 'custom_hospital_type', ''),
+                'doctor_count': getattr(h, 'doctor_count', 0),
+                'total_beds': getattr(h, 'total_beds', 0),
+                'available_beds': getattr(h, 'available_beds', 0),
+                'icu_beds': getattr(h, 'icu_beds', 0),
+                'available_icu_beds': getattr(h, 'available_icu_beds', 0),
+                'is_verified': getattr(h, 'is_verified', True),
+                'is_blocked': getattr(h, 'is_blocked', False),
+                'logo_url': logo_src
+            })
+
+    return jsonify({
+        'classification': {
+            'id': ht_obj.id,
+            'name': ht_obj.name,
+            'description': getattr(ht_obj, 'description', ''),
+            'icon': getattr(ht_obj, 'icon', 'fa-solid fa-hospital'),
+            'color': getattr(ht_obj, 'color', 'emerald'),
+            'count': len(matched)
+        },
+        'hospitals': matched
+    })
+
+
+
+
 @admin_bp.route('/api/admin/details/<entity_type>/<path:entity_id>')
 @admin_required
 def api_admin_details(entity_type, entity_id):
