@@ -1768,25 +1768,18 @@
                         <tbody>
                             {% if hospital_types %}
                                 {% for ht in hospital_types %}
-                                {% set h_count = ht.registered_hospitals_count|default(0) %}
                                 <tr>
                                     <td>
                                         <span class="badge bg-light text-dark border font-mono">#{{ ht.id }}</span>
                                     </td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-2.5" 
-                                             style="cursor: pointer;" 
-                                             onclick="showClassificationHospitals('{{ ht.id }}', '{{ ht.name|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', '{{ ht.description|e }}')" 
-                                             title="Click to view all {{ ht.name|e }} hospitals">
-                                            <div class="w-8 h-8 rounded-lg d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-2xs transition-transform hover-scale"
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-lg d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-2xs"
                                                  style="background-color: {{ ht.color }}; width: 32px; height: 32px; border-radius: 8px;">
                                                 <i class="fa-solid {{ ht.icon }} text-xs"></i>
                                             </div>
                                             <div>
-                                                <div class="fw-bold text-dark text-primary-hover d-flex align-items-center gap-1.5">
-                                                    <span>{{ ht.name }}</span>
-                                                    <i class="fas fa-arrow-up-right-from-square text-muted" style="font-size: 0.65rem;"></i>
-                                                </div>
+                                                <div class="fw-bold text-dark">{{ ht.name }}</div>
                                                 <small class="text-muted font-mono" style="font-size: 0.72rem;">slug: {{ ht.slug }}</small>
                                             </div>
                                         </div>
@@ -1797,21 +1790,15 @@
                                         </div>
                                     </td>
                                     <td>
+                                        {% set h_count = ht.registered_hospitals_count|default(0) %}
                                         {% if h_count > 0 %}
-                                        <button type="button" 
-                                                onclick="showClassificationHospitals('{{ ht.id }}', '{{ ht.name|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', '{{ ht.description|e }}')"
-                                                class="badge bg-primary text-white border-0 shadow-2xs d-inline-flex align-items-center gap-1.5 py-1.5 px-2.5 cursor-pointer hover-lift"
-                                                title="View {{ h_count }} hospitals classified under this category">
+                                        <a href="{{ url_for('hospitals_list', type=ht.id) }}" target="_blank" 
+                                           class="badge bg-primary text-white text-decoration-none shadow-2xs d-inline-flex align-items-center gap-1.5 py-1.5 px-2.5">
                                             <i class="fas fa-hospital text-xs"></i>
                                             <span>{{ h_count }} Facility{% if h_count > 1 %}s{% endif %}</span>
-                                        </button>
+                                        </a>
                                         {% else %}
-                                        <button type="button" 
-                                                onclick="showClassificationHospitals('{{ ht.id }}', '{{ ht.name|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', '{{ ht.description|e }}')"
-                                                class="badge bg-light text-muted border py-1.5 px-2.5 cursor-pointer hover-lift"
-                                                title="View category details">
-                                            0 Facilities
-                                        </button>
+                                        <span class="badge bg-light text-muted border py-1.5 px-2.5">0 Facilities</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -1826,13 +1813,6 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end text-nowrap">
-                                        <!-- View Classified Hospitals Trigger -->
-                                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-1 fw-semibold me-1 shadow-2xs"
-                                                onclick="showClassificationHospitals('{{ ht.id }}', '{{ ht.name|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', '{{ ht.description|e }}')"
-                                                title="View hospitals under {{ ht.name|e }}">
-                                            <i class="fas fa-hospital-user"></i> Hospitals ({{ h_count }})
-                                        </button>
-
                                         <!-- Edit Modal Trigger -->
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold me-1"
                                                 onclick="openEditHospitalTypeModal('{{ ht.id }}', '{{ ht.name|e }}', '{{ ht.description|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', {{ 'true' if ht.is_active else 'false' }})"
@@ -1862,71 +1842,6 @@
                             {% endif %}
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= MODAL: CLASSIFICATION HOSPITALS VIEWER ================= -->
-        <div class="modal fade" id="classificationHospitalsModal" tabindex="-1" aria-labelledby="classificationHospitalsModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-xl">
-                <div class="modal-content rounded-4 border-0 shadow-2xl overflow-hidden">
-                    <div class="modal-header border-bottom p-4 bg-slate-900 text-white">
-                        <div class="d-flex align-items-center gap-3">
-                            <div id="classModalIconWrapper" class="w-12 h-12 rounded-xl d-flex align-items-center justify-content-center text-white shadow-md flex-shrink-0" style="width: 46px; height: 46px; background-color: #0284c7; border-radius: 12px;">
-                                <i id="classModalIcon" class="fa-solid fa-hospital fs-5"></i>
-                            </div>
-                            <div>
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <h5 class="modal-title fw-bold text-white mb-0" id="classModalTitle">Hospital Classification</h5>
-                                    <span id="classModalCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small fw-bold">0 Facilities</span>
-                                </div>
-                                <p id="classModalDescription" class="text-slate-300 small mb-0 mt-1 line-clamp-2" style="max-width: 750px;"></p>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-
-                    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                        <div class="input-group" style="max-width: 380px;">
-                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search text-xs"></i></span>
-                            <input type="text" id="classHospitalsSearch" onkeyup="filterClassificationHospitals()" class="form-control border-start-0 text-xs" placeholder="Search hospitals by name, city, or email...">
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <a id="classModalPublicDirectoryBtn" href="#" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-medium">
-                                <i class="fas fa-external-link-alt me-1"></i> Public Directory
-                            </a>
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-medium" onclick="bootstrap.Modal.getInstance(document.getElementById('classificationHospitalsModal')).hide(); openFormDrawer('hospital', 'add');">
-                                <i class="fas fa-plus me-1"></i> Add Hospital
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="modal-body p-4" style="max-height: 65vh; overflow-y: auto;">
-                        <div id="classModalLoading" class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status"></div>
-                            <div class="text-muted small mt-2">Loading classified hospitals...</div>
-                        </div>
-
-                        <div id="classModalEmpty" class="text-center py-5 d-none">
-                            <div class="w-16 h-16 rounded-circle bg-light d-inline-flex align-items-center justify-content-center text-muted mb-3" style="width: 60px; height: 60px;">
-                                <i class="fas fa-hospital text-2xl"></i>
-                            </div>
-                            <h6 class="fw-bold text-dark">No Hospitals in this Category Yet</h6>
-                            <p class="text-muted small mb-3">There are currently no partner facilities registered under this medical classification.</p>
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('classificationHospitalsModal')).hide(); openFormDrawer('hospital', 'add');">
-                                <i class="fas fa-plus me-1"></i> Add First Hospital
-                            </button>
-                        </div>
-
-                        <div id="classHospitalsContainer" class="row g-3 d-none">
-                            <!-- Populated dynamically via JavaScript -->
-                        </div>
-                    </div>
-
-                    <div class="modal-footer border-top p-3 d-flex justify-content-between bg-light">
-                        <small class="text-muted" id="classModalFooterSummary">Showing facilities</small>
-                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -2057,132 +1972,6 @@
         </div>
 
         <script>
-        let currentClassificationHospitals = [];
-
-        function showClassificationHospitals(typeId, typeName, typeIcon, typeColor, typeDesc) {
-            const modalEl = document.getElementById('classificationHospitalsModal');
-            const titleEl = document.getElementById('classModalTitle');
-            const iconEl = document.getElementById('classModalIcon');
-            const iconWrapper = document.getElementById('classModalIconWrapper');
-            const descEl = document.getElementById('classModalDescription');
-            const countBadge = document.getElementById('classModalCountBadge');
-            const loadingEl = document.getElementById('classModalLoading');
-            const emptyEl = document.getElementById('classModalEmpty');
-            const containerEl = document.getElementById('classHospitalsContainer');
-            const searchInput = document.getElementById('classHospitalsSearch');
-            const pubBtn = document.getElementById('classModalPublicDirectoryBtn');
-            const footerSummary = document.getElementById('classModalFooterSummary');
-
-            titleEl.innerText = typeName;
-            iconEl.className = 'fa-solid ' + (typeIcon || 'fa-hospital') + ' fs-5';
-            iconWrapper.style.backgroundColor = typeColor || '#0284c7';
-            descEl.innerText = typeDesc || 'Medical Scope & Specialty Treatments';
-            countBadge.innerText = 'Loading...';
-            pubBtn.href = `/hospitals?type=${typeId}`;
-            searchInput.value = '';
-
-            loadingEl.classList.remove('d-none');
-            emptyEl.classList.add('d-none');
-            containerEl.classList.add('d-none');
-            containerEl.innerHTML = '';
-            footerSummary.innerText = 'Loading facilities...';
-
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-
-            fetch(`/api/admin/hospital-types/${typeId}/hospitals`)
-                .then(res => {
-                    if (!res.ok) throw new Error('Failed to load hospitals for this classification');
-                    return res.json();
-                })
-                .then(data => {
-                    loadingEl.classList.add('d-none');
-                    currentClassificationHospitals = data.hospitals || [];
-                    countBadge.innerText = `${currentClassificationHospitals.length} Facility${currentClassificationHospitals.length === 1 ? '' : 's'}`;
-                    footerSummary.innerText = `Showing ${currentClassificationHospitals.length} facilities registered under "${typeName}"`;
-
-                    if (currentClassificationHospitals.length === 0) {
-                        emptyEl.classList.remove('d-none');
-                        containerEl.classList.add('d-none');
-                    } else {
-                        emptyEl.classList.add('d-none');
-                        containerEl.classList.remove('d-none');
-                        renderClassificationHospitalCards(currentClassificationHospitals);
-                    }
-                })
-                .catch(err => {
-                    loadingEl.classList.add('d-none');
-                    emptyEl.classList.remove('d-none');
-                    emptyEl.querySelector('h6').innerText = 'Error Loading Hospitals';
-                    emptyEl.querySelector('p').innerText = err.message || 'Could not load facilities.';
-                });
-        }
-
-        function renderClassificationHospitalCards(hospitals) {
-            const containerEl = document.getElementById('classHospitalsContainer');
-            containerEl.innerHTML = hospitals.map(h => `
-                <div class="col-md-6 col-lg-4 class-hospital-card" data-name="${(h.name || '').toLowerCase()}" data-city="${(h.city || '').toLowerCase()}" data-email="${(h.email || '').toLowerCase()}">
-                    <div class="card h-100 border rounded-3xl shadow-xs hover-shadow transition-all bg-white p-3.5 d-flex flex-column justify-content-between">
-                        <div>
-                            <div class="d-flex align-items-start gap-3 mb-2.5">
-                                <img src="${h.logo_url}" alt="${h.name}" class="rounded-2xl border object-cover shadow-2xs flex-shrink-0" style="width: 48px; height: 48px;">
-                                <div class="overflow-hidden flex-grow-1">
-                                    <h6 class="fw-bold text-dark text-truncate mb-0" title="${h.name}">${h.name}</h6>
-                                    <div class="d-flex align-items-center gap-1.5 mt-1 flex-wrap">
-                                        <span class="badge bg-light text-muted border font-mono" style="font-size: 0.65rem;">#${h.id}</span>
-                                        ${h.is_verified ? '<span class="badge bg-success-subtle text-success border border-success-subtle py-0.5 px-1.5" style="font-size: 0.65rem;"><i class="fas fa-check-circle me-1"></i>Verified</span>' : '<span class="badge bg-warning-subtle text-warning border border-warning-subtle py-0.5 px-1.5" style="font-size: 0.65rem;"><i class="fas fa-clock me-1"></i>Pending</span>'}
-                                        ${h.is_blocked ? '<span class="badge bg-danger py-0.5 px-1.5" style="font-size: 0.65rem;">Blocked</span>' : ''}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="space-y-1.5 py-2 border-top border-bottom my-2 small">
-                                <div class="text-slate-700 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1.5"></i>${h.city}${h.state ? ', ' + h.state : ''}</div>
-                                <div class="text-slate-700 text-truncate"><i class="fas fa-envelope text-primary me-1.5"></i>${h.email}</div>
-                                <div class="text-slate-700 text-truncate"><i class="fas fa-phone text-success me-1.5"></i>${h.phone || 'N/A'}</div>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center text-xs text-muted mb-3 px-1">
-                                <span><i class="fas fa-bed text-primary me-1"></i>${h.available_beds}/${h.total_beds} Beds</span>
-                                <span><i class="fas fa-heartbeat text-danger me-1"></i>${h.available_icu_beds}/${h.icu_beds} ICU</span>
-                                <span><i class="fas fa-user-md text-info me-1"></i>${h.doctor_count} Docs</span>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2 pt-2 border-top">
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill flex-grow-1 fw-semibold shadow-2xs" onclick="bootstrap.Modal.getInstance(document.getElementById('classificationHospitalsModal')).hide(); showEntityDetails('hospital', '${h.id}');">
-                                <i class="fas fa-eye me-1"></i> View Details
-                            </button>
-                            <a href="/hospitals?q=${encodeURIComponent(h.name)}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3" title="Public Facility Page">
-                                <i class="fas fa-external-link-alt"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function filterClassificationHospitals() {
-            const query = (document.getElementById('classHospitalsSearch').value || '').toLowerCase().trim();
-            const cards = document.querySelectorAll('.class-hospital-card');
-            let visibleCount = 0;
-            cards.forEach(card => {
-                const name = card.getAttribute('data-name') || '';
-                const city = card.getAttribute('data-city') || '';
-                const email = card.getAttribute('data-email') || '';
-                if (!query || name.includes(query) || city.includes(query) || email.includes(query)) {
-                    card.classList.remove('d-none');
-                    visibleCount++;
-                } else {
-                    card.classList.add('d-none');
-                }
-            });
-            const footerSummary = document.getElementById('classModalFooterSummary');
-            if (footerSummary) {
-                footerSummary.innerText = `Showing ${visibleCount} of ${cards.length} facilities`;
-            }
-        }
-
         function openEditHospitalTypeModal(id, name, desc, icon, color, isActive) {
             document.getElementById('editHospitalTypeForm').action = `/admin/hospital-types/edit/${id}`;
             document.getElementById('editTypeName').value = name;
@@ -6424,6 +6213,13 @@
 
 <!-- Hidden Chart & Utility Data Source Scripts & Spans -->
 <script type="application/json" id="hospital-dropdown-json">{{ (all_hospitals or hospitals or []) | map(attribute='name') | list | tojson | safe }}</script>
+<script type="application/json" id="hospital-types-dropdown-json">[
+    {% if hospital_types %}
+        {% for ht in hospital_types %}
+            {"id": {{ ht.id }}, "name": {{ ht.name|tojson }}, "description": {{ (ht.description or '')|tojson }}}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    {% endif %}
+]</script>
 <span id="earnings-dates-data" data-dates="{{ earnings_dates | tojson | safe }}" class="d-none"></span>
 <span id="earnings-values-data" data-values="{{ earnings_values | tojson | safe }}" class="d-none"></span>
 <span id="doctor-names-data" data-names="{{ doctor_names_labels | tojson | safe }}" class="d-none"></span>
@@ -7144,6 +6940,62 @@
         return opts;
     }
 
+    function getHospitalTypeOptions(selectedVal) {
+        let types = [];
+        const scriptEl = document.getElementById('hospital-types-dropdown-json');
+        if (scriptEl && scriptEl.textContent) {
+            try {
+                types = JSON.parse(scriptEl.textContent.trim());
+            } catch (e) {
+                types = [];
+            }
+        }
+        if (!types || types.length === 0) {
+            types = [
+                { id: 1, name: "General Hospital" },
+                { id: 2, name: "Multispecialty Hospital" },
+                { id: 3, name: "Super Specialty Hospital" },
+                { id: 4, name: "Cardiology Hospital" },
+                { id: 5, name: "Oncology Hospital" },
+                { id: 6, name: "Neurology Hospital" },
+                { id: 7, name: "Orthopedic Hospital" },
+                { id: 8, name: "Maternity Hospital" },
+                { id: 9, name: "Pediatric Hospital" },
+                { id: 10, name: "Psychiatric Hospital" },
+                { id: 11, name: "Eye Hospital" },
+                { id: 12, name: "Dental Hospital" },
+                { id: 13, name: "ENT Hospital" },
+                { id: 14, name: "Nephrology Hospital" },
+                { id: 15, name: "Rehabilitation Hospital" },
+                { id: 16, name: "Infectious Disease Hospital" },
+                { id: 17, name: "Burns and Plastic Surgery Hospital" },
+                { id: 18, name: "Emergency and Trauma Hospital" },
+                { id: 19, name: "Other" }
+            ];
+        }
+        let opts = '<option value="">-- Select Hospital Classification --</option>';
+        types.forEach(t => {
+            const isSelected = (selectedVal && (String(selectedVal) === String(t.id) || String(selectedVal).toLowerCase() === String(t.name).toLowerCase())) ? 'selected' : '';
+            opts += `<option value="${t.id}" data-name="${escapeHtml(t.name)}" ${isSelected}>${escapeHtml(t.name)}</option>`;
+        });
+        return opts;
+    }
+
+    function handleAdminHospitalTypeChange(selectEl) {
+        const wrap = document.getElementById('customHospitalTypeWrap');
+        if (!wrap) return;
+        const selectedVal = selectEl ? String(selectEl.value) : '';
+        const selectedOpt = selectEl ? selectEl.options[selectEl.selectedIndex] : null;
+        const selectedName = selectedOpt ? (selectedOpt.getAttribute('data-name') || selectedOpt.text) : '';
+        if (selectedVal === '19' || selectedName.toLowerCase() === 'other') {
+            wrap.style.display = 'block';
+            const input = document.getElementById('customHospitalTypeInput');
+            if (input) input.focus();
+        } else {
+            wrap.style.display = 'none';
+        }
+    }
+
     function openFormDrawer(entityType, mode = 'add', entityId = null) {
         const formDrawerEl = document.getElementById('formDrawer');
         const form = document.getElementById('adminEntityForm');
@@ -7348,6 +7200,8 @@
                 </div>
             `;
         } else if (entityType === 'hospital') {
+            const currentTypeId = data.hospital_type_id || (data.hospital_type ? data.hospital_type : 1);
+            const isOther = (String(currentTypeId) === '19' || String(data.hospital_type).toLowerCase() === 'other' || !!data.custom_hospital_type);
             html = `
                 <div class="col-12">
                     <label class="form-label small fw-bold">Hospital Facility Name <span class="text-danger">*</span></label>
@@ -7358,8 +7212,25 @@
                     <input type="email" name="email" class="form-control" required value="${escapeHtml(data.email || '')}" placeholder="admin@hospital.com">
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label small fw-bold">Hospital Classification / Category <span class="text-danger">*</span></label>
+                    <select name="hospital_type_id" id="adminHospitalTypeSelect" class="form-select" onchange="handleAdminHospitalTypeChange(this)" required>
+                        ${getHospitalTypeOptions(currentTypeId)}
+                    </select>
+                </div>
+                <div class="col-12" id="customHospitalTypeWrap" style="${isOther ? 'display:block;' : 'display:none;'}">
+                    <div class="p-3 bg-light rounded border border-primary-subtle">
+                        <label class="form-label small fw-bold text-primary"><i class="fas fa-edit me-1"></i> Specify Custom Classification / Specialty</label>
+                        <input type="text" name="custom_hospital_type" id="customHospitalTypeInput" class="form-control bg-white" value="${escapeHtml(data.custom_hospital_type || (isOther && data.hospital_type && data.hospital_type !== 'Other' ? data.hospital_type : ''))}" placeholder="e.g. Ayurvedic & Integrative Healing Center, Dental & Maxillofacial Hub...">
+                        <div class="form-text text-muted small mt-1">Provide a custom category or specialized institutional description.</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
                     <label class="form-label small fw-bold">City / Location</label>
                     <input type="text" name="city" class="form-control" value="${escapeHtml(data.city || data.location || '')}" placeholder="New Delhi">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">State / Region</label>
+                    <input type="text" name="state" class="form-control" value="${escapeHtml(data.state || '')}" placeholder="Delhi">
                 </div>
                 ${isAdd ? `
                 <div class="col-12">

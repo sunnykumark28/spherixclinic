@@ -534,6 +534,12 @@ def hospital_register():
         hospital_type_id = hospital_type_obj.id
         hospital_type_name = hospital_type_obj.name
         
+        # Check for custom classification name if Other / Custom is chosen
+        custom_hospital_type = request.form.get('custom_hospital_type', '').strip()
+        if custom_hospital_type and (str(hospital_type_id) == '19' or hospital_type_name.lower() == 'other'):
+            hospital_type_name = custom_hospital_type
+            hospital_type_id = 19
+        
         # Additional Specialties & Facilities
         selected_specialties = request.form.getlist('specialties')
         if not selected_specialties and request.form.get('specialties_custom'):
@@ -603,6 +609,7 @@ def hospital_register():
             'accreditation': accreditation,
             'hospital_type_id': hospital_type_id,
             'hospital_type': hospital_type_name,
+            'custom_hospital_type': custom_hospital_type,
             'specialties': selected_specialties,
             'facilities': selected_facilities,
             'emergency_services': emergency_services,
@@ -676,6 +683,7 @@ def hospital_verify_otp():
                 accreditation=stored_data.get('accreditation', 'NABH Accredited'),
                 hospital_type_id=stored_data.get('hospital_type_id', 1),
                 hospital_type=stored_data.get('hospital_type', 'General Hospital'),
+                custom_hospital_type=stored_data.get('custom_hospital_type', ''),
                 specialties=stored_data.get('specialties', []),
                 facilities=stored_data.get('facilities', []),
                 emergency_services=stored_data.get('emergency_services', True),

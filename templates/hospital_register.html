@@ -79,6 +79,7 @@
             name: '{{ request.form.name or '' }}',
             hospital_type_id: '{{ request.form.hospital_type_id or '1' }}',
             facility_type: 'General Hospital',
+            custom_hospital_type: '{{ request.form.custom_hospital_type or '' }}',
             selected_type_desc: 'Provides treatment for common medical conditions',
             license_no: '{{ request.form.license_no or '' }}',
             email: '{{ request.form.email or '' }}',
@@ -104,6 +105,9 @@
                 this.formData.facility_type = this.hospitalTypesMap[selectedId].name;
                 this.formData.selected_type_desc = this.hospitalTypesMap[selectedId].description;
             }
+            if (selectedId === '19' && this.formData.custom_hospital_type) {
+                this.formData.facility_type = this.formData.custom_hospital_type;
+            }
         },
         handleLogo(event) {
             const file = event.target.files[0];
@@ -118,6 +122,10 @@
             if (this.currentStep === 1) {
                 if (!this.formData.name.trim()) {
                     this.stepError = 'Please enter the official hospital / facility name.';
+                    return false;
+                }
+                if (this.formData.hospital_type_id === '19' && !this.formData.custom_hospital_type.trim()) {
+                    this.stepError = 'Please specify your custom hospital classification name.';
                     return false;
                 }
                 if (!this.formData.license_no.trim()) {
@@ -359,6 +367,21 @@
                                    class="minimal-input placeholder:text-slate-400"
                                    @keydown.enter.prevent="goToNextStep()">
                         </div>
+                    </div>
+
+                    <!-- Custom Hospital Classification Input (Active when Other / Custom is selected) -->
+                    <div class="minimal-input-wrap bg-sky-50/60 border border-sky-200 rounded-2xl p-4 transition-all"
+                         x-show="formData.hospital_type_id === '19' || formData.facility_type === 'Other'"
+                         x-transition>
+                        <label for="customHospitalType" class="minimal-label block text-sky-800 font-bold mb-1">
+                            <i class="fas fa-edit text-sky-600 mr-1.5"></i> Specify Custom Classification / Specialty *
+                        </label>
+                        <input type="text" name="custom_hospital_type" id="customHospitalType"
+                               x-model="formData.custom_hospital_type"
+                               @input="formData.facility_type = formData.custom_hospital_type"
+                               placeholder="e.g., Integrative Ayur-Genix Center, Cosmetic & Laser Surgery Hub..."
+                               class="minimal-input bg-white border-sky-300 focus:border-sky-500 placeholder:text-slate-400">
+                        <p class="text-[11px] text-sky-700 font-medium mt-1">Enter your custom facility category or institutional clinical classification.</p>
                     </div>
 
                     <!-- Category Description Helper Card -->

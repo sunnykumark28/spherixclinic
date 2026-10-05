@@ -537,6 +537,9 @@ def api_admin_details(entity_type, entity_id):
             'icu_beds': getattr(entity, 'icu_beds', 0),
             'available_icu_beds': getattr(entity, 'available_icu_beds', 0),
             'doctors_available': getattr(entity, 'doctor_count', 'N/A'),
+            'hospital_type_id': getattr(entity, 'hospital_type_id', 1),
+            'hospital_type': getattr(entity, 'hospital_type', 'General Hospital'),
+            'custom_hospital_type': getattr(entity, 'custom_hospital_type', ''),
             'is_verified': getattr(entity, 'is_verified', False),
             'is_blocked': getattr(entity, 'is_blocked', False),
             'is_hidden': getattr(entity, 'is_hidden', False),
@@ -595,62 +598,6 @@ def api_admin_details(entity_type, entity_id):
         })
         
     return jsonify({'error': 'Invalid entity type'}), 400
-
-
-
-@admin_bp.route('/api/admin/hospital-types/<int:type_id>/hospitals')
-@admin_required
-def api_admin_type_hospitals(type_id):
-    """Returns all partner hospitals registered under a specific hospital classification."""
-    type_obj = get_hospital_type_by_id(type_id)
-    if not type_obj:
-        return jsonify({'error': 'Hospital classification not found'}), 404
-
-    matched = []
-    for h in TEMP_DATA.get('hospitals', {}).values():
-        h_type_id = getattr(h, 'hospital_type_id', None)
-        h_type_name = getattr(h, 'hospital_type', '') or ''
-        
-        # Match by ID or Name
-        if (h_type_id is not None and str(h_type_id) == str(type_id)) or \
-           (h_type_id is None and type_id == 1) or \
-           (h_type_name.strip().lower() == type_obj.name.strip().lower()):
-            
-            logo_url = url_for('static', filename='uploads/hospital_logos/' + h.logo_url) if getattr(h, 'logo_url', None) else f"https://ui-avatars.com/api/?name={h.name}&background=random"
-            
-            matched.append({
-                'id': h.id,
-                'name': h.name,
-                'email': h.email,
-                'phone': getattr(h, 'phone', 'N/A') or 'N/A',
-                'city': getattr(h, 'city', 'Main Center') or 'Main Center',
-                'state': getattr(h, 'state', '') or '',
-                'address': getattr(h, 'address', 'N/A') or 'N/A',
-                'total_beds': getattr(h, 'total_beds', 0),
-                'available_beds': getattr(h, 'available_beds', 0),
-                'icu_beds': getattr(h, 'icu_beds', 0),
-                'available_icu_beds': getattr(h, 'available_icu_beds', 0),
-                'doctor_count': getattr(h, 'doctor_count', 0),
-                'is_verified': getattr(h, 'is_verified', False),
-                'is_blocked': getattr(h, 'is_blocked', False),
-                'is_hidden': getattr(h, 'is_hidden', False),
-                'logo_url': logo_url
-            })
-
-    return jsonify({
-        'success': True,
-        'type': {
-            'id': type_obj.id,
-            'name': type_obj.name,
-            'description': type_obj.description,
-            'icon': type_obj.icon,
-            'color': type_obj.color,
-            'slug': getattr(type_obj, 'slug', ''),
-            'is_active': getattr(type_obj, 'is_active', True),
-            'count': len(matched)
-        },
-        'hospitals': matched
-    })
 
 
 
@@ -1729,6 +1676,21 @@ def admin_add_hospital():
         icu_beds = int(request.form.get('icu_beds') or 20)
         available_icu_beds = int(request.form.get('available_icu_beds') or icu_beds)
         
+        # Hospital Type & Classification
+        hospital_type_id_raw = request.form.get('hospital_type_id') or 1
+        hospital_type_obj = get_hospital_type_by_id(hospital_type_id_raw) if hospital_type_id_raw else None
+        custom_type = request.form.get('custom_hospital_type', '').strip()
+        
+        if custom_type and (str(hospital_type_id_raw) == '19' or (hospital_type_obj and hospital_type_obj.name.lower() == 'other')):
+            hospital_type_name = custom_type
+            hospital_type_id = 19
+        elif hospital_type_obj:
+            hospital_type_id = hospital_type_obj.id
+            hospital_type_name = hospital_type_obj.name
+        else:
+            hospital_type_id = 1
+            hospital_type_name = 'General Hospital'
+
         new_hospital = Hospital(
             id=hospital_id,
             name=name,
@@ -1741,13 +1703,16 @@ def admin_add_hospital():
             available_beds=available_beds,
             icu_beds=icu_beds,
             available_icu_beds=available_icu_beds,
-            is_verified=True
+            is_verified=True,
+            hospital_type_id=hospital_type_id,
+            hospital_type=hospital_type_name,
+            custom_hospital_type=custom_type
         )
         
         TEMP_DATA['hospitals'][hospital_id] = new_hospital
         TEMP_DATA['next_ids']['hospital'] += 1
         save_data()
-        flash(f"Hospital '{name}' added successfully.", "success")
+        flash(f"Hospital '{name}' ({hospital_type_name}) added successfully.", "success")
         return redirect(url_for('admin_dashboard') + '?tab=hospitals')
 
     return redirect(url_for('admin_dashboard') + '?tab=hospitals')
@@ -1776,6 +1741,20 @@ def admin_edit_hospital(hospital_id):
             hospital.icu_beds = int(request.form.get('icu_beds'))
         if 'available_icu_beds' in request.form and request.form.get('available_icu_beds'):
             hospital.available_icu_beds = int(request.form.get('available_icu_beds'))
+
+        # Update Classification
+        if 'hospital_type_id' in request.form:
+            ht_id_raw = request.form.get('hospital_type_id')
+            ht_obj = get_hospital_type_by_id(ht_id_raw)
+            custom_type = request.form.get('custom_hospital_type', '').strip()
+            if custom_type and (str(ht_id_raw) == '19' or (ht_obj and ht_obj.name.lower() == 'other')):
+                hospital.hospital_type = custom_type
+                hospital.hospital_type_id = 19
+                hospital.custom_hospital_type = custom_type
+            elif ht_obj:
+                hospital.hospital_type_id = ht_obj.id
+                hospital.hospital_type = ht_obj.name
+                hospital.custom_hospital_type = ''
             
         save_data()
         flash(f"Hospital '{hospital.name}' updated successfully.", "success")

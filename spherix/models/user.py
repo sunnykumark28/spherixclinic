@@ -260,6 +260,7 @@ class Hospital(UserMixin):
             self.hospital_type_id = default_t.id
 
         self.hospital_type = kwargs.get('hospital_type') or kwargs.get('facility_type') or (get_hospital_types_master_dict().get(self.hospital_type_id).name if self.hospital_type_id in get_hospital_types_master_dict() else 'General Hospital')
+        self.custom_hospital_type = kwargs.get('custom_hospital_type', '')
         
         # Parse Specialties
         raw_specs = kwargs.get('specialties')
