@@ -1791,7 +1791,7 @@
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2.5 cursor-pointer hover-lift-sm" 
-                                             onclick="showClassificationHospitals({{ ht.id }}, '{{ ht.name|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', '{{ (ht.description or '')|e }}')"
+                                             onclick="showClassificationHospitals({{ ht.id }})"
                                              title="Click to view all registered hospitals in {{ ht.name|e }}">
                                             <div class="w-8 h-8 rounded-lg d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-2xs"
                                                  style="background-color: {{ ht.color }}; width: 32px; height: 32px; border-radius: 8px;">
@@ -1808,14 +1808,14 @@
                                     </td>
                                     <td>
                                         <div class="text-slate-700 small cursor-pointer" 
-                                             onclick="showClassificationHospitals({{ ht.id }}, '{{ ht.name|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', '{{ (ht.description or '')|e }}')"
+                                             onclick="showClassificationHospitals({{ ht.id }})"
                                              style="max-width: 380px;">
                                             {{ ht.description }}
                                         </div>
                                     </td>
                                     <td>
                                         <button type="button" 
-                                                onclick="showClassificationHospitals({{ ht.id }}, '{{ ht.name|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', '{{ (ht.description or '')|e }}')"
+                                                onclick="showClassificationHospitals({{ ht.id }})"
                                                 class="btn btn-sm {% if h_count > 0 %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill shadow-2xs d-inline-flex align-items-center gap-1.5 py-1 px-3"
                                                 title="View {{ h_count }} hospitals in {{ ht.name|e }}">
                                             <i class="fas fa-hospital text-xs"></i>
@@ -1836,7 +1836,13 @@
                                     <td class="text-end text-nowrap">
                                         <!-- Edit Modal Trigger -->
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold me-1"
-                                                onclick="openEditHospitalTypeModal('{{ ht.id }}', '{{ ht.name|e }}', '{{ ht.description|e }}', '{{ ht.icon|e }}', '{{ ht.color|e }}', {{ 'true' if ht.is_active else 'false' }})"
+                                                data-type-id="{{ ht.id }}"
+                                                data-type-name="{{ ht.name|e }}"
+                                                data-type-desc="{{ (ht.description or '')|e }}"
+                                                data-type-icon="{{ ht.icon|e }}"
+                                                data-type-color="{{ ht.color|e }}"
+                                                data-type-active="{{ '1' if ht.is_active else '0' }}"
+                                                onclick="openEditHospitalTypeModalFromBtn(this)"
                                                 title="Edit Category Description &amp; Details">
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
@@ -1851,7 +1857,10 @@
 
                                         <!-- Delete / Safe Reassign Trigger -->
                                         <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 fw-semibold"
-                                                onclick="openDeleteHospitalTypeModal('{{ ht.id }}', '{{ ht.name|e }}', {{ h_count }})"
+                                                data-type-id="{{ ht.id }}"
+                                                data-type-name="{{ ht.name|e }}"
+                                                data-type-count="{{ h_count }}"
+                                                onclick="openDeleteHospitalTypeModalFromBtn(this)"
                                                 title="Delete Category">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
@@ -2047,23 +2056,15 @@
         let currentClassificationData = null;
         let currentClassificationHospitals = [];
 
-        function showClassificationHospitals(typeId, typeName, typeIcon, typeColor, typeDesc) {
+        function showClassificationHospitals(typeId) {
             const modalEl = document.getElementById('classificationHospitalsModal');
             if (!modalEl) return;
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
             // Setup Header info
-            document.getElementById('classModalTitle').innerText = typeName;
-            document.getElementById('classModalDesc').innerText = typeDesc || 'Hospitals registered under this classification';
-            document.getElementById('classModalBadge').innerText = 'Loading...';
-            const iconWrap = document.getElementById('classModalIconWrap');
-            if (iconWrap) {
-                iconWrap.style.backgroundColor = typeColor || '#0284c7';
-            }
-            const iconEl = document.getElementById('classModalIcon');
-            if (iconEl) {
-                iconEl.className = typeIcon && typeIcon.startsWith('fa-') ? `fa-solid ${typeIcon.replace('fa-solid ', '')}` : 'fa-solid fa-hospital';
-            }
+            document.getElementById('classModalTitle').innerText = 'Loading Classification...';
+            document.getElementById('classModalDesc').innerText = 'Fetching registered hospitals';
+            document.getElementById('classModalBadge').innerText = '...';
             const searchInput = document.getElementById('classHospitalSearch');
             if (searchInput) searchInput.value = '';
 
@@ -2071,11 +2072,10 @@
             bodyEl.innerHTML = `
                 <div class="text-center py-5">
                     <div class="spinner-border text-primary" role="status"></div>
-                    <div class="text-muted small mt-2">Loading facilities registered under <strong>${escapeHtml(typeName)}</strong>...</div>
+                    <div class="text-muted small mt-2">Loading facilities...</div>
                 </div>
             `;
 
-            currentClassificationData = { id: typeId, name: typeName, icon: typeIcon, color: typeColor, description: typeDesc };
             modal.show();
 
             // Fetch from API
@@ -2086,8 +2086,21 @@
                 })
                 .then(data => {
                     currentClassificationHospitals = data.hospitals || [];
-                    currentClassificationData = data.classification || currentClassificationData;
+                    currentClassificationData = data.classification || { id: typeId, name: 'Classification' };
+                    
+                    document.getElementById('classModalTitle').innerText = currentClassificationData.name;
+                    document.getElementById('classModalDesc').innerText = currentClassificationData.description || 'Hospitals registered under this classification';
                     document.getElementById('classModalBadge').innerText = `${currentClassificationHospitals.length} Facilit${currentClassificationHospitals.length === 1 ? 'y' : 'ies'}`;
+                    
+                    const iconWrap = document.getElementById('classModalIconWrap');
+                    if (iconWrap) iconWrap.style.backgroundColor = currentClassificationData.color || '#0284c7';
+                    
+                    const iconEl = document.getElementById('classModalIcon');
+                    if (iconEl) {
+                        const iconCls = currentClassificationData.icon || 'fa-hospital';
+                        iconEl.className = iconCls.startsWith('fa-') ? `fa-solid ${iconCls.replace('fa-solid ', '')}` : 'fa-solid fa-hospital';
+                    }
+                    
                     renderClassificationHospitalsList(currentClassificationHospitals, currentClassificationData);
                 })
                 .catch(err => {
@@ -2253,6 +2266,41 @@
                     r.style.display = 'none';
                 }
             });
+        }
+
+        function openEditHospitalTypeModalFromBtn(btn) {
+            const id = btn.getAttribute('data-type-id');
+            const name = btn.getAttribute('data-type-name') || '';
+            const desc = btn.getAttribute('data-type-desc') || '';
+            const icon = btn.getAttribute('data-type-icon') || 'fa-hospital';
+            const color = btn.getAttribute('data-type-color') || '#0284c7';
+            const isActive = btn.getAttribute('data-type-active') === '1';
+
+            document.getElementById('editHospitalTypeForm').action = `/admin/hospital-types/edit/${id}`;
+            document.getElementById('editTypeName').value = name;
+            document.getElementById('editTypeDescription').value = desc;
+            document.getElementById('editTypeIcon').value = icon;
+            document.getElementById('editTypeColor').value = color;
+            document.getElementById('editTypeActive').checked = isActive;
+            new bootstrap.Modal(document.getElementById('editHospitalTypeModal')).show();
+        }
+
+        function openDeleteHospitalTypeModalFromBtn(btn) {
+            const id = btn.getAttribute('data-type-id');
+            const name = btn.getAttribute('data-type-name') || '';
+            const count = parseInt(btn.getAttribute('data-type-count') || '0', 10);
+
+            document.getElementById('deleteHospitalTypeForm').action = `/admin/hospital-types/delete/${id}`;
+            document.getElementById('deleteTypeName').innerText = name;
+            const warningEl = document.getElementById('deleteWarningWithHospitals');
+            const countText = document.getElementById('deleteHospitalCountText');
+            if (count > 0) {
+                warningEl.classList.remove('d-none');
+                countText.innerText = `There are ${count} hospital(s) currently classified under this type. You must select a fallback category below:`;
+            } else {
+                warningEl.classList.add('d-none');
+            }
+            new bootstrap.Modal(document.getElementById('deleteHospitalTypeModal')).show();
         }
 
         function openEditHospitalTypeModal(id, name, desc, icon, color, isActive) {
@@ -3063,7 +3111,10 @@
                                         </button>
                                     </form>
                                     <!-- Reject Form -->
-                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold" onclick="openLabRejectModal('{{ lab.id }}', '{{ lab.display_name|replace('\'', '\\\'') }}')">
+                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold" 
+                                            data-lab-id="{{ lab.id }}" 
+                                            data-lab-name="{{ lab.display_name|e }}"
+                                            onclick="openLabRejectModal(this.getAttribute('data-lab-id'), this.getAttribute('data-lab-name'))">
                                         <i class="fas fa-times-circle me-1"></i> Reject...
                                     </button>
                                 </div>
