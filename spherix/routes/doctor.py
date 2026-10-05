@@ -913,9 +913,13 @@ def get_doctor_image(doc_id):
     except Exception as e:
         print(f"Error fetching image for {doc_id}: {e}")
 
-    # Fallback placeholder if no image in DB
-    # Generate a realistic face from pravatar using a deterministic hash of the ID
-    return redirect(f"https://i.pravatar.cc/250?u={doc_id}")
+    # Fallback neutral avatar placeholder when doctor has no uploaded profile image
+    svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+        <rect width="200" height="200" fill="#f1f5f9"/>
+        <circle cx="100" cy="75" r="40" fill="#cbd5e1"/>
+        <path d="M40 180 C40 135, 70 120, 100 120 C130 120, 160 135, 160 180 Z" fill="#cbd5e1"/>
+    </svg>'''
+    return Response(svg, mimetype='image/svg+xml')
 
 
 

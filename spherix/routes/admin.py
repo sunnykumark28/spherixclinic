@@ -447,7 +447,7 @@ def api_admin_classification_hospitals(type_id):
             is_match = True
 
         if is_match:
-            logo_src = url_for('static', filename='uploads/hospital_logos/' + h.logo_url) if getattr(h, 'logo_url', None) else f"https://ui-avatars.com/api/?name={h.name}&background=random"
+            logo_src = url_for('static', filename='uploads/hospital_logos/' + h.logo_url) if getattr(h, 'logo_url', None) else None
             matched.append({
                 'id': h.id,
                 'name': h.name,
@@ -531,7 +531,7 @@ def api_admin_details(entity_type, entity_id):
             'gender': entity.gender or 'N/A',
             'is_blocked': getattr(entity, 'is_blocked', False),
             'is_hidden': getattr(entity, 'is_hidden', False),
-            'profile_picture_url': url_for('static', filename='uploads/' + entity.profile_picture_url) if getattr(entity, 'profile_picture_url', None) else f"https://ui-avatars.com/api/?name={entity.name}&background=random"
+            'profile_picture_url': url_for('static', filename='uploads/' + entity.profile_picture_url) if getattr(entity, 'profile_picture_url', None) else None
         })
         
     elif entity_type == 'blood_donor':
@@ -551,7 +551,7 @@ def api_admin_details(entity_type, entity_id):
             'status': getattr(entity, 'status', 'N/A') or 'N/A',
             'is_blocked': getattr(entity, 'is_blocked', False),
             'is_hidden': getattr(entity, 'is_hidden', False),
-            'profile_picture_url': url_for('static', filename='uploads/' + entity.profile_picture_url) if getattr(entity, 'profile_picture_url', None) else f"https://ui-avatars.com/api/?name={entity.name}&background=random"
+            'profile_picture_url': url_for('static', filename='uploads/' + entity.profile_picture_url) if getattr(entity, 'profile_picture_url', None) else None
         })
         
     elif entity_type == 'organ_donor':
@@ -577,7 +577,7 @@ def api_admin_details(entity_type, entity_id):
             'status': getattr(entity, 'status', 'N/A') or 'N/A',
             'is_blocked': getattr(entity, 'is_blocked', False),
             'is_hidden': getattr(entity, 'is_hidden', False),
-            'profile_picture_url': url_for('static', filename='uploads/' + entity.profile_picture_url) if getattr(entity, 'profile_picture_url', None) else f"https://ui-avatars.com/api/?name={entity.name}&background=random"
+            'profile_picture_url': url_for('static', filename='uploads/' + entity.profile_picture_url) if getattr(entity, 'profile_picture_url', None) else None
         })
         
     elif entity_type == 'hospital':
@@ -603,7 +603,7 @@ def api_admin_details(entity_type, entity_id):
             'is_verified': getattr(entity, 'is_verified', False),
             'is_blocked': getattr(entity, 'is_blocked', False),
             'is_hidden': getattr(entity, 'is_hidden', False),
-            'logo_url': url_for('static', filename='uploads/hospital_logos/' + entity.logo_url) if getattr(entity, 'logo_url', None) else f"https://ui-avatars.com/api/?name={entity.name}&background=random"
+            'logo_url': url_for('static', filename='uploads/hospital_logos/' + entity.logo_url) if getattr(entity, 'logo_url', None) else None
         })
 
     elif entity_type == 'staff':
@@ -618,7 +618,7 @@ def api_admin_details(entity_type, entity_id):
         if pic_url:
             pic_url = url_for('static', filename='uploads/' + pic_url)
         else:
-            pic_url = f"https://ui-avatars.com/api/?name={entity.name}&background=random"
+            pic_url = None
 
         return jsonify({
             'id': entity.id,
