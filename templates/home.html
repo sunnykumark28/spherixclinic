@@ -4788,22 +4788,27 @@
 
             <!-- Controls: Map Layer Switcher + Country Search + Modal Trigger -->
             <div class="flex items-center gap-2.5 flex-wrap ml-auto">
-                <!-- Map Theme Buttons -->
-                <div class="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-0.5">
-                    <button type="button" onclick="switchMapLayer('light');" id="btnLayerLight"
+                <!-- Map Theme Buttons (Google Maps Engine & High-Res Layers) -->
+                <div class="flex items-center bg-slate-100 border border-slate-200 rounded-xl p-0.5 shadow-xs">
+                    <button type="button" onclick="switchMapLayer('google');" id="btnLayerGoogle"
                         class="px-2.5 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-sm"
-                        title="High-Contrast Light Map">
-                        <i class="fas fa-sun text-[10px]"></i> <span>Light</span>
+                        title="Google Maps Standard Roadmap">
+                        <i class="fab fa-google text-[10px]"></i> <span>Google Map</span>
+                    </button>
+                    <button type="button" onclick="switchMapLayer('google_sat');" id="btnLayerSat"
+                        class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                        title="Google Satellite & Hybrid Imagery">
+                        <i class="fas fa-satellite text-[10px]"></i> <span>Satellite</span>
+                    </button>
+                    <button type="button" onclick="switchMapLayer('google_terrain');" id="btnLayerTerrain"
+                        class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                        title="Google Topographical Terrain">
+                        <i class="fas fa-mountain text-[10px]"></i> <span>Terrain</span>
                     </button>
                     <button type="button" onclick="switchMapLayer('dark');" id="btnLayerDark"
                         class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
                         title="Dark Tactical Radar">
                         <i class="fas fa-moon text-[10px]"></i> <span>Dark</span>
-                    </button>
-                    <button type="button" onclick="switchMapLayer('satellite');" id="btnLayerSat"
-                        class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                        title="Satellite Imagery">
-                        <i class="fas fa-satellite text-[10px]"></i> <span>Satellite</span>
                     </button>
                 </div>
 
@@ -4943,17 +4948,25 @@
                     </div>
 
                     <!-- Call-To-Action Buttons -->
-                    <div class="pt-3 border-t border-slate-200 flex flex-col gap-2.5">
+                    <div class="pt-3 border-t border-slate-200 flex flex-col gap-2">
                         <a href="{{ url_for('doctors_list') }}"
-                            class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider text-center transition-all shadow-md shadow-sky-500/25 hover:shadow-lg flex items-center justify-center gap-2 text-decoration-none">
+                            class="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider text-center transition-all shadow-md shadow-sky-500/25 hover:shadow-lg flex items-center justify-center gap-2 text-decoration-none">
                             <i class="fas fa-video"></i>
                             <span>Book Priority Tele-Consultation</span>
                         </a>
-                        <a href="{{ url_for('hospitals_list') }}"
-                            class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold text-center transition-all border border-slate-200 flex items-center justify-center gap-2 text-decoration-none">
-                            <i class="fas fa-hospital-alt text-sky-600"></i>
-                            <span>View Connected Facilities</span>
-                        </a>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="{{ url_for('hospitals_list') }}"
+                                class="py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-[11px] font-bold text-center transition-all border border-slate-200 flex items-center justify-center gap-1.5 text-decoration-none">
+                                <i class="fas fa-hospital-alt text-sky-600 text-xs"></i>
+                                <span>Facilities</span>
+                            </a>
+                            <a id="hubGoogleMapsLink" href="https://www.google.com/maps/search/?api=1&query=28.6139,77.2090" target="_blank" rel="noopener noreferrer"
+                                class="py-2 px-2.5 rounded-xl bg-white hover:bg-rose-50/50 text-slate-700 hover:text-rose-600 text-[11px] font-bold text-center transition-all border border-slate-200 shadow-xs flex items-center justify-center gap-1.5 text-decoration-none"
+                                title="Open this location in Google Maps">
+                                <i class="fab fa-google text-rose-500 text-xs"></i>
+                                <span>Google Maps</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -5175,9 +5188,11 @@
         let currentTileLayer = null;
 
         const MAP_LAYERS = {
-            'light': 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+            'google': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+            'google_sat': 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+            'google_terrain': 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
             'dark': 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-            'satellite': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            'light': 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
         };
 
         const CLINICAL_HUBS = [
@@ -5456,6 +5471,11 @@
             document.getElementById('hubEmergencyText').innerHTML = hub.emergency;
             document.getElementById('hubComplianceText').innerHTML = hub.compliance;
 
+            const gmapLink = document.getElementById('hubGoogleMapsLink');
+            if (gmapLink && hub.lat && hub.lng) {
+                gmapLink.href = `https://www.google.com/maps/search/?api=1&query=${hub.lat},${hub.lng}`;
+            }
+
             if (globalLeafletMap) {
                 globalLeafletMap.flyTo([hub.lat, hub.lng], Math.max(globalLeafletMap.getZoom(), 5), {
                     duration: 1.2,
@@ -5492,25 +5512,28 @@
         };
 
         window.switchMapLayer = function (layerKey) {
-            ['btnLayerLight', 'btnLayerDark', 'btnLayerSat'].forEach(id => {
+            ['btnLayerGoogle', 'btnLayerSat', 'btnLayerTerrain', 'btnLayerDark'].forEach(id => {
                 const btn = document.getElementById(id);
                 if (btn) {
                     btn.className = 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1';
                 }
             });
 
-            const activeBtn = layerKey === 'light' ? document.getElementById('btnLayerLight') :
+            const activeBtn = layerKey === 'google' ? document.getElementById('btnLayerGoogle') :
+                              layerKey === 'google_sat' ? document.getElementById('btnLayerSat') :
+                              layerKey === 'google_terrain' ? document.getElementById('btnLayerTerrain') :
                               layerKey === 'dark' ? document.getElementById('btnLayerDark') :
-                              document.getElementById('btnLayerSat');
+                              document.getElementById('btnLayerGoogle');
             if (activeBtn) {
                 activeBtn.className = 'px-2.5 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-sm';
             }
 
             if (globalLeafletMap && currentTileLayer) {
                 globalLeafletMap.removeLayer(currentTileLayer);
-                currentTileLayer = L.tileLayer(MAP_LAYERS[layerKey] || MAP_LAYERS['light'], {
-                    maxZoom: 18,
-                    subdomains: 'abcd'
+                const tileUrl = MAP_LAYERS[layerKey] || MAP_LAYERS['google'];
+                currentTileLayer = L.tileLayer(tileUrl, {
+                    maxZoom: 20,
+                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
                 }).addTo(globalLeafletMap);
                 setTimeout(() => {
                     globalLeafletMap.invalidateSize();
@@ -5646,6 +5669,11 @@
             if (logEl) {
                 const timeStr = new Date().toLocaleTimeString();
                 logEl.innerHTML = `<span class="text-sky-600 font-bold">[${timeStr}]</span> Routed ${flag || ''} ${name} (${code || ''}) &bull; Emergency SOS (${sos || '112'}) linked.`;
+            }
+
+            const gmapLink = document.getElementById('hubGoogleMapsLink');
+            if (gmapLink && lat !== undefined && lng !== undefined) {
+                gmapLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
             }
 
             if (globalLeafletMap && lat !== undefined && lng !== undefined) {
@@ -5803,14 +5831,14 @@
                 center: [22, 15],
                 zoom: 2,
                 minZoom: 2,
-                maxZoom: 10,
+                maxZoom: 18,
                 zoomControl: true,
                 attributionControl: false
             });
 
-            currentTileLayer = L.tileLayer(MAP_LAYERS['light'], {
-                subdomains: 'abcd',
-                maxZoom: 18
+            currentTileLayer = L.tileLayer(MAP_LAYERS['google'], {
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                maxZoom: 20
             }).addTo(globalLeafletMap);
 
             markersLayerGroup = L.layerGroup().addTo(globalLeafletMap);
