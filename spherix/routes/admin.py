@@ -598,6 +598,62 @@ def api_admin_details(entity_type, entity_id):
 
 
 
+@admin_bp.route('/api/admin/hospital-types/<int:type_id>/hospitals')
+@admin_required
+def api_admin_type_hospitals(type_id):
+    """Returns all partner hospitals registered under a specific hospital classification."""
+    type_obj = get_hospital_type_by_id(type_id)
+    if not type_obj:
+        return jsonify({'error': 'Hospital classification not found'}), 404
+
+    matched = []
+    for h in TEMP_DATA.get('hospitals', {}).values():
+        h_type_id = getattr(h, 'hospital_type_id', None)
+        h_type_name = getattr(h, 'hospital_type', '') or ''
+        
+        # Match by ID or Name
+        if (h_type_id is not None and str(h_type_id) == str(type_id)) or \
+           (h_type_id is None and type_id == 1) or \
+           (h_type_name.strip().lower() == type_obj.name.strip().lower()):
+            
+            logo_url = url_for('static', filename='uploads/hospital_logos/' + h.logo_url) if getattr(h, 'logo_url', None) else f"https://ui-avatars.com/api/?name={h.name}&background=random"
+            
+            matched.append({
+                'id': h.id,
+                'name': h.name,
+                'email': h.email,
+                'phone': getattr(h, 'phone', 'N/A') or 'N/A',
+                'city': getattr(h, 'city', 'Main Center') or 'Main Center',
+                'state': getattr(h, 'state', '') or '',
+                'address': getattr(h, 'address', 'N/A') or 'N/A',
+                'total_beds': getattr(h, 'total_beds', 0),
+                'available_beds': getattr(h, 'available_beds', 0),
+                'icu_beds': getattr(h, 'icu_beds', 0),
+                'available_icu_beds': getattr(h, 'available_icu_beds', 0),
+                'doctor_count': getattr(h, 'doctor_count', 0),
+                'is_verified': getattr(h, 'is_verified', False),
+                'is_blocked': getattr(h, 'is_blocked', False),
+                'is_hidden': getattr(h, 'is_hidden', False),
+                'logo_url': logo_url
+            })
+
+    return jsonify({
+        'success': True,
+        'type': {
+            'id': type_obj.id,
+            'name': type_obj.name,
+            'description': type_obj.description,
+            'icon': type_obj.icon,
+            'color': type_obj.color,
+            'slug': getattr(type_obj, 'slug', ''),
+            'is_active': getattr(type_obj, 'is_active', True),
+            'count': len(matched)
+        },
+        'hospitals': matched
+    })
+
+
+
 @admin_bp.route('/admin/medicine/add', methods=['POST'])
 @admin_required
 def admin_add_medicine():
