@@ -1819,10 +1819,11 @@
                                         <button type="button" 
                                                 data-type-id="{{ ht.id }}"
                                                 onclick="showClassificationHospitals(this.dataset.typeId)"
-                                                class="btn btn-sm {% if h_count > 0 %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill shadow-2xs d-inline-flex align-items-center gap-1.5 py-1 px-3"
-                                                title="View {{ h_count }} hospitals in {{ ht.name|e }}">
+                                                class="btn btn-sm {% if h_count > 0 %}btn-primary text-white shadow-2xs{% else %}btn-outline-primary bg-primary-subtle text-primary border-primary-subtle{% endif %} rounded-pill d-inline-flex align-items-center gap-2 py-1 px-3 hover-lift-sm transition-all"
+                                                title="Open sidebar to view {{ h_count }} hospitals in {{ ht.name|e }}">
                                             <i class="fas fa-hospital text-xs"></i>
                                             <span class="fw-bold">{{ h_count }} Hospital{% if h_count != 1 %}s{% endif %}</span>
+                                            <i class="fas fa-arrow-right-to-bracket text-xs opacity-75"></i>
                                         </button>
                                     </td>
                                     <td>
@@ -1879,54 +1880,86 @@
             </div>
         </div>
 
-        <!-- ================= MODAL: VIEW CLASSIFICATION HOSPITALS ================= -->
-        <div class="modal fade" id="classificationHospitalsModal" tabindex="-1" aria-labelledby="classificationHospitalsModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-                <div class="modal-content rounded-4 border-0 shadow-2xl overflow-hidden">
-                    <!-- Modal Header -->
-                    <div class="modal-header border-bottom p-4 bg-slate-900 text-white" id="classModalHeader">
-                        <div class="d-flex align-items-center gap-3">
-                            <div id="classModalIconWrap" class="w-12 h-12 rounded-xl d-flex align-items-center justify-content-center text-white shadow-sm flex-shrink-0" style="width: 44px; height: 44px; background-color: #0284c7;">
-                                <i id="classModalIcon" class="fa-solid fa-hospital fs-5"></i>
-                            </div>
-                            <div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <h5 class="modal-title fw-bold text-white m-0" id="classModalTitle">Category Hospitals</h5>
-                                    <span class="badge bg-white text-dark rounded-pill px-2.5 py-0.5" id="classModalBadge">0 Facilities</span>
-                                </div>
-                                <p class="text-white-50 small m-0 mt-0.5" id="classModalDesc">List of hospitals registered under this classification.</p>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- ================= OFFCANVAS SIDEBAR: VIEW CLASSIFICATION HOSPITALS ================= -->
+        <div class="offcanvas offcanvas-end shadow-2xl border-0" tabindex="-1" id="classificationHospitalsDrawer" aria-labelledby="classificationHospitalsDrawerLabel" style="width: 600px; max-width: 95vw; z-index: 1065; background-color: #f8fafc;">
+            <!-- Header with Gradient Accent -->
+            <div class="offcanvas-header p-4 text-white position-relative overflow-hidden" id="classDrawerHeader" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                <div class="position-absolute top-0 end-0 p-3 opacity-10 pointer-events-none" style="transform: translate(20%, -20%);">
+                    <i id="classDrawerBgIcon" class="fa-solid fa-hospital" style="font-size: 130px;"></i>
+                </div>
+                <div class="d-flex align-items-start gap-3 position-relative z-1 w-100 pe-4">
+                    <div id="classDrawerIconWrap" class="w-12 h-12 rounded-2xl d-flex align-items-center justify-content-center text-white shadow-lg flex-shrink-0" style="width: 48px; height: 48px; background-color: #0284c7; border: 2px solid rgba(255,255,255,0.25);">
+                        <i id="classDrawerIcon" class="fa-solid fa-hospital fs-5"></i>
                     </div>
-
-                    <!-- Modal Search & Filter Bar -->
-                    <div class="p-3 bg-light border-bottom d-flex align-items-center gap-2">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
-                            <input type="text" id="classHospitalSearch" class="form-control border-start-0" placeholder="Filter by hospital name, city, or ID..." oninput="filterClassificationModalHospitals(this.value)">
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                            <span class="badge bg-white/20 text-white border border-white/20 font-mono text-2xs py-0.5 px-2" id="classDrawerIdBadge">#ID</span>
+                            <h5 class="offcanvas-title fw-bold text-white m-0 text-truncate" id="classDrawerTitle">Category Hospitals</h5>
+                            <span class="badge bg-emerald-500 text-white rounded-pill px-2.5 py-0.5 text-xs fw-semibold shadow-xs" id="classDrawerBadge">0 Facilities</span>
                         </div>
-                        <button type="button" class="btn btn-sm btn-primary text-nowrap rounded-pill px-3 shadow-2xs" id="classModalAddHospBtn" onclick="addHospitalInCurrentCategory()">
-                            <i class="fas fa-plus me-1"></i> Add Hospital
-                        </button>
-                    </div>
-
-                    <!-- Modal Body (List of Hospitals) -->
-                    <div class="modal-body p-4" id="classModalBody" style="min-height: 250px; max-height: 60vh;">
-                        <div class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status"></div>
-                            <div class="text-muted small mt-2">Loading hospitals...</div>
-                        </div>
-                    </div>
-
-                    <!-- Modal Footer -->
-                    <div class="modal-footer border-top p-3 bg-light d-flex justify-content-between align-items-center">
-                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" id="classModalFilterMainBtn" onclick="switchHospitalsTabWithFilter()">
-                            <i class="fas fa-list-check me-1"></i> View in Hospitals Registry
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                        <p class="text-slate-300 small m-0" id="classDrawerDesc" style="font-size: 0.82rem; line-height: 1.35;">Hospitals registered under this classification.</p>
                     </div>
                 </div>
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-2" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+
+            <!-- Quick Stats Metric Strip -->
+            <div class="bg-white border-bottom px-4 py-2.5 shadow-2xs">
+                <div class="row g-2 text-center" id="classDrawerStatsRow">
+                    <div class="col-3">
+                        <div class="p-2 rounded-2 bg-slate-50 border border-slate-100">
+                            <div class="text-2xs text-muted fw-bold text-uppercase">Facilities</div>
+                            <div class="fw-bold text-dark fs-6" id="statDrawerFacilities">0</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="p-2 rounded-2 bg-slate-50 border border-slate-100">
+                            <div class="text-2xs text-muted fw-bold text-uppercase">Total Beds</div>
+                            <div class="fw-bold text-primary fs-6" id="statDrawerBeds">0</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="p-2 rounded-2 bg-slate-50 border border-slate-100">
+                            <div class="text-2xs text-muted fw-bold text-uppercase">ICU Beds</div>
+                            <div class="fw-bold text-danger fs-6" id="statDrawerICU">0</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="p-2 rounded-2 bg-slate-50 border border-slate-100">
+                            <div class="text-2xs text-muted fw-bold text-uppercase">Verified</div>
+                            <div class="fw-bold text-success fs-6" id="statDrawerVerified">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Filter Bar -->
+            <div class="p-3 bg-slate-100/80 border-bottom d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm flex-grow-1 shadow-2xs">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" id="classHospitalSearch" class="form-control border-start-0" placeholder="Filter by hospital name, city, or ID..." oninput="filterClassificationModalHospitals(this.value)">
+                </div>
+                <button type="button" class="btn btn-sm btn-primary text-nowrap rounded-pill px-3 shadow-2xs fw-semibold d-inline-flex align-items-center gap-1.5" id="classModalAddHospBtn" onclick="addHospitalInCurrentCategory()">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Hospital</span>
+                </button>
+            </div>
+
+            <!-- Drawer Body (List of Hospitals) -->
+            <div class="offcanvas-body p-3.5" id="classModalBody" style="min-height: 250px;">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="text-muted small mt-2">Loading hospitals...</div>
+                </div>
+            </div>
+
+            <!-- Drawer Footer -->
+            <div class="p-3 bg-white border-top d-flex justify-content-between align-items-center shadow-lg mt-auto">
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1.5" id="classModalFilterMainBtn" onclick="switchHospitalsTabWithFilter()">
+                    <i class="fas fa-list-check"></i>
+                    <span>Open in Full Registry</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4 fw-medium" data-bs-dismiss="offcanvas">Close</button>
             </div>
         </div>
 
@@ -2059,27 +2092,55 @@
         let currentClassificationData = null;
         let currentClassificationHospitals = [];
 
-        function showClassificationHospitals(typeId) {
-            const modalEl = document.getElementById('classificationHospitalsModal');
-            if (!modalEl) return;
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        function closeClassificationDrawer() {
+            const drawerEl = document.getElementById('classificationHospitalsDrawer') || document.getElementById('classificationHospitalsModal');
+            if (drawerEl) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas && drawerEl.classList.contains('offcanvas')) {
+                    const inst = bootstrap.Offcanvas.getInstance(drawerEl);
+                    if (inst) inst.hide();
+                } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const inst = bootstrap.Modal.getInstance(drawerEl);
+                    if (inst) inst.hide();
+                }
+            }
+        }
 
-            // Setup Header info
-            document.getElementById('classModalTitle').innerText = 'Loading Classification...';
-            document.getElementById('classModalDesc').innerText = 'Fetching registered hospitals';
-            document.getElementById('classModalBadge').innerText = '...';
+        function showClassificationHospitals(typeId) {
+            const drawerEl = document.getElementById('classificationHospitalsDrawer') || document.getElementById('classificationHospitalsModal');
+            if (!drawerEl) return;
+            
+            let drawerInstance = null;
+            if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas && drawerEl.classList.contains('offcanvas')) {
+                drawerInstance = bootstrap.Offcanvas.getOrCreateInstance(drawerEl);
+            } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                drawerInstance = bootstrap.Modal.getOrCreateInstance(drawerEl);
+            }
+
+            // Setup Header placeholders
+            const titleEl = document.getElementById('classDrawerTitle') || document.getElementById('classModalTitle');
+            const descEl = document.getElementById('classDrawerDesc') || document.getElementById('classModalDesc');
+            const badgeEl = document.getElementById('classDrawerBadge') || document.getElementById('classModalBadge');
+            const idBadgeEl = document.getElementById('classDrawerIdBadge');
+            
+            if (titleEl) titleEl.innerText = 'Loading Classification...';
+            if (descEl) descEl.innerText = 'Fetching registered hospitals & live metrics...';
+            if (badgeEl) badgeEl.innerText = '...';
+            if (idBadgeEl) idBadgeEl.innerText = `#${typeId}`;
+
             const searchInput = document.getElementById('classHospitalSearch');
             if (searchInput) searchInput.value = '';
 
             const bodyEl = document.getElementById('classModalBody');
-            bodyEl.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <div class="text-muted small mt-2">Loading facilities...</div>
-                </div>
-            `;
+            if (bodyEl) {
+                bodyEl.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="text-muted small mt-2">Loading facility details &amp; metrics...</div>
+                    </div>
+                `;
+            }
 
-            modal.show();
+            if (drawerInstance) drawerInstance.show();
 
             // Fetch from API
             fetch(`/api/admin/classification/${typeId}/hospitals`)
@@ -2091,28 +2152,63 @@
                     currentClassificationHospitals = data.hospitals || [];
                     currentClassificationData = data.classification || { id: typeId, name: 'Classification' };
                     
-                    document.getElementById('classModalTitle').innerText = currentClassificationData.name;
-                    document.getElementById('classModalDesc').innerText = currentClassificationData.description || 'Hospitals registered under this classification';
-                    document.getElementById('classModalBadge').innerText = `${currentClassificationHospitals.length} Facilit${currentClassificationHospitals.length === 1 ? 'y' : 'ies'}`;
+                    if (titleEl) titleEl.innerText = currentClassificationData.name;
+                    if (descEl) descEl.innerText = currentClassificationData.description || 'Hospitals registered under this classification.';
+                    if (badgeEl) badgeEl.innerText = `${currentClassificationHospitals.length} Facilit${currentClassificationHospitals.length === 1 ? 'y' : 'ies'}`;
+                    if (idBadgeEl) idBadgeEl.innerText = `#${currentClassificationData.id}`;
                     
-                    const iconWrap = document.getElementById('classModalIconWrap');
-                    if (iconWrap) iconWrap.style.backgroundColor = currentClassificationData.color || '#0284c7';
+                    const catColor = currentClassificationData.color || '#0284c7';
+                    const iconWrap = document.getElementById('classDrawerIconWrap') || document.getElementById('classModalIconWrap');
+                    if (iconWrap) iconWrap.style.backgroundColor = catColor;
                     
-                    const iconEl = document.getElementById('classModalIcon');
+                    const drawerHeader = document.getElementById('classDrawerHeader') || document.getElementById('classModalHeader');
+                    if (drawerHeader) {
+                        drawerHeader.style.background = `linear-gradient(135deg, #0f172a 0%, ${catColor}cc 140%)`;
+                    }
+
+                    const iconEl = document.getElementById('classDrawerIcon') || document.getElementById('classModalIcon');
+                    const bgIconEl = document.getElementById('classDrawerBgIcon');
                     if (iconEl) {
                         const iconCls = currentClassificationData.icon || 'fa-hospital';
-                        iconEl.className = iconCls.startsWith('fa-') ? `fa-solid ${iconCls.replace('fa-solid ', '')}` : 'fa-solid fa-hospital';
+                        const formattedIcon = iconCls.startsWith('fa-') ? `fa-solid ${iconCls.replace('fa-solid ', '')}` : 'fa-solid fa-hospital';
+                        iconEl.className = `${formattedIcon} fs-5`;
+                        if (bgIconEl) bgIconEl.className = formattedIcon;
                     }
+
+                    // Compute Quick Stats
+                    let totalBeds = 0;
+                    let totalIcu = 0;
+                    let verifiedCount = 0;
+                    currentClassificationHospitals.forEach(h => {
+                        totalBeds += parseInt(h.total_beds || 0, 10);
+                        totalIcu += parseInt(h.icu_beds || 0, 10);
+                        if (h.is_verified) verifiedCount++;
+                    });
+                    const verifiedPct = currentClassificationHospitals.length > 0 
+                        ? Math.round((verifiedCount / currentClassificationHospitals.length) * 100) 
+                        : 0;
+
+                    const statFacEl = document.getElementById('statDrawerFacilities');
+                    const statBedsEl = document.getElementById('statDrawerBeds');
+                    const statIcuEl = document.getElementById('statDrawerICU');
+                    const statVerEl = document.getElementById('statDrawerVerified');
+
+                    if (statFacEl) statFacEl.innerText = currentClassificationHospitals.length;
+                    if (statBedsEl) statBedsEl.innerText = totalBeds;
+                    if (statIcuEl) statIcuEl.innerText = totalIcu;
+                    if (statVerEl) statVerEl.innerText = `${verifiedPct}%`;
                     
                     renderClassificationHospitalsList(currentClassificationHospitals, currentClassificationData);
                 })
                 .catch(err => {
-                    bodyEl.innerHTML = `
-                        <div class="text-center py-4 text-danger">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                            <p class="mb-0 fw-semibold">${err.message || 'Error loading facilities.'}</p>
-                        </div>
-                    `;
+                    if (bodyEl) {
+                        bodyEl.innerHTML = `
+                            <div class="text-center py-5 text-danger">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2 text-danger opacity-75"></i>
+                                <p class="mb-0 fw-semibold">${escapeHtml(err.message || 'Error loading facilities.')}</p>
+                            </div>
+                        `;
+                    }
                 });
         }
 
@@ -2123,22 +2219,23 @@
             if (!hospitals || hospitals.length === 0) {
                 bodyEl.innerHTML = `
                     <div class="text-center py-5 px-3">
-                        <div class="w-16 h-16 rounded-circle bg-light d-inline-flex align-items-center justify-content-center text-muted mb-3" style="width: 64px; height: 64px;">
-                            <i class="fas fa-hospital fa-2x opacity-50"></i>
+                        <div class="rounded-4 bg-white border shadow-2xs d-inline-flex align-items-center justify-content-center text-muted mb-3" style="width: 72px; height: 72px;">
+                            <i class="fas fa-hospital-user fa-2x text-primary opacity-50"></i>
                         </div>
-                        <h6 class="fw-bold text-dark mb-1">No Hospitals Registered Under ${escapeHtml(classification.name)}</h6>
-                        <p class="text-muted small mb-4" style="max-width: 420px; margin: 0 auto;">
-                            There are currently no active healthcare facilities classified under this category. You can register a new hospital directly into this category.
+                        <h6 class="fw-bold text-dark mb-1">No Hospitals Registered Yet</h6>
+                        <p class="text-muted small mb-4" style="max-width: 380px; margin: 0 auto; line-height: 1.4;">
+                            There are currently no healthcare facilities assigned to <strong>${escapeHtml(classification.name)}</strong>. You can register a new hospital directly into this classification.
                         </p>
-                        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold" onclick="addHospitalInCurrentCategory()">
-                            <i class="fas fa-plus me-1.5"></i> Add First Hospital
+                        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold d-inline-flex align-items-center gap-1.5" onclick="addHospitalInCurrentCategory()">
+                            <i class="fas fa-plus"></i>
+                            <span>Register First Hospital</span>
                         </button>
                     </div>
                 `;
                 return;
             }
 
-            let html = `<div class="row g-3">`;
+            let html = `<div class="d-flex flex-column gap-3">`;
             hospitals.forEach(h => {
                 const isVerifiedBadge = h.is_verified 
                     ? '<span class="badge bg-success-subtle text-success border border-success-subtle py-0.5 px-2 font-semibold" style="font-size: 0.65rem;"><i class="fas fa-check-circle me-1"></i>Verified</span>'
@@ -2148,38 +2245,66 @@
                     ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle py-0.5 px-2 font-semibold" style="font-size: 0.65rem;"><i class="fas fa-ban me-1"></i>Blocked</span>' 
                     : '';
 
+                const logoSrc = h.logo_url ? h.logo_url : '/static/images/spherixclinic.jpg';
+
                 html += `
-                    <div class="col-12 hospital-item-card" data-search="${escapeHtml(h.name.toLowerCase())} ${escapeHtml(h.city.toLowerCase())} ${escapeHtml(h.id.toLowerCase())}">
-                        <div class="card border rounded-3 p-3 shadow-2xs hover-shadow transition-all bg-white">
-                            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
-                                <div class="d-flex align-items-center gap-3">
-                                    <img src="${h.logo_url}" class="avatar-lg shadow-2xs border rounded-3" style="width: 48px; height: 48px; object-fit: cover;" alt="${escapeHtml(h.name)}">
-                                    <div>
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <h6 class="fw-bold text-dark m-0 hover-primary cursor-pointer" onclick="showEntityFromModal('hospital', '${escapeHtml(h.id)}')">
+                    <div class="hospital-item-card" data-search="${escapeHtml(h.name.toLowerCase())} ${escapeHtml((h.city || '').toLowerCase())} ${escapeHtml(h.id.toLowerCase())}">
+                        <div class="card border-0 rounded-4 p-3.5 shadow-2xs hover-shadow transition-all bg-white position-relative" style="border: 1px solid #e2e8f0 !important;">
+                            <div class="d-flex align-items-start justify-content-between gap-3 mb-2.5">
+                                <div class="d-flex align-items-center gap-3 min-w-0">
+                                    <img src="${escapeHtml(logoSrc)}" 
+                                         onerror="this.onerror=null; this.src='/static/images/spherixclinic.jpg';"
+                                         class="avatar-lg shadow-2xs border rounded-3 flex-shrink-0" 
+                                         style="width: 46px; height: 46px; object-fit: cover;" 
+                                         alt="${escapeHtml(h.name)}">
+                                    <div class="min-w-0">
+                                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                            <h6 class="fw-bold text-dark m-0 text-truncate cursor-pointer hover-primary" 
+                                                title="${escapeHtml(h.name)}" 
+                                                onclick="showEntityFromModal('hospital', '${escapeHtml(h.id)}')">
                                                 ${escapeHtml(h.name)}
                                             </h6>
-                                            <span class="badge bg-light text-muted border font-mono" style="font-size: 0.68rem;">#${escapeHtml(h.id)}</span>
+                                            <span class="badge bg-light text-muted border font-mono" style="font-size: 0.65rem;">#${escapeHtml(h.id)}</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
                                             ${isVerifiedBadge}
                                             ${isBlockedBadge}
-                                        </div>
-                                        <div class="small text-muted mt-1 d-flex align-items-center gap-3 flex-wrap">
-                                            <span><i class="fas fa-map-marker-alt text-muted me-1"></i>${escapeHtml(h.city)}${h.state ? ', ' + escapeHtml(h.state) : ''}</span>
-                                            <span><i class="fas fa-envelope text-muted me-1"></i>${escapeHtml(h.email)}</span>
-                                            ${h.custom_hospital_type ? `<span class="badge bg-purple-subtle text-purple border"><i class="fas fa-tag me-1"></i>${escapeHtml(h.custom_hospital_type)}</span>` : ''}
+                                            ${h.custom_hospital_type ? `<span class="badge bg-purple-subtle text-purple border py-0.5 px-2" style="font-size: 0.65rem;"><i class="fas fa-tag me-1"></i>${escapeHtml(h.custom_hospital_type)}</span>` : ''}
                                         </div>
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center gap-2 flex-wrap flex-sm-nowrap align-self-sm-center">
-                                    <div class="d-flex flex-column gap-1 me-2 text-end d-none d-md-flex">
-                                        <span class="badge bg-light text-dark border small"><i class="fas fa-bed text-primary me-1"></i>${h.available_beds}/${h.total_beds} Beds</span>
-                                        <span class="badge bg-light text-dark border small"><i class="fas fa-heartbeat text-danger me-1"></i>${h.available_icu_beds}/${h.icu_beds} ICU</span>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-2xs" onclick="showEntityFromModal('hospital', '${escapeHtml(h.id)}')">
-                                        <i class="fas fa-eye"></i> View
+                            </div>
+
+                            <div class="p-2.5 rounded-3 bg-slate-50 border border-slate-100 small text-muted mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <i class="fas fa-map-marker-alt text-primary opacity-75"></i>
+                                    <span class="fw-medium text-slate-700">${escapeHtml(h.city || 'City N/A')}${h.state ? ', ' + escapeHtml(h.state) : ''}</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-white text-dark border py-1 px-2 font-mono shadow-2xs" style="font-size: 0.72rem;">
+                                        <i class="fas fa-bed text-primary me-1"></i>${h.available_beds}/${h.total_beds} Beds
+                                    </span>
+                                    <span class="badge bg-white text-dark border py-1 px-2 font-mono shadow-2xs" style="font-size: 0.72rem;">
+                                        <i class="fas fa-heartbeat text-danger me-1"></i>${h.available_icu_beds}/${h.icu_beds} ICU
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-between gap-2 pt-1 border-top">
+                                <span class="small text-muted text-truncate" style="font-size: 0.75rem; max-width: 220px;">
+                                    <i class="fas fa-envelope me-1 opacity-50"></i>${escapeHtml(h.email || 'No email')}
+                                </span>
+                                <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-2xs" 
+                                            onclick="showEntityFromModal('hospital', '${escapeHtml(h.id)}')" 
+                                            title="View Facility Profile">
+                                        <i class="fas fa-eye text-xs"></i>
+                                        <span>View</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-muted hover-primary" onclick="editEntityFromModal('hospital', '${escapeHtml(h.id)}')" title="Edit Facility">
-                                        <i class="fas fa-pen"></i>
+                                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-muted hover-primary shadow-2xs" 
+                                            onclick="editEntityFromModal('hospital', '${escapeHtml(h.id)}')" 
+                                            title="Edit Hospital">
+                                        <i class="fas fa-pen text-xs"></i>
                                     </button>
                                 </div>
                             </div>
@@ -2201,33 +2326,21 @@
         }
 
         function showEntityFromModal(type, id) {
-            const modalEl = document.getElementById('classificationHospitalsModal');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
+            closeClassificationDrawer();
             setTimeout(() => {
                 showEntityDetails(type, id);
             }, 250);
         }
 
         function editEntityFromModal(type, id) {
-            const modalEl = document.getElementById('classificationHospitalsModal');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
+            closeClassificationDrawer();
             setTimeout(() => {
                 openFormDrawer(type, 'edit', id);
             }, 250);
         }
 
         function addHospitalInCurrentCategory() {
-            const modalEl = document.getElementById('classificationHospitalsModal');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
+            closeClassificationDrawer();
             setTimeout(() => {
                 openFormDrawer('hospital', 'add');
                 setTimeout(() => {
@@ -2241,11 +2354,7 @@
         }
 
         function switchHospitalsTabWithFilter() {
-            const modalEl = document.getElementById('classificationHospitalsModal');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
+            closeClassificationDrawer();
             const catName = currentClassificationData ? currentClassificationData.name : '';
             switchTab('hospitals');
             setTimeout(() => {
