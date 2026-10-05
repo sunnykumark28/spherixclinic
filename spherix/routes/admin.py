@@ -1764,8 +1764,10 @@ def admin_login():
         email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password', '')
 
-        # The admin user is hardcoded for this application
-        if email != 'admin@spherixclinic.com':
+        # The admin user is hardcoded for this application (accepts 'admin' or 'admin@spherixclinic.com')
+        if email in ['admin', 'admin@spherixclinic.com']:
+            email = 'admin@spherixclinic.com'
+        else:
             flash('Invalid admin credentials. Access restricted to authorized system controllers.', 'error')
             return redirect(url_for('admin_login'))
 

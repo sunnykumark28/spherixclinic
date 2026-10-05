@@ -63,17 +63,21 @@
         border-radius: 4px;
         padding: 0.75rem 1rem 0.75rem 2.85rem;
         font-size: 0.85rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
+        letter-spacing: 0.08em;
         color: #ffffff;
         outline: none;
         transition: all 0.25s ease;
+    }
+
+    .minimal-auth-input.uppercase-input {
+        text-transform: uppercase;
     }
 
     .minimal-auth-input::placeholder {
         color: rgba(255, 255, 255, 0.65);
         font-weight: 500;
         letter-spacing: 0.15em;
+        text-transform: uppercase;
     }
 
     .minimal-auth-input:focus {
@@ -92,6 +96,26 @@
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+
+    .password-toggle-btn {
+        position: absolute;
+        right: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.75);
+        background: transparent;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s ease;
+    }
+
+    .password-toggle-btn:hover {
+        color: #ffffff;
     }
 
     /* Solid White Login Button with Jet Black Text */
@@ -222,12 +246,12 @@
                     required 
                     autocomplete="username" 
                     value="admin@spherixclinic.com"
-                    placeholder="USERNAME" 
+                    placeholder="USERNAME OR EMAIL" 
                     class="minimal-auth-input"
                 >
             </div>
 
-            <!-- 2. Password Input -->
+            <!-- 2. Password Input with Visibility Toggle -->
             <div class="minimal-auth-input-group">
                 <span class="minimal-auth-icon">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -242,8 +266,16 @@
                     required 
                     autocomplete="current-password"
                     placeholder="PASSWORD" 
-                    class="minimal-auth-input"
+                    class="minimal-auth-input pr-10"
                 >
+                <button type="button" 
+                        onclick="toggleAdminPasswordVisibility()" 
+                        class="password-toggle-btn" 
+                        id="togglePasswordBtn"
+                        title="Toggle password visibility" 
+                        aria-label="Toggle password visibility">
+                    <i class="fas fa-eye text-xs" id="passwordToggleIcon"></i>
+                </button>
             </div>
 
             <!-- 3. Security Code (CAPTCHA) Verification Row -->
@@ -262,18 +294,19 @@
                         maxlength="6"
                         autocomplete="off"
                         placeholder="CAPTCHA" 
-                        class="minimal-auth-input"
+                        class="minimal-auth-input uppercase-input"
                     >
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
-                    <div class="h-[48px] px-1 rounded bg-white/5 border border-white/85 overflow-hidden flex items-center justify-center">
+                    <div class="h-[48px] px-1 rounded bg-slate-900 border border-white/85 overflow-hidden flex items-center justify-center shadow-inner">
                         <img id="adminCaptchaImg" src="{{ url_for('get_captcha_image', portal_type='admin') }}" alt="CAPTCHA"
-                             class="h-9 w-[130px] object-cover rounded select-none pointer-events-none filter invert brightness-200">
+                             class="h-9 w-[130px] object-cover rounded select-none pointer-events-none">
                     </div>
                     <button type="button" 
                             onclick="refreshAdminCaptcha()"
-                            class="w-[48px] h-[48px] rounded border border-white/85 bg-white/5 hover:bg-white/15 text-white flex items-center justify-center transition-all cursor-pointer"
-                            title="Refresh Code">
+                            class="w-[48px] h-[48px] rounded border border-white/85 bg-white/5 hover:bg-white/15 active:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
+                            title="Refresh Security Code"
+                            aria-label="Refresh Security Code">
                         <i id="adminCaptchaRefreshIcon" class="fas fa-sync-alt text-xs"></i>
                     </button>
                 </div>
@@ -299,10 +332,29 @@
         if (img) img.src = '/api/captcha/image/admin?refresh=1&t=' + Date.now();
         setTimeout(function() {
             if (icon) icon.classList.remove('fa-spin');
-        }, 400);
+        }, 500);
     }
 
-    // Map single username input to admin email if needed
+    function toggleAdminPasswordVisibility() {
+        var pwd = document.getElementById('adminPassword');
+        var icon = document.getElementById('passwordToggleIcon');
+        if (!pwd) return;
+        if (pwd.type === 'password') {
+            pwd.type = 'text';
+            if (icon) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        } else {
+            pwd.type = 'password';
+            if (icon) {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    }
+
+    // Map single username input to admin email if needed and handle loading state
     var form = document.getElementById('adminForm');
     var btn = document.getElementById('submitBtn');
     if (form) {
@@ -311,12 +363,27 @@
             if (emailField && emailField.value.trim().toLowerCase() === 'admin') {
                 emailField.value = 'admin@spherixclinic.com';
             }
-            if (btn) {
+            if (btn && form.checkValidity()) {
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin text-sm mr-2"></i> LOGGING IN...';
                 btn.disabled = true;
                 btn.classList.add('opacity-90', 'cursor-wait');
+                // Re-enable in 10s timeout safeguard
+                setTimeout(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = 'LOGIN';
+                    btn.classList.remove('opacity-90', 'cursor-wait');
+                }, 10000);
             }
         });
     }
+
+    // Reset button state if navigated back via browser history
+    window.addEventListener('pageshow', function(event) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'LOGIN';
+            btn.classList.remove('opacity-90', 'cursor-wait');
+        }
+    });
 </script>
 {% endblock %}
