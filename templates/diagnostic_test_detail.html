@@ -536,17 +536,29 @@
         </div>
     </footer>
 
+    <!-- Metadata Container for Script -->
+    <div id="diagnosticTestMeta" 
+         class="hidden"
+         data-logged-in="{{ 'true' if (current_user.is_authenticated and session.get('user_role') == 'patient') else 'false' }}"
+         data-login-url="{{ url_for('patient_login') }}"
+         data-id="{{ item.id }}"
+         data-name="{{ item.name|e }}"
+         data-price="{{ item.price }}"
+         data-sample-type="{{ item.sample_type or 'Whole Blood' }}"
+         data-fasting="{{ 'true' if item.fasting_required else 'false' }}"></div>
+
     <!-- ================= 5. SCRIPT CONTROLLER ================= -->
     <script>
-        const IS_PATIENT_LOGGED_IN = {% if current_user.is_authenticated and session.get('user_role') == 'patient' %}true{% else %}false{% endif %};
-        const PATIENT_LOGIN_URL = "{{ url_for('patient_login') }}";
+        const testMetaEl = document.getElementById('diagnosticTestMeta');
+        const IS_PATIENT_LOGGED_IN = testMetaEl ? (testMetaEl.dataset.loggedIn === 'true') : false;
+        const PATIENT_LOGIN_URL = testMetaEl ? (testMetaEl.dataset.loginUrl || '/patient/login') : '/patient/login';
 
         const currentItem = {
-            id: "{{ item.id }}",
-            name: "{{ item.name }}",
-            price: {{ item.price }},
-            sample_type: "{{ item.sample_type or 'Whole Blood' }}",
-            fasting_required: {{ 'true' if item.fasting_required else 'false' }}
+            id: testMetaEl ? (testMetaEl.dataset.id || '') : '',
+            name: testMetaEl ? (testMetaEl.dataset.name || '') : '',
+            price: testMetaEl ? parseFloat(testMetaEl.dataset.price || '0') : 0,
+            sample_type: testMetaEl ? (testMetaEl.dataset.sampleType || 'Whole Blood') : 'Whole Blood',
+            fasting_required: testMetaEl ? (testMetaEl.dataset.fasting === 'true') : false
         };
 
         let activeSelectedLabId = 'LAB-SPHERIX-DELHI-01';
