@@ -1,3 +1,13 @@
+---
+title: Spherix Clinic
+emoji: 🏥
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🏥 Spherix Clinic — AI-Powered Smart Healthcare & Hospital Management Platform
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
