@@ -692,8 +692,6 @@
   {% if current_user.is_authenticated %}
     {% if current_user.email == 'admin@spherixclinic.com' %}
       {% set current_role = 'admin' %}
-    {% elif getattr(current_user, 'is_pathology_lab', False) or (current_user.get_id and (current_user.get_id().startswith('pathology_lab-') or current_user.get_id().startswith('pathology-'))) %}
-      {% set current_role = 'pathology_lab' %}
     {% else %}
       {% set role_parts = current_user.get_id().split('-') %}
       {% set current_role = role_parts[0] %}
@@ -811,60 +809,7 @@
           class="sidebar-link {% if request.args.get('tab') == 'settings' %}active{% endif %}"><i
             class="fas fa-cog fa-fw"></i> <span>Settings</span></a>
 
-        <!-- ================= 3. PATHOLOGY LAB NAVIGATION ================= -->
-        {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
-        <div class="sidebar-section-title">Core Operations</div>
-        {% set lab_ops_nav = [
-          ('overview', 'fas fa-th-large', 'Dashboard'),
-          ('bookings', 'fas fa-calendar-check', 'Bookings & Requests'),
-          ('referrals', 'fas fa-user-md', 'Doctor Referrals')
-        ] %}
-        {% for id, icon, label in lab_ops_nav %}
-        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
-          class="sidebar-link {% if (request.args.get('tab', 'overview') == id) or (id == 'bookings' and request.args.get('tab') in ['bookings', 'requests', 'booking_requests']) %}active{% endif %}">
-          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
-        </a>
-        {% endfor %}
-
-        <div class="sidebar-section-title">Diagnostic Services</div>
-        {% set lab_catalog_nav = [
-          ('catalog', 'fas fa-book-medical', 'Test Catalog & Pricing'),
-          ('slots', 'fas fa-clock', 'Appointment Slots')
-        ] %}
-        {% for id, icon, label in lab_catalog_nav %}
-        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
-          class="sidebar-link {% if (request.args.get('tab') == id) or (id == 'catalog' and request.args.get('tab') in ['catalog', 'pricing', 'availability']) %}active{% endif %}">
-          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
-        </a>
-        {% endfor %}
-
-        <div class="sidebar-section-title">Clinical Processing</div>
-        {% set lab_clinical_nav = [
-          ('tracking', 'fas fa-barcode', 'Specimens & Processing'),
-          ('reports', 'fas fa-file-signature', 'Report Management'),
-          ('staff', 'fas fa-user-nurse', 'Phlebotomists & Staff')
-        ] %}
-        {% for id, icon, label in lab_clinical_nav %}
-        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
-          class="sidebar-link {% if (request.args.get('tab') == id) or (id == 'tracking' and request.args.get('tab') in ['tracking', 'processing', 'collections', 'collection']) %}active{% endif %}">
-          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
-        </a>
-        {% endfor %}
-
-        <div class="sidebar-section-title">Finance & Settings</div>
-        {% set lab_finance_nav = [
-          ('settlements', 'fas fa-wallet', 'Financials & Payouts'),
-          ('analytics', 'fas fa-chart-line', 'Analytics'),
-          ('settings', 'fas fa-cog', 'Profile & Settings')
-        ] %}
-        {% for id, icon, label in lab_finance_nav %}
-        <a href="{{ url_for('pathology.pathology_dashboard', tab=id) }}"
-          class="sidebar-link {% if (request.args.get('tab') == id) or (id == 'settlements' and request.args.get('tab') in ['settlements', 'payments', 'refunds']) or (id == 'settings' and request.args.get('tab') in ['settings', 'profile']) %}active{% endif %}">
-          <i class="{{ icon }} fa-fw"></i> <span>{{ label }}</span>
-        </a>
-        {% endfor %}
-
-        <!-- ================= 4. HOSPITAL NAVIGATION ================= -->
+        <!-- ================= 3. HOSPITAL NAVIGATION ================= -->
         {% elif current_role == 'hospital' %}
         <div class="sidebar-section-title">Facility Portal</div>
         {% set hospital_nav = [
@@ -1047,8 +992,6 @@
           <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital Avatar" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
           {% elif current_user.profile_picture_url %}
           <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
-          {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
-          <i class="fas fa-microscope text-sky-600"></i>
           {% else %}
           {{ current_user.name[0] if current_user.name else 'U' }}
           {% endif %}
@@ -1174,8 +1117,6 @@
               <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
               {% elif current_user.profile_picture_url %}
               <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
-              {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
-              <i class="fas fa-microscope text-sky-600"></i>
               {% else %}
               <span class="font-bold text-sky-600 text-xs">{{ current_user.name[0] if current_user.name else 'U' }}</span>
               {% endif %}
@@ -1198,8 +1139,6 @@
               <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('doctor_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Account Settings</a></li>
               {% elif current_role == 'hospital' %}
               <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('hospital_dashboard', tab='settings') }}"><i class="fas fa-cog me-2 text-muted"></i>Hospital Settings</a></li>
-              {% elif current_role in ['pathology_lab', 'pathology', 'lab'] %}
-              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('pathology.pathology_dashboard', tab='settings') }}"><i class="fas fa-cog me-2 text-muted"></i>Lab Settings</a></li>
               {% elif current_role == 'patient' %}
               <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('patient_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Profile Settings</a></li>
               {% endif %}
@@ -1477,322 +1416,8 @@
     });
   </script>
 
-  <!-- ============================================== -->
-  <!-- UNIVERSAL IMAGE CROPPING & FIX SIZE MODAL      -->
-  <!-- ============================================== -->
-  <div class="modal fade" id="universalCropModal" tabindex="-1" aria-labelledby="universalCropModalLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 99999;">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content border-0 shadow-2xl rounded-4 overflow-hidden" style="background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0 !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;">
-        
-        <div class="modal-header px-4 py-3 border-bottom" style="background: #f8fafc; border-color: #e2e8f0 !important;">
-          <div class="d-flex align-items-center gap-2.5">
-            <div class="rounded-xl d-flex align-items-center justify-content-center text-sm" style="width: 38px; height: 38px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd;">
-              <i class="fas fa-crop-alt fs-6"></i>
-            </div>
-            <div>
-              <h6 class="modal-title font-black mb-0 text-sm text-slate-900" id="universalCropModalLabel">Crop &amp; Fix Size Profile Image</h6>
-              <span class="text-slate-500 text-xs">Adjust frame, scale, rotate and select standard output resolution</span>
-            </div>
-          </div>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeUniversalCropper();"></button>
-        </div>
-
-        <div class="modal-body p-4" style="background: #ffffff;">
-          <div class="row g-4 align-items-center">
-            
-            <!-- Cropper Canvas Viewport -->
-            <div class="col-lg-7">
-              <div class="rounded-3 overflow-hidden d-flex align-items-center justify-content-center position-relative" style="max-height: 380px; min-height: 300px; background: #0f172a; border: 1px solid #cbd5e1;">
-                <img id="universalImageToCrop" src="" alt="Source image for cropping" style="max-width: 100%; display: block;">
-              </div>
-            </div>
-
-            <!-- Live Previews & Control Toolbar -->
-            <div class="col-lg-5">
-              <div class="p-3.5 rounded-3 text-center" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-                
-                <!-- Dual Preview Section (Circle Avatar + Square Badge) -->
-                <div class="d-flex align-items-center justify-content-center gap-3 mb-2.5">
-                  <div>
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider d-block mb-1">Avatar</span>
-                    <div style="width: 86px; height: 86px; border-radius: 50%; overflow: hidden; border: 3px solid #0284c7; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25); background: #ffffff;">
-                      <div class="universal-crop-preview-box" style="width: 100%; height: 100%; overflow: hidden;"></div>
-                    </div>
-                  </div>
-                  <div>
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider d-block mb-1">Badge ID</span>
-                    <div style="width: 86px; height: 86px; border-radius: 12px; overflow: hidden; border: 2px solid #64748b; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15); background: #ffffff;">
-                      <div class="universal-crop-preview-box" style="width: 100%; height: 100%; overflow: hidden;"></div>
-                    </div>
-                  </div>
-                </div>
-                
-                <span class="text-[11px] text-slate-500 d-block mb-2">Drag image to position &bull; Scroll to zoom</span>
-
-                <!-- Fixed Size Presets Model Selection -->
-                <div class="mb-2.5 text-start">
-                  <label class="text-[11px] font-bold text-slate-700 d-block mb-1"><i class="fas fa-expand me-1 text-sky-600"></i>Fixed Output Size:</label>
-                  <div class="d-flex justify-content-center gap-1">
-                    <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 text-[11px] fw-bold active universal-size-btn" onclick="setUniversalCropSize(500, 500, '500 × 500 px (HD)', this);">500×500 HD</button>
-                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-size-btn" onclick="setUniversalCropSize(300, 300, '300 × 300 px (Standard)', this);">300×300</button>
-                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-size-btn" onclick="setUniversalCropSize(200, 200, '200 × 200 px (Compact)', this);">200×200</button>
-                  </div>
-                </div>
-
-                <!-- Aspect Ratio Selector -->
-                <div class="mb-2.5 text-start">
-                  <label class="text-[11px] font-bold text-slate-700 d-block mb-1"><i class="fas fa-shapes me-1 text-sky-600"></i>Aspect Ratio:</label>
-                  <div class="d-flex justify-content-center gap-1">
-                    <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 text-[11px] fw-bold active universal-ratio-btn" onclick="setUniversalCropRatio(1, this);">1:1 Square</button>
-                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-ratio-btn" onclick="setUniversalCropRatio(4/3, this);">4:3 Card</button>
-                    <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 text-[11px] fw-bold text-slate-700 border-slate-300 universal-ratio-btn" onclick="setUniversalCropRatio(NaN, this);">Free</button>
-                  </div>
-                </div>
-
-                <!-- Toolbar Controls -->
-                <div class="d-flex justify-content-center flex-wrap gap-1.5 mb-2">
-                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.zoom(0.1);" title="Zoom In">
-                    <i class="fas fa-search-plus text-slate-600"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.zoom(-0.1);" title="Zoom Out">
-                    <i class="fas fa-search-minus text-slate-600"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.rotate(-90);" title="Rotate Left">
-                    <i class="fas fa-undo text-slate-600"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.rotate(90);" title="Rotate Right">
-                    <i class="fas fa-redo text-slate-600"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="toggleUniversalCropFlip();" title="Flip Horizontal">
-                    <i class="fas fa-arrows-alt-h text-slate-600"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-light bg-white rounded-2 px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.reset();" title="Reset Frame">
-                    <i class="fas fa-sync-alt text-slate-600"></i>
-                  </button>
-                </div>
-                
-                <div class="p-1.5 rounded-2 bg-sky-50 border border-sky-200 mt-2">
-                  <span class="text-[11px] text-sky-800 font-mono font-bold d-block">
-                    <i class="fas fa-check-circle text-sky-600 me-1"></i>Output: <span id="cropOutputResolutionLabel">500 &times; 500 px (HD)</span>
-                  </span>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="modal-footer px-4 py-3 border-top d-flex justify-content-between" style="background: #f8fafc; border-color: #e2e8f0 !important;">
-          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4 font-bold text-xs" data-bs-dismiss="modal" onclick="closeUniversalCropper();">
-            Cancel
-          </button>
-          <button type="button" id="universalApplyCropBtn" class="btn btn-sm btn-primary rounded-pill px-4 py-2 font-bold text-xs d-inline-flex align-items-center gap-1.5 shadow-sm">
-            <i class="fas fa-check"></i>
-            <span>Set Size &amp; Crop Image</span>
-          </button>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
-  <!-- Universal Image Cropper & Fixed Size Engine -->
-  <script>
-    window._universalCropper = null;
-    window._universalCropCallback = null;
-    window._universalAutoSubmitFormId = null;
-    window._universalFlipX = 1;
-    window._universalTargetWidth = 500;
-    window._universalTargetHeight = 500;
-    window._universalAspectRatio = 1;
-
-    function setUniversalCropSize(w, h, label, btnEl) {
-      window._universalTargetWidth = w;
-      window._universalTargetHeight = h;
-      const resLabel = document.getElementById('cropOutputResolutionLabel');
-      if (resLabel) {
-        resLabel.innerHTML = label || `${w} &times; ${h} px`;
-      }
-      if (btnEl && btnEl.parentElement) {
-        btnEl.parentElement.querySelectorAll('.universal-size-btn').forEach(b => {
-          b.classList.remove('btn-primary', 'text-white', 'active', 'shadow-sm');
-          b.classList.add('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
-        });
-        btnEl.classList.remove('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
-        btnEl.classList.add('btn-primary', 'text-white', 'active', 'shadow-sm');
-      }
-    }
-
-    function setUniversalCropRatio(ratio, btnEl) {
-      window._universalAspectRatio = ratio;
-      if (window._universalCropper) {
-        window._universalCropper.setAspectRatio(ratio);
-      }
-      if (btnEl && btnEl.parentElement) {
-        btnEl.parentElement.querySelectorAll('.universal-ratio-btn').forEach(b => {
-          b.classList.remove('btn-primary', 'text-white', 'active', 'shadow-sm');
-          b.classList.add('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
-        });
-        btnEl.classList.remove('btn-outline-secondary', 'bg-white', 'text-slate-700', 'border-slate-300');
-        btnEl.classList.add('btn-primary', 'text-white', 'active', 'shadow-sm');
-      }
-    }
-
-    function toggleUniversalCropFlip() {
-      if (!window._universalCropper) return;
-      window._universalFlipX = window._universalFlipX === 1 ? -1 : 1;
-      window._universalCropper.scaleX(window._universalFlipX);
-    }
-
-    function openUniversalCropper(file, options) {
-      options = options || {};
-      const modalEl = document.getElementById('universalCropModal');
-      const imgEl = document.getElementById('universalImageToCrop');
-      if (!modalEl || !imgEl) return;
-
-      window._universalCropCallback = options.onCrop || null;
-      window._universalAutoSubmitFormId = options.autoSubmitFormId || null;
-      window._universalFlipX = 1;
-      window._universalTargetWidth = options.targetWidth || 500;
-      window._universalTargetHeight = options.targetHeight || 500;
-      window._universalAspectRatio = options.aspectRatio !== undefined ? options.aspectRatio : 1;
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        imgEl.src = e.target.result;
-
-        // Show modal safely across Bootstrap versions or fallback
-        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-          bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        } else {
-          modalEl.classList.add('show');
-          modalEl.style.display = 'block';
-          document.body.classList.add('modal-open');
-        }
-
-        // Initialize or re-initialize Cropper.js once image is rendered
-        setTimeout(() => {
-          if (window._universalCropper) {
-            window._universalCropper.destroy();
-          }
-          if (typeof Cropper !== 'undefined') {
-            window._universalCropper = new Cropper(imgEl, {
-              aspectRatio: window._universalAspectRatio,
-              viewMode: 1,
-              dragMode: 'move',
-              autoCropArea: 0.9,
-              restore: false,
-              guides: true,
-              center: true,
-              highlight: false,
-              cropBoxMovable: true,
-              cropBoxResizable: true,
-              toggleDragModeOnDblclick: false,
-              preview: '.universal-crop-preview-box'
-            });
-          }
-        }, 200);
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function closeUniversalCropper() {
-      const modalEl = document.getElementById('universalCropModal');
-      if (modalEl) {
-        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-        } else {
-          modalEl.classList.remove('show');
-          modalEl.style.display = 'none';
-          document.body.classList.remove('modal-open');
-        }
-      }
-      if (window._universalCropper) {
-        window._universalCropper.destroy();
-        window._universalCropper = null;
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const applyBtn = document.getElementById('universalApplyCropBtn');
-      if (applyBtn) {
-        applyBtn.addEventListener('click', () => {
-          if (!window._universalCropper) return;
-
-          let targetW = window._universalTargetWidth || 500;
-          let targetH = window._universalTargetHeight || 500;
-
-          if (window._universalAspectRatio && !isNaN(window._universalAspectRatio) && window._universalAspectRatio !== 1) {
-            targetH = Math.round(targetW / window._universalAspectRatio);
-          }
-
-          const canvas = window._universalCropper.getCroppedCanvas({
-            width: targetW,
-            height: targetH,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high'
-          });
-
-          if (canvas) {
-            const base64Data = canvas.toDataURL('image/jpeg', 0.95);
-
-            if (typeof window._universalCropCallback === 'function') {
-              window._universalCropCallback(base64Data, canvas);
-            }
-
-            closeUniversalCropper();
-
-            if (window._universalAutoSubmitFormId) {
-              const form = document.getElementById(window._universalAutoSubmitFormId);
-              if (form) form.submit();
-            }
-          }
-        });
-      }
-
-      // Auto-bind any file input with data-crop-image="true" or class="crop-image-input"
-      document.body.addEventListener('change', (e) => {
-        const target = e.target;
-        if (target && target.matches('input[type="file"][data-crop-image="true"], input[type="file"].crop-image-input')) {
-          if (target.files && target.files.length > 0) {
-            const file = target.files[0];
-            if (!file.type.match(/^image\//)) {
-              alert('Please choose a valid image file (PNG, JPG, WebP).');
-              return;
-            }
-
-            const hiddenTargetId = target.getAttribute('data-crop-target');
-            const previewTargetId = target.getAttribute('data-preview-target');
-            const formId = target.form ? target.form.id : null;
-            openUniversalCropper(file, {
-              onCrop: (base64) => {
-                if (hiddenTargetId) {
-                  const hiddenInput = document.getElementById(hiddenTargetId);
-                  if (hiddenInput) hiddenInput.value = base64;
-                }
-                if (previewTargetId) {
-                  const previewImg = document.getElementById(previewTargetId);
-                  if (previewImg) {
-                    previewImg.src = base64;
-                    previewImg.classList.remove('d-none');
-                  }
-                  const placeholder = document.getElementById(previewTargetId + 'Placeholder') || 
-                                      document.getElementById(previewTargetId.replace('Img', 'Placeholder')) ||
-                                      document.getElementById(previewTargetId + 'PlaceholderOD');
-                  if (placeholder) placeholder.classList.add('d-none');
-                }
-              },
-              autoSubmitFormId: autoSubmit ? formId : null
-            });
-          }
-        }
-      });
-    });
-  </script>
+  <!-- Universal Image Cropper & Fixed Size Engine Include -->
+  {% include 'universal_crop_modal.html' %}
 
   {% block extra_scripts %}{% endblock %}
 </body>

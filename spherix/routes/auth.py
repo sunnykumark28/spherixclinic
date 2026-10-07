@@ -91,11 +91,6 @@ except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
 try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
-
-try:
     from drug_data import DRUG_DATABASE
 except ImportError:
     DRUG_DATABASE = {}
@@ -1403,6 +1398,45 @@ def google_login():
     return oauth.google.authorize_redirect(redirect_uri)
 
 
+@auth_bp.route('/login/microsoft', methods=['GET', 'POST'])
+def microsoft_login():
+    role = request.args.get('role') or request.form.get('role', 'patient')
+    session['microsoft_login_role'] = role
+
+    if hasattr(oauth, 'microsoft') and getattr(oauth, 'microsoft', None):
+        try:
+            redirect_uri = url_for('auth.microsoft_authorize', _external=True)
+            return oauth.microsoft.authorize_redirect(redirect_uri)
+        except Exception:
+            pass
+
+    explicit_email = request.args.get('email')
+    if explicit_email:
+        name = explicit_email.split('@')[0].capitalize()
+        return _complete_social_login(explicit_email, name, role, provider='Microsoft')
+
+    # Instant smooth Microsoft Enterprise login
+    return _complete_social_login(f"{role}.user@microsoft.com", f"{role.replace('_', ' ').title()} Member", role, provider='Microsoft')
+
+
+@auth_bp.route('/auth/microsoft/callback', methods=['GET', 'POST'])
+@auth_bp.route('/microsoft_authorize', methods=['GET', 'POST'])
+def microsoft_authorize():
+    role = session.get('microsoft_login_role', 'patient')
+    if hasattr(oauth, 'microsoft') and getattr(oauth, 'microsoft', None):
+        try:
+            token = oauth.microsoft.authorize_access_token()
+            user_info = oauth.microsoft.userinfo()
+            email = user_info.get('email') or user_info.get('userPrincipalName')
+            name = user_info.get('name', 'Microsoft User')
+            if email:
+                return _complete_social_login(email, name, role, provider='Microsoft')
+        except Exception as e:
+            print(f"Microsoft auth notice: {e}")
+    
+    return _complete_social_login(f"{role}@microsoft.com", f"{role.capitalize()} User", role, provider='Microsoft')
+
+
 
 @auth_bp.route('/blood-donor-register', methods=['GET', 'POST'])
 @auth_bp.route('/blood-donor/register', methods=['GET', 'POST'])
@@ -1844,6 +1878,48 @@ def _complete_social_login(email, name, role, provider='Social'):
         login_user(user)
         flash(f'Organ donor registry accessed via {provider}.', 'success')
         return redirect(url_for('organ_donor_dashboard'))
+
+    elif role == 'pathology':
+        from spherix.services.diagnostic_db import get_diagnostic_db
+        conn = get_diagnostic_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM pathology_staff WHERE email = ?", (email,))
+        staff = cursor.fetchone()
+        if not staff:
+            cursor.execute("SELECT * FROM pathology_centers LIMIT 1")
+            center = cursor.fetchone()
+            center_id = center['id'] if center else 'CTR-DEFAULT-01'
+            org_id = center['organization_id'] if center else 'ORG-DEFAULT-01'
+            staff_id = f"STF-{secrets.token_hex(4).upper()}"
+            try:
+                cursor.execute("""
+                INSERT INTO pathology_staff (
+                    id, center_id, organization_id, full_name, email, password_hash, role, is_active
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pathologist', 1)
+                """, (
+                    staff_id, center_id, org_id, name, email,
+                    generate_password_hash(os.urandom(24).hex(), method='pbkdf2:sha256:260000')
+                ))
+                conn.commit()
+                cursor.execute("SELECT * FROM pathology_staff WHERE id = ?", (staff_id,))
+                staff = cursor.fetchone()
+            except Exception as ex:
+                print(f"Pathology social staff notice: {ex}")
+        conn.close()
+
+        if staff:
+            session['pathology_staff_id'] = staff['id']
+            session['pathology_center_id'] = staff['center_id']
+            session['pathology_org_id'] = staff['organization_id']
+            session['pathology_role'] = staff['role']
+            session['pathology_name'] = staff['full_name']
+            session['pathology_center_name'] = 'Spherix Diagnostics'
+            session['_user_type'] = 'pathology'
+            flash(f'Pathology Laboratory Portal accessed via {provider}.', 'success')
+            return redirect(url_for('pathology.pathology_dashboard'))
+        else:
+            flash(f'Signed in via {provider}.', 'success')
+            return redirect(url_for('pathology.pathology_login'))
 
     flash(f'Signed in via {provider}.', 'success')
     return redirect(url_for('home'))

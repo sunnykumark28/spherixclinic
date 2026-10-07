@@ -88,11 +88,6 @@ except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
 try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
-
-try:
     from drug_data import DRUG_DATABASE
 except ImportError:
     DRUG_DATABASE = {}

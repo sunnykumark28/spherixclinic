@@ -114,18 +114,7 @@ try:
 except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
-try:
-    from lab_catalog import (
-        LAB_TESTS_CATALOG, get_all_packages, get_all_tests,
-        ALL_LAB_ITEMS, search_lab_catalog, get_item_by_id
-    )
-except ImportError:
-    LAB_TESTS_CATALOG = []
-    get_all_packages = lambda: []
-    get_all_tests = lambda: []
-    ALL_LAB_ITEMS = []
-    search_lab_catalog = lambda **kwargs: []
-    get_item_by_id = lambda item_id: None
+
 
 try:
     from drug_data import DRUG_DATABASE
@@ -375,8 +364,6 @@ def dashboard_dispatcher():
         return redirect(url_for('staff_dashboard'))
     if getattr(current_user, 'is_doctor', False) or isinstance(current_user, Doctor):
         return redirect(url_for('doctor_dashboard'))
-    if getattr(current_user, 'is_pathology_lab', False):
-        return redirect(url_for('pathology.pathology_dashboard'))
     if getattr(current_user, 'is_patient', False) or isinstance(current_user, Patient):
         return redirect(url_for('patient_dashboard'))
     return redirect(url_for('home'))
@@ -1114,499 +1101,7 @@ def api_disease_info(disease_identifier):
 
 
 
-@main_bp.route('/medical-lab')
-@main_bp.route('/lab-tests')
-@main_bp.route('/diagnostics')
-def medical_lab():
-    packages = get_all_packages()
-    tests = get_all_tests()
-    return render_template(
-        'medical_lab.html',
-        packages=packages,
-        tests=tests,
-        all_items=ALL_LAB_ITEMS
-    )
 
-
-
-@main_bp.route('/api/lab/search')
-def api_lab_search():
-    q = request.args.get('q', '').strip()
-    category = request.args.get('category', 'all').strip()
-    concern = request.args.get('concern', 'all').strip()
-    item_type = request.args.get('type', 'all').strip()
-    
-    results = search_lab_catalog(query=q, category=category, concern=concern, item_type=item_type)
-    return jsonify({
-        'success': True,
-        'count': len(results),
-        'results': results
-    })
-
-
-
-@main_bp.route('/api/lab/details/<item_id>')
-def api_lab_details(item_id):
-    item = get_item_by_id(item_id)
-    if not item:
-        return jsonify({'success': False, 'error': 'Diagnostic test or package not found'}), 404
-    return jsonify({
-        'success': True,
-        'item': item
-    })
-
-
-
-@main_bp.route('/diagnostic-test/<item_id>')
-@main_bp.route('/lab-test/<item_id>')
-def diagnostic_test_detail(item_id):
-    """
-    Standalone full-page test details view (without layout.html) designed for opening in a new tab.
-    """
-    item = get_item_by_id(item_id)
-    if not item:
-        flash("Diagnostic test or health package not found.", "warning")
-        return redirect(url_for('main.medical_lab'))
-    return render_template('diagnostic_test_detail.html', item=item)
-
-
-
-@main_bp.route('/api/lab/centers')
-def api_lab_centers():
-    """
-    Returns registered pathology laboratories and diagnostic centers for a given pincode/city.
-    Integrates with both live database diagnostic_labs and calibrated network reference centers.
-    """
-    pincode = request.args.get('pincode', '').strip()
-    city = request.args.get('city', '').strip()
-    test_id = request.args.get('test_id', '').strip()
-    collection_mode = request.args.get('mode', 'all').strip().upper()
-
-    registered_labs = []
-
-    # 1. Query database diagnostic_labs
-    try:
-        from spherix.services.database import get_db_connection
-        conn = get_db_connection()
-        if conn:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT id, legal_name, display_name, registration_number, lab_type,
-                       phone, email, address, city, state, pincode,
-                       is_nabl_accredited, nabl_accreditation_number,
-                       home_collection_available, walkin_available, operating_hours
-                FROM diagnostic_labs
-                WHERE is_active = 1
-            """)
-            rows = cur.fetchall()
-            cols = [d[0] for d in cur.description]
-            for r in rows:
-                lab = dict(zip(cols, r))
-                registered_labs.append({
-                    "id": lab.get("id"),
-                    "name": lab.get("display_name") or lab.get("legal_name"),
-                    "legal_name": lab.get("legal_name"),
-                    "registration_number": lab.get("registration_number") or "NABL-LAB-REG",
-                    "lab_type": lab.get("lab_type") or "Central Reference Pathology Lab",
-                    "rating": 4.9,
-                    "reviews_count": 1850,
-                    "nabl_accredited": bool(lab.get("is_nabl_accredited", 1)),
-                    "cap_accredited": True,
-                    "iso_certified": True,
-                    "address": lab.get("address") or "Main Medical Enclave",
-                    "city": lab.get("city") or "New Delhi",
-                    "state": lab.get("state") or "Delhi",
-                    "pincode": str(lab.get("pincode") or "110001"),
-                    "distance_km": 1.5,
-                    "home_collection_available": bool(lab.get("home_collection_available", 1)),
-                    "walkin_available": bool(lab.get("walkin_available", 1)),
-                    "home_collection_tat": "45-60 Mins Phlebotomist Dispatch",
-                    "operating_hours": lab.get("operating_hours") or "06:30 AM - 09:30 PM",
-                    "phone": lab.get("phone") or "+91 11 4987 6500",
-                    "sample_tracking": "100% Barcode & 2-8°C Cold Chain",
-                    "badge": "OFFICIAL REFERENCE LAB"
-                })
-            conn.close()
-    except Exception as e:
-        pass
-
-    # 2. Comprehensive Master Network of Certified Reference Labs across major cities
-    master_network = [
-        {
-            "id": "LAB-SPHERIX-DELHI-01",
-            "name": "Spherix Central Reference Pathology Laboratory",
-            "legal_name": "Spherix Diagnostics India Pvt Ltd (NRL)",
-            "registration_number": "NABL-DEL-2024-8891",
-            "lab_type": "National Reference Laboratory & Molecular Pathology",
-            "rating": 4.9,
-            "reviews_count": 3420,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "Plot 12, Healthcare Zone, Connaught Place & Ring Road Enclave",
-            "city": "New Delhi",
-            "state": "Delhi",
-            "pincode": "110001",
-            "distance_km": 1.2,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "45 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:00 AM - 10:00 PM (All 7 Days)",
-            "phone": "+91 11 4500 8900",
-            "sample_tracking": "100% Barcode & 2-8°C Cold Chain Carrier",
-            "badge": "NATIONAL REFERENCE LAB"
-        },
-        {
-            "id": "LAB-SPHERIX-DEL-02",
-            "name": "Spherix Accredited Regional Clinical Pathology Lab",
-            "legal_name": "Spherix Diagnostics Regional Clinical Center",
-            "registration_number": "NABL-SPX-REG-4421",
-            "lab_type": "Accredited Pathology & Automated Biochemistry Center",
-            "rating": 4.9,
-            "reviews_count": 2890,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "Block B-3, Medical Hub, South Extension & Lajpat Nagar",
-            "city": "New Delhi",
-            "state": "Delhi",
-            "pincode": "110024",
-            "distance_km": 2.4,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "60 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:30 AM - 09:30 PM",
-            "phone": "+91 11 4987 6500",
-            "sample_tracking": "100% Barcode Vacuum Tubes (EDTA/SST)",
-            "badge": "ACCREDITED PARTNER LAB"
-        },
-        {
-            "id": "LAB-SPHERIX-NOIDA-03",
-            "name": "Spherix Apex Diagnostic & Histopathology Hub",
-            "legal_name": "Apex Clinical Laboratories & Research",
-            "registration_number": "NABL-UP-NOIDA-7712",
-            "lab_type": "Super-Specialty Automated Laboratory",
-            "rating": 4.8,
-            "reviews_count": 1640,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "Sector 62, Institutional Area, Electronic City",
-            "city": "Noida",
-            "state": "Uttar Pradesh",
-            "pincode": "201301",
-            "distance_km": 3.1,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "50 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:30 AM - 09:00 PM",
-            "phone": "+91 120 488 9200",
-            "sample_tracking": "100% Barcode & Cold Chain Protected",
-            "badge": "REGIONAL REFERENCE LAB"
-        },
-        {
-            "id": "LAB-SPHERIX-GURGAON-04",
-            "name": "Spherix CyberCity Diagnostic Center & Pathology",
-            "legal_name": "CyberCity Health Diagnostics Pvt Ltd",
-            "registration_number": "NABL-HR-GGN-9943",
-            "lab_type": "Advanced Diagnostic & Preventive Checkup Center",
-            "rating": 4.9,
-            "reviews_count": 2150,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "DLF Cyber City Phase 2, Golf Course Road",
-            "city": "Gurugram",
-            "state": "Haryana",
-            "pincode": "122002",
-            "distance_km": 2.8,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "45 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:00 AM - 09:30 PM",
-            "phone": "+91 124 456 7890",
-            "sample_tracking": "100% Barcode & 2-8°C Cold Chain",
-            "badge": "ACCREDITED LAB"
-        },
-        {
-            "id": "LAB-SPHERIX-MUMBAI-05",
-            "name": "Spherix Western Reference Pathology Laboratory",
-            "legal_name": "Spherix Metro Diagnostics Mumbai Ltd",
-            "registration_number": "NABL-MH-MUM-5519",
-            "lab_type": "Metropolitan Reference Laboratory",
-            "rating": 4.9,
-            "reviews_count": 4100,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "Bandra Kurla Complex (BKC) & Andheri Medical Zone",
-            "city": "Mumbai",
-            "state": "Maharashtra",
-            "pincode": "400051",
-            "distance_km": 2.0,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "45 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:00 AM - 10:00 PM",
-            "phone": "+91 22 4199 8800",
-            "sample_tracking": "100% Barcode & 2-8°C Cold Chain",
-            "badge": "METRO REFERENCE LAB"
-        },
-        {
-            "id": "LAB-SPHERIX-BLR-06",
-            "name": "Spherix Southern Reference Pathology Center",
-            "legal_name": "Spherix Biotech & Clinical Labs Bangalore",
-            "registration_number": "NABL-KA-BLR-3312",
-            "lab_type": "Automated Genomics & Clinical Pathology Lab",
-            "rating": 4.9,
-            "reviews_count": 3200,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "Indiranagar 100ft Road & Koramangala Medical Hub",
-            "city": "Bengaluru",
-            "state": "Karnataka",
-            "pincode": "560038",
-            "distance_km": 1.9,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "45 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:00 AM - 09:30 PM",
-            "phone": "+91 80 4321 9900",
-            "sample_tracking": "100% Barcode & 2-8°C Cold Chain",
-            "badge": "SOUTHERN REFERENCE LAB"
-        },
-        {
-            "id": "LAB-SPHERIX-LKO-07",
-            "name": "Spherix Awadh Central Diagnostic Center",
-            "legal_name": "Awadh Clinical Pathology & Diagnostic Services",
-            "registration_number": "NABL-UP-LKO-6120",
-            "lab_type": "Comprehensive Pathology & Health Checkup Center",
-            "rating": 4.8,
-            "reviews_count": 1420,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "Hazratganj & Gomti Nagar Medical Square",
-            "city": "Lucknow",
-            "state": "Uttar Pradesh",
-            "pincode": "226001",
-            "distance_km": 2.2,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "60 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:30 AM - 09:00 PM",
-            "phone": "+91 522 411 2233",
-            "sample_tracking": "100% Barcode & Cold Chain Protected",
-            "badge": "REGIONAL REFERENCE LAB"
-        },
-        {
-            "id": "LAB-SPHERIX-PATNA-08",
-            "name": "Spherix Eastern Diagnostic & Pathology Hub",
-            "legal_name": "Patliputra Clinical Diagnostic Center",
-            "registration_number": "NABL-BR-PAT-4401",
-            "lab_type": "NABL Certified Diagnostic Laboratory",
-            "rating": 4.8,
-            "reviews_count": 1180,
-            "nabl_accredited": True,
-            "cap_accredited": True,
-            "iso_certified": True,
-            "address": "Frazer Road & Bailey Road Medical Enclave",
-            "city": "Patna",
-            "state": "Bihar",
-            "pincode": "800001",
-            "distance_km": 2.5,
-            "home_collection_available": True,
-            "walkin_available": True,
-            "home_collection_tat": "60 Mins Phlebotomist Dispatch",
-            "operating_hours": "06:30 AM - 08:30 PM",
-            "phone": "+91 612 250 8899",
-            "sample_tracking": "100% Barcode & Cold Chain Protected",
-            "badge": "ACCREDITED LAB"
-        }
-    ]
-
-    # Combine database labs with master network
-    existing_ids = {l["id"] for l in registered_labs}
-    for m in master_network:
-        if m["id"] not in existing_ids:
-            registered_labs.append(m)
-
-    # Filter by location if specified
-    filtered = []
-    p_clean = pincode.lower() if pincode else ""
-    c_clean = city.lower() if city else ""
-
-    for lab in registered_labs:
-        lab_p = str(lab.get("pincode", "")).lower()
-        lab_c = str(lab.get("city", "")).lower()
-        lab_s = str(lab.get("state", "")).lower()
-
-        # Check collection mode filter
-        if collection_mode == "HOME" and not lab.get("home_collection_available"):
-            continue
-        if collection_mode == "WALKIN" and not lab.get("walkin_available"):
-            continue
-
-        match = True
-        if p_clean:
-            # Match 3-digit pincode prefix or exact pincode
-            if p_clean not in lab_p and lab_p[:3] != p_clean[:3]:
-                # If city also provided, check city match
-                if not (c_clean and (c_clean in lab_c or c_clean in lab_s)):
-                    match = False
-
-        elif c_clean:
-            if c_clean not in lab_c and c_clean not in lab_s:
-                match = False
-
-        if match:
-            filtered.append(lab)
-
-    # Fallback to all active labs if location filter returned 0
-    results = filtered if filtered else registered_labs
-
-    return jsonify({
-        "success": True,
-        "location": {
-            "pincode": pincode or "110001",
-            "city": city or "New Delhi"
-        },
-        "count": len(results),
-        "centers": results
-    })
-
-
-
-@main_bp.route('/medical-lab/payment', methods=['POST'])
-def medical_lab_payment():
-    data = request.get_json(silent=True) or {}
-    selected_tests = data.get('selected_tests')
-    patient_info = data.get('patient_info') or {}
-    slot_info = data.get('slot_info') or {}
-    address_info = data.get('address_info') or {}
-
-    if not selected_tests or not isinstance(selected_tests, list):
-        return jsonify({"success": False, "error": "No lab test or package selected."}), 400
-
-    subtotal = 0.0
-    items = []
-    for entry in selected_tests:
-        item_id = entry.get('id')
-        name = entry.get('name')
-        price = entry.get('price')
-        try:
-            price = float(price)
-        except (TypeError, ValueError):
-            price = 0.0
-        if not name or price <= 0:
-            continue
-        items.append({
-            "id": item_id,
-            "name": name,
-            "price": price,
-            "quantity": 1,
-            "sample_type": entry.get('sample_type', 'Blood'),
-            "fasting_required": entry.get('fasting_required', False)
-        })
-        subtotal += price
-
-    if subtotal <= 0:
-        return jsonify({"success": False, "error": "Please select at least one valid diagnostic test."}), 400
-
-    # Home sample collection is FREE for orders >= ₹499
-    sample_collection_fee = 0.0 if subtotal >= 499 else 99.0
-    platform_fee = 19.0
-    total_price = round(subtotal + sample_collection_fee + platform_fee, 2)
-    order_id = TEMP_DATA['next_ids']['order']
-
-    shipping_details = {
-        'patient_name': patient_info.get('name', 'Patient'),
-        'patient_age': patient_info.get('age', ''),
-        'patient_gender': patient_info.get('gender', ''),
-        'patient_phone': patient_info.get('phone', ''),
-        'sample_date': slot_info.get('date', str(date.today())),
-        'sample_slot': slot_info.get('slot', '07:00 AM - 08:00 AM (Fasting)'),
-        'pincode': address_info.get('pincode', '110001'),
-        'address_line': address_info.get('address_line', 'Home Address'),
-        'city': address_info.get('city', 'New Delhi'),
-        'booking_type': 'Home Sample Collection'
-    }
-
-    patient_user_id = current_user.id if current_user and current_user.is_authenticated else 1001
-
-    if not razorpay_client:
-        # Fallback / Instant confirmation mode
-        new_order = Order(
-            id=order_id,
-            patient_id=patient_user_id,
-            items=items,
-            total_price=total_price,
-            shipping_address=shipping_details,
-            order_date=date.today(),
-            status='Diagnostic Order Confirmed • Phlebotomist Assigned'
-        )
-        TEMP_DATA['orders'][order_id] = new_order
-        TEMP_DATA['next_ids']['order'] += 1
-        save_data()
-        return jsonify({
-            "success": True,
-            "order_id": order_id,
-            "redirect_url": url_for('order_success', order_id=order_id, session_id='lab_booking')
-        })
-
-    new_order = Order(
-        id=order_id,
-        patient_id=patient_user_id,
-        items=items,
-        total_price=total_price,
-        shipping_address=shipping_details,
-        order_date=date.today(),
-        status='Awaiting Payment'
-    )
-    TEMP_DATA['orders'][order_id] = new_order
-    TEMP_DATA['next_ids']['order'] += 1
-    save_data()
-
-    try:
-        user_name = patient_info.get('name') or (current_user.name if current_user and current_user.is_authenticated else 'Valued Patient')
-        user_email = (current_user.email if current_user and current_user.is_authenticated else 'patient@spherixclinic.com')
-        user_phone = patient_info.get('phone', '')
-
-        rzp_order = create_razorpay_order(
-            amount_inr=total_price,
-            receipt=f"lab_{order_id}",
-            notes={"order_id": str(order_id), "type": "diagnostic_lab"}
-        )
-
-        payment_link = razorpay_client.payment_link.create({
-            "amount": int(total_price * 100),
-            "currency": "INR",
-            "accept_partial": False,
-            "reference_id": f"lab_{order_id}_{int(time_module.time())}",
-            "description": f"Diagnostic Booking #{order_id} - Spherix Labs",
-            "customer": {
-                "name": user_name,
-                "email": user_email,
-                "contact": user_phone
-            },
-            "callback_url": url_for('order_success', order_id=order_id, _external=True) + '?session_id=razorpay_payment',
-            "callback_method": "get"
-        })
-        return jsonify({
-            "success": True,
-            "order_id": order_id,
-            "redirect_url": payment_link['short_url'],
-            "razorpay_key_id": get_razorpay_key_id(),
-            "razorpay_order_id": rzp_order['id'] if rzp_order else None,
-            "amount": int(round(total_price * 100)),
-            "currency": "INR",
-            "patient_name": user_name,
-            "patient_email": user_email,
-            "patient_phone": user_phone
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Payment gateway error: {str(e)}"}), 500
 
 
 
@@ -3575,8 +3070,9 @@ def faq_page():
 
 
 
+@main_bp.route('/legal', defaults={'policy_id': 'terms-of-service'})
 @main_bp.route('/legal/<policy_id>')
-def legal_hub(policy_id):
+def legal_hub(policy_id='terms-of-service'):
     """Renders a specific policy page based on the policy_id."""
     alias_map = {
         'privacy': 'privacy-policy',
@@ -3679,18 +3175,32 @@ def serve_image(user_type, user_id):
 @main_bp.route('/static/uploads/<path:filename>')
 @main_bp.route('/uploads/<path:filename>')
 def serve_uploaded_file(filename):
-    """Serves uploaded files and images with multi-directory search and avatar fallback."""
+    """Serves uploaded files and images with in-memory cache, multi-directory search, and avatar fallback."""
     clean_name = os.path.basename(filename)
+
+    # 1. Check in-memory UPLOAD_CACHE first
+    if filename in UPLOAD_CACHE:
+        data_bytes, mimetype = UPLOAD_CACHE[filename]
+        return send_file(BytesIO(data_bytes), mimetype=mimetype)
+    if clean_name in UPLOAD_CACHE:
+        data_bytes, mimetype = UPLOAD_CACHE[clean_name]
+        return send_file(BytesIO(data_bytes), mimetype=mimetype)
+
+    # 2. Check filesystem search paths
     search_dirs = [
         os.path.join(current_app.root_path, 'static', 'uploads'),
+        os.path.join(current_app.root_path, 'static', 'uploads', 'hospital_logos'),
         os.path.join(current_app.root_path, 'static', 'uploads', 'doctor_profiles'),
         os.path.join(current_app.root_path, 'static', 'uploads', 'signatures'),
         os.path.join(current_app.root_path, 'static', 'uploads', 'stamps'),
         os.path.join(current_app.root_path, 'static', 'uploads', 'prescriptions'),
         os.path.join(current_app.root_path, 'static', 'uploads', 'documents'),
+        os.path.join(current_app.root_path, 'static', 'uploads', 'medical_records'),
         os.path.join(current_app.root_path, 'static', 'images'),
         os.path.join(current_app.root_path, 'static', 'img'),
-        os.path.join(current_app.root_path, 'static')
+        os.path.join(current_app.root_path, 'static'),
+        os.path.join('/tmp', 'uploads'),
+        os.path.join('/tmp', 'uploads', 'hospital_logos')
     ]
     for d in search_dirs:
         target = os.path.join(d, clean_name)

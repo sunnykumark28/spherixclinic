@@ -606,10 +606,7 @@
             <i class="fas fa-shopping-bag"></i> Prescriptions & Orders <span class="badge">{{ orders|length }}</span>
         </div>
         <div class="nav-item" data-section="lab" onclick="switchTab('lab', this)">
-            <i class="fas fa-microscope"></i> Pathology &amp; Diagnostics
-            {% if diagnostic_admin_data and diagnostic_admin_data.pending_labs and diagnostic_admin_data.pending_labs|length > 0 %}
-            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;" title="{{ diagnostic_admin_data.pending_labs|length }} pending lab verifications">{{ diagnostic_admin_data.pending_labs|length }} pending</span>
-            {% endif %}
+            <i class="fas fa-microscope"></i> Clinical Laboratory
         </div>
 
         <div class="nav-header">Donation Services</div>
@@ -3139,7 +3136,7 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
                     <h4 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
-                        <i class="fas fa-microscope text-primary"></i> Diagnostic Laboratory & Clinical Pathology
+                        <i class="fas fa-microscope text-primary"></i> Clinical Laboratory & Specimen Investigations
                     </h4>
                     <p class="text-muted small m-0">Live specimen telemetry, critical panic alerts, automated reference intervals & verified diagnostic reports</p>
                 </div>
@@ -3153,352 +3150,535 @@
                 </div>
             </div>
 
-            <!-- Master Diagnostic Center Nav Tabs -->
-            <ul class="nav nav-pills gap-2 mb-4 bg-light p-2 rounded-4 border" id="adminDiagNav">
-                <li class="nav-item">
-                    <button class="nav-link active rounded-pill px-3.5 py-2 text-xs fw-bold" id="btnAdminDiagLabs" onclick="switchAdminDiagSubtab('admin-pane-labs')">
-                        <i class="fas fa-clinic-medical text-primary me-1.5"></i> Pathology Labs &amp; Applications
-                        {% if diagnostic_admin_data and diagnostic_admin_data.pending_labs and diagnostic_admin_data.pending_labs|length > 0 %}
-                        <span class="badge bg-warning text-dark rounded-pill ms-1 text-xxs">{{ diagnostic_admin_data.pending_labs|length }} pending</span>
-                        {% endif %}
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-bold text-dark" id="btnAdminDiagCatalog" onclick="switchAdminDiagSubtab('admin-pane-catalog')">
-                        <i class="fas fa-book-medical text-indigo-500 me-1.5"></i> Master Test Catalog ({{ diagnostic_admin_data.tests|default([])|length }})
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-bold text-dark" id="btnAdminDiagBookings" onclick="switchAdminDiagSubtab('admin-pane-bookings')">
-                        <i class="fas fa-network-wired text-purple-600 me-1.5"></i> Live Bookings &amp; Doctor Referrals
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link rounded-pill px-3.5 py-2 text-xs fw-bold text-dark" id="btnAdminDiagInternal" onclick="switchAdminDiagSubtab('admin-pane-internal')">
-                        <i class="fas fa-vial text-teal-600 me-1.5"></i> Internal Clinic Specimen Lab ({{ lab_requests|length }})
-                    </button>
-                </li>
-            </ul>
-
-            <!-- PANE 1: PATHOLOGY LABS & APPLICATIONS REVIEW -->
-            <div id="admin-pane-labs" class="admin-diag-pane">
-                <!-- 1A: Pending Review Queue -->
-                <div class="card-box border-0 shadow-sm p-4 mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+            <!-- 4 Quick KPI Summary Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-box p-3 h-100 border-0 shadow-sm d-flex align-items-center gap-3">
+                        <div class="stat-icon bg-primary-soft text-primary rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                            <i class="fas fa-capsules fs-4"></i>
+                        </div>
                         <div>
-                            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-clipboard-check text-warning me-2"></i>Laboratory Registration &amp; Accreditation Queue</h5>
-                            <small class="text-muted">Review compliance, registration licenses, and NABL certifications for new diagnostic laboratory applicants</small>
+                            <span class="text-muted small fw-medium d-block">Total Formulations</span>
+                            <h4 class="fw-bold m-0 text-slate-900">{{ medicines|length }}</h4>
+                            <small class="text-success fw-medium"><i class="fas fa-check-circle me-1"></i>Active Catalog</small>
                         </div>
-                        <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill fw-bold">
-                            {{ diagnostic_admin_data.pending_labs|default([])|length }} Laboratories Awaiting Verification
-                        </span>
                     </div>
-
-                    {% if diagnostic_admin_data and diagnostic_admin_data.pending_labs and diagnostic_admin_data.pending_labs|length > 0 %}
-                    <div class="d-flex flex-column gap-3">
-                        {% for lab in diagnostic_admin_data.pending_labs %}
-                        <div class="p-3.5 rounded-3 border bg-light d-flex flex-column gap-2">
-                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                                <div>
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <span class="badge bg-dark text-white font-monospace">{{ lab.id }}</span>
-                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">PENDING VERIFICATION</span>
-                                        {% if lab.is_nabl_accredited %}
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill"><i class="fas fa-certificate me-1"></i>NABL Accredited</span>
-                                        {% endif %}
-                                    </div>
-                                    <h5 class="fw-bold text-dark mb-0">{{ lab.legal_name }} ({{ lab.display_name }})</h5>
-                                    <small class="text-muted">
-                                        <i class="fas fa-id-card me-1"></i> Reg #: <strong>{{ lab.registration_number }}</strong> &bull; 
-                                        <i class="fas fa-user me-1"></i> Owner: {{ lab.owner_name or 'Authorized Representative' }} &bull; 
-                                        <i class="fas fa-map-marker-alt me-1"></i> {{ lab.city }}, {{ lab.state }} - {{ lab.pincode }}
-                                    </small>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <!-- Approve Form -->
-                                    <form action="{{ url_for('pathology.admin_approve_lab', lab_id=lab.id) }}" method="POST" onsubmit="return confirm('Approve {{ lab.display_name }} to receive patient diagnostic bookings and doctor referrals?');">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 fw-bold shadow-xs">
-                                            <i class="fas fa-check-circle me-1"></i> Approve Laboratory
-                                        </button>
-                                    </form>
-                                    <!-- Reject Form -->
-                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold" 
-                                            data-lab-id="{{ lab.id }}" 
-                                            data-lab-name="{{ lab.display_name|e }}"
-                                            onclick="openLabRejectModal(this.getAttribute('data-lab-id'), this.getAttribute('data-lab-name'))">
-                                        <i class="fas fa-times-circle me-1"></i> Reject...
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="p-2.5 rounded-2 bg-white border small text-muted">
-                                <strong>Contact:</strong> Phone: {{ lab.phone }} &bull; Email: {{ lab.email }} &bull; 
-                                <strong>License:</strong> {{ lab.license_number or 'Not provided' }}
-                                {% if lab.nabl_accreditation_number %} &bull; <strong>NABL Accr #:</strong> {{ lab.nabl_accreditation_number }}{% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4 text-muted bg-white rounded-3 border">
-                        <i class="fas fa-check-double fs-2 text-success mb-2 d-block"></i>
-                        <p class="small mb-0">No diagnostic laboratory registration applications pending review.</p>
-                    </div>
-                    {% endif %}
                 </div>
 
-                <!-- 1B: All Registered Pathology Laboratories -->
-                <div class="card-box border-0 shadow-sm p-4">
-                    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-hospital-user text-primary me-2"></i>All Diagnostic &amp; Pathology Laboratories</h5>
-                    <div class="table-responsive">
-                        <table class="table align-middle table-hover">
-                            <thead class="bg-light text-muted small">
-                                <tr>
-                                    <th>Lab ID</th>
-                                    <th>Laboratory Name</th>
-                                    <th>Registration / License</th>
-                                    <th>Location</th>
-                                    <th>Contact</th>
-                                    <th>Accreditation</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if diagnostic_admin_data and diagnostic_admin_data.all_labs %}
-                                {% for l in diagnostic_admin_data.all_labs %}
-                                <tr>
-                                    <td class="font-monospace text-xs fw-bold">{{ l.id }}</td>
-                                    <td>
-                                        <strong class="text-dark d-block">{{ l.display_name }}</strong>
-                                        <small class="text-muted">{{ l.legal_name }}</small>
-                                    </td>
-                                    <td>
-                                        <span class="font-monospace small">{{ l.registration_number }}</span>
-                                    </td>
-                                    <td>{{ l.city }}, {{ l.state }}</td>
-                                    <td>
-                                        <div class="small">{{ l.phone }}</div>
-                                        <small class="text-muted">{{ l.email }}</small>
-                                    </td>
-                                    <td>
-                                        {% if l.is_nabl_accredited %}
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">NABL</span>
-                                        {% else %}
-                                        <span class="badge bg-light text-muted border rounded-pill">Standard</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge rounded-pill px-2.5 py-1 text-xs fw-bold
-                                            {% if l.status == 'APPROVED' %}bg-success text-white
-                                            {% elif l.status == 'PENDING_VERIFICATION' %}bg-warning text-dark
-                                            {% elif l.status == 'SUSPENDED' %}bg-danger text-white
-                                            {% else %}bg-secondary text-white{% endif %}">
-                                            {{ l.status }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="d-flex justify-content-end gap-1.5">
-                                            {% if l.status == 'APPROVED' %}
-                                            <form action="{{ url_for('pathology.admin_suspend_lab', lab_id=l.id) }}" method="POST" onsubmit="return confirm('Suspend {{ l.display_name }}?');">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-xs btn-outline-danger rounded-pill px-2.5" title="Suspend Lab">
-                                                    Suspend
-                                                </button>
-                                            </form>
-                                            {% elif l.status in ['SUSPENDED', 'REJECTED'] %}
-                                            <form action="{{ url_for('pathology.admin_reactivate_lab', lab_id=l.id) }}" method="POST" onsubmit="return confirm('Reactivate {{ l.display_name }}?');">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-xs btn-outline-success rounded-pill px-2.5" title="Reactivate Lab">
-                                                    Reactivate
-                                                </button>
-                                            </form>
-                                            {% endif %}
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-box p-3 h-100 border-0 shadow-sm d-flex align-items-center gap-3">
+                        <div class="stat-icon bg-warning-soft text-warning rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                            <i class="fas fa-exclamation-triangle fs-4"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small fw-medium d-block">Low Stock Warnings</span>
+                            <h4 class="fw-bold m-0 text-warning" id="pharmacyLowStockCount">
+                                {% set low_count = 0 %}
+                                {% for m in medicines %}
+                                    {% if (m.stock|default(100)|int) < (m.min_threshold|default(25)|int) %}
+                                        {% set low_count = low_count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ low_count }}
+                            </h4>
+                            <small class="text-muted fw-medium">Below reorder limit</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-box p-3 h-100 border-0 shadow-sm d-flex align-items-center gap-3">
+                        <div class="stat-icon bg-danger-soft text-danger rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                            <i class="fas fa-boxes-stacked fs-4"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small fw-medium d-block">Out of Stock</span>
+                            <h4 class="fw-bold m-0 text-danger">
+                                {% set oos_count = 0 %}
+                                {% for m in medicines %}
+                                    {% if (m.stock|default(100)|int) == 0 %}
+                                        {% set oos_count = oos_count + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ oos_count }}
+                            </h4>
+                            <small class="text-danger fw-medium"><i class="fas fa-ban me-1"></i>Needs Restock</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card-box p-3 h-100 border-0 shadow-sm d-flex align-items-center gap-3">
+                        <div class="stat-icon bg-success-soft text-success rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                            <i class="fas fa-indian-rupee-sign fs-4"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small fw-medium d-block">Est. Inventory Value</span>
+                            <h4 class="fw-bold m-0 text-success">
+                                ₹{% set val = namespace(total=0) %}
+                                {% for m in medicines %}
+                                    {% set val.total = val.total + ((m.price|default(50)|float) * (m.stock|default(100)|int)) %}
+                                {% endfor %}
+                                {{ "{:,.0f}".format(val.total) }}
+                            </h4>
+                            <small class="text-muted fw-medium">Live retail estimate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Toolbar -->
+            <div class="card-box p-3 mb-4 border-0 shadow-sm">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                            <input type="text" id="pharmacySearchInput" class="form-control border-start-0 ps-0" placeholder="Search by name, composition, manufacturer, batch..." oninput="filterPharmacyTable()">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="pharmacyCategoryFilter" class="form-select" onchange="filterPharmacyTable()">
+                            <option value="">All Pharmaceutical Categories</option>
+                            <option value="Analgesic">Analgesic (Pain Relief)</option>
+                            <option value="Antibiotic">Antibiotics</option>
+                            <option value="Cardiovascular">Cardiovascular / Cardiology</option>
+                            <option value="Gastrointestinal">Gastrointestinal</option>
+                            <option value="Anti-Diabetic">Anti-Diabetic</option>
+                            <option value="Anti-Allergic">Anti-Allergic</option>
+                            <option value="Supplements">Supplements & Vitamins</option>
+                            <option value="Respiratory">Respiratory</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="pharmacyStockFilter" class="form-select" onchange="filterPharmacyTable()">
+                            <option value="">All Stock Levels</option>
+                            <option value="low">Low Stock (< Threshold)</option>
+                            <option value="adequate">In Stock (Safe)</option>
+                            <option value="oos">Out of Stock (0)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medicines Inventory Table -->
+            <div class="card-box border-0 shadow-sm p-0 overflow-hidden">
+                <div class="table-responsive">
+                    <table class="custom-table w-100" id="pharmacyTable">
+                        <thead class="bg-light">
+                            <tr>
+                                <th style="min-width: 220px;">Medicine Name & Formulation</th>
+                                <th style="min-width: 140px;">Category</th>
+                                <th style="min-width: 180px;">Active Composition</th>
+                                <th style="min-width: 160px;">Stock Level</th>
+                                <th style="min-width: 90px;">Price</th>
+                                <th style="min-width: 140px;">Batch & Expiry</th>
+                                <th style="min-width: 150px;" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for med in medicines %}
+                            {% set med_id = med.id|default(loop.index) %}
+                            {% set med_stock = med.stock|default(100)|int %}
+                            {% set med_min = med.min_threshold|default(25)|int %}
+                            {% set med_price = med.price|default(0.0)|float %}
+                            {% set med_dosage = med.dosage_form|default('Tablet') %}
+                            {% set med_mfg = med.manufacturer|default('Spherix Pharma') %}
+                            {% set med_batch = med.batch_number|default('SPX-B' ~ loop.index) %}
+                            {% set med_exp = med.expiry_date|default('2027-12-31') %}
+                            <tr data-category="{{ med.category|default('General')|lower }}" 
+                                data-stock-status="{% if med_stock == 0 %}oos{% elif med_stock < med_min %}low{% else %}adequate{% endif %}"
+                                data-searchable="{{ (med.name ~ ' ' ~ med.composition|default('') ~ ' ' ~ med.category|default('') ~ ' ' ~ med_mfg ~ ' ' ~ med_batch)|lower }}">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="avatar-sm rounded-circle bg-primary-soft text-primary d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px; flex-shrink: 0;">
+                                            <i class="fas fa-pills"></i>
                                         </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                {% else %}
-                                <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">No pathology laboratories registered yet.</td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ med.name }}</div>
+                                            <div class="d-flex align-items-center gap-1 mt-1">
+                                                <span class="badge bg-light text-secondary border" style="font-size: 0.7rem;">{{ med_dosage }}</span>
+                                                {% if med.rx_required|default(1) == 1 %}
+                                                <span class="badge bg-danger-soft text-danger" style="font-size: 0.65rem;" title="Prescription Required"><i class="fas fa-prescription me-1"></i>Rx</span>
+                                                {% else %}
+                                                <span class="badge bg-success-soft text-success" style="font-size: 0.65rem;" title="Over-the-Counter">OTC</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-blue-soft text-primary px-2 py-1 rounded-pill" style="font-size: 0.75rem;">
+                                        {{ med.category|default('General') }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="small text-muted text-truncate d-block" style="max-width: 200px;" title="{{ med.composition|default(med.name) }}">
+                                        {{ med.composition|default(med.name) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold {% if med_stock == 0 %}text-danger{% elif med_stock < med_min %}text-warning{% else %}text-success{% endif %}">
+                                                {{ med_stock }} units
+                                            </span>
+                                            <small class="text-muted" style="font-size: 0.7rem;">Min: {{ med_min }}</small>
+                                        </div>
+                                        <div class="progress" style="height: 6px; border-radius: 10px; background-color: #f1f5f9;">
+                                            {% set progress_pct = (med_stock / (med_min * 3) * 100)|round|int %}
+                                            {% if progress_pct > 100 %}{% set progress_pct = 100 %}{% endif %}
+                                            <div class="progress-bar {% if med_stock == 0 %}bg-danger{% elif med_stock < med_min %}bg-warning{% else %}bg-success{% endif %}" 
+                                                 style="--bar-pct: {{ progress_pct }}%; width: var(--bar-pct); border-radius: 10px;"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-dark">₹{{ "{:,.2f}".format(med_price) }}</span>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-slate-800">{{ med_batch }}</div>
+                                    <small class="text-muted"><i class="far fa-calendar-alt me-1"></i>{{ med_exp }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex align-items-center justify-content-end gap-1">
+                                        <!-- Quick Restock Button -->
+                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1" 
+                                                title="Quick Restock Units"
+                                                data-med-id="{{ med_id }}"
+                                                data-med-name="{{ med.name }}"
+                                                data-med-stock="{{ med_stock }}"
+                                                onclick="openQuickRestockModal(Number(this.dataset.medId), this.dataset.medName, Number(this.dataset.medStock))">
+                                            <i class="fas fa-plus"></i> Restock
+                                        </button>
+                                        <!-- Edit Medicine Button -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle" style="width: 32px; height: 32px;"
+                                                title="Edit Formulation"
+                                                data-medicine='{{ {"id": med_id, "name": med.name, "category": med.category|default("General"), "composition": med.composition|default(med.name), "dosage_form": med_dosage, "price": med_price, "stock": med_stock, "min_threshold": med_min, "manufacturer": med_mfg, "batch_number": med_batch, "expiry_date": med_exp, "rx_required": med.rx_required|default(1)}|tojson|forceescape }}'
+                                                onclick="openEditMedicineModal(JSON.parse(this.dataset.medicine))">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <!-- Delete Medicine Form -->
+                                        <form action="{{ url_for('admin_delete_medicine', med_id=med_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to remove this medicine from pharmacy catalog?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle" style="width: 32px; height: 32px;" title="Delete Medicine">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr class="no-results-row">
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="fas fa-pills fs-1 mb-3 text-secondary opacity-50 d-block"></i>
+                                    No medicines found in the inventory catalog. Click <strong>"Add New Medicine"</strong> above to register formulations.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
-            <!-- PANE 2: MASTER TEST CATALOG -->
-            <div id="admin-pane-catalog" class="admin-diag-pane d-none">
-                <div class="card-box border-0 shadow-sm p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div>
-                            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-book-medical text-indigo-600 me-2"></i>Global Diagnostic Master Catalog</h5>
-                            <small class="text-muted">Standardized clinical diagnostic catalog verified by Spherix medical directors</small>
+        <!-- ================= MODAL: ADD NEW MEDICINE ================= -->
+        <div class="modal fade" id="addMedicineModal" tabindex="-1" aria-labelledby="addMedicineModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <form action="{{ url_for('admin_add_medicine') }}" method="POST">
+                        <div class="modal-header border-bottom pb-3 px-4 pt-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-sm rounded-circle bg-primary-soft text-primary d-flex align-items-center justify-content-center fw-bold">
+                                    <i class="fas fa-plus-circle"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-bold text-dark m-0" id="addMedicineModalLabel">Add New Pharmaceutical Formulation</h5>
+                                    <small class="text-muted">Register a new drug into Spherix Clinic clinical pharmacy</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
+                        <div class="modal-body p-4">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-muted">Medicine / Brand Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" class="form-control" placeholder="e.g. Augmentin 625 Duo" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-muted">Therapeutic Category <span class="text-danger">*</span></label>
+                                    <select name="category" class="form-select" required>
+                                        <option value="Antibiotic">Antibiotics</option>
+                                        <option value="Analgesic (Pain Relief)">Analgesic (Pain Relief)</option>
+                                        <option value="Cardiovascular">Cardiovascular / Blood Pressure</option>
+                                        <option value="Gastrointestinal">Gastrointestinal / Antacid</option>
+                                        <option value="Anti-Diabetic">Anti-Diabetic / Endocrinology</option>
+                                        <option value="Anti-Allergic">Anti-Allergic / Antihistamine</option>
+                                        <option value="Respiratory">Respiratory / Pulmonology</option>
+                                        <option value="Dermatology">Dermatology / Topical</option>
+                                        <option value="Supplements">Supplements & Multivitamins</option>
+                                        <option value="Ayurveda">Ayurveda / Herbal Formulation</option>
+                                        <option value="Critical Care">Critical Care / Anaesthesia</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-muted">Active Generic Composition & Strength</label>
+                                    <input type="text" name="composition" class="form-control" placeholder="e.g. Amoxicillin Trihydrate 500mg + Potassium Clavulanate 125mg">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Dosage Form</label>
+                                    <select name="dosage_form" class="form-select">
+                                        <option value="Tablet">Tablet (Oral)</option>
+                                        <option value="Capsule">Capsule</option>
+                                        <option value="Syrup">Syrup / Suspension</option>
+                                        <option value="Injection">Injection / IV Vial</option>
+                                        <option value="Ointment">Ointment / Gel</option>
+                                        <option value="Eye Drops">Eye / Ear Drops</option>
+                                        <option value="Inhaler">Inhaler / Respule</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Unit Price (₹) <span class="text-danger">*</span></label>
+                                    <input type="number" step="0.01" min="0" name="price" class="form-control" placeholder="e.g. 180.00" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Initial Stock (Units)</label>
+                                    <input type="number" min="0" name="stock" class="form-control" value="100" placeholder="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Min Reorder Threshold</label>
+                                    <input type="number" min="1" name="min_threshold" class="form-control" value="25" placeholder="25">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Manufacturer / Pharma House</label>
+                                    <input type="text" name="manufacturer" class="form-control" placeholder="e.g. GlaxoSmithKline">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Batch Number</label>
+                                    <input type="text" name="batch_number" class="form-control" placeholder="e.g. SPX-2026-B12">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-muted">Expiry Date</label>
+                                    <input type="date" name="expiry_date" class="form-control" value="2027-12-31">
+                                </div>
+                                <div class="col-md-6 d-flex align-items-center pt-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="addRxRequired" name="rx_required" value="1" checked>
+                                        <label class="form-check-label fw-semibold small text-dark" for="addRxRequired">Doctor Prescription Required (Rx)</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-muted">Clinical Storage & Dosage Instructions</label>
+                                    <textarea name="description" class="form-control" rows="2" placeholder="Store in a cool dry place below 25°C. Keep out of reach of children."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top pt-3 px-4 pb-4">
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Register Formulation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: EDIT MEDICINE ================= -->
+        <div class="modal fade" id="editMedicineModal" tabindex="-1" aria-labelledby="editMedicineModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <form id="editMedicineForm" method="POST">
+                        <div class="modal-header border-bottom pb-3 px-4 pt-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-sm rounded-circle bg-warning-soft text-warning d-flex align-items-center justify-content-center fw-bold">
+                                    <i class="fas fa-edit"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-bold text-dark m-0" id="editMedicineModalLabel">Edit Medicine Formulation</h5>
+                                    <small class="text-muted">Update pricing, reorder levels, batch details or active composition</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-muted">Medicine Name <span class="text-danger">*</span></label>
+                                    <input type="text" id="editMedName" name="name" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-muted">Category <span class="text-danger">*</span></label>
+                                    <input type="text" id="editMedCategory" name="category" class="form-control" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small text-muted">Active Generic Composition</label>
+                                    <input type="text" id="editMedComposition" name="composition" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Dosage Form</label>
+                                    <select id="editMedDosage" name="dosage_form" class="form-select">
+                                        <option value="Tablet">Tablet</option>
+                                        <option value="Capsule">Capsule</option>
+                                        <option value="Syrup">Syrup</option>
+                                        <option value="Injection">Injection</option>
+                                        <option value="Ointment">Ointment</option>
+                                        <option value="Eye Drops">Eye Drops</option>
+                                        <option value="Inhaler">Inhaler</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Unit Price (₹)</label>
+                                    <input type="number" step="0.01" min="0" id="editMedPrice" name="price" class="form-control" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Current Stock (Units)</label>
+                                    <input type="number" min="0" id="editMedStock" name="stock" class="form-control" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Reorder Threshold</label>
+                                    <input type="number" min="1" id="editMedThreshold" name="min_threshold" class="form-control" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Manufacturer</label>
+                                    <input type="text" id="editMedMfg" name="manufacturer" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold small text-muted">Batch Number</label>
+                                    <input type="text" id="editMedBatch" name="batch_number" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-muted">Expiry Date</label>
+                                    <input type="date" id="editMedExpiry" name="expiry_date" class="form-control">
+                                </div>
+                                <div class="col-md-6 d-flex align-items-center pt-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="editRxRequired" name="rx_required" value="1">
+                                        <label class="form-check-label fw-semibold small text-dark" for="editRxRequired">Prescription Required (Rx)</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top pt-3 px-4 pb-4">
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">Update Formulation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: QUICK RESTOCK ================= -->
+        <div class="modal fade" id="quickRestockModal" tabindex="-1" aria-labelledby="quickRestockModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <form id="quickRestockForm" method="POST">
+                        <input type="hidden" name="action" value="add">
+                        <div class="modal-header border-bottom pb-3 px-4 pt-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-sm rounded-circle bg-success-soft text-success d-flex align-items-center justify-content-center fw-bold">
+                                    <i class="fas fa-plus"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title fw-bold text-dark m-0" id="quickRestockModalLabel">Quick Restock Units</h5>
+                                    <small class="text-muted" id="restockMedicineNameSubtitle">Increase available pharmacy inventory</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="alert bg-light border p-3 rounded-3 mb-3">
+                                <div class="small text-muted mb-1">Current Stock Level:</div>
+                                <div class="fs-5 fw-bold text-dark" id="restockCurrentStockDisplay">0 units</div>
+                            </div>
+                            <label class="form-label fw-semibold small text-muted">Select Units to Add:</label>
+                            <div class="d-flex gap-2 mb-3">
+                                <button type="button" class="btn btn-outline-primary flex-fill rounded-pill py-2 fw-semibold" onclick="setRestockQuantity(10)">+10</button>
+                                <button type="button" class="btn btn-outline-primary flex-fill rounded-pill py-2 fw-semibold" onclick="setRestockQuantity(50)">+50</button>
+                                <button type="button" class="btn btn-outline-primary flex-fill rounded-pill py-2 fw-semibold" onclick="setRestockQuantity(100)">+100</button>
+                                <button type="button" class="btn btn-outline-primary flex-fill rounded-pill py-2 fw-semibold" onclick="setRestockQuantity(500)">+500</button>
+                            </div>
+                            <label class="form-label fw-semibold small text-muted">Or Enter Custom Units to Add:</label>
+                            <input type="number" min="1" id="restockQuantityInput" name="quantity" class="form-control form-control-lg text-center fw-bold" value="50" required>
+                        </div>
+                        <div class="modal-footer border-top pt-3 px-4 pb-4">
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">Confirm Restock</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: BILLING ================= -->
+        <div id="billing" class="content-section">
+            <div class="card-box">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold m-0">Invoices & Billing</h5>
+                        <small class="text-muted">Financial records and payments</small>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table align-middle table-hover">
-                            <thead class="bg-light text-muted small">
-                                <tr>
-                                    <th>Test Code</th>
-                                    <th>Test Name</th>
-                                    <th>Category</th>
-                                    <th>Specimen</th>
-                                    <th>Fasting</th>
-                                    <th>Turnaround (TAT)</th>
-                                    <th>Prescription</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if diagnostic_admin_data and diagnostic_admin_data.tests %}
-                                {% for t in diagnostic_admin_data.tests %}
-                                <tr>
-                                    <td class="font-monospace fw-bold text-primary">{{ t.test_code }}</td>
-                                    <td>
-                                        <strong class="text-dark">{{ t.test_name }}</strong>
-                                        {% if t.preparation_instructions %}
-                                        <small class="text-muted d-block text-xxs">{{ t.preparation_instructions }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td><span class="badge bg-light text-dark border">{{ t.category_name or t.category_id }}</span></td>
-                                    <td>{{ t.specimen_type or 'Blood' }}</td>
-                                    <td>
-                                        {% if t.fasting_required %}
-                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Fasting Required</span>
-                                        {% else %}
-                                        <span class="badge bg-light text-muted border rounded-pill">Non-Fasting</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ t.turnaround_hours or 24 }} Hours</td>
-                                    <td>
-                                        {% if t.prescription_required %}
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Prescription Required</span>
-                                        {% else %}
-                                        <span class="badge bg-light text-muted border rounded-pill">Direct Walk-in</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Active</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                {% else %}
-                                <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">No catalog tests found.</td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
+                    <button class="btn btn-primary rounded-pill px-4 shadow-sm"><i class="fas fa-file-invoice me-2"></i> Create Invoice</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Invoice ID</th>
+                                <th>Patient Name</th>
+                                <th>Date Issued</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appt in appointments if appt.status in ['confirmed', 'completed'] %}
+                            <tr>
+                                <td class="fw-bold text-primary">#INV-APT-{{ appt.id }}</td>
+                                <td>{{ appt.patient_name }}</td>
+                                <td>{{ appt.appointment_date.strftime('%b %d, %Y') if (appt.appointment_date and hasattr(appt.appointment_date, 'strftime')) else (appt.appointment_date or 'N/A') }}</td>
+                                <td class="fw-bold">₹{{ "%.2f"|format(appt.doctor.consultation_fee|float if appt.doctor and appt.doctor.consultation_fee else 1000.0) }}</td>
+                                <td><span class="status-badge bg-green-soft">Paid</span></td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('appointment_payment_receipt', appointment_id=appt.id) }}" class="btn btn-sm btn-light btn-icon" target="_blank" title="Download Receipt"><i class="fas fa-download"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% for order in orders if order.status in ['Paid & Processing', 'Delivered'] %}
+                            <tr>
+                                <td class="fw-bold text-primary">#INV-ORD-{{ order.id }}</td>
+                                <td>{{ order.shipping_address.name if order.shipping_address else order.patient_id }}</td>
+                                <td>{{ order.order_date.strftime('%b %d, %Y') if (order.order_date and hasattr(order.order_date, 'strftime')) else (order.order_date or 'N/A') }}</td>
+                                <td class="fw-bold">₹{{ "%.2f"|format(order.total_price) }}</td>
+                                <td><span class="status-badge bg-green-soft">Paid</span></td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('print_invoice', order_id=order.id) }}" class="btn btn-sm btn-light btn-icon" target="_blank" title="Download Invoice"><i class="fas fa-download"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: LAB REPORTS & DIAGNOSTICS ================= -->
+        <div id="lab" class="content-section">
+            <!-- Lab Header & Action Buttons -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <h4 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                        <i class="fas fa-microscope text-primary"></i> Clinical Laboratory & Specimen Investigations
+                    </h4>
+                    <p class="text-muted small m-0">Live specimen telemetry, critical panic alerts, automated reference intervals & verified diagnostic reports</p>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm btn-sm" onclick="exportLabCSV()">
+                        <i class="fas fa-file-export me-1"></i> Export Lab CSV
+                    </button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold btn-sm" data-bs-toggle="modal" data-bs-target="#orderLabTestModal">
+                        <i class="fas fa-plus-circle me-1"></i> Order Diagnostic Test
+                    </button>
                 </div>
             </div>
 
-            <!-- PANE 3: CROSS-LAB BOOKINGS & REFERRALS OVERSIGHT -->
-            <div id="admin-pane-bookings" class="admin-diag-pane d-none">
-                <!-- Bookings -->
-                <div class="card-box border-0 shadow-sm p-4 mb-4">
-                    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-network-wired text-purple-600 me-2"></i>Live Diagnostic Bookings Across Network</h5>
-                    <div class="table-responsive">
-                        <table class="table align-middle table-hover">
-                            <thead class="bg-light text-muted small">
-                                <tr>
-                                    <th>Booking ID</th>
-                                    <th>Source</th>
-                                    <th>Patient</th>
-                                    <th>Assigned Laboratory</th>
-                                    <th>Collection</th>
-                                    <th>Scheduled Slot</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if diagnostic_admin_data and diagnostic_admin_data.recent_bookings %}
-                                {% for b in diagnostic_admin_data.recent_bookings %}
-                                <tr>
-                                    <td class="font-monospace fw-bold text-dark">#{{ b.id }}</td>
-                                    <td><span class="badge bg-light text-dark border">{{ b.booking_source }}</span></td>
-                                    <td>
-                                        <strong class="text-dark d-block">{{ b.patient_name }}</strong>
-                                        <small class="text-muted">{{ b.patient_phone }}</small>
-                                    </td>
-                                    <td><strong>{{ b.lab_name or b.lab_id }}</strong></td>
-                                    <td>{{ b.collection_type|replace('_', ' ')|title }}</td>
-                                    <td>{{ b.scheduled_date }} <small class="text-muted">({{ b.scheduled_slot }})</small></td>
-                                    <td><strong class="text-dark">₹{{ "%.2f"|format(b.total_amount) }}</strong></td>
-                                    <td>
-                                        <span class="badge rounded-pill px-2.5 py-1 text-xs fw-bold
-                                            {% if b.status in ['REPORT_PUBLISHED', 'COMPLETED'] %}bg-success text-white
-                                            {% elif b.status in ['CANCELLED', 'DECLINED'] %}bg-danger text-white
-                                            {% elif b.status in ['PROCESSING', 'SAMPLE_COLLECTED'] %}bg-info text-white
-                                            {% else %}bg-primary text-white{% endif %}">
-                                            {{ b.status }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                {% else %}
-                                <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">No diagnostic bookings recorded yet.</td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Referrals -->
-                <div class="card-box border-0 shadow-sm p-4">
-                    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-clipboard-prescription text-purple-600 me-2"></i>Doctor Diagnostic Referrals</h5>
-                    <div class="table-responsive">
-                        <table class="table align-middle table-hover">
-                            <thead class="bg-light text-muted small">
-                                <tr>
-                                    <th>Referral #</th>
-                                    <th>Doctor</th>
-                                    <th>Patient</th>
-                                    <th>Selected Lab</th>
-                                    <th>Priority</th>
-                                    <th>Clinical Indication</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if diagnostic_admin_data and diagnostic_admin_data.recent_referrals %}
-                                {% for r in diagnostic_admin_data.recent_referrals %}
-                                <tr>
-                                    <td class="font-monospace fw-bold text-purple-700">{{ r.referral_number }}</td>
-                                    <td><strong>{{ r.doctor_name or 'Specialist Doctor' }}</strong></td>
-                                    <td>{{ r.patient_name or 'Patient' }}</td>
-                                    <td>{{ r.lab_name or 'Patient Choice' }}</td>
-                                    <td>
-                                        <span class="badge rounded-pill px-2 py-0.5 text-xs
-                                            {% if r.priority == 'URGENT' %}bg-warning-subtle text-warning border border-warning-subtle
-                                            {% elif r.priority == 'TIME_SENSITIVE' %}bg-danger-subtle text-danger border border-danger-subtle
-                                            {% else %}bg-light text-dark border{% endif %}">
-                                            {{ r.priority }}
-                                        </span>
-                                    </td>
-                                    <td><small class="text-muted">{{ r.clinical_indication }}</small></td>
-                                    <td><span class="badge bg-light text-dark border">{{ r.status }}</span></td>
-                                </tr>
-                                {% endfor %}
-                                {% else %}
-                                <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">No doctor diagnostic referrals recorded.</td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PANE 4: INTERNAL CLINIC SPECIMEN LAB (WRAPS EXISTING CONTENT) -->
-            <div id="admin-pane-internal" class="admin-diag-pane d-none">
             <!-- 4 Quick KPI Summary Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-sm-6 col-xl-3">
@@ -4062,75 +4242,7 @@
                 </div>
             </div>
         </div>
-        </div> <!-- End of admin-pane-internal -->
-
-        <!-- MODAL: REJECT LABORATORY APPLICATION -->
-        <div class="modal fade" id="adminRejectLabModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content rounded-4 border-0 shadow-lg">
-                    <form id="adminRejectLabForm" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="modal-header border-bottom bg-danger text-white px-4 py-3">
-                            <h5 class="modal-title fw-bold mb-0"><i class="fas fa-times-circle me-2"></i>Reject Laboratory Application</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body p-4">
-                            <p class="text-muted small mb-3">Please specify the legal, compliance, or document deficiency reasons for declining <strong id="rejectLabNameSpan" class="text-dark">this laboratory</strong>. This explanation will be audited and communicated to the applicant.</p>
-                            <div class="mb-3">
-                                <label class="form-label text-xs fw-bold text-dark">Deficiency / Rejection Reason <span class="text-danger">*</span></label>
-                                <textarea name="rejection_reason" class="form-control rounded-3" rows="4" placeholder="e.g. Incomplete NABL scope documentation, expired medical establishment license, or invalid GPS coordinates..." required></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-top bg-light px-4 py-3 d-flex justify-content-between">
-                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
-                                <i class="fas fa-ban me-1.5"></i> Confirm Rejection
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            function switchAdminDiagSubtab(paneId) {
-                document.querySelectorAll('.admin-diag-pane').forEach(p => p.classList.add('d-none'));
-                const target = document.getElementById(paneId);
-                if (target) target.classList.remove('d-none');
-
-                const navBtns = document.querySelectorAll('#adminDiagNav .nav-link');
-                navBtns.forEach(b => {
-                    b.classList.remove('active', 'bg-primary', 'text-white');
-                    b.classList.add('text-dark');
-                });
-
-                if (paneId === 'admin-pane-labs') {
-                    document.getElementById('btnAdminDiagLabs')?.classList.add('active', 'bg-primary', 'text-white');
-                } else if (paneId === 'admin-pane-catalog') {
-                    document.getElementById('btnAdminDiagCatalog')?.classList.add('active', 'bg-primary', 'text-white');
-                } else if (paneId === 'admin-pane-bookings') {
-                    document.getElementById('btnAdminDiagBookings')?.classList.add('active', 'bg-primary', 'text-white');
-                } else if (paneId === 'admin-pane-internal') {
-                    document.getElementById('btnAdminDiagInternal')?.classList.add('active', 'bg-primary', 'text-white');
-                }
-            }
-
-            function openLabRejectModal(labId, labName) {
-                const form = document.getElementById('adminRejectLabForm');
-                if (form) {
-                    form.action = `/admin/diagnostic/lab/${labId}/reject`;
-                }
-                const nameSpan = document.getElementById('rejectLabNameSpan');
-                if (nameSpan) {
-                    nameSpan.textContent = unescape(labName);
-                }
-                const modalEl = document.getElementById('adminRejectLabModal');
-                if (modalEl && typeof bootstrap !== 'undefined') {
-                    const modal = new bootstrap.Modal(modalEl);
-                    modal.show();
-                }
-            }
-        </script>
+<script></script>
         </div> <!-- End of content-section lab -->
 
         <!-- ================= SECTION: SETTINGS ================= -->
@@ -5049,7 +5161,7 @@
                         <div class="border rounded-4 p-4 text-center hover-lift h-100 bg-light">
                             <i class="fas fa-droplet fa-3x text-info mb-3"></i>
                             <div class="fw-bold fs-5">Blood Stock</div>
-                            <small class="text-info fw-bold">{{ blood_stock.keys()|length }} Groups</small>
+                            <small class="text-info fw-bold">{{ blood_stock|length if blood_stock else 0 }} Groups</small>
                         </div>
                     </div>
                     <div class="col-md-4">

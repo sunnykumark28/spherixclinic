@@ -378,15 +378,11 @@ except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
 try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
-
-try:
-    from drug_data import DRUG_DATABASE, KNOWN_INTERACTIONS
+    from drug_data import DRUG_DATABASE, KNOWN_INTERACTIONS, PILL_CHARACTERISTICS_DATABASE
 except ImportError:
     DRUG_DATABASE = {}
     KNOWN_INTERACTIONS = []
+    PILL_CHARACTERISTICS_DATABASE = []
 
 try:
     from ayurveda_catalog import AYURVEDA_KNOWLEDGE_BASE
@@ -2859,9 +2855,279 @@ def api_chatbot():
 @clinical_ai_bp.route('/drug-checker')
 def drug_checker():
     """Renders the AI Multi-Drug & Food Interaction Safety Checker UI."""
-    return render_template('drug_checker.html')
+    return render_template('drug_checker.html', pill_catalog=PILL_CHARACTERISTICS_DATABASE)
 
 
+@clinical_ai_bp.route('/api/drug/pill-catalog', methods=['GET'])
+def api_drug_pill_catalog():
+    """Returns the visual pill & capsule characteristics database with filter metadata."""
+    colors = sorted(list(set([p.get('color', '') for p in PILL_CHARACTERISTICS_DATABASE if p.get('color')])))
+    shapes = sorted(list(set([p.get('shape', '') for p in PILL_CHARACTERISTICS_DATABASE if p.get('shape')])))
+    forms = sorted(list(set([p.get('form_type', '') for p in PILL_CHARACTERISTICS_DATABASE if p.get('form_type')])))
+    
+    return jsonify({
+        'success': True,
+        'count': len(PILL_CHARACTERISTICS_DATABASE),
+        'pills': PILL_CHARACTERISTICS_DATABASE,
+        'filter_options': {
+            'colors': colors,
+            'shapes': shapes,
+            'forms': forms
+        }
+    })
+
+
+@clinical_ai_bp.route('/api/drug/identify-pill', methods=['GET', 'POST'])
+def api_drug_identify_pill():
+    """Visual Pill, Capsule & Tablet Recognizer using color, shape, imprint, or photo upload with Groq Vision."""
+    req_json = request.get_json(silent=True) or {}
+    color_filter = str(request.args.get('color') or req_json.get('color') or request.form.get('color') or '')
+    shape_filter = str(request.args.get('shape') or req_json.get('shape') or request.form.get('shape') or '')
+    imprint_filter = str(request.args.get('imprint') or req_json.get('imprint') or request.form.get('imprint') or '')
+    form_filter = str(request.args.get('form_type') or req_json.get('form_type') or request.form.get('form_type') or '')
+    query = str(request.args.get('q') or req_json.get('q') or request.form.get('q') or '')
+
+    # 1. Handle Photo Upload / Visual AI Recognition
+    uploaded_image = request.files.get('image') or request.files.get('pill_photo')
+    if uploaded_image and uploaded_image.filename:
+        try:
+            import tempfile, uuid
+            ext = os.path.splitext(uploaded_image.filename)[1].lower() or '.jpg'
+            temp_filename = f"pill_scan_{uuid.uuid4().hex[:8]}{ext}"
+            temp_path = os.path.join(tempfile.gettempdir(), temp_filename)
+            uploaded_image.save(temp_path)
+
+            vision_prompt = (
+                "You are an expert Clinical Pharmacist and Pill Identifier AI. "
+                "Carefully inspect this image of a pill, tablet, capsule, or medicine blister strip. "
+                "Extract and identify its physical characteristics and clinical profile. "
+                "Respond STRICTLY in valid JSON format matching this schema:\n"
+                "{\n"
+                '  "identified": true,\n'
+                '  "brand_name": "Likely brand name (e.g. Dolo 650, Augmentin 625, Lipitor 20mg)",\n'
+                '  "generic_name": "Active pharmaceutical ingredient (e.g. Paracetamol, Amoxicillin + Clavulanate)",\n'
+                '  "strength": "Dosage strength (e.g. 650 mg, 500 mg)",\n'
+                '  "form_type": "Tablet | Capsule | Softgel | Caplet",\n'
+                '  "color": "Observed color (e.g. White, Blue, Yellow, Pink, Two-tone Maroon/Pink)",\n'
+                '  "shape": "Observed shape (e.g. Round, Oval / Oblong, Capsule, Diamond)",\n'
+                '  "imprint": "Visible letters, numbers, or markings",\n'
+                '  "drug_class": "Therapeutic drug classification",\n'
+                '  "primary_use": "Primary medical indication",\n'
+                '  "how_to_use": {\n'
+                '    "administration": "How to take (with water, food relations, swallow whole)",\n'
+                '    "timing": "Recommended timing & maximum daily limit",\n'
+                '    "what_to_avoid": "Critical food, alcohol, and drug contraindications",\n'
+                '    "missed_dose": "Action to take if a dose is forgotten",\n'
+                '    "overdose_warning": "Warning signs and emergency first aid",\n'
+                '    "storage": "Storage temperature and moisture advice"\n'
+                "  }\n"
+                "}"
+            )
+
+            vision_result = _analyze_image_with_groq_vision(temp_path, custom_prompt=vision_prompt)
+            if os.path.exists(temp_path):
+                try: os.remove(temp_path)
+                except Exception: pass
+
+            if vision_result and not vision_result.get('error'):
+                # Clean and parse text response if string returned
+                raw_text = vision_result.get('text', '') or str(vision_result)
+                cleaned = re.sub(r'^```json\s*', '', raw_text.strip())
+                cleaned = re.sub(r'^```\s*', '', cleaned)
+                cleaned = re.sub(r'```$', '', cleaned.strip())
+                
+                try:
+                    parsed_ai = json.loads(cleaned)
+                    parsed_ai['source'] = 'Groq Multimodal Vision AI'
+                    parsed_ai['color_hex'] = '#38bdf8'
+                    cands = [parsed_ai] + PILL_CHARACTERISTICS_DATABASE[:4]
+                    return jsonify({
+                        'success': True,
+                        'source': 'ai_vision',
+                        'recognized_pill': parsed_ai,
+                        'matches': cands,
+                        'candidates': cands
+                    })
+                except Exception as parse_err:
+                    print(f"⚠️ JSON parse error from Vision AI: {parse_err}")
+
+        except Exception as img_err:
+            print(f"⚠️ Pill Image Analysis error: {img_err}")
+
+    # 2. Filter Database Candidates by Attributes
+    results = []
+    c_lower = color_filter.strip().lower()
+    s_lower = shape_filter.strip().lower()
+    i_lower = imprint_filter.strip().lower()
+    f_lower = form_filter.strip().lower()
+    q_lower = query.strip().lower()
+
+    for p in PILL_CHARACTERISTICS_DATABASE:
+        score = 0
+        if c_lower:
+            if c_lower in p.get('color', '').lower():
+                score += 3
+            else:
+                continue
+        if s_lower:
+            if s_lower in p.get('shape', '').lower():
+                score += 3
+            else:
+                continue
+        if i_lower:
+            if i_lower in p.get('imprint', '').lower():
+                score += 4
+        if f_lower:
+            if f_lower in p.get('form_type', '').lower():
+                score += 2
+        if q_lower:
+            if (q_lower in p.get('brand_name', '').lower() or 
+                q_lower in p.get('generic_name', '').lower() or 
+                q_lower in p.get('primary_use', '').lower() or
+                q_lower in p.get('drug_class', '').lower()):
+                score += 5
+            elif not (c_lower or s_lower or i_lower or f_lower):
+                continue
+
+        p_copy = dict(p)
+        p_copy['match_score'] = score
+        results.append(p_copy)
+
+    if not results and not (c_lower or s_lower or i_lower or f_lower or q_lower):
+        results = list(PILL_CHARACTERISTICS_DATABASE)
+
+    results.sort(key=lambda x: x.get('match_score', 0), reverse=True)
+
+    return jsonify({
+        'success': True,
+        'source': 'clinical_database',
+        'count': len(results),
+        'matches': results,
+        'candidates': results
+    })
+
+
+@clinical_ai_bp.route('/api/drug/usage-guide', methods=['GET', 'POST'])
+def api_drug_usage_guide():
+    """Returns authoritative clinical 'How to Use', Dosage, Administration and Missed Dose guidelines."""
+    drug_query = (request.args.get('drug') or request.args.get('q') or request.args.get('name') or '').strip()
+    
+    if not drug_query and request.is_json:
+        drug_query = (request.json.get('drug') or request.json.get('name') or '').strip()
+
+    if not drug_query:
+        return jsonify({'success': False, 'error': 'Please provide a medication name.'}), 400
+
+    q_lower = drug_query.lower()
+
+    # 1. Search in PILL_CHARACTERISTICS_DATABASE
+    for p in PILL_CHARACTERISTICS_DATABASE:
+        if (q_lower in p.get('brand_name', '').lower() or 
+            q_lower in p.get('generic_name', '').lower() or 
+            q_lower in p.get('id', '').lower()):
+            return jsonify({
+                'success': True,
+                'source': 'Spherix Clinical Pharmacopeia',
+                'drug_name': p.get('brand_name'),
+                'brand_name': p.get('brand_name'),
+                'generic_name': p.get('generic_name'),
+                'strength': p.get('strength'),
+                'form_type': p.get('form_type'),
+                'color': p.get('color'),
+                'shape': p.get('shape'),
+                'drug_class': p.get('drug_class'),
+                'primary_use': p.get('primary_use'),
+                'guide': p.get('how_to_use'),
+                'how_to_use': p.get('how_to_use')
+            })
+
+    # 2. Search in DRUG_DATABASE
+    for name, data in DRUG_DATABASE.items():
+        if q_lower in name.lower():
+            usage_protocol = {
+                "administration": "Take orally with a full glass of water. Review food interactions before taking.",
+                "timing": "Take at evenly spaced intervals as prescribed by your physician.",
+                "what_to_avoid": "; ".join([f"{fi['food']}: {fi['details']}" for fi in data.get('food_interactions', [])]) or "Avoid alcohol and unapproved supplements.",
+                "missed_dose": "Take as soon as you remember unless it is almost time for your next scheduled dose. Never double up.",
+                "overdose_warning": f"Caution: {data.get('caution', 'Seek immediate emergency medical assistance.')}",
+                "storage": "Store below 25°C in a dry place away from heat and direct sunlight.",
+                "special_precautions": data.get('caution', 'Consult your physician.')
+            }
+            return jsonify({
+                'success': True,
+                'source': 'Spherix Drug Matrix',
+                'drug_name': name,
+                'brand_name': name,
+                'generic_name': name,
+                'drug_class': data.get('category', 'Prescription Medication'),
+                'primary_use': data.get('primary_use', data.get('description', '')),
+                'guide': usage_protocol,
+                'how_to_use': usage_protocol
+            })
+
+    # 3. Dynamic Generation with OpenFDA & Groq AI
+    if _is_groq_configured():
+        try:
+            prompt = (
+                f"You are a Chief Clinical Pharmacist. Provide an authoritative patient 'How to Use & Dosage Guide' for the medication '{drug_query}'. "
+                "Respond strictly in valid JSON format matching this schema:\n"
+                "{\n"
+                f'  "drug_name": "{drug_query.title()}",\n'
+                '  "generic_name": "Active ingredient",\n'
+                '  "drug_class": "Therapeutic class",\n'
+                '  "primary_use": "Primary indication",\n'
+                '  "how_to_use": {\n'
+                '    "administration": "Clear oral administration instructions with food/water guidance",\n'
+                '    "timing": "Optimal time of day and dosing frequency",\n'
+                '    "what_to_avoid": "Critical food, alcohol, and supplement contraindications",\n'
+                '    "missed_dose": "Exact step-by-step guidance for a missed dose",\n'
+                '    "overdose_warning": "Warning signs and emergency first aid protocol",\n'
+                '    "storage": "Storage temperature and moisture precautions",\n'
+                '    "special_precautions": "Pregnancy, liver/kidney, or elderly precautions"\n'
+                '  }\n'
+                "}"
+            )
+            headers = {
+                'Authorization': f'Bearer {GROQ_API_KEY}',
+                'Content-Type': 'application/json'
+            }
+            payload = {
+                'model': GROQ_API_MODEL,
+                'messages': [
+                    {'role': 'system', 'content': 'You are the Spherix Clinical Pharmacologist. Output valid JSON only.'},
+                    {'role': 'user', 'content': prompt}
+                ],
+                'temperature': 0.2,
+                'max_tokens': 1024,
+                'response_format': {'type': 'json_object'}
+            }
+            resp = requests.post(f"{GROQ_API_BASE}/chat/completions", headers=headers, json=payload, timeout=12)
+            if resp.status_code == 200:
+                parsed = json.loads(resp.json()['choices'][0]['message']['content'])
+                parsed['success'] = True
+                parsed['source'] = 'Groq AI Neural Pharmacologist'
+                return jsonify(parsed)
+        except Exception as e:
+            print(f"⚠️ Groq AI usage guide generation error: {e}")
+
+    # 4. Fallback Default Response
+    return jsonify({
+        'success': True,
+        'source': 'Spherix Clinical Standard Guidelines',
+        'drug_name': drug_query.title(),
+        'generic_name': drug_query.title(),
+        'drug_class': 'Prescription / OTC Therapeutic Agent',
+        'primary_use': 'Therapeutic disease management as directed by licensed physician.',
+        'how_to_use': {
+            'administration': 'Take orally with a full glass of water. Take with food if stomach irritation occurs.',
+            'timing': 'Take at the exact same times every day according to prescription label instructions.',
+            'what_to_avoid': 'Avoid alcohol, grapefruit juice, and unverified herbal supplements without physician consultation.',
+            'missed_dose': 'Take the missed dose as soon as you remember. Skip if it is close to your next scheduled dose. Never take two doses at once.',
+            'overdose_warning': 'In case of accidental overdose, contact emergency services or poison control immediately.',
+            'storage': 'Store in a cool, dry place between 15°C and 25°C away from moisture and out of reach of children.',
+            'special_precautions': 'Inform your healthcare provider if you are pregnant, planning pregnancy, or have kidney or liver impairment.'
+        }
+    })
 
 
 @clinical_ai_bp.route('/api/drug/search', methods=['GET'])

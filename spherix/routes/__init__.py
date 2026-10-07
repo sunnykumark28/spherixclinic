@@ -8,6 +8,7 @@ from spherix.routes.pharmacy import pharmacy_bp
 from spherix.routes.blood_organ import blood_organ_bp
 from spherix.routes.clinical_ai import clinical_ai_bp
 from spherix.routes.admin import admin_bp
+from spherix.routes.diagnostic import diagnostic_bp
 from spherix.routes.pathology import pathology_bp
 
 ALL_BLUEPRINTS = [
@@ -21,6 +22,7 @@ ALL_BLUEPRINTS = [
     blood_organ_bp,
     clinical_ai_bp,
     admin_bp,
+    diagnostic_bp,
     pathology_bp
 ]
 
@@ -35,6 +37,8 @@ __all__ = [
     'blood_organ_bp',
     'clinical_ai_bp',
     'admin_bp',
+    'diagnostic_bp',
     'pathology_bp',
     'ALL_BLUEPRINTS'
 ]
+

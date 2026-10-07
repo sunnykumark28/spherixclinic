@@ -171,11 +171,6 @@ except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
 try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
-
-try:
     from drug_data import DRUG_DATABASE
 except ImportError:
     DRUG_DATABASE = {}
@@ -600,26 +595,35 @@ def medical_shop():
     """
     Renders the medical shop page modeled directly after Spherix Meds / Tata 1mg.
     Renders curated top recommendation medicines by default to avoid slow initial DOM render.
-    Full catalog of 11,825 medicines is available via instant live search & categories.
+    Full catalog of 11,825+ medicines is available via instant live search & categories.
     """
-    top_meds = get_top_recommended(limit=32)
-    if not top_meds:
-        db_medicines = TEMP_DATA.get('medicines', [])
-        top_meds = db_medicines if db_medicines and len(db_medicines) >= 10 else TATA_1MG_PHARMACY_CATALOG
-        
+    q = request.args.get('q', '').strip()
+    category = request.args.get('category', 'all').strip()
+
+    if q or (category and category != 'all'):
+        search_res = search_medicines(query=q, category=category, limit=32)
+        top_meds = search_res.get('medicines', [])
+    else:
+        top_meds = get_top_recommended(limit=32)
+        if not top_meds:
+            db_medicines = TEMP_DATA.get('medicines', [])
+            top_meds = db_medicines if db_medicines and len(db_medicines) >= 10 else TATA_1MG_PHARMACY_CATALOG
+
     # Calculate average rating for medical shop
     shop_ratings = [fb.rating for fb in TEMP_DATA.get('feedbacks', {}).values() if getattr(fb, 'feedback_target', None) == 'medical_shop']
     avg_rating = round(sum(shop_ratings) / len(shop_ratings), 1) if shop_ratings else 4.9
     rating_count = len(shop_ratings) if shop_ratings else 18450
     total_catalog_count = len(ALL_MEDICINES) if ALL_MEDICINES else 253973
-    
+
     return render_template(
         'medical_shop.html',
         medicines=top_meds,
         display_medicines=top_meds,
         total_catalog_count=total_catalog_count,
         avg_rating=avg_rating,
-        rating_count=rating_count
+        rating_count=rating_count,
+        initial_query=q,
+        initial_category=category
     )
 
 

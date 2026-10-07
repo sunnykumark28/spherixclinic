@@ -45,7 +45,7 @@ from spherix.services.database import (
     init_auth_telemetry, log_auth_activity, get_auth_telemetry_stats,
     reset_factory_database, get_hospital_types, get_hospital_type_by_id,
     add_hospital_type, update_hospital_type, toggle_hospital_type_status,
-    delete_hospital_type
+    delete_hospital_type, log_user_logout
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html,
@@ -68,37 +68,7 @@ from spherix.routes.decorators import (
 )
 from spherix.extensions import limiter, csrf, talisman, cors, jwt, oauth, socketio, razorpay_client
 
-try:
-    from lab_catalog import ALL_LAB_ITEMS
-except ImportError:
-    ALL_LAB_ITEMS = []
 
-MEDICINE_LIST = []
-
-try:
-    from audit_logger import log_medical_access
-except ImportError:
-    def log_medical_access(*args, **kwargs): pass
-
-try:
-    from policy_data import POLICY_DATA
-except ImportError:
-    POLICY_DATA = {}
-
-try:
-    from medicine_catalog import MEDICINES_CATALOG
-except ImportError:
-    MEDICINES_CATALOG = []
-
-try:
-    from prescription_ocr import extract_prescription_text
-except ImportError:
-    def extract_prescription_text(*args, **kwargs): return ""
-
-try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
 
 try:
     from drug_data import DRUG_DATABASE
@@ -293,13 +263,6 @@ def admin_dashboard():
     pending_hospitals = [h for h in all_hospitals if not getattr(h, 'is_verified', False)]
     pending_verifications_count = len(pending_doctors) + len(pending_hospitals)
 
-    try:
-        from spherix.services.diagnostic_db import get_admin_diagnostic_data
-        diagnostic_admin_data = get_admin_diagnostic_data()
-    except Exception as e:
-        print(f"Error fetching admin diagnostic data: {e}")
-        diagnostic_admin_data = {'pending_labs': [], 'all_labs': [], 'recent_bookings': [], 'recent_referrals': [], 'tests': [], 'categories': []}
-
     # Master hospital classification categories
     admin_hospital_types = get_hospital_types(active_only=False)
     for ht in admin_hospital_types:
@@ -377,8 +340,6 @@ def admin_dashboard():
                            current_time=time_module.time(),
                            medicines=list(TEMP_DATA.get('medicines', [])),
                            lab_requests=all_lab_requests,
-                           lab_catalog=ALL_LAB_ITEMS if 'ALL_LAB_ITEMS' in globals() else [],
-                           diagnostic_admin_data=diagnostic_admin_data,
                            auth_stats=get_auth_telemetry_stats(),
                            auth_logs=list(TEMP_DATA.get('auth_activity_logs', [])))
 

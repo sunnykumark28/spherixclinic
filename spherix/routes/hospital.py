@@ -91,11 +91,6 @@ except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
 try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
-
-try:
     from drug_data import DRUG_DATABASE
 except ImportError:
     DRUG_DATABASE = {}
@@ -557,6 +552,84 @@ def hospital_inquiry(hospital_id):
             flash("This hospital does not have a registered email for inquiries.", "warning")
     else:
         flash("Please fill out all fields.", "error")
+
+    return redirect(url_for('hospital_detail', hospital_id=hospital_id))
+
+
+
+@hospital_bp.route('/hospital/<path:hospital_id>/medical_travel_inquiry', methods=['POST'])
+def medical_travel_inquiry(hospital_id):
+    hospital_id = parse_route_id(hospital_id)
+    hospital = TEMP_DATA['hospitals'].get(hospital_id)
+    if not hospital:
+        flash("Hospital not found.", "error")
+        return redirect(url_for('hospitals_list'))
+
+    patient_name = request.form.get('patient_name')
+    email = request.form.get('email')
+    country = request.form.get('origin_country')
+    treatment = request.form.get('treatment_required')
+    message = request.form.get('notes', '')
+
+    if patient_name and email:
+        subject = f"Cross-Border Medical Visa Inquiry: {patient_name} ({country or 'International'}) - Spherix Clinic"
+        body = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #4f46e5;">International Patient & Medical Visa Inquiry</h2>
+            <p><strong>Patient Name:</strong> {patient_name}</p>
+            <p><strong>Email:</strong> {email}</p>
+            <p><strong>Origin Country:</strong> {country or 'N/A'}</p>
+            <p><strong>Treatment Requested:</strong> {treatment or 'General Clinical Inquiry'}</p>
+            <p><strong>Notes:</strong></p>
+            <div style="background: #f8fafc; padding: 15px; border-left: 4px solid #4f46e5; border-radius: 4px;">
+                {message or 'Requesting medical visa assistance and clinical admission quote.'}
+            </div>
+        </div>
+        """
+        if hospital.email:
+            send_notification_email(hospital.email, subject, body, is_html=True)
+            flash("Your cross-border medical travel inquiry has been transmitted to the hospital international desk.", "success")
+        else:
+            flash("Your inquiry has been logged. Our international concierge will assist you.", "success")
+    else:
+        flash("Please provide your name and email address.", "error")
+
+    return redirect(url_for('hospital_detail', hospital_id=hospital_id))
+
+
+
+@hospital_bp.route('/hospital/<path:hospital_id>/blood_inquiry', methods=['POST'])
+def hospital_blood_inquiry(hospital_id):
+    hospital_id = parse_route_id(hospital_id)
+    hospital = TEMP_DATA['hospitals'].get(hospital_id)
+    if not hospital:
+        flash("Hospital not found.", "error")
+        return redirect(url_for('hospitals_list'))
+
+    name = request.form.get('name')
+    email = request.form.get('email')
+    blood_group = request.form.get('blood_group')
+    units = request.form.get('units', '1')
+    urgency = request.form.get('urgency', 'Immediate / Emergency')
+
+    if name and email and blood_group:
+        subject = f"🚨 URGENT Transfusion Inquiry: {blood_group} ({units} units) - Spherix Clinic"
+        body = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #dc2626;">Emergency Blood Bank Transfusion Request</h2>
+            <p><strong>Requester:</strong> {name} ({email})</p>
+            <p><strong>Blood Group:</strong> <span style="font-size: 16px; font-weight: bold; color: #dc2626;">{blood_group}</span></p>
+            <p><strong>Units Required:</strong> {units}</p>
+            <p><strong>Urgency:</strong> {urgency}</p>
+        </div>
+        """
+        if hospital.email:
+            send_notification_email(hospital.email, subject, body, is_html=True)
+            flash(f"Emergency blood inquiry for {blood_group} ({units} units) has been sent to {hospital.name}.", "success")
+        else:
+            flash("Transfusion inquiry logged with hospital blood bank registry.", "success")
+    else:
+        flash("Please specify name, contact email, and blood group.", "error")
 
     return redirect(url_for('hospital_detail', hospital_id=hospital_id))
 
@@ -3250,5 +3323,71 @@ def api_queue_call_next():
 def ensure_hospital_sample_data(hospital_id, hospital_name):
     """No-op: Only real database records are loaded."""
     pass
+
+
+# ==============================================================================
+# HOSPITAL & PATHOLOGY DIAGNOSTIC NETWORK INTEGRATION
+# ==============================================================================
+
+@hospital_bp.route('/hospital/pathology/connect', methods=['POST'])
+@hospital_required
+def hospital_pathology_connect():
+    """Hospital sends a partnership connection request to a pathology center specifying the doctor."""
+    hospital = TEMP_DATA['hospitals'].get(current_user.id)
+    if not hospital:
+        flash("Hospital profile not found.", "error")
+        return redirect(url_for('hospital_dashboard'))
+
+    center_id = request.form.get('center_id')
+    doctor_id = request.form.get('doctor_id')
+    partnership_type = request.form.get('partnership_type', 'ROUTINE_DIAGNOSTICS')
+    notes = request.form.get('notes', 'Hospital pathology diagnostic tie-up agreement')
+
+    if not center_id:
+        flash("Please select a diagnostic pathology center.", "error")
+        return redirect(url_for('hospital_dashboard', tab='partners'))
+
+    doc_name = None
+    if doctor_id:
+        doc_obj = TEMP_DATA.get('doctors', {}).get(doctor_id)
+        if doc_obj:
+            doc_name = f"Dr. {doc_obj.first_name} {doc_obj.last_name}"
+
+    from spherix.services.diagnostic_db import connect_with_hospital
+    success, msg = connect_with_hospital(
+        center_id=center_id,
+        hospital_id=str(hospital.id),
+        doctor_id=doctor_id,
+        notes=notes,
+        partnership_type=partnership_type,
+        requested_by='HOSPITAL',
+        doctor_name=doc_name,
+        hospital_name=hospital.name
+    )
+
+    if success:
+        flash("Hospital connection request sent. Final activation requires doctor acceptance and pathology confirmation.", "success")
+    else:
+        flash(f"Connection request failed: {msg}", "error")
+    return redirect(url_for('hospital_dashboard', tab='partners'))
+
+
+@hospital_bp.route('/hospital/pathology/respond-connection', methods=['POST'])
+@hospital_required
+def hospital_pathology_respond():
+    """Hospital confirms or declines a partnership request with a pathology center."""
+    conn_id = request.form.get('connection_id')
+    action = request.form.get('action', 'accept')
+    notes = request.form.get('notes')
+
+    from spherix.services.diagnostic_db import respond_hospital_pathology_connection
+    success, msg, data = respond_hospital_pathology_connection(conn_id, actor_role='hospital', action=action, notes=notes)
+
+    if success:
+        flash(msg, "success")
+    else:
+        flash(f"Hospital response failed: {msg}", "error")
+    return redirect(url_for('hospital_dashboard', tab='partners'))
+
 
 

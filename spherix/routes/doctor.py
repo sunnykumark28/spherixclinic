@@ -91,11 +91,6 @@ except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
 try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
-
-try:
     from drug_data import DRUG_DATABASE
 except ImportError:
     DRUG_DATABASE = {}
@@ -378,6 +373,21 @@ def doctor_dashboard():
             )
             if saved_filename:
                 doctor.profile_picture_url = saved_filename
+                if saved_filename in UPLOAD_CACHE:
+                    try:
+                        conn = get_db_connection()
+                        if conn:
+                            cursor = conn.cursor()
+                            img_bytes, mime = UPLOAD_CACHE[saved_filename]
+                            cursor.execute("SELECT doctor_id FROM doctor_images WHERE doctor_id = ?", (str(doctor.id),))
+                            if cursor.fetchone():
+                                cursor.execute("UPDATE doctor_images SET image_data = ?, content_type = ? WHERE doctor_id = ?", (img_bytes, mime, str(doctor.id)))
+                            else:
+                                cursor.execute("INSERT INTO doctor_images (doctor_id, image_data, content_type) VALUES (?, ?, ?)", (str(doctor.id), img_bytes, mime))
+                            conn.commit()
+                            conn.close()
+                    except Exception as e:
+                        print(f"doctor_images table sync notice: {e}")
         save_data()
         flash('Profile updated successfully!', 'success')
         return redirect(url_for('doctor_dashboard'))
@@ -660,12 +670,30 @@ def doctor_dashboard():
             'is_today': (target_date == cal_today)
         })
 
+    # Diagnostic & Pathology Network Integration
+    doctor_pathology_conns = []
+    doctor_referrals = []
     try:
-        from spherix.services.diagnostic_db import get_doctor_diagnostic_data
-        doctor_diag_data = get_doctor_diagnostic_data(doctor.id)
-    except Exception as e:
-        print(f"Error fetching doctor diagnostic data: {e}")
-        doctor_diag_data = {'referrals': [], 'categories': [], 'tests': []}
+        from spherix.services.diagnostic_db import (
+            get_doctor_pathology_connections_list, get_diagnostic_db, dict_list_from_rows
+        )
+        from spherix.services.diagnostic_catalog import DIAGNOSTIC_MASTER_CATEGORIES, MASTER_TESTS_CATALOG
+        doctor_pathology_conns = get_doctor_pathology_connections_list(str(doctor.id))
+
+        conn_dx = get_diagnostic_db()
+        cur_dx = conn_dx.cursor()
+        cur_dx.execute("SELECT * FROM diagnostic_referrals WHERE doctor_id = ? ORDER BY created_at DESC", (str(doctor.id),))
+        doctor_referrals = dict_list_from_rows(cur_dx.fetchall())
+        for ref in doctor_referrals:
+            cur_dx.execute("SELECT * FROM diagnostic_referral_items WHERE referral_id = ?", (ref['id'],))
+            ref['items'] = dict_list_from_rows(cur_dx.fetchall())
+            try:
+                ref['medicines_list'] = json.loads(ref.get('medicines_json') or '[]')
+            except Exception:
+                ref['medicines_list'] = []
+        conn_dx.close()
+    except Exception as e_dx:
+        print(f"Pathology load note: {e_dx}")
 
     return render_template(
         'doctor_dashboard.html',
@@ -692,9 +720,10 @@ def doctor_dashboard():
         pending_hospital=pending_hospital,
         todays_appointments=todays_appointments,
         lab_requests=lab_requests,
-        diagnostic_referrals=doctor_diag_data.get('referrals', []),
-        diagnostic_categories=doctor_diag_data.get('categories', []),
-        diagnostic_tests=doctor_diag_data.get('tests', []),
+        pathology_connections=doctor_pathology_conns,
+        diagnostic_referrals=doctor_referrals,
+        diagnostic_categories=DIAGNOSTIC_MASTER_CATEGORIES,
+        diagnostic_tests=MASTER_TESTS_CATALOG,
         shared_medical_records=shared_medical_records,
         shared_medical_records_json=shared_medical_records_json,
         profile_url=url_for('get_doctor_image', doc_id=doctor.id),
@@ -2329,4 +2358,90 @@ def mock_soap_note_generator(raw_text):
     </div>
     """
     return html
+
+
+# ==============================================================================
+# DOCTOR & PATHOLOGY NETWORK COLLABORATION
+# ==============================================================================
+
+@doctor_bp.route('/doctor/pathology/respond-connection', methods=['POST'])
+@doctor_required
+def doctor_respond_pathology_connection():
+    """Doctor accepts or declines a partnership connection from a hospital or pathology center."""
+    conn_id = request.form.get('connection_id')
+    action = request.form.get('action', 'accept') # 'accept' or 'reject'
+    notes = request.form.get('notes')
+
+    from spherix.services.diagnostic_db import respond_doctor_pathology_connection
+    success, msg, data = respond_doctor_pathology_connection(conn_id, action=action, notes=notes)
+    if success:
+        flash(msg, "success")
+    else:
+        flash(f"Connection response failed: {msg}", "error")
+    return redirect(url_for('doctor_dashboard', tab='lab_requests'))
+
+
+@doctor_bp.route('/doctor/pathology/send-referral', methods=['POST'])
+@doctor_required
+def doctor_send_pathology_referral():
+    """Doctor sends a diagnostic investigation and prescribed medicines schedule directly to a pathology center."""
+    doctor = TEMP_DATA['doctors'].get(current_user.id)
+    if not doctor:
+        flash("Doctor profile not found.", "error")
+        return redirect(url_for('doctor_login'))
+
+    patient_id = request.form.get('patient_id')
+    center_id = request.form.get('center_id')
+    clinical_indication = request.form.get('clinical_indication', 'Clinical consultation diagnostic investigation').strip()
+    priority = request.form.get('priority', 'ROUTINE')
+    doctor_instructions = request.form.get('doctor_instructions', '').strip()
+    test_codes = request.form.getlist('test_codes')
+
+    medicines = []
+    medicines_raw = request.form.get('medicines_json')
+    if medicines_raw:
+        try:
+            medicines = json.loads(medicines_raw)
+        except Exception:
+            pass
+
+    med_names = request.form.getlist('med_name[]')
+    if med_names:
+        med_dosages = request.form.getlist('med_dosage[]')
+        med_freqs = request.form.getlist('med_freq[]')
+        med_durs = request.form.getlist('med_duration[]')
+        for i, m_name in enumerate(med_names):
+            if m_name.strip():
+                medicines.append({
+                    "name": m_name.strip(),
+                    "dosage": med_dosages[i].strip() if i < len(med_dosages) else "1 tab",
+                    "frequency": med_freqs[i].strip() if i < len(med_freqs) else "Once daily",
+                    "duration": med_durs[i].strip() if i < len(med_durs) else "5 days"
+                })
+
+    patient = TEMP_DATA.get('patients', {}).get(patient_id)
+    patient_name = getattr(patient, 'name', 'Patient') if patient else 'Patient'
+    doc_name = f"Dr. {doctor.first_name} {doctor.last_name}"
+
+    from spherix.services.diagnostic_db import create_doctor_diagnostic_referral
+    success, msg, data = create_doctor_diagnostic_referral(
+        doctor_id=str(doctor.id),
+        doctor_name=doc_name,
+        patient_id=patient_id or 'PAT-WALKIN',
+        patient_name=patient_name,
+        center_id=center_id,
+        test_codes=test_codes,
+        clinical_indication=clinical_indication,
+        priority=priority,
+        doctor_instructions=doctor_instructions,
+        medicines=medicines,
+        hospital_id=doctor.hospital_id,
+        hospital_name=doctor.hospital_name
+    )
+    if success:
+        flash(f"Prescription & diagnostic referral successfully transmitted to pathology center (Ref #{data.get('referral_number')}).", "success")
+    else:
+        flash(f"Failed to transmit referral: {msg}", "error")
+    return redirect(url_for('doctor_dashboard', tab='lab_requests'))
+
 

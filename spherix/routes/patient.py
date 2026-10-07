@@ -89,11 +89,6 @@ except ImportError:
     def extract_prescription_text(*args, **kwargs): return ""
 
 try:
-    from lab_catalog import LAB_TESTS_CATALOG
-except ImportError:
-    LAB_TESTS_CATALOG = []
-
-try:
     from drug_data import DRUG_DATABASE
 except ImportError:
     DRUG_DATABASE = {}
@@ -662,12 +657,7 @@ def patient_dashboard():
 
     all_registered_doctors = deduplicate_entities(list(TEMP_DATA.get('doctors', {}).values()))
 
-    try:
-        from spherix.services.diagnostic_db import get_patient_diagnostic_data
-        diagnostic_data = get_patient_diagnostic_data(current_user.id)
-    except Exception as e:
-        print(f"Error fetching diagnostic data for patient: {e}")
-        diagnostic_data = {'bookings': [], 'referrals': [], 'reports': [], 'categories': [], 'tests': []}
+    diagnostic_data = {'bookings': [], 'referrals': [], 'reports': [], 'categories': [], 'tests': []}
 
     return render_template('patient_dashboard.html', 
                            patient=current_user, 

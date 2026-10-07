@@ -245,6 +245,14 @@ class TestAdvancedFilterEngine(unittest.TestCase):
 class TestAdminCategoryManagement(unittest.TestCase):
     """Tests for admin creating, editing, toggling, and safely deleting hospital types."""
 
+    def setUp(self):
+        from spherix.hospital_types import get_hospital_types_master_dict
+        TEMP_DATA['hospital_types'] = get_hospital_types_master_dict()
+
+    def tearDown(self):
+        from spherix.hospital_types import get_hospital_types_master_dict
+        TEMP_DATA['hospital_types'] = get_hospital_types_master_dict()
+
     def test_add_edit_toggle_delete_category(self):
         import time
         unique_suffix = str(int(time.time() * 1000))
@@ -310,9 +318,15 @@ class TestWebEndpoints(unittest.TestCase):
     """Tests for HTTP routes and templates."""
 
     def setUp(self):
+        from spherix.hospital_types import get_hospital_types_master_dict
+        TEMP_DATA['hospital_types'] = get_hospital_types_master_dict()
         self.client = app.test_client()
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
+
+    def tearDown(self):
+        from spherix.hospital_types import get_hospital_types_master_dict
+        TEMP_DATA['hospital_types'] = get_hospital_types_master_dict()
 
     def test_hospitals_discovery_page_loads(self):
         response = self.client.get('/hospitals')

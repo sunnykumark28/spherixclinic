@@ -1,0 +1,419 @@
+<!-- Universal Spherix Image Cropper & Resolution Adjuster Modal Component -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" integrity="sha512-cyzxRvewl+FOKTtpBzYjW6x6IAYUCZy3sGP40hn+DQkqeluGRCax7qztK2ImL64SA+C7kVWbFa6P2mlI6QmO5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<style>
+  .universal-cropper-dialog {
+    max-width: 780px !important;
+  }
+  .universal-crop-viewport {
+    width: 100%;
+    height: 380px;
+    background-color: #0b1329;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .universal-crop-viewport img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .cropper-view-box,
+  .cropper-face {
+    border-radius: 50%;
+  }
+  .cropper-view-box {
+    outline: 2px solid #0284c7;
+    outline-color: rgba(2, 132, 199, 0.9);
+  }
+  .cropper-square .cropper-view-box,
+  .cropper-square .cropper-face {
+    border-radius: 8px !important;
+  }
+  .universal-crop-preview-circle {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #0284c7;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+    background: #ffffff;
+    margin: 0 auto;
+  }
+  .universal-crop-preview-square {
+    width: 90px;
+    height: 90px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid #64748b;
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15);
+    background: #ffffff;
+    margin: 0 auto;
+  }
+  .universal-crop-preview-box {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+</style>
+
+<!-- Crop & Adjust Modal -->
+<div class="modal fade" id="universalCropModal" tabindex="-1" aria-labelledby="universalCropModalLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 100050;">
+  <div class="modal-dialog modal-dialog-centered universal-cropper-dialog">
+    <div class="modal-content rounded-4 border-0 shadow-2xl overflow-hidden bg-white">
+      
+      <!-- Header -->
+      <div class="modal-header px-4 py-3 border-bottom d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+        <div class="d-flex align-items-center gap-2.5">
+          <div class="w-8 h-8 rounded-circle bg-sky-100 text-sky-700 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; border-radius: 50%; background: #e0f2fe; color: #0284c7;">
+            <i class="fas fa-crop-alt text-sm"></i>
+          </div>
+          <div>
+            <h6 class="modal-title fw-bold mb-0 text-dark" id="universalCropModalLabel" style="font-size: 15px;">Adjust &amp; Crop Profile Image</h6>
+            <small class="text-muted" style="font-size: 11px;">Zoom, rotate, align and set resolution for clinical profile display</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeUniversalCropper();"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body p-3 p-md-4">
+        <div class="row g-3">
+          
+          <!-- Cropper Left Viewport -->
+          <div class="col-lg-8">
+            <div class="universal-crop-viewport" id="universalCropViewportContainer">
+              <img id="universalImageToCrop" src="" alt="Crop image source">
+            </div>
+            
+            <!-- Quick Adjustment Controls Bar -->
+            <div class="d-flex align-items-center justify-content-center gap-1.5 mt-2.5 flex-wrap">
+              <button type="button" class="btn btn-sm btn-light bg-white rounded-pill px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.zoom(0.1);" title="Zoom In">
+                <i class="fas fa-search-plus text-sky-600 me-1"></i> Zoom In
+              </button>
+              <button type="button" class="btn btn-sm btn-light bg-white rounded-pill px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.zoom(-0.1);" title="Zoom Out">
+                <i class="fas fa-search-minus text-sky-600 me-1"></i> Zoom Out
+              </button>
+              <button type="button" class="btn btn-sm btn-light bg-white rounded-pill px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.rotate(-90);" title="Rotate 90deg Left">
+                <i class="fas fa-undo text-slate-600 me-1"></i> -90&deg;
+              </button>
+              <button type="button" class="btn btn-sm btn-light bg-white rounded-pill px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.rotate(90);" title="Rotate 90deg Right">
+                <i class="fas fa-redo text-slate-600 me-1"></i> +90&deg;
+              </button>
+              <button type="button" class="btn btn-sm btn-light bg-white rounded-pill px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="toggleUniversalCropFlip();" title="Flip Horizontal">
+                <i class="fas fa-arrows-alt-h text-slate-600 me-1"></i> Flip
+              </button>
+              <button type="button" class="btn btn-sm btn-light bg-white rounded-pill px-2.5 py-1 text-xs border border-slate-300 text-slate-700 shadow-sm" onclick="if(window._universalCropper) window._universalCropper.reset();" title="Reset Frame">
+                <i class="fas fa-sync-alt text-slate-600 me-1"></i> Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Controls Panel & Live Previews -->
+          <div class="col-lg-4 d-flex flex-column justify-content-between">
+            <div class="p-3 bg-slate-50 rounded-4 border border-slate-200 text-center">
+              
+              <span class="text-xs fw-bold text-slate-700 text-uppercase tracking-wider d-block mb-2" style="font-size: 11px;">Live Output Preview</span>
+              
+              <!-- Double Preview: Round Avatar & Square ID Badge -->
+              <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+                <div>
+                  <span class="text-muted d-block mb-1" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Circular Avatar</span>
+                  <div class="universal-crop-preview-circle">
+                    <div class="universal-crop-preview-box"></div>
+                  </div>
+                </div>
+                <div>
+                  <span class="text-muted d-block mb-1" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Card Badge</span>
+                  <div class="universal-crop-preview-square">
+                    <div class="universal-crop-preview-box"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Output Resolution Presets -->
+              <div class="mb-2.5 text-start">
+                <label class="fw-bold text-dark d-block mb-1" style="font-size: 11px;"><i class="fas fa-expand me-1 text-sky-600"></i>Fixed Resolution Size:</label>
+                <div class="d-flex justify-content-center gap-1 flex-wrap">
+                  <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 fw-bold active universal-size-btn" style="font-size: 11px;" onclick="setUniversalCropSize(500, 500, '500 × 500 px (HD)', this);">500×500 HD</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 fw-bold text-dark border-slate-300 universal-size-btn" style="font-size: 11px;" onclick="setUniversalCropSize(300, 300, '300 × 300 px (Standard)', this);">300×300</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 fw-bold text-dark border-slate-300 universal-size-btn" style="font-size: 11px;" onclick="setUniversalCropSize(200, 200, '200 × 200 px (Compact)', this);">200×200</button>
+                </div>
+              </div>
+
+              <!-- Aspect Ratio Presets -->
+              <div class="mb-2.5 text-start">
+                <label class="fw-bold text-dark d-block mb-1" style="font-size: 11px;"><i class="fas fa-shapes me-1 text-sky-600"></i>Crop Shape / Ratio:</label>
+                <div class="d-flex justify-content-center gap-1 flex-wrap">
+                  <button type="button" class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 fw-bold active universal-ratio-btn" style="font-size: 11px;" onclick="setUniversalCropRatio(1, true, this);">1:1 Round</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 fw-bold text-dark border-slate-300 universal-ratio-btn" style="font-size: 11px;" onclick="setUniversalCropRatio(1, false, this);">1:1 Square</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 fw-bold text-dark border-slate-300 universal-ratio-btn" style="font-size: 11px;" onclick="setUniversalCropRatio(4/3, false, this);">4:3 Card</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-1 fw-bold text-dark border-slate-300 universal-ratio-btn" style="font-size: 11px;" onclick="setUniversalCropRatio(NaN, false, this);">Free</button>
+                </div>
+              </div>
+
+              <!-- Current Selected Size Badge -->
+              <div class="p-2 rounded-3 bg-sky-50 border border-sky-200 mt-2 text-center">
+                <span class="text-sky-900 fw-bold d-block" style="font-size: 11px; font-family: monospace;">
+                  <i class="fas fa-check-circle text-sky-600 me-1"></i>Output: <span id="cropOutputResolutionLabel">500 &times; 500 px (HD)</span>
+                </span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="modal-footer px-4 py-3 border-top d-flex justify-content-between align-items-center" style="background: #f8fafc;">
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4 fw-bold text-xs" data-bs-dismiss="modal" onclick="closeUniversalCropper();">
+          Cancel
+        </button>
+        <button type="button" id="universalApplyCropBtn" class="btn btn-sm btn-primary rounded-pill px-4 py-2 fw-bold text-xs d-inline-flex align-items-center gap-1.5 shadow-sm">
+          <i class="fas fa-crop-alt"></i>
+          <span>Set Size &amp; Save Crop</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    window._universalCropper = null;
+    window._universalCropCallback = null;
+    window._universalAutoSubmitFormId = null;
+    window._universalFlipX = 1;
+    window._universalTargetWidth = 500;
+    window._universalTargetHeight = 500;
+    window._universalAspectRatio = 1;
+
+    // Dynamically load Cropper.js if not already present
+    if (typeof Cropper === 'undefined') {
+      var script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js';
+      script.crossOrigin = 'anonymous';
+      document.head.appendChild(script);
+    }
+
+    window.setUniversalCropSize = function(w, h, label, btnEl) {
+      window._universalTargetWidth = w;
+      window._universalTargetHeight = h;
+      var resLabel = document.getElementById('cropOutputResolutionLabel');
+      if (resLabel) {
+        resLabel.innerHTML = label || (w + ' &times; ' + h + ' px');
+      }
+      if (btnEl && btnEl.parentElement) {
+        btnEl.parentElement.querySelectorAll('.universal-size-btn').forEach(function(b) {
+          b.classList.remove('btn-primary', 'text-white', 'active', 'shadow-sm');
+          b.classList.add('btn-outline-secondary', 'bg-white', 'text-dark', 'border-slate-300');
+        });
+        btnEl.classList.remove('btn-outline-secondary', 'bg-white', 'text-dark', 'border-slate-300');
+        btnEl.classList.add('btn-primary', 'text-white', 'active', 'shadow-sm');
+      }
+    };
+
+    window.setUniversalCropRatio = function(ratio, isCircle, btnEl) {
+      window._universalAspectRatio = ratio;
+      var container = document.getElementById('universalCropViewportContainer');
+      if (container) {
+        if (isCircle) {
+          container.classList.remove('cropper-square');
+        } else {
+          container.classList.add('cropper-square');
+        }
+      }
+      if (window._universalCropper) {
+        window._universalCropper.setAspectRatio(ratio);
+      }
+      if (btnEl && btnEl.parentElement) {
+        btnEl.parentElement.querySelectorAll('.universal-ratio-btn').forEach(function(b) {
+          b.classList.remove('btn-primary', 'text-white', 'active', 'shadow-sm');
+          b.classList.add('btn-outline-secondary', 'bg-white', 'text-dark', 'border-slate-300');
+        });
+        btnEl.classList.remove('btn-outline-secondary', 'bg-white', 'text-dark', 'border-slate-300');
+        btnEl.classList.add('btn-primary', 'text-white', 'active', 'shadow-sm');
+      }
+    };
+
+    window.toggleUniversalCropFlip = function() {
+      if (!window._universalCropper) return;
+      window._universalFlipX = window._universalFlipX === 1 ? -1 : 1;
+      window._universalCropper.scaleX(window._universalFlipX);
+    };
+
+    window.openUniversalCropper = function(file, options) {
+      options = options || {};
+      var modalEl = document.getElementById('universalCropModal');
+      var imgEl = document.getElementById('universalImageToCrop');
+      if (!modalEl || !imgEl) return;
+
+      window._universalCropCallback = options.onCrop || null;
+      window._universalAutoSubmitFormId = options.autoSubmitFormId || null;
+      window._universalFlipX = 1;
+      window._universalTargetWidth = options.targetWidth || 500;
+      window._universalTargetHeight = options.targetHeight || 500;
+      window._universalAspectRatio = options.aspectRatio !== undefined ? options.aspectRatio : 1;
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        imgEl.src = e.target.result;
+
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else {
+          modalEl.classList.add('show');
+          modalEl.style.display = 'block';
+          document.body.classList.add('modal-open');
+        }
+
+        var initCropper = function() {
+          if (typeof Cropper === 'undefined') {
+            setTimeout(initCropper, 100);
+            return;
+          }
+          if (window._universalCropper) {
+            window._universalCropper.destroy();
+          }
+          window._universalCropper = new Cropper(imgEl, {
+            aspectRatio: window._universalAspectRatio,
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 0.9,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+            preview: '.universal-crop-preview-box'
+          });
+        };
+
+        setTimeout(initCropper, 200);
+      };
+      reader.readAsDataURL(file);
+    };
+
+    window.closeUniversalCropper = function() {
+      var modalEl = document.getElementById('universalCropModal');
+      if (modalEl) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        } else {
+          modalEl.classList.remove('show');
+          modalEl.style.display = 'none';
+          document.body.classList.remove('modal-open');
+        }
+      }
+      if (window._universalCropper) {
+        window._universalCropper.destroy();
+        window._universalCropper = null;
+      }
+    };
+
+    function attachCropHandlers() {
+      var applyBtn = document.getElementById('universalApplyCropBtn');
+      if (applyBtn && !applyBtn._attached) {
+        applyBtn._attached = true;
+        applyBtn.addEventListener('click', function() {
+          if (!window._universalCropper) return;
+
+          var targetW = window._universalTargetWidth || 500;
+          var targetH = window._universalTargetHeight || 500;
+
+          if (window._universalAspectRatio && !isNaN(window._universalAspectRatio) && window._universalAspectRatio !== 1) {
+            targetH = Math.round(targetW / window._universalAspectRatio);
+          }
+
+          var canvas = window._universalCropper.getCroppedCanvas({
+            width: targetW,
+            height: targetH,
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high'
+          });
+
+          if (canvas) {
+            var base64Data = canvas.toDataURL('image/jpeg', 0.92);
+
+            if (typeof window._universalCropCallback === 'function') {
+              window._universalCropCallback(base64Data, canvas);
+            }
+
+            closeUniversalCropper();
+
+            if (window._universalAutoSubmitFormId) {
+              var form = document.getElementById(window._universalAutoSubmitFormId);
+              if (form) form.submit();
+            }
+          }
+        });
+      }
+
+      // Delegate file change events
+      document.body.addEventListener('change', function(e) {
+        var target = e.target;
+        if (target && (target.matches('input[type="file"][data-crop-image="true"]') || target.matches('input[type="file"].crop-image-input') || target.matches('input[type="file"].cropper-input'))) {
+          if (target.files && target.files.length > 0) {
+            var file = target.files[0];
+            if (!file.type || !file.type.match(/^image\//)) {
+              alert('Please select a valid image file (PNG, JPG, JPEG, WebP).');
+              return;
+            }
+
+            var hiddenTargetId = target.getAttribute('data-crop-target');
+            var previewTargetId = target.getAttribute('data-preview-target');
+            var autoSubmit = target.getAttribute('data-auto-submit') === 'true';
+            var formId = target.form ? target.form.id : null;
+
+            openUniversalCropper(file, {
+              onCrop: function(base64) {
+                if (hiddenTargetId) {
+                  var hiddenInput = document.getElementById(hiddenTargetId);
+                  if (hiddenInput) {
+                    hiddenInput.value = base64;
+                    hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                  }
+                }
+                if (previewTargetId) {
+                  var previewImg = document.getElementById(previewTargetId);
+                  if (previewImg) {
+                    previewImg.src = base64;
+                    previewImg.classList.remove('d-none');
+                    previewImg.style.display = '';
+                  }
+                  var placeholder = document.getElementById(previewTargetId + 'Placeholder') || 
+                                      document.getElementById(previewTargetId.replace('Img', 'Placeholder')) ||
+                                      document.getElementById(previewTargetId + 'PlaceholderOD') ||
+                                      document.getElementById(previewTargetId + 'PlaceholderDoc') ||
+                                      document.getElementById(previewTargetId + 'PlaceholderLab');
+                  if (placeholder) {
+                    placeholder.classList.add('d-none');
+                    placeholder.style.display = 'none';
+                  }
+                }
+                // Also trigger custom event on the input
+                target.dispatchEvent(new CustomEvent('imageCropped', { detail: { base64: base64 } }));
+              },
+              autoSubmitFormId: autoSubmit ? formId : null
+            });
+          }
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attachCropHandlers);
+    } else {
+      attachCropHandlers();
+    }
+  })();
+</script>

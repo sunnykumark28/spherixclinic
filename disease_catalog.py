@@ -302,3 +302,8 @@ def find_disease_by_name_or_id(identifier):
             
     return None
 
+# Export alias for backwards compatibility
+DISEASE_CATALOG = DISEASES_BY_ID
+
+# Automatically initialize catalog
+load_all_diseases()

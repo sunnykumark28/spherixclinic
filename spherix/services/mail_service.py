@@ -328,14 +328,6 @@ def get_account_approval_email_html(
         role_greeting = f"Dear Administration of {name},"
         welcome_msg = "We are pleased to inform you that your Hospital / Medical Facility account registration has been thoroughly inspected, verified, and officially approved by Spherix Administration. You now have full operational access to the Hospital Management Dashboard."
         cta_text = "Access Hospital Portal"
-    elif 'pathology' in entity_lower or 'lab' in entity_lower or 'diagnostic' in entity_lower:
-        role_title = "Diagnostic & Pathology Center"
-        badge_text = "🔬 Diagnostic Center Verified"
-        role_color = "#0d9488"
-        accent_bg = "#f0fdfa"
-        role_greeting = f"Dear Medical Team at {name},"
-        welcome_msg = "Congratulations! Your Diagnostic & Pathology Laboratory registration has been verified and approved by Spherix Clinical Administration. Your facility is now active in the diagnostic network to receive doctor referrals, manage patient test bookings, and publish clinical test reports."
-        cta_text = "Access Laboratory Hub"
     else: # Doctor / Specialist
         clean_name = str(name).strip()
         if not clean_name.lower().startswith('dr.'):

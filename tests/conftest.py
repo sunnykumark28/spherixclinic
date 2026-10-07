@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 os.environ['SQLITE_DB_PATH'] = os.path.join(os.path.dirname(__file__), 'test_spherixclinic.db')
+os.environ['DIAGNOSTIC_DB_PATH'] = os.path.join(os.path.dirname(__file__), 'test_spherixclinic.db')
 from app import app as flask_app
 
 @pytest.fixture

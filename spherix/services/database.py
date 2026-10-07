@@ -23,14 +23,14 @@ from spherix.models import (
 
 # PyODBC handling
 try:
-    import pyodbc
+    import pyodbc  # type: ignore
     HAS_PYODBC = True
 except ImportError:
     for sp in ['/opt/anaconda3/lib/python3.13/site-packages', '/opt/homebrew/lib/python3.11/site-packages', '/opt/homebrew/lib/python3.12/site-packages', '/usr/local/lib/python3.11/site-packages']:
         if os.path.exists(sp) and sp not in sys.path:
             sys.path.insert(0, sp)
     try:
-        import pyodbc
+        import pyodbc  # type: ignore
         HAS_PYODBC = True
     except ImportError:
         HAS_PYODBC = False
@@ -2114,7 +2114,7 @@ def load_data():
 
         # Perform data-safe migration of schema and ensure all tables/columns exist
         migrate_legacy_schema(cursor)
-        
+
         try:
             from spherix.services.diagnostic_db import init_diagnostic_schema
             init_diagnostic_schema()
@@ -2133,14 +2133,6 @@ def load_data():
         # 2. Patients
         pats = fetch_dict("SELECT * FROM patients")
         TEMP_DATA['patients'] = {p['id']: Patient(**p) for p in pats}
-
-        # 2b. Pathology Labs
-        try:
-            from spherix.models.user import PathologyLab
-            labs = fetch_dict("SELECT * FROM diagnostic_labs")
-            TEMP_DATA['pathology_labs'] = {l['id']: PathologyLab(**l) for l in labs}
-        except Exception as l_err:
-            TEMP_DATA['pathology_labs'] = {}
 
         # 3a. Hospital Types Master
         from spherix.hospital_types import HospitalType, HOSPITAL_TYPE_MASTER_DATA, get_hospital_types_master_dict
@@ -3935,12 +3927,15 @@ def toggle_hospital_type_status(type_id: int):
     return ht
 
 
-def delete_hospital_type(type_id: int, safe_reassign_to_id: int = None) -> tuple:
+def delete_hospital_type(type_id: int, safe_reassign_to_id: int = None, reassign_to_id: int = None) -> tuple:
     """
     Safely deletes a hospital category.
     Fails if any hospital is assigned to it unless reassign_to_id is provided.
     Returns (success: bool, message: str)
     """
+    if safe_reassign_to_id is None and reassign_to_id is not None:
+        safe_reassign_to_id = reassign_to_id
+
     ht = get_hospital_type_by_id(type_id)
     if not ht:
         return False, "Hospital category not found."

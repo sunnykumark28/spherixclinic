@@ -3,7 +3,6 @@ from prescription_ocr import parse_medicines_with_groq, extract_text_from_image
 from disease_catalog import ALL_DISEASES, DISEASES_BY_NAME, load_all_diseases
 from ayurveda_catalog import ALL_AYUR_DISEASES, AYUR_DISEASES_BY_ID
 from medicine_catalog import ALL_MEDICINES, MEDICINES_BY_ID, load_all_medicines
-from lab_catalog import HEALTH_PACKAGES, INDIVIDUAL_TESTS
 
 def test_disease_catalog_loaded():
     """Verify disease catalog contains structured disease entries."""
@@ -22,13 +21,6 @@ def test_medicine_catalog_loaded():
     meds = load_all_medicines()
     assert isinstance(meds, list)
     assert len(meds) > 0
-
-def test_lab_catalog_loaded():
-    """Verify lab tests catalog contains diagnostic health packages and tests."""
-    assert isinstance(HEALTH_PACKAGES, list)
-    assert len(HEALTH_PACKAGES) > 0
-    assert isinstance(INDIVIDUAL_TESTS, list)
-    assert len(INDIVIDUAL_TESTS) > 0
 
 def test_ocr_extract_text_empty_path():
     """Verify OCR handles invalid or empty path gracefully without throwing."""

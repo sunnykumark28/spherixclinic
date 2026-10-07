@@ -606,7 +606,8 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5.5">
             {% for hospital in hospitals %}
             <!-- HOSPITAL CARD (GRID) -->
-            <div class="hospital-card rounded-3xl overflow-hidden flex flex-col justify-between group border-2 border-slate-200 bg-white">
+            <div class="hospital-card rounded-3xl overflow-hidden flex flex-col justify-between group border-2 border-slate-200 bg-white cursor-pointer relative hover:-translate-y-1.5 transition-all duration-300 shadow-sm hover:shadow-xl"
+                 onclick="if(!event.target.closest('a, button')) { window.location.href='{{ url_for('hospital.hospital_detail', hospital_id=hospital.id) }}'; }">
                 <div>
                     <!-- 1. Card Media & Header -->
                     <div class="relative h-56 bg-gradient-to-b from-slate-50 via-sky-50/20 to-white flex items-center justify-center p-6 border-b border-slate-100 overflow-hidden">
@@ -651,9 +652,10 @@
                             {% endif %}
                         </div>
 
-                        <!-- Centered Hospital Logo / Monogram -->
-                        <div class="relative z-10 w-28 h-28 rounded-2xl bg-white/95 backdrop-blur-xl border-2 border-white shadow-xl flex items-center justify-center p-3 cursor-pointer group/dp transition-all duration-300 hover:scale-105"
-                             @click="openImage('{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) if hospital.logo_url else '' }}', '{{ hospital.name|e }}', '{{ hospital.country|default('India')|e }}', '{{ hospital.city|default('')|e }}', '{{ hospital.accreditation|default('NABH & JCI Accredited')|e }}', '{{ hospital.email|default('')|e }}', '{{ hospital.phone|default('102')|e }}', '{{ url_for('hospital.hospital_detail', hospital_id=hospital.id) }}', '{{ hospital.name[:2]|upper }}')">
+                        <!-- Centered Hospital Logo / Monogram (Direct Profile Link) -->
+                        <a href="{{ url_for('hospital.hospital_detail', hospital_id=hospital.id) }}"
+                           class="relative z-10 w-28 h-28 rounded-2xl bg-white/95 backdrop-blur-xl border-2 border-white shadow-xl flex items-center justify-center p-3 cursor-pointer group/dp transition-all duration-300 group-hover:scale-105"
+                           title="View {{ hospital.name }} Profile">
                             
                             {% if hospital.logo_url %}
                                 <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) }}" 
@@ -673,15 +675,17 @@
                                 <i class="fa-solid fa-check text-[10px]"></i>
                             </div>
                             {% endif %}
-                        </div>
+                        </a>
                     </div>
 
                     <!-- 2. Card Body Content -->
                     <div class="p-5 sm:p-6">
                         <div class="mb-3">
-                            <h3 class="text-lg font-display font-extrabold text-slate-900 group-hover:text-sky-600 transition-colors leading-snug line-clamp-1" title="{{ hospital.name }}">
-                                {{ hospital.name }}
-                            </h3>
+                            <a href="{{ url_for('hospital.hospital_detail', hospital_id=hospital.id) }}" class="text-decoration-none block">
+                                <h3 class="text-lg font-display font-extrabold text-slate-900 group-hover:text-sky-600 transition-colors leading-snug line-clamp-1" title="{{ hospital.name }}">
+                                    {{ hospital.name }}
+                                </h3>
+                            </a>
                             <p class="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 line-clamp-1">
                                 <i class="fa-solid fa-map-location-dot text-slate-400 text-xs shrink-0"></i>
                                 <span>{{ hospital.city|default('City') }}{% if hospital.state %}, {{ hospital.state }}{% endif %}{% if hospital.country and hospital.country != 'India' %}, {{ hospital.country }}{% endif %}</span>
@@ -750,6 +754,7 @@
                     {% if hospital.address %}
                     <a href="https://www.google.com/maps/search/?api=1&query={{ (hospital.name ~ ' ' ~ hospital.address)|urlencode }}" 
                        target="_blank" rel="noopener noreferrer"
+                       onclick="event.stopPropagation();"
                        class="py-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1"
                        title="Get Directions on Google Maps">
                         <i class="fa-solid fa-diamond-turn-right text-teal-600"></i>
@@ -758,6 +763,7 @@
 
                     {% if hospital.emergency_phone or hospital.phone %}
                     <a href="tel:{{ hospital.emergency_phone or hospital.phone }}" 
+                       onclick="event.stopPropagation();"
                        class="py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1"
                        title="Call Emergency Helpline">
                         <i class="fa-solid fa-phone"></i>
@@ -774,12 +780,15 @@
         <div class="space-y-4">
             {% for hospital in hospitals %}
             <!-- HOSPITAL ROW (LIST) -->
-            <div class="hospital-card rounded-2xl p-4 sm:p-6 bg-white border border-slate-200 hover:border-sky-300 transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div class="hospital-card rounded-2xl p-4 sm:p-6 bg-white border border-slate-200 hover:border-sky-300 transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 cursor-pointer shadow-sm hover:shadow-md"
+                 onclick="if(!event.target.closest('a, button')) { window.location.href='{{ url_for('hospital.hospital_detail', hospital_id=hospital.id) }}'; }">
                 
                 <!-- Left: Logo & Core Info -->
                 <div class="flex items-start gap-4 flex-1">
                     <!-- Logo / Monogram -->
-                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center p-2 shrink-0">
+                    <a href="{{ url_for('hospital.hospital_detail', hospital_id=hospital.id) }}"
+                       class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center p-2 shrink-0 hover:scale-105 transition-transform"
+                       title="View {{ hospital.name }} Profile">
                         {% if hospital.logo_url %}
                             <img src="{{ url_for('static', filename='uploads/hospital_logos/' ~ hospital.logo_url) }}" alt="{{ hospital.name }}" class="max-w-full max-h-full object-contain rounded-lg">
                         {% else %}
@@ -787,7 +796,7 @@
                                 {{ hospital.name[:2]|upper }}
                             </div>
                         {% endif %}
-                    </div>
+                    </a>
 
                     <div>
                         <div class="flex flex-wrap items-center gap-2 mb-1">
@@ -865,6 +874,7 @@
                     {% if hospital.address %}
                     <a href="https://www.google.com/maps/search/?api=1&query={{ (hospital.name ~ ' ' ~ hospital.address)|urlencode }}" 
                        target="_blank" rel="noopener noreferrer"
+                       onclick="event.stopPropagation();"
                        class="px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors">
                         <i class="fa-solid fa-diamond-turn-right text-teal-600"></i>
                     </a>

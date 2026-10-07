@@ -130,7 +130,7 @@ def create_app(config_object=None):
                     return admin_user
 
             # Check direct match across collections
-            for col_name in ['pathology_labs', 'patients', 'doctors', 'hospitals', 'staff', 'blood_donors', 'organ_donors']:
+            for col_name in ['patients', 'doctors', 'hospitals', 'staff', 'blood_donors', 'organ_donors']:
                 col = TEMP_DATA.get(col_name, {})
                 if user_id_str in col:
                     return col[user_id_str]
@@ -141,37 +141,13 @@ def create_app(config_object=None):
                 except (ValueError, TypeError):
                     pass
 
-            # Handle pathology lab direct IDs or prefixed IDs
-            if user_id_str.startswith('LAB-') or user_id_str.startswith('pathology_lab-') or session.get('_user_type') == 'pathology_lab':
-                real_lab_id = user_id_str.replace('pathology_lab-', '')
-                if real_lab_id in TEMP_DATA.get('pathology_labs', {}):
-                    return TEMP_DATA['pathology_labs'][real_lab_id]
-                conn = get_db_connection()
-                if conn:
-                    cur = conn.cursor()
-                    cur.execute("SELECT * FROM diagnostic_labs WHERE id = ? OR email = ?", (real_lab_id, real_lab_id))
-                    row = cur.fetchone()
-                    if row:
-                        cols = [d[0] for d in cur.description]
-                        lab_dict = dict(zip(cols, row))
-                        from spherix.models.user import PathologyLab
-                        lab_obj = PathologyLab(**lab_dict)
-                        if 'pathology_labs' not in TEMP_DATA:
-                            TEMP_DATA['pathology_labs'] = {}
-                        TEMP_DATA['pathology_labs'][lab_obj.id] = lab_obj
-                        conn.close()
-                        return lab_obj
-                    conn.close()
-
             collection_map = {
                 'doctor': 'doctors',
                 'patient': 'patients',
                 'staff': 'staff',
                 'hospital': 'hospitals',
                 'blood_donor': 'blood_donors',
-                'organ_donor': 'organ_donors',
-                'pathology_lab': 'pathology_labs',
-                'lab': 'pathology_labs'
+                'organ_donor': 'organ_donors'
             }
 
             role = 'doctor'
@@ -235,7 +211,7 @@ def create_app(config_object=None):
     def add_security_and_cache_headers(response):
         # Prevent browser caching on admin, dashboards, and auth endpoints to ensure immediate logout enforcement
         path = request.path.lower()
-        if any(prefix in path for prefix in ['/admin', '/doctor', '/patient', '/staff', '/hospital', '/blood-donor', '/organ-donor', '/pathology', '/dashboard', '/logout']):
+        if any(prefix in path for prefix in ['/admin', '/doctor', '/patient', '/staff', '/hospital', '/blood-donor', '/organ-donor', '/dashboard', '/logout']):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
@@ -373,10 +349,21 @@ def create_app(config_object=None):
         )
 
     # Dynamic URL resolution fallback for unprefixed template endpoints
+    _in_url_build_error_handler = set()
+
     def url_build_error_handler(error, endpoint, values):
-        for rule in current_app.url_map.iter_rules():
-            if rule.endpoint.endswith('.' + endpoint) or rule.endpoint == endpoint:
-                return url_for(rule.endpoint, **values)
+        if endpoint in _in_url_build_error_handler:
+            return None
+        _in_url_build_error_handler.add(endpoint)
+        try:
+            for rule in current_app.url_map.iter_rules():
+                if rule.endpoint != endpoint and rule.endpoint.endswith('.' + endpoint):
+                    try:
+                        return url_for(rule.endpoint, **values)
+                    except Exception:
+                        continue
+        finally:
+            _in_url_build_error_handler.discard(endpoint)
         return None
 
     app.url_build_error_handlers.append(url_build_error_handler)

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Pathology Operations Workspace — {{ user.center_name if user else 'Laboratory Dashboard' }}{% endblock %}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            lpl: {
+              navy: '#002244',
+              blue: '#004b87',
+              darkblue: '#001e3d',
+              lightblue: '#e8f1f8',
+              yellow: '#fdb813',
+              yellowdark: '#e0a108',
+              gold: '#ffc20e',
+              teal: '#00a896',
+              accent: '#ff6f61',
+              light: '#f4f8fb'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome 6.5.2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <!-- Chart.js 4.4 for Clinical Diagnostic Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased bg-slate-100 overflow-hidden">
+
+  <!-- ================= TOP APP HEADER (SPECIALIZED DASHBOARD HEADER) ================= -->
+  <header class="h-16 bg-[#002244] text-white border-b border-[#003870] flex items-center justify-between px-4 sm:px-6 z-30 shrink-0 select-none">
+    
+    <!-- Left: Sidebar Toggle, Brand & Facility Info -->
+    <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+      <!-- Mobile Sidebar Toggle -->
+      <button type="button" onclick="toggleDashboardSidebar()" class="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 focus:outline-none" aria-label="Toggle Navigation">
+        <i class="fas fa-bars text-base"></i>
+      </button>
+
+      <!-- Brand Logo & Center Title -->
+      <a href="{{ url_for('pathology.pathology_dashboard') }}" class="flex items-center gap-2.5 group shrink-0">
+        <img src="{{ url_for('static', filename='images/spherix_lab_logo.png') }}" 
+             alt="Spherix Pathology" 
+             class="w-9 h-9 rounded-xl object-cover shadow-xs group-hover:scale-105 transition-transform">
+        <div class="hidden sm:block">
+          <div class="flex items-center gap-1.5 leading-none">
+            <span class="font-extrabold text-sm tracking-tight text-white">{{ user.center_name if user else 'Spherix Pathology' }}</span>
+            <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#fdb813] text-[#002244] uppercase tracking-wider">LAB OPS</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-medium truncate max-w-[200px] mt-0.5">{{ user.branch_name if user else 'Reference Lab' }} &bull; {{ user.city if user else 'India' }}</p>
+        </div>
+      </a>
+    </div>
+
+    <!-- Center: Global Search Bar -->
+    <div class="flex-1 max-w-xl mx-4 relative hidden sm:block">
+      <div class="relative">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 text-xs">
+          <i class="fas fa-magnifying-glass"></i>
+        </span>
+        <input 
+          type="text" 
+          id="globalDashboardSearch" 
+          placeholder="Search by Patient Name, Phone, Order #, Barcode, or Test (Press ⌘K or /)" 
+          class="w-full pl-9 pr-14 py-2 text-xs font-semibold text-white bg-slate-800/80 border border-slate-700/80 rounded-xl placeholder-slate-400 focus:bg-slate-900 focus:border-indigo-500 focus:outline-none transition-all"
+          autocomplete="off"
+          oninput="handleGlobalSearch(this.value)"
+          onfocus="showSearchResultsDropdown()"
+        >
+        <span class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-[10px] font-mono font-bold text-slate-400">
+          <kbd class="px-1.5 py-0.5 rounded bg-slate-700 border border-slate-600 text-slate-300">⌘K</kbd>
+        </span>
+      </div>
+
+      <!-- Live Search Results Dropdown -->
+      <div id="globalSearchResults" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden hidden z-50 text-slate-900">
+        <div class="p-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500 bg-slate-50">
+          <span id="searchResultCount">Search Results</span>
+          <span class="text-xxs text-slate-400">ESC to close</span>
+        </div>
+        <div id="searchResultsList" class="max-h-72 overflow-y-auto custom-scrollbar p-2 space-y-1 text-xs">
+          <!-- Dynamic results populated by JavaScript -->
+        </div>
+        <div class="p-2 bg-slate-50 border-t border-slate-100 text-center text-xxs text-slate-500 font-medium">
+          Type order number, patient name, phone, sample barcode, or test acronym
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Quick Status, Notifications & User Profile -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      
+      <!-- Mobile Search Button -->
+      <button type="button" onclick="openMobileSearchModal()" class="sm:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800" title="Search">
+        <i class="fas fa-magnifying-glass text-sm"></i>
+      </button>
+
+      <!-- Cold-Chain Indicator Pill -->
+      <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold" title="Phlebotomy fleet cold-chain temperature active">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-[11px]">4.2°C Cold-Chain</span>
+      </div>
+
+      <!-- Notification Center Button & Flyout -->
+      <div class="relative">
+        <button 
+          type="button" 
+          id="notifBellBtn"
+          onclick="toggleNotificationDropdown()" 
+          class="p-2 sm:px-2.5 sm:py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 relative focus:outline-none transition-all cursor-pointer" 
+          title="Laboratory Alerts & Notifications"
+          aria-expanded="false"
+        >
+          <i class="fas fa-bell text-sm"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-[#002244] animate-ping"></span>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-[#002244]"></span>
+        </button>
+
+        <!-- Notification Flyout Dropdown -->
+        <div id="notifDropdown" class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden hidden z-50 text-slate-900">
+          <div class="p-3.5 bg-slate-900 text-white flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-bell text-amber-400 text-xs"></i>
+              <span class="text-xs font-black uppercase tracking-wider">Laboratory Live Alerts</span>
+            </div>
+            <span class="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              4 Active
+            </span>
+          </div>
+
+          <div class="max-h-80 overflow-y-auto custom-scrollbar divide-y divide-slate-100 text-xs">
+            <!-- Alert 1: Critical Panic Value -->
+            <a href="{{ url_for('pathology.reports_workbench') }}" class="p-3 hover:bg-rose-50/50 flex gap-3 items-start transition-colors block">
+              <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                <i class="fas fa-triangle-exclamation"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-bold text-slate-900 text-xs">Panic Value: Glucose 480 mg/dL</div>
+                <p class="text-xxs text-slate-500 mt-0.5">Order #DX-2026-4892 &bull; Immediate physician call required</p>
+                <span class="text-[10px] text-rose-600 font-bold">2 mins ago</span>
+              </div>
+            </a>
+
+            <!-- Alert 2: Incoming Doctor Referral -->
+            <a href="{{ url_for('pathology.doctors_discovery', tab='referrals') }}" class="p-3 hover:bg-indigo-50/50 flex gap-3 items-start transition-colors block">
+              <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                <i class="fas fa-prescription"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-bold text-slate-900 text-xs">New Digital Referral Received</div>
+                <p class="text-xxs text-slate-500 mt-0.5">Dr. Sameer Joshi transmitted Rx &amp; Lipid panel</p>
+                <span class="text-[10px] text-indigo-600 font-bold">14 mins ago</span>
+              </div>
+            </a>
+
+            <!-- Alert 3: Phlebotomy Doorstep Collection -->
+            <a href="{{ url_for('pathology.phlebotomy_collections') }}" class="p-3 hover:bg-emerald-50/50 flex gap-3 items-start transition-colors block">
+              <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                <i class="fas fa-vial-circle-check"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-bold text-slate-900 text-xs">Specimen Collected: Doorstep Route</div>
+                <p class="text-xxs text-slate-500 mt-0.5">Phlebotomist Amit Sharma checked in sample #SMP-4109</p>
+                <span class="text-[10px] text-emerald-600 font-bold">28 mins ago</span>
+              </div>
+            </a>
+
+            <!-- Alert 4: Cold-Chain Check -->
+            <a href="{{ url_for('pathology.phlebotomy_collections') }}" class="p-3 hover:bg-sky-50/50 flex gap-3 items-start transition-colors block">
+              <div class="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                <i class="fas fa-snowflake"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-bold text-slate-900 text-xs">Cold-Chain Temperature Verified</div>
+                <p class="text-xxs text-slate-500 mt-0.5">Transport Box #02 logged at 4.1°C (Compliant)</p>
+                <span class="text-[10px] text-sky-600 font-bold">1 hr ago</span>
+              </div>
+            </a>
+          </div>
+
+          <div class="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xxs font-bold text-slate-500">
+            <button type="button" onclick="alert('All notifications marked as read.')" class="hover:text-indigo-600">Mark all read</button>
+            <a href="{{ url_for('pathology.orders_list') }}" class="text-indigo-600 hover:text-indigo-800">View All Orders &rarr;</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile Dropdown Button -->
+      <div class="relative">
+        <button 
+          type="button" 
+          id="profileMenuBtn"
+          onclick="toggleProfileDropdown()" 
+          class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-800 text-left focus:outline-none transition-all cursor-pointer"
+          aria-expanded="false"
+        >
+          {% if user and user.profile_image %}
+          <img src="{{ user.profile_image }}" alt="User" class="w-8 h-8 rounded-lg object-cover border border-slate-700">
+          {% else %}
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white flex items-center justify-center font-black text-xs border border-indigo-400/30">
+            {{ user.full_name[:1] if user else 'P' }}
+          </div>
+          {% endif %}
+          <div class="hidden md:block">
+            <div class="text-xs font-bold text-white line-clamp-1 leading-none">{{ user.full_name if user else 'Pathologist' }}</div>
+            <span class="text-[9px] font-mono text-indigo-300 font-bold uppercase">{{ user.role if user else 'Staff' }}</span>
+          </div>
+          <i class="fas fa-chevron-down text-[10px] text-slate-400 hidden md:inline-block ml-1"></i>
+        </button>
+
+        <!-- Profile Flyout Menu -->
+        <div id="profileDropdown" class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden hidden z-50 text-slate-900">
+          <div class="p-4 bg-slate-50 border-b border-slate-100">
+            <div class="text-xs font-black text-slate-900">{{ user.full_name if user else 'Pathology Staff' }}</div>
+            <div class="text-xxs text-slate-500 font-medium truncate">{{ user.email if user else 'lab@spherix.com' }}</div>
+            <span class="badge bg-indigo-100 text-indigo-800 text-[10px] font-mono font-bold mt-1.5 uppercase">
+              {{ user.role if user else 'Admin' }} &bull; {{ user.qualification if user else 'MD Pathology' }}
+            </span>
+          </div>
+
+          <div class="p-2 space-y-1 text-xs font-semibold">
+            <a href="{{ url_for('pathology.pathology_settings', tab='profile') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+              <i class="fas fa-building text-slate-400 w-4 text-center"></i> Center Profile &amp; Logo
+            </a>
+            <a href="{{ url_for('pathology.pathology_settings', tab='address') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+              <i class="fas fa-map-location-dot text-slate-400 w-4 text-center"></i> Address &amp; Geolocation
+            </a>
+            <a href="{{ url_for('pathology.pathology_settings', tab='staff') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+              <i class="fas fa-user-gear text-slate-400 w-4 text-center"></i> Staff &amp; Pathologist Profile
+            </a>
+            <a href="{{ url_for('diagnostic.diagnostic_home') }}" target="_blank" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+              <i class="fas fa-arrow-up-right-from-square text-slate-400 w-4 text-center"></i> Public Patient Portal
+            </a>
+          </div>
+
+          <div class="p-2 bg-slate-50 border-t border-slate-100">
+            <a href="{{ url_for('pathology.pathology_logout') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold transition-colors">
+              <i class="fas fa-power-off w-4 text-center"></i> Sign Out of Portal
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </header>
+
+  <!-- ================= MAIN BODY: SIDEBAR + WORKSPACE (NO FOOTER, 100% VIEWPORT) ================= -->
+  <div class="flex-1 flex overflow-hidden relative">
+    
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="sidebarBackdrop" onclick="toggleDashboardSidebar()" class="fixed inset-0 bg-slate-900/60 z-30 hidden md:hidden"></div>
+
+    <!-- ================= SIDEBAR NAVIGATION ================= -->
+    <aside id="dashboardSidebar" class="w-64 bg-slate-900 text-white flex flex-col justify-between shrink-0 border-r border-slate-800 z-40 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-200 ease-in-out">
+      
+      <div class="overflow-y-auto custom-scrollbar flex-1">
+        
+        <!-- Mobile Sidebar Close Header -->
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between md:hidden">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Navigation Menu</span>
+          <button type="button" onclick="toggleDashboardSidebar()" class="text-slate-400 hover:text-white p-1">
+            <i class="fas fa-xmark text-base"></i>
+          </button>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-3 space-y-1 text-xs font-bold" aria-label="Pathology Operations">
+          <a href="{{ url_for('pathology.pathology_dashboard') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if not view_tab %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-chart-pie w-4 text-center text-indigo-400"></i>
+              <span>Dashboard Overview</span>
+            </div>
+          </a>
+
+          <a href="{{ url_for('pathology.orders_list') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if view_tab in ['orders', 'order_detail'] %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-list-check w-4 text-center text-amber-400"></i>
+              <span>Orders &amp; Accessioning</span>
+            </div>
+          </a>
+
+          <a href="{{ url_for('pathology.phlebotomy_collections') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if view_tab == 'collections' %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-house-user w-4 text-center text-emerald-400"></i>
+              <span>Home Phlebotomy</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">Fleet</span>
+          </a>
+
+          <a href="{{ url_for('pathology.walkin_queue_view') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if view_tab == 'walkin_queue' %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-hospital-user w-4 text-center text-sky-400"></i>
+              <span>Walk-in Token Queue</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300">Caller</span>
+          </a>
+
+          <a href="{{ url_for('pathology.reports_workbench') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if view_tab == 'reports' %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-file-signature w-4 text-center text-purple-400"></i>
+              <span>Pathologist Reports</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">Sign-off</span>
+          </a>
+
+          <a href="{{ url_for('pathology.doctors_discovery') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if view_tab == 'doctors' %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-handshake-angle w-4 text-center text-amber-400"></i>
+              <span>Doctors &amp; Hospitals</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">Tie-ups</span>
+          </a>
+
+          <a href="{{ url_for('pathology.tests_management') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if view_tab == 'tests_management' %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-flask w-4 text-center text-teal-400"></i>
+              <span>Test Catalog &amp; Pricing</span>
+            </div>
+          </a>
+
+          <a href="{{ url_for('pathology.pathology_settings') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl {% if view_tab == 'settings' %}bg-indigo-600 text-white shadow-xs{% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %} transition-all">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-sliders w-4 text-center text-rose-400"></i>
+              <span>Settings &amp; Location</span>
+            </div>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer User Profile -->
+      <div class="p-3.5 border-t border-slate-800">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5 min-w-0">
+            {% if user and user.profile_image %}
+            <img src="{{ user.profile_image }}" alt="User" class="w-8 h-8 rounded-lg object-cover border border-slate-700 shrink-0">
+            {% else %}
+            <div class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">
+              {{ user.full_name[:1] if user else 'P' }}
+            </div>
+            {% endif %}
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-white truncate">{{ user.full_name if user else 'User' }}</div>
+              <span class="text-[10px] text-slate-400 font-mono">{{ user.role if user else 'Staff' }}</span>
+            </div>
+          </div>
+          <a href="{{ url_for('pathology.pathology_logout') }}" class="text-slate-400 hover:text-rose-400 p-1.5 transition-colors" title="Sign Out">
+            <i class="fas fa-power-off text-sm"></i>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ================= MAIN WORKSPACE (SCROLLABLE, NO FOOTER) ================= -->
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8">
+      
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="max-w-7xl mx-auto mb-6 space-y-2">
+            {% for category, message in messages %}
+              <div class="p-3.5 rounded-2xl flex items-center justify-between text-xs font-bold border {% if category == 'success' %}bg-emerald-50 text-emerald-900 border-emerald-200{% elif category in ['error', 'danger'] %}bg-rose-50 text-rose-900 border-rose-200{% elif category == 'warning' %}bg-amber-50 text-amber-900 border-amber-200{% else %}bg-indigo-50 text-indigo-900 border-indigo-200{% endif %}">
+                <div class="flex items-center gap-2.5">
+                  <i class="fas {% if category == 'success' %}fa-circle-check text-emerald-600{% elif category in ['error', 'danger'] %}fa-circle-exclamation text-rose-600{% elif category == 'warning' %}fa-triangle-exclamation text-amber-600{% else %}fa-circle-info text-indigo-600{% endif %} text-sm"></i>
+                  <span>{{ message }}</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-700 p-1">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <!-- ================= MOBILE SEARCH MODAL ================= -->
+  <div id="mobileSearchModal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs p-4 hidden flex flex-col">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-700 text-white mb-3">
+      <span class="text-xs font-black uppercase tracking-wider">Universal Laboratory Search</span>
+      <button type="button" onclick="closeMobileSearchModal()" class="p-1 text-slate-400 hover:text-white">
+        <i class="fas fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <div class="relative mb-3">
+      <input 
+        type="text" 
+        id="mobileSearchInput" 
+        placeholder="Search patient, phone, order #, test..." 
+        class="w-full px-4 py-3 text-xs font-semibold text-white bg-slate-800 border border-slate-700 rounded-xl placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+        oninput="handleGlobalSearch(this.value, 'mobile')"
+      >
+    </div>
+    <div id="mobileSearchResultsList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2 text-xs">
+      <!-- Populated dynamically -->
+    </div>
+  </div>
+
+  <!-- Global Dashboard JavaScript -->
+  <script>
+    function toggleDashboardSidebar() {
+      const sidebar = document.getElementById('dashboardSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (sidebar && backdrop) {
+        sidebar.classList.toggle('-translate-x-full');
+        backdrop.classList.toggle('hidden');
+      }
+    }
+
+    function toggleNotificationDropdown() {
+      const dd = document.getElementById('notifDropdown');
+      const profileDd = document.getElementById('profileDropdown');
+      if (profileDd) profileDd.classList.add('hidden');
+      if (dd) dd.classList.toggle('hidden');
+    }
+
+    function toggleProfileDropdown() {
+      const dd = document.getElementById('profileDropdown');
+      const notifDd = document.getElementById('notifDropdown');
+      if (notifDd) notifDd.classList.add('hidden');
+      if (dd) dd.classList.toggle('hidden');
+    }
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', function(e) {
+      const notifBtn = document.getElementById('notifBellBtn');
+      const notifDd = document.getElementById('notifDropdown');
+      const profileBtn = document.getElementById('profileMenuBtn');
+      const profileDd = document.getElementById('profileDropdown');
+      const searchInput = document.getElementById('globalDashboardSearch');
+      const searchResults = document.getElementById('globalSearchResults');
+
+      if (notifBtn && notifDd && !notifBtn.contains(e.target) && !notifDd.contains(e.target)) {
+        notifDd.classList.add('hidden');
+      }
+      if (profileBtn && profileDd && !profileBtn.contains(e.target) && !profileDd.contains(e.target)) {
+        profileDd.classList.add('hidden');
+      }
+      if (searchInput && searchResults && !searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        searchResults.classList.add('hidden');
+      }
+    });
+
+    // Global keyboard shortcut (⌘K or / to search)
+    document.addEventListener('keydown', function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('globalDashboardSearch');
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+      } else if (e.key === 'Escape') {
+        const searchResults = document.getElementById('globalSearchResults');
+        if (searchResults) searchResults.classList.add('hidden');
+        closeMobileSearchModal();
+      }
+    });
+
+    function showSearchResultsDropdown() {
+      const searchInput = document.getElementById('globalDashboardSearch');
+      if (searchInput && searchInput.value.trim().length > 0) {
+        const dd = document.getElementById('globalSearchResults');
+        if (dd) dd.classList.remove('hidden');
+      }
+    }
+
+    function openMobileSearchModal() {
+      const modal = document.getElementById('mobileSearchModal');
+      const input = document.getElementById('mobileSearchInput');
+      if (modal) {
+        modal.classList.remove('hidden');
+        if (input) input.focus();
+      }
+    }
+
+    function closeMobileSearchModal() {
+      const modal = document.getElementById('mobileSearchModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Search Query Debounce & AJAX Handler
+    let searchTimeout = null;
+    function handleGlobalSearch(query, target = 'desktop') {
+      clearTimeout(searchTimeout);
+      const trimmed = query.trim();
+      const resultsContainer = target === 'mobile' 
+        ? document.getElementById('mobileSearchResultsList') 
+        : document.getElementById('searchResultsList');
+      const resultsDropdown = document.getElementById('globalSearchResults');
+
+      if (!trimmed) {
+        if (resultsDropdown) resultsDropdown.classList.add('hidden');
+        if (resultsContainer) resultsContainer.innerHTML = '';
+        return;
+      }
+
+      if (target === 'desktop' && resultsDropdown) resultsDropdown.classList.remove('hidden');
+
+      searchTimeout = setTimeout(() => {
+        fetch(`/api/pathology/search?q=${encodeURIComponent(trimmed)}`)
+          .then(res => res.json())
+          .then(data => {
+            renderSearchResults(data.results || [], resultsContainer, target);
+          })
+          .catch(err => {
+            console.error("Global search error:", err);
+          });
+      }, 200);
+    }
+
+    function renderSearchResults(results, container, target) {
+      if (!container) return;
+      if (results.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 text-center text-slate-400 text-xs">
+            <i class="fas fa-search text-slate-300 mb-1 block"></i>
+            No matching orders, patients, or tests found.
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      results.forEach(r => {
+        html += `
+          <a href="${r.url}" class="p-2.5 rounded-xl hover:bg-slate-100 flex items-center justify-between transition-colors block text-slate-800">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg ${r.badge_bg || 'bg-indigo-100 text-indigo-700'} flex items-center justify-center text-xs font-bold shrink-0">
+                <i class="${r.icon || 'fas fa-vial'}"></i>
+              </div>
+              <div>
+                <div class="font-bold text-slate-900 text-xs">${r.title}</div>
+                <div class="text-[10px] text-slate-500">${r.subtitle}</div>
+              </div>
+            </div>
+            <span class="badge ${r.pill_class || 'bg-slate-100 text-slate-700'} text-[10px] font-bold px-2 py-0.5 rounded-full">
+              ${r.category}
+            </span>
+          </a>
+        `;
+      });
+      container.innerHTML = html;
+    }
+  </script>
+
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

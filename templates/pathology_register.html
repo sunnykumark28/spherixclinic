@@ -1,10 +1,10 @@
 {% extends 'layout.html' %}
 
-{% block title %}Create Diagnostic Lab Account | Spherix Clinic{% endblock %}
+{% block title %}Pathology & Diagnostic Center Onboarding | Spherix Clinic{% endblock %}
 
 {% block content %}
 <style>
-    /* Minimalist floating underline input styling matching reference design */
+    /* Minimalist floating underline input styling matching doctor register design */
     .minimal-input-wrap {
         position: relative;
         transition: all 0.2s ease;
@@ -17,264 +17,586 @@
         padding: 0.5rem 0;
         font-size: 0.95rem;
         font-weight: 600;
-        color: #0f172a;
+        color: #000000;
         outline: none;
         transition: border-color 0.25s ease, box-shadow 0.25s ease;
     }
     .minimal-input:focus {
-        border-bottom-color: #0d9488;
-        box-shadow: 0 1px 0 0 #0d9488;
+        border-bottom-color: #0284c7;
+        box-shadow: 0 1px 0 0 #0284c7;
     }
     .minimal-label {
         font-size: 0.75rem;
         font-weight: 700;
-        color: #334155;
+        color: #0f172a;
         transition: color 0.2s ease;
     }
     .minimal-input-wrap:focus-within .minimal-label {
-        color: #0d9488;
+        color: #0284c7;
     }
-    .btn-teal-soft {
-        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
-        box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.4);
+    .btn-pill-soft {
+        background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
+        box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.4);
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .btn-teal-soft:hover {
-        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-        box-shadow: 0 14px 28px -4px rgba(15, 118, 110, 0.45);
+    .btn-pill-soft:hover {
+        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+        box-shadow: 0 14px 28px -4px rgba(2, 132, 199, 0.45);
         transform: translateY(-1px);
     }
     .step-fade-slide {
-        animation: slideStepIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: slideStepIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     @keyframes slideStepIn {
         0% {
             opacity: 0;
-            transform: translateX(12px);
+            transform: translateX(18px);
         }
         100% {
             opacity: 1;
             transform: translateX(0);
         }
     }
+    .otp-input-box {
+        letter-spacing: 0.6em;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
 </style>
 
-<div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-teal-500 selection:text-white"
+<div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-sky-400 selection:text-white"
      x-data="{ 
-        currentStep: 1,
-        totalSteps: 3,
+        currentStep: 1, 
+        totalSteps: 5, 
         showPass: false, 
         showConfirmPass: false, 
         isSubmitting: false,
         stepError: '',
+        otpCode: '',
+        generatedOtp: '482910',
+        otpSent: false,
+        resendCountdown: 45,
+        timerInterval: null,
         formData: {
             legal_name: '',
-            owner_name: '',
-            email: '',
-            phone: '',
-            lab_type: 'Independent Pathology Lab',
+            display_name: '',
+            org_type: 'Clinical Diagnostic Center',
+            license_number: '',
+            accreditation: 'NABL (ISO 15189)',
+            country: 'India',
+            currency: 'INR',
+            tax_rate_percent: '5.0',
+            center_name: '',
+            branch_name: 'Main Central Laboratory',
+            address: '',
             city: '',
-            password: '',
+            state_province: '',
+            postal_code: '',
+            org_email: '',
+            org_phone: '',
+            home_collection: true,
+            walkin: true,
+            collection_radius: '25',
+            collection_fee: '150',
+            min_order: '200',
+            admin_name: '',
+            admin_qualification: 'MD Pathology / Lab Director',
+            admin_license: '',
+            admin_email: '',
+            admin_phone: '',
+            admin_password: '',
             confirm_password: '',
             terms: true
+        },
+        startResendTimer() {
+            this.resendCountdown = 45;
+            if (this.timerInterval) clearInterval(this.timerInterval);
+            this.timerInterval = setInterval(() => {
+                if (this.resendCountdown > 0) {
+                    this.resendCountdown--;
+                } else {
+                    clearInterval(this.timerInterval);
+                }
+            }, 1000);
+        },
+        triggerOtpDispatch() {
+            this.generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+            this.otpSent = true;
+            this.startResendTimer();
         },
         validateCurrentStep() {
             this.stepError = '';
             if (this.currentStep === 1) {
                 if (!this.formData.legal_name.trim()) {
-                    this.stepError = 'Please enter your diagnostic center or laboratory name.';
+                    this.stepError = 'Please enter your organization legal name.';
                     return false;
                 }
-                if (!this.formData.owner_name.trim()) {
-                    this.stepError = 'Please enter the medical director or authorized owner name.';
+                if (!this.formData.license_number.trim()) {
+                    this.stepError = 'Please enter your clinical establishment or lab license number.';
+                    return false;
+                }
+                if (!this.formData.country) {
+                    this.stepError = 'Please select your operating country.';
                     return false;
                 }
                 return true;
             } else if (this.currentStep === 2) {
-                if (!this.formData.email.trim() || !this.formData.email.includes('@')) {
-                    this.stepError = 'Please enter a valid official laboratory email address.';
-                    return false;
-                }
-                if (!this.formData.phone.trim()) {
-                    this.stepError = 'Please enter a valid primary contact phone number.';
+                if (!this.formData.address.trim()) {
+                    this.stepError = 'Please enter the center street address.';
                     return false;
                 }
                 if (!this.formData.city.trim()) {
-                    this.stepError = 'Please enter the city or district.';
+                    this.stepError = 'Please enter the operational city / district.';
+                    return false;
+                }
+                if (!this.formData.postal_code.trim()) {
+                    this.stepError = 'Please enter your area PIN / Postal code.';
+                    return false;
+                }
+                if (!this.formData.org_email.trim() || !this.formData.org_email.includes('@')) {
+                    this.stepError = 'Please enter a valid laboratory center email.';
+                    return false;
+                }
+                if (!this.formData.org_phone.trim()) {
+                    this.stepError = 'Please enter the center phone number.';
                     return false;
                 }
                 return true;
             } else if (this.currentStep === 3) {
-                if (!this.formData.password) {
-                    this.stepError = 'Please enter an account password.';
+                if (!this.formData.collection_radius || parseFloat(this.formData.collection_radius) <= 0) {
+                    this.stepError = 'Please specify a valid operational collection radius in km.';
                     return false;
                 }
-                if (this.formData.password.length < 8) {
-                    this.stepError = 'Password must contain at least 8 characters.';
+                return true;
+            } else if (this.currentStep === 4) {
+                if (!this.formData.admin_name.trim()) {
+                    this.stepError = 'Please enter the Chief Pathologist or Lab Administrator name.';
                     return false;
                 }
-                if (this.formData.password !== this.formData.confirm_password) {
+                if (!this.formData.admin_email.trim() || !this.formData.admin_email.includes('@')) {
+                    this.stepError = 'Please enter a valid admin email for login.';
+                    return false;
+                }
+                if (!this.formData.admin_password || this.formData.admin_password.length < 6) {
+                    this.stepError = 'Password must be at least 6 characters long.';
+                    return false;
+                }
+                if (this.formData.admin_password !== this.formData.confirm_password) {
                     this.stepError = 'Passwords do not match.';
                     return false;
                 }
                 if (!this.formData.terms) {
-                    this.stepError = 'You must agree to the Terms of Service & Partner Agreement.';
+                    this.stepError = 'You must agree to the Laboratory Quality & HIPAA protocols.';
+                    return false;
+                }
+                return true;
+            } else if (this.currentStep === 5) {
+                if (!this.otpCode || this.otpCode.trim().length < 6) {
+                    this.stepError = 'Please enter the 6-digit verification code sent to your email.';
                     return false;
                 }
                 return true;
             }
             return true;
         },
-        nextStep() {
+        goToNextStep() {
             if (this.validateCurrentStep()) {
+                if (this.currentStep === 1 && !this.formData.center_name) {
+                    this.formData.center_name = this.formData.legal_name;
+                }
+                if (this.currentStep === 4) {
+                    this.triggerOtpDispatch();
+                }
                 if (this.currentStep < this.totalSteps) {
                     this.currentStep++;
                 }
             }
         },
-        prevStep() {
+        goToPrevStep() {
             this.stepError = '';
             if (this.currentStep > 1) {
                 this.currentStep--;
             }
+        },
+        handleFormSubmit(e) {
+            if (!this.validateCurrentStep()) {
+                e.preventDefault();
+                return false;
+            }
+            this.isSubmitting = true;
         }
      }">
 
     <!-- Main Clean Minimalist Card Container (Two Columns: 5/12 Form, 7/12 Large Image) -->
     <div class="w-full max-w-[1500px] bg-white rounded-3xl p-6 sm:p-10 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
 
-        <!-- ================= COLUMN 1: Form ================= -->
+        <!-- ================= COLUMN 1: Multi-Step Registration Form ================= -->
         <div class="w-full lg:col-span-5 max-w-xl mx-auto lg:mx-0 flex flex-col justify-center lg:border-r lg:border-slate-200 lg:pr-12">
 
             <!-- Switcher Tabs -->
             <div class="flex items-center gap-6 mb-6 border-b border-slate-200 pb-3">
                 <a href="{{ url_for('pathology.pathology_register') }}" 
-                   class="text-xs font-bold uppercase tracking-wider text-teal-600 border-b-2 border-teal-500 pb-3 -mb-3.5 transition-colors">
-                    Create Account
+                   class="text-xs font-bold uppercase tracking-wider text-sky-600 border-b-2 border-sky-500 pb-3 -mb-3.5 transition-colors">
+                    Register Lab Center
                 </a>
                 <a href="{{ url_for('pathology.pathology_login') }}" 
                    class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors">
-                    Lab Sign In
+                    Pathology Sign In
                 </a>
                 <a href="{{ url_for('login_landing') }}" 
                    class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors ml-auto">
                     All Portals &rarr;
                 </a>
             </div>
-
-            <!-- 3-Slide Step Progress Indicator -->
+            <!-- Step Progress Indicator Bar -->
             <div class="mb-6">
-                <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
-                    <span class="uppercase tracking-wider">Step <span x-text="currentStep"></span> of 3</span>
-                    <span class="text-teal-600 font-semibold" x-show="currentStep === 1">1. Laboratory Identity</span>
-                    <span class="text-teal-600 font-semibold" x-show="currentStep === 2" style="display: none;">2. Contact Information</span>
-                    <span class="text-teal-600 font-semibold" x-show="currentStep === 3" style="display: none;">3. Security &amp; Completion</span>
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-600 text-white text-[11px] font-extrabold" x-text="currentStep"></span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-900" 
+                              x-text="currentStep === 1 ? 'Organization & Accreditations' : (currentStep === 2 ? 'Center Location & Catchment' : (currentStep === 3 ? 'Services & Phlebotomy' : (currentStep === 4 ? 'Administrator Account' : 'Security OTP Verification')))"></span>
+                    </div>
+                    <span class="text-xs font-bold text-slate-500" x-text="`Step ${currentStep} of ${totalSteps}`"></span>
                 </div>
-                <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full bg-teal-500 transition-all duration-300"
-                         :style="'width: ' + ((currentStep / totalSteps) * 100) + '%'"></div>
+                <!-- 5 Segment Progress Track -->
+                <div class="grid grid-cols-5 gap-1.5">
+                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 1 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 2 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 3 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 4 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 5 ? 'bg-sky-500' : 'bg-slate-200'"></div>
                 </div>
             </div>
 
             <!-- Heading & Subtitle -->
             <div class="mb-6">
-                <h1 class="text-3xl sm:text-4xl font-extrabold text-black tracking-tight leading-tight">
-                    Register your diagnostic <br>
-                    <span class="text-teal-600">center with Spherix.</span>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 1">
+                    Register Your <br><span class="text-sky-500">Pathology Organization.</span>
                 </h1>
-                <p class="text-slate-700 text-sm font-medium mt-3 leading-relaxed">
-                    Join the premier digital diagnostics network to receive doctor referrals, accept patient bookings, and publish digital test reports.
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 2" style="display: none;">
+                    Laboratory Location &amp; <br><span class="text-sky-500">Area Catchment.</span>
+                </h1>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 3" style="display: none;">
+                    Phlebotomy &amp; <br><span class="text-sky-500">Service Coverage.</span>
+                </h1>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 4" style="display: none;">
+                    Chief Pathologist &amp; <br><span class="text-sky-500">Admin Account.</span>
+                </h1>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 5" style="display: none;">
+                    Verify Security <br><span class="text-sky-500">One-Time Password.</span>
+                </h1>
+                <p class="text-slate-600 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
+                    <span x-show="currentStep === 1">Enter your legal diagnostic center credentials, statutory license number, and quality accreditations.</span>
+                    <span x-show="currentStep === 2" style="display: none;">Set your main facility location, postal code, and direct dispatch contacts to receive patient test orders in your area.</span>
+                    <span x-show="currentStep === 3" style="display: none;">Configure home sample collection radius, collection fees, and walk-in patient queue capabilities.</span>
+                    <span x-show="currentStep === 4" style="display: none;">Create your master administrator account to access your dedicated lab operations dashboard and digital reports.</span>
+                    <span x-show="currentStep === 5" style="display: none;">We've dispatched a 6-digit authentication PIN to verify your administrator credentials.</span>
                 </p>
             </div>
 
-            <!-- Step Error Banner -->
-            <div x-show="stepError" style="display: none;" class="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs font-bold flex items-center gap-2.5">
-                <i class="fas fa-exclamation-circle text-rose-600 flex-shrink-0"></i>
+            <!-- Step Validation Error Alert -->
+            <div x-show="stepError" x-transition class="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2" style="display: none;">
+                <i class="fas fa-circle-exclamation text-rose-600 text-sm flex-shrink-0"></i>
                 <span x-text="stepError"></span>
             </div>
 
-            <!-- 3-Slide Registration Form -->
-            <form method="POST" action="{{ url_for('pathology.pathology_register') }}" class="space-y-5" id="pathologyRegisterForm" @submit="if (!validateCurrentStep()) { $event.preventDefault(); } else { isSubmitting = true; }">
+            <!-- Flash Notification Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6 space-y-2.5">
+                        {% for category, message in messages %}
+                            <div class="flex items-center gap-3 text-xs p-3.5 rounded-xl {{ 'bg-emerald-50 text-emerald-900 border border-emerald-300' if category == 'success' else 'bg-rose-50 text-rose-900 border border-rose-300' }}">
+                                <i class="fas {{ 'fa-check-circle text-emerald-600' if category == 'success' else 'fa-circle-exclamation text-rose-600' }} text-sm flex-shrink-0"></i>
+                                <span class="font-bold">{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Multi-Step Form Container -->
+            <form method="POST" action="{{ url_for('pathology.pathology_register') }}" 
+                  enctype="multipart/form-data" 
+                  id="pathologyRegisterForm" 
+                  @submit="handleFormSubmit($event)">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="otp_code" :value="otpCode">
 
-                <!-- ================= SLIDE 1: First Two Options ================= -->
+                <!-- ================= STEP 1: Organization & Accreditation ================= -->
                 <div x-show="currentStep === 1" class="step-fade-slide space-y-5">
-                    <!-- Option 1: Diagnostic Center / Laboratory Name -->
+                    <!-- Social Registration Options (Google, Microsoft & Apple) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
+                        <a href="{{ url_for('google_login', role='pathology') }}" 
+                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Google">
+                            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                            </svg>
+                            <span>Google</span>
+                        </a>
+                        <a href="{{ url_for('microsoft_login', role='pathology') }}" 
+                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Microsoft">
+                            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 23 23">
+                                <path fill="#f35325" d="M1 1h10v10H1z"/>
+                                <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                                <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                                <path fill="#ffba08" d="M12 12h10v10H12z"/>
+                            </svg>
+                            <span>Microsoft</span>
+                        </a>
+                        <a href="{{ url_for('apple_login', role='pathology') }}" 
+                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl border border-black bg-black hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Apple">
+                            <i class="fab fa-apple text-base flex-shrink-0"></i>
+                            <span>Apple</span>
+                        </a>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="relative flex items-center justify-center mb-5">
+                        <div class="border-t border-slate-300 w-full"></div>
+                        <span class="bg-white px-3 text-[11px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">or register with center details</span>
+                    </div>
+
                     <div class="minimal-input-wrap">
-                        <label class="minimal-label block">Diagnostic Center / Laboratory Name *</label>
-                        <input type="text" name="legal_name" x-model="formData.legal_name" required placeholder="e.g. Apex Diagnostic & Pathology Center"
+                        <label class="minimal-label block">Organization Legal Name</label>
+                        <input type="text" name="legal_name" x-model="formData.legal_name" required 
+                               placeholder="e.g. Apex Diagnostics &amp; Research Labs Pvt Ltd"
                                class="minimal-input placeholder:text-slate-400">
                     </div>
 
-                    <!-- Option 2: Medical Director / Authorized Owner Name -->
-                    <div class="minimal-input-wrap">
-                        <label class="minimal-label block">Medical Director / Authorized Owner Name *</label>
-                        <input type="text" name="owner_name" x-model="formData.owner_name" required placeholder="e.g. Dr. Rajesh Sharma, MD Pathology"
-                               class="minimal-input placeholder:text-slate-400">
-                    </div>
-                </div>
-
-                <!-- ================= SLIDE 2: Contact Information ================= -->
-                <div x-show="currentStep === 2" style="display: none;" class="step-fade-slide space-y-5">
-                    <!-- Email & Phone Grid -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div class="minimal-input-wrap">
-                            <label class="minimal-label block">Official Lab Email *</label>
-                            <input type="email" name="email" x-model="formData.email" required placeholder="contact@apexlabs.com"
+                            <label class="minimal-label block">Brand / Display Name</label>
+                            <input type="text" name="display_name" x-model="formData.display_name"
+                                   placeholder="e.g. Apex Diagnostics"
                                    class="minimal-input placeholder:text-slate-400">
                         </div>
-                        <div class="minimal-input-wrap">
-                            <label class="minimal-label block">Contact Phone Number *</label>
-                            <input type="tel" name="phone" x-model="formData.phone" required placeholder="+91 98765 43210"
-                                   class="minimal-input placeholder:text-slate-400">
-                        </div>
-                    </div>
 
-                    <!-- Facility Type & City Grid -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="minimal-input-wrap">
-                            <label class="minimal-label block">Laboratory Type *</label>
-                            <select name="lab_type" x-model="formData.lab_type" required class="minimal-input bg-transparent text-slate-900 font-semibold cursor-pointer">
-                                <option value="Independent Pathology Lab">Independent Pathology Lab</option>
-                                <option value="Hospital Diagnostic Center">Hospital Diagnostic Center</option>
-                                <option value="Collection Center & Phlebotomy Point">Collection Center &amp; Phlebotomy Point</option>
-                                <option value="Molecular & Research Laboratory">Molecular &amp; Research Laboratory</option>
+                            <label class="minimal-label block">Facility Type</label>
+                            <select name="org_type" x-model="formData.org_type" class="minimal-input bg-white cursor-pointer">
+                                <option value="Clinical Diagnostic Center">Clinical Diagnostic Center</option>
+                                <option value="National Reference Laboratory">National Reference Laboratory</option>
+                                <option value="Hospital Pathology Department">Hospital Pathology Department</option>
+                                <option value="Molecular &amp; Genomics Lab">Molecular &amp; Genomics Lab</option>
+                                <option value="Patient Service Center (PSC)">Patient Service Center (PSC)</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div class="minimal-input-wrap">
-                            <label class="minimal-label block">City / District *</label>
-                            <input type="text" name="city" x-model="formData.city" required placeholder="e.g. Motihari, Patna, Delhi"
+                            <label class="minimal-label block">Clinical License / Registration #</label>
+                            <input type="text" name="license_number" x-model="formData.license_number" required 
+                                   placeholder="e.g. DL-LAB-2026-8942"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Primary Accreditation</label>
+                            <select name="accreditation" x-model="formData.accreditation" class="minimal-input bg-white cursor-pointer">
+                                <option value="NABL (ISO 15189)">NABL (ISO 15189) Accredited</option>
+                                <option value="CAP Accredited">CAP (College of American Pathologists)</option>
+                                <option value="ISO 9001:2015">ISO 9001:2015 Certified</option>
+                                <option value="State Health Department">State Health Dept. Licensed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Country</label>
+                            <select name="country" x-model="formData.country" class="minimal-input bg-white cursor-pointer">
+                                <option value="India">India</option>
+                                <option value="United States">United States</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                                <option value="United Arab Emirates">United Arab Emirates</option>
+                                <option value="Singapore">Singapore</option>
+                                <option value="Canada">Canada</option>
+                                <option value="Australia">Australia</option>
+                                <option value="Germany">Germany</option>
+                            </select>
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Billing Currency</label>
+                            <select name="currency" x-model="formData.currency" class="minimal-input bg-white cursor-pointer">
+                                <option value="INR">INR (₹)</option>
+                                <option value="USD">USD ($)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="GBP">GBP (£)</option>
+                                <option value="AED">AED (د.إ)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= STEP 2: Center Location & Contact ================= -->
+                <div x-show="currentStep === 2" class="step-fade-slide space-y-5" style="display: none;">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Center Name</label>
+                            <input type="text" name="center_name" x-model="formData.center_name" required 
+                                   placeholder="e.g. Apex Reference Lab - South Delhi"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Branch / Unit Designation</label>
+                            <input type="text" name="branch_name" x-model="formData.branch_name" 
+                                   placeholder="e.g. Main Central Facility"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                    </div>
+
+                    <div class="minimal-input-wrap">
+                        <label class="minimal-label block">Physical Street Address</label>
+                        <input type="text" name="address" x-model="formData.address" required 
+                               placeholder="e.g. 14 Institutional Area, Hauz Khas"
+                               class="minimal-input placeholder:text-slate-400">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">City / District</label>
+                            <input type="text" name="city" x-model="formData.city" required 
+                                   placeholder="e.g. New Delhi"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">State / Province</label>
+                            <input type="text" name="state_province" x-model="formData.state_province"
+                                   placeholder="e.g. Delhi"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Postal / PIN Code</label>
+                            <input type="text" name="postal_code" x-model="formData.postal_code" required 
+                                   placeholder="e.g. 110016"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Center Support Email</label>
+                            <input type="email" name="org_email" x-model="formData.org_email" required 
+                                   placeholder="ops@apexdiagnostics.com"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Center Dispatch Phone</label>
+                            <input type="tel" name="org_phone" x-model="formData.org_phone" required 
+                                   placeholder="+91 98765 43210"
                                    class="minimal-input placeholder:text-slate-400">
                         </div>
                     </div>
                 </div>
 
-                <!-- ================= SLIDE 3: Last Options (Password & Terms) ================= -->
-                <div x-show="currentStep === 3" style="display: none;" class="step-fade-slide space-y-5">
-                    <!-- Password & Confirm Password Grid -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- ================= STEP 3: Phlebotomy & Services ================= -->
+                <div x-show="currentStep === 3" class="step-fade-slide space-y-5" style="display: none;">
+                    <div class="p-4 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-slate-900 block">Home Sample Collection Fleet</span>
+                            <span class="text-xxs text-slate-600">Dispatch certified phlebotomists to patient doorsteps in your catchment area.</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="home_collection" x-model="formData.home_collection" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-show="formData.home_collection">
                         <div class="minimal-input-wrap">
-                            <label class="minimal-label block">Account Password *</label>
+                            <label class="minimal-label block">Collection Radius (km)</label>
+                            <input type="number" name="collection_radius" x-model="formData.collection_radius" min="1" max="150"
+                                   placeholder="25"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Collection Fee (₹)</label>
+                            <input type="number" name="collection_fee" x-model="formData.collection_fee" min="0" step="10"
+                                   placeholder="150"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Min. Order Amount (₹)</label>
+                            <input type="number" name="min_order" x-model="formData.min_order" min="0" step="50"
+                                   placeholder="200"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                    </div>
+
+                    <div class="minimal-input-wrap pt-2">
+                        <label class="minimal-label block">Upload Operating License / NABL Certificate (PDF/PNG)</label>
+                        <input type="file" name="license_doc" accept=".pdf,.png,.jpg,.jpeg"
+                               class="text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer w-full mt-2">
+                    </div>
+                </div>
+
+                <!-- ================= STEP 4: Administrator Account ================= -->
+                <div x-show="currentStep === 4" class="step-fade-slide space-y-5" style="display: none;">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Chief Pathologist / Lab Director</label>
+                            <input type="text" name="admin_name" x-model="formData.admin_name" required 
+                                   placeholder="Dr. Rajesh Mehra"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Medical Council Registration #</label>
+                            <input type="text" name="admin_license" x-model="formData.admin_license"
+                                   placeholder="MCI-184920"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Master Admin Login Email</label>
+                            <input type="email" name="admin_email" x-model="formData.admin_email" required 
+                                   placeholder="director@apexdiagnostics.com"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Admin Mobile Phone</label>
+                            <input type="tel" name="admin_phone" x-model="formData.admin_phone"
+                                   placeholder="+91 98111 22334"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div class="minimal-input-wrap">
+                            <label class="minimal-label block">Portal Password</label>
                             <div class="relative">
-                                <input :type="showPass ? 'text' : 'password'" name="password" id="labRegPassword" x-model="formData.password" required minlength="8"
+                                <input :type="showPass ? 'text' : 'password'" name="admin_password" x-model="formData.admin_password" required 
                                        placeholder="••••••••••••"
                                        class="minimal-input pr-8 placeholder:text-slate-400">
                                 <button type="button" @click="showPass = !showPass" 
                                         class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
-                                    <i class="fas text-xs" :class="showPass ? 'fa-eye-slash text-teal-600' : 'fa-eye'"></i>
+                                    <i class="fas text-xs" :class="showPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
                                 </button>
                             </div>
                         </div>
 
                         <div class="minimal-input-wrap">
-                            <label class="minimal-label block">Confirm Password *</label>
+                            <label class="minimal-label block">Confirm Password</label>
                             <div class="relative">
-                                <input :type="showConfirmPass ? 'text' : 'password'" name="confirm_password" id="labRegConfirmPassword" x-model="formData.confirm_password" required minlength="8"
+                                <input :type="showConfirmPass ? 'text' : 'password'" name="confirm_password" x-model="formData.confirm_password" required 
                                        placeholder="••••••••••••"
                                        class="minimal-input pr-8 placeholder:text-slate-400">
                                 <button type="button" @click="showConfirmPass = !showConfirmPass" 
                                         class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
-                                    <i class="fas text-xs" :class="showConfirmPass ? 'fa-eye-slash text-teal-600' : 'fa-eye'"></i>
+                                    <i class="fas text-xs" :class="showConfirmPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
                                 </button>
                             </div>
                         </div>
@@ -282,44 +604,99 @@
 
                     <!-- Terms Checkbox -->
                     <div class="flex items-center gap-3 pt-2">
-                        <input id="terms" name="terms" type="checkbox" x-model="formData.terms" required
-                               class="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer">
-                        <label for="terms" class="text-xs text-slate-800 font-medium select-none cursor-pointer">
-                            I agree to the <a href="/legal/terms" target="_blank" class="text-teal-600 hover:underline font-bold">Terms of Service</a> &amp; Diagnostic Partner Agreement
+                        <input id="reg_terms" name="terms" type="checkbox" x-model="formData.terms" required checked
+                               class="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer">
+                        <label for="reg_terms" class="text-xs text-slate-800 font-medium select-none cursor-pointer">
+                            I verify that all licensing credentials are valid and agree to the <a href="/legal/privacy" target="_blank" class="text-sky-600 hover:underline font-bold">Diagnostic Network Agreement &amp; Protocols</a>
                         </label>
                     </div>
                 </div>
 
-                <!-- Slide Navigation Controls -->
-                <div class="flex items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                    <button type="button" @click="prevStep()" x-show="currentStep > 1"
-                            class="px-6 py-3 rounded-full border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-all cursor-pointer">
-                        &larr; Back
-                    </button>
-                    <div x-show="currentStep === 1"></div>
+                <!-- ================= STEP 5: Security OTP Verification Slide ================= -->
+                <div x-show="currentStep === 5" class="step-fade-slide space-y-6" style="display: none;">
+                    
+                    <div class="p-4 rounded-2xl bg-sky-50 border border-sky-100 flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
+                            <i class="fas fa-shield-halved"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-slate-900 block">Verification Code Sent</span>
+                            <span class="text-xxs text-slate-600">
+                                A 6-digit authentication PIN has been dispatched to:
+                                <strong class="text-sky-800 block mt-0.5" x-text="formData.admin_email || 'your email'"></strong>
+                            </span>
+                        </div>
+                    </div>
 
-                    <!-- Next Button for Slides 1 & 2 -->
-                    <button type="button" @click="nextStep()" x-show="currentStep < totalSteps"
-                            class="btn-teal-soft px-8 py-3.5 rounded-full text-white font-bold text-xs tracking-wide transition-all cursor-pointer ml-auto">
-                        <span x-show="currentStep === 1">Continue to Contact Info &rarr;</span>
-                        <span x-show="currentStep === 2">Continue to Security &rarr;</span>
-                    </button>
+                    <!-- Monospace Minimalist OTP Code Field -->
+                    <div class="minimal-input-wrap">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="minimal-label block">Enter 6-Digit Verification PIN</label>
+                            <span class="text-[10px] text-slate-500 font-bold">Numeric only</span>
+                        </div>
+                        <input type="text" maxlength="6" x-model="otpCode" required
+                               placeholder="••••••"
+                               class="minimal-input otp-input-box text-2xl font-bold tracking-widest text-center py-2 text-slate-950 placeholder:text-slate-300">
+                    </div>
 
-                    <!-- Submit Button for Slide 3 -->
-                    <button type="submit" :disabled="isSubmitting" x-show="currentStep === totalSteps" style="display: none;"
-                            class="btn-teal-soft px-10 py-3.5 rounded-full text-white font-bold text-xs tracking-wide transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2 ml-auto">
-                        <span x-show="!isSubmitting">Create Diagnostic Center Account</span>
-                        <span x-show="isSubmitting" style="display: none;" class="flex items-center gap-2">
-                            <i class="fas fa-circle-notch fa-spin text-xs"></i>
-                            <span>Creating Account...</span>
-                        </span>
-                    </button>
+                    <!-- Quick Fill Pill & Countdown Timer -->
+                    <div class="flex items-center justify-between pt-1">
+                        <button type="button" @click="otpCode = generatedOtp"
+                                class="text-xxs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-800 font-bold border border-sky-200 hover:bg-sky-100 transition-colors flex items-center gap-1.5 cursor-pointer">
+                            <i class="fas fa-key text-sky-600"></i>
+                            <span>Auto-fill Verification PIN (<strong x-text="generatedOtp"></strong>)</span>
+                        </button>
+
+                        <div class="text-xs font-bold text-slate-500">
+                            <span x-show="resendCountdown > 0">Resend in <strong class="text-sky-600" x-text="`${resendCountdown}s`"></strong></span>
+                            <button type="button" x-show="resendCountdown === 0" @click="triggerOtpDispatch()" style="display: none;"
+                                    class="text-sky-600 hover:text-sky-800 hover:underline font-extrabold cursor-pointer">
+                                Resend PIN Code
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xxs text-slate-500 space-y-1">
+                        <div class="flex items-center gap-1.5 font-bold text-slate-700">
+                            <i class="fas fa-lock text-sky-600"></i>
+                            <span>Enterprise Security Standard</span>
+                        </div>
+                        <p>Completing verification will automatically provision your diagnostic laboratory tenant, isolate order tables, and grant instant operations desk access.</p>
+                    </div>
                 </div>
+
+                <!-- Navigation Controls (Back / Next / Submit) -->
+                <div class="pt-8 flex items-center justify-between gap-4">
+                    <button type="button" @click="goToPrevStep()" x-show="currentStep > 1"
+                            class="px-6 py-3 rounded-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center gap-2">
+                        <i class="fas fa-arrow-left text-xxs"></i> Back
+                    </button>
+
+                    <div class="ml-auto">
+                        <!-- Next Step Button -->
+                        <button type="button" @click="goToNextStep()" x-show="currentStep < totalSteps"
+                                class="btn-pill-soft px-8 py-3.5 rounded-full text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center gap-2">
+                            <span x-text="currentStep === 4 ? 'Verify via OTP' : 'Continue'"></span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </button>
+
+                        <!-- Submit Registration Button -->
+                        <button type="submit" x-show="currentStep === totalSteps" :disabled="isSubmitting" style="display: none;"
+                                class="btn-pill-soft px-10 py-3.5 rounded-full text-white font-bold text-sm tracking-wide transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                            <span x-show="!isSubmitting">Complete Laboratory Registration</span>
+                            <span x-show="isSubmitting" style="display: none;" class="flex items-center gap-2">
+                                <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                                <span>Registering Center...</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
             </form>
 
-            <!-- Footer Sign In CTA -->
+            <!-- Bottom Note -->
             <div class="mt-8 text-xs text-slate-700">
-                <span>Already registered your diagnostic center? <a href="{{ url_for('pathology.pathology_login') }}" class="text-teal-600 hover:underline font-bold">Sign in here</a></span>
+                <span>Already registered your diagnostic center? <a href="{{ url_for('pathology.pathology_login') }}" class="text-sky-600 hover:underline font-bold">Sign In to Lab Portal</a></span>
             </div>
 
         </div>
@@ -328,8 +705,8 @@
         <div class="w-full lg:col-span-7 lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex items-center justify-center p-0 self-start lg:pl-6">
             <div class="relative w-full h-full flex items-center justify-center">
                 <img src="{{ url_for('static', filename='images/pathology_lab_art.jpg') }}" 
-                     alt="Pathology & Diagnostic Laboratory" 
-                     class="w-full h-full max-h-[85vh] object-contain select-none pointer-events-none border-0 shadow-none rounded-2xl">
+                     alt="Pathology Center Onboarding" 
+                     class="w-full h-full max-h-[85vh] object-contain rounded-3xl select-none pointer-events-none border-0 shadow-2xl">
             </div>
         </div>
 

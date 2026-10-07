@@ -396,7 +396,7 @@
             <h5 class="fw-bold text-slate-800 mb-3"><i class="fas fa-user-circle text-primary me-2"></i>Staff Identity</h5>
             <div class="text-center py-2">
                 {% if staff.profile_picture_url %}
-                <img src="{{ staff.profile_picture_url }}" alt="Profile" class="w-20 h-20 rounded-circle object-cover mx-auto mb-2 border shadow-sm">
+                <img src="{{ url_for('static', filename='uploads/' + staff.profile_picture_url) if not (staff.profile_picture_url.startswith('http://') or staff.profile_picture_url.startswith('https://') or staff.profile_picture_url.startswith('/')) else staff.profile_picture_url }}" alt="Profile" class="w-20 h-20 rounded-circle object-cover mx-auto mb-2 border shadow-sm" onerror="this.onerror=null; this.src='/uploads/{{ staff.profile_picture_url }}';">
                 {% else %}
                 <div class="w-20 h-20 rounded-circle bg-primary text-white fs-2 fw-bold d-flex align-items-center justify-content-center mx-auto mb-2 shadow-sm">
                     {{ staff.name[:1] }}
@@ -655,9 +655,35 @@
                 <h5 class="modal-title fw-bold"><i class="fas fa-user-edit text-primary me-2"></i>Update Staff Profile</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('staff.staff_update_profile') }}" method="POST">
+            <form action="{{ url_for('staff.staff_update_profile') }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="cropped_profile_image" id="staffCroppedAvatar">
                 <div class="modal-body p-4 space-y-3">
+                    
+                    <!-- Staff Avatar Upload & Crop Section -->
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <label class="form-label small fw-bold d-block mb-1">Staff Profile Photo</label>
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="position-relative flex-shrink-0">
+                                {% if staff.profile_picture_url %}
+                                <img src="{{ url_for('static', filename='uploads/' + staff.profile_picture_url) if not (staff.profile_picture_url.startswith('http://') or staff.profile_picture_url.startswith('https://') or staff.profile_picture_url.startswith('/')) else staff.profile_picture_url }}" id="staffEditAvatarPreview" class="rounded-circle border shadow-sm object-cover" style="width: 64px; height: 64px;" alt="{{ staff.name }}" onerror="this.onerror=null; this.src='/uploads/{{ staff.profile_picture_url }}';">
+                                {% else %}
+                                <div id="staffEditAvatarPreviewPlaceholder" class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center shadow-sm" style="width: 64px; height: 64px; font-size: 22px;">
+                                    {{ staff.name[:1] }}
+                                </div>
+                                <img id="staffEditAvatarPreview" class="rounded-circle border shadow-sm object-cover d-none" style="width: 64px; height: 64px;" alt="{{ staff.name }}">
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <input type="file" name="profilePicture" id="staffProfilePicInput" class="crop-image-input d-none" accept="image/*" data-crop-image="true" data-crop-target="staffCroppedAvatar" data-preview-target="staffEditAvatarPreview">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold" onclick="document.getElementById('staffProfilePicInput').click()">
+                                    <i class="fas fa-crop-alt me-1.5"></i> Adjust &amp; Crop Photo
+                                </button>
+                                <small class="text-muted d-block mt-1" style="font-size: 11px;">Zoom, rotate, and align for Hospital Staff ID Badge</small>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="form-label small fw-bold">Full Name</label>
                         <input type="text" name="name" class="form-control" value="{{ staff.name }}" required>
