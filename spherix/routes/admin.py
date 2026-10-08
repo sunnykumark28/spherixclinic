@@ -85,6 +85,11 @@ try:
 except ImportError:
     DISEASE_CATALOG = {}
 
+try:
+    from spherix.routes.pharmacy_constants import MEDICINE_LIST
+except ImportError:
+    MEDICINE_LIST = []
+
 admin_bp = Blueprint('admin', __name__)
 
 

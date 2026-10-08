@@ -229,7 +229,7 @@
                 <h2 class="text-lg font-black text-stone-900 flex items-center gap-2">
                     <i class="fas fa-leaf text-emerald-600"></i> Clinical Ayurvedic Domains
                 </h2>
-                <span class="text-xs text-stone-500 font-semibold" id="ayurResultsCountLabel">Showing top verified conditions</span>
+                <span class="text-xs text-stone-500 font-semibold" id="ayurResultsCountLabel">Found {{ total_ayur_count }} Ayurvedic conditions • Showing {{ featured_conditions|length }}</span>
             </div>
 
             <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scroll no-scrollbar">
@@ -350,13 +350,13 @@
             </div>
 
             <!-- Load More Button -->
-            <div class="text-center pt-8" id="loadMoreAyurBox">
+            <div class="text-center pt-8 {% if total_ayur_pages and total_ayur_pages <= 1 %}hidden{% endif %}" id="loadMoreAyurBox">
                 <button type="button" onclick="loadMoreAyurDiseases();" id="loadMoreAyurBtn" class="px-6 py-3 rounded-2xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs transition-all cursor-pointer inline-flex items-center gap-2">
                     <span>Load More Vedic Conditions</span>
                     <i class="fas fa-chevron-down text-[10px]"></i>
                 </button>
                 <div class="text-[11px] text-stone-400 font-semibold mt-2" id="ayurProgressLabel">
-                    Showing top verified conditions • Powered by AyurGenixAI
+                    Showing {{ featured_conditions|length }} of {{ total_ayur_count }} conditions (Page 1 of {{ total_ayur_pages }})
                 </div>
             </div>
         </section>
@@ -957,7 +957,8 @@
     let currentAyurDosha = 'all';
     let currentAyurCategory = 'all';
     let currentAyurPage = 1;
-    let totalAyurPages = 1;
+    let totalAyurPages = parseInt('{{ total_ayur_pages | default(16) }}', 10) || 16;
+    let totalAyurCount = parseInt('{{ total_ayur_count | default(367) }}', 10) || 367;
     let ayurDebounceTimer = null;
     let activeAyurConditionData = null;
     let isAyurFullscreen = false;
@@ -1017,8 +1018,10 @@
         const doshaClass = (dis.doshas || '').includes('Vata') ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 
                            ((dis.doshas || '').includes('Pitta') ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-teal-50 text-teal-800 border-teal-200');
 
+        const disIdClean = (dis.id || '').replace(/'/g, "\\'");
+
         return `
-            <div class="ayur-card p-6 cursor-pointer group" onclick="openAyurMonographModal('${escapeHtml(dis.id)}');">
+            <div class="ayur-card p-6 cursor-pointer group" onclick="openAyurMonographModal('${disIdClean}');">
                 <div>
                     <div class="flex items-center justify-between gap-2 mb-3">
                         <span class="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-200">

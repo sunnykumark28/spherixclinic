@@ -487,11 +487,14 @@ Required JSON keys:
 
 @clinical_ai_bp.route("/ayurveda")
 def ayurveda():
-    featured = get_featured_ayurveda_conditions()
+    res = search_ayurveda_catalog(query="", dosha="all", category="all", page=1, limit=24)
+    total_count = res.get('total') or len(ALL_AYUR_DISEASES) or 367
+    total_pages = res.get('total_pages') or max(1, (total_count + 23) // 24)
     return render_template(
         "ayurveda.html",
-        featured_conditions=featured,
-        total_ayur_count=len(ALL_AYUR_DISEASES) or 367
+        featured_conditions=res.get('results') or get_featured_ayurveda_conditions()[:24],
+        total_ayur_count=total_count,
+        total_ayur_pages=total_pages
     )
 
 
@@ -647,49 +650,162 @@ Required JSON keys:
 @clinical_ai_bp.route('/health-calculators', methods=['GET', 'POST'])
 def health_calculators():
     bmi_result = None
+    bmi_asian_result = None
     bmr_result = None
-    active_tab = request.form.get('calculator_type', 'bmi')
+    active_tab = request.form.get('calculator_type', 'all')
 
     if request.method == 'POST':
-        calculator_type = request.form.get('calculator_type')
-        if calculator_type == 'bmi':
+        calculator_type = request.form.get('calculator_type', 'bmi_metric')
+        
+        if calculator_type in ['bmi', 'bmi_metric']:
             try:
-                weight = float(request.form.get('weight'))
-                height = float(request.form.get('height'))
+                weight = float(request.form.get('weight', 0))
+                height = float(request.form.get('height', 0))
+                age = int(request.form.get('age', 30))
+                gender = request.form.get('gender', 'male')
+                
                 if weight > 0 and height > 0:
-                    bmi = weight / ((height / 100) ** 2)
+                    height_m = height / 100
+                    bmi = weight / (height_m ** 2)
                     
                     category = "Underweight"
-                    if 18.5 <= bmi < 25: category = "Normal weight"
-                    elif 25 <= bmi < 30: category = "Overweight"
-                    elif bmi >= 30: category = "Obesity"
+                    color = "blue"
+                    if 18.5 <= bmi < 25:
+                        category = "Normal weight"
+                        color = "emerald"
+                    elif 25 <= bmi < 30:
+                        category = "Overweight"
+                        color = "amber"
+                    elif 30 <= bmi < 35:
+                        category = "Obesity (Class I)"
+                        color = "rose"
+                    elif bmi >= 35:
+                        category = "Severe Obesity (Class II/III)"
+                        color = "red"
                     
-                    bmi_result = {'bmi': round(bmi, 1), 'category': category}
+                    min_healthy_wt = round(18.5 * (height_m ** 2), 1)
+                    max_healthy_wt = round(24.9 * (height_m ** 2), 1)
+                    
+                    bmi_result = {
+                        'bmi': round(bmi, 1),
+                        'category': category,
+                        'color': color,
+                        'min_healthy_wt': min_healthy_wt,
+                        'max_healthy_wt': max_healthy_wt,
+                        'height': height,
+                        'weight': weight
+                    }
+                    active_tab = 'bmi_metric'
                 else:
                     flash('Please enter positive values for weight and height.', 'error')
             except (ValueError, TypeError):
-                flash('Invalid input for BMI calculation. Please enter numbers.', 'error')
-        
+                flash('Invalid input for BMI calculation. Please enter valid numbers.', 'error')
+
+        elif calculator_type in ['bmi_asian', 'bmi_imperial']:
+            try:
+                weight_lbs = float(request.form.get('weight_lbs', 0))
+                height_ft = float(request.form.get('height_ft', 0))
+                height_in = float(request.form.get('height_in', 0))
+                age = int(request.form.get('age', 30))
+                gender = request.form.get('gender', 'male')
+
+                total_inches = (height_ft * 12) + height_in
+                if weight_lbs > 0 and total_inches > 0:
+                    bmi = 703 * (weight_lbs / (total_inches ** 2))
+                    
+                    # Asian WHO Classification (lower cutoffs for visceral adiposity)
+                    category = "Underweight"
+                    color = "blue"
+                    if 18.5 <= bmi < 23:
+                        category = "Normal Weight (Asian WHO)"
+                        color = "emerald"
+                    elif 23 <= bmi < 25:
+                        category = "Increased Risk (Pre-Obese)"
+                        color = "amber"
+                    elif 25 <= bmi < 30:
+                        category = "High Risk (Obese Class I)"
+                        color = "rose"
+                    elif bmi >= 30:
+                        category = "Very High Risk (Obese Class II)"
+                        color = "red"
+
+                    # Ideal Body Weight (Devine formula)
+                    if gender == 'male':
+                        ibw_kg = 50.0 + 2.3 * max(0, total_inches - 60)
+                    else:
+                        ibw_kg = 45.5 + 2.3 * max(0, total_inches - 60)
+                    ibw_lbs = round(ibw_kg * 2.20462, 1)
+
+                    # Estimated Body Fat % (Deurenberg Formula)
+                    sex_num = 1 if gender == 'male' else 0
+                    bfp = (1.20 * bmi) + (0.23 * age) - (10.8 * sex_num) - 5.4
+                    bfp = max(3.0, min(65.0, round(bfp, 1)))
+
+                    bmi_asian_result = {
+                        'bmi': round(bmi, 1),
+                        'category': category,
+                        'color': color,
+                        'ibw_lbs': ibw_lbs,
+                        'ibw_kg': round(ibw_kg, 1),
+                        'bfp': bfp,
+                        'weight_lbs': weight_lbs,
+                        'height_total_in': total_inches
+                    }
+                    active_tab = 'bmi_asian'
+                else:
+                    flash('Please enter positive values for weight and height.', 'error')
+            except (ValueError, TypeError):
+                flash('Invalid input for Imperial/Asian BMI calculation.', 'error')
+
         elif calculator_type == 'bmr':
             try:
-                weight = float(request.form.get('weight'))
-                height = float(request.form.get('height'))
-                age = int(request.form.get('age'))
-                gender = request.form.get('gender')
+                weight = float(request.form.get('weight', 0))
+                height = float(request.form.get('height', 0))
+                age = int(request.form.get('age', 0))
+                gender = request.form.get('gender', 'male')
+                activity = request.form.get('activity', 'moderate')
                 
                 if weight > 0 and height > 0 and age > 0:
+                    # Mifflin-St Jeor Equation
                     if gender == 'male':
-                        bmr = 10 * weight + 6.25 * height - 5 * age + 5
-                    else: # female
-                        bmr = 10 * weight + 6.25 * height - 5 * age - 161
+                        bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5
+                    else:
+                        bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161
                     
-                    bmr_result = { 'bmr': round(bmr) }
+                    multipliers = {
+                        'sedentary': 1.2,
+                        'light': 1.375,
+                        'moderate': 1.55,
+                        'very_active': 1.725,
+                        'extra_active': 1.9
+                    }
+                    mult = multipliers.get(activity, 1.55)
+                    tdee = bmr * mult
+
+                    bmr_result = {
+                        'bmr': round(bmr),
+                        'tdee': round(tdee),
+                        'weight_loss_cal': round(max(1200, tdee - 500)),
+                        'mild_loss_cal': round(max(1200, tdee - 250)),
+                        'muscle_gain_cal': round(tdee + 350),
+                        'protein_g': round((tdee * 0.30) / 4),
+                        'carb_g': round((tdee * 0.40) / 4),
+                        'fat_g': round((tdee * 0.30) / 9),
+                        'activity': activity
+                    }
+                    active_tab = 'bmr'
                 else:
                     flash('Please enter positive values for age, weight, and height.', 'error')
             except (ValueError, TypeError):
                 flash('Invalid input for BMR calculation. Please enter numbers.', 'error')
 
-    return render_template('health_calculators.html', bmi_result=bmi_result, bmr_result=bmr_result, active_tab=active_tab)
+    return render_template(
+        'health_calculators.html',
+        bmi_result=bmi_result,
+        bmi_asian_result=bmi_asian_result,
+        bmr_result=bmr_result,
+        active_tab=active_tab
+    )
 
 
 
@@ -2649,51 +2765,425 @@ def bmi_calculator():
 @clinical_ai_bp.route('/api/yoga-session-generator', methods=['POST'])
 @csrf.exempt
 def api_yoga_session_generator():
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'Invalid request.'}), 400
+    data = request.get_json(silent=True) or {}
+    duration = str(data.get('duration', '20')).strip()
+    difficulty = str(data.get('difficulty', 'beginner')).strip().lower()
+    goal = str(data.get('goal', 'stress relief')).strip().lower()
+    focus = str(data.get('focus', 'full body')).strip().lower()
+    accommodation = str(data.get('accommodation', 'none')).strip().lower()
+
+    # Curated Clinically-Structured Sequence Library for Instant & Reliable Rendering
+    CURATED_SEQUENCES = {
+        'stress relief': {
+            'title': f"Somatic Nervous System Reset & Stress Dissolution Flow ({duration}m)",
+            'summary': "Restorative slow-flow calibrated to downregulate cortisol, calm Vata dosha, and stimulate vagal tone.",
+            'dosha': {'vata': 'Deeply Pacifying (Warm & Grounding)', 'pitta': 'Soothing & Cooling', 'kapha': 'Gentle Circulatory Support'},
+            'chakra': 'Anahata (Heart) & Muladhara (Root)',
+            'pranayama': 'Bhramari (Humming Bee) & Extended Exhalation 4:8',
+            'mudra': 'Apana Vayu Mudra (Mudra of the Heart & Nervous Relief)',
+            'dinacharya': 'Optimal during Vata evening hours (6:00 PM - 8:00 PM) or after intense cognitive work.',
+            'biomechanics': 'Long-duration spinal decompression restores intervertebral disc hydration, relieves iliopsoas spasm, and triggers parasympathetic vagus nerve activation.',
+            'contraindications': 'Severe acute lumbar disc herniation (use bolstered child pose support).',
+            'poses': [
+                {
+                    'name': 'Balasana (Child\'s Pose with Extended Arms)',
+                    'sanskrit': 'बालासन',
+                    'category': 'warm-up',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Inhale deep into the back ribs; exhale melt chest to floor',
+                    'cue': 'Big toes touching, knees wide as the mat. Walk hands forward and rest third eye (Ajna) on the mat. Surrender shoulder tension.',
+                    'benefits': 'Stimulates parasympathetic nervous system, stretches lower back & ankles.'
+                },
+                {
+                    'name': 'Marjaryasana-Bitilasana (Cat-Cow Breath Wave)',
+                    'sanskrit': 'मार्जरी-बितिलासन',
+                    'category': 'warm-up',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins (10 cycles)',
+                    'breath': 'Inhale drop belly & lift crown; Exhale round spine like a cat',
+                    'cue': 'Wrists under shoulders, knees under hips. Initiate movement from the tailbone, rippling sequentially up each vertebra.',
+                    'benefits': 'Synchronizes breath with spinal flexion-extension and calms sympathetic overdrive.'
+                },
+                {
+                    'name': 'Anjaneyasana (Low Lunge with Heart Opening)',
+                    'sanskrit': 'अञ्जनेयासन',
+                    'category': 'flow',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Inhale sweep arms high, Exhale soften shoulders and open sternum',
+                    'cue': 'Step right foot forward, lower left knee. Lift torso, cactus arms to open chest and gently stretch the psoas.',
+                    'benefits': 'Releases deep emotional tension and fight-or-flight stress stored in hip flexors.'
+                },
+                {
+                    'name': 'Supta Matsyendrasana (Supine Spinal Twist)',
+                    'sanskrit': 'सुप्त मत्स्येन्द्रासन',
+                    'category': 'cool-down',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins (2m/side)',
+                    'breath': 'Slow passive exhalations, releasing abdominal resistance',
+                    'cue': 'Lie on back, hug knees, drop knees to the right while gazing left. Extend left arm wide in a T-shape.',
+                    'benefits': 'Aids visceral organ massage, gently stretches paraspinal musculature and releases lumbar holding patterns.'
+                },
+                {
+                    'name': 'Savasana with 432Hz Sound Integration',
+                    'sanskrit': 'शवासन',
+                    'category': 'cool-down',
+                    'duration_secs': 300,
+                    'duration_text': '5 mins',
+                    'breath': 'Effortless natural autonomic breath',
+                    'cue': 'Extend legs wide, palms facing upwards, close eyes. Relax jaw, tongue, brow, and float in quiet awareness.',
+                    'benefits': 'Integrates neuromuscular reorganization, initiates deep delta-wave restorative autonomic recovery.'
+                }
+            ]
+        },
+        'morning vitality': {
+            'title': f"Solar Prana Awakening & Agni Boost Flow ({duration}m)",
+            'summary': "Dynamic solar sequence designed to awaken metabolic fire (Agni), clear Kapha sluggishness, and sharpen mental clarity.",
+            'dosha': {'vata': 'Harmonizing & Stabilizing', 'pitta': 'Ignites Healthy Solar Energy', 'kapha': 'Powerful Kapha-Reducer (Clears Lethargy)'},
+            'chakra': 'Manipura (Solar Plexus) & Vishuddha (Throat)',
+            'pranayama': 'Surya Bhedana & Kapalabhati (Skull-Shining Breath)',
+            'mudra': 'Surya Mudra (Sun Gesture for Metabolic Vitality)',
+            'dinacharya': 'Optimal at Sunrise / Brahma Muhurta (6:00 AM - 8:00 AM) prior to breakfast.',
+            'biomechanics': 'Full-body dynamic movements stimulate lymphatic drainage, elevate cardiovascular heart rate variability, and enhance thoracic expansion.',
+            'contraindications': 'Uncontrolled hypertension, recent abdominal surgery, or severe vertigo.',
+            'poses': [
+                {
+                    'name': 'Tadasana & Urdhva Hastasana (Mountain to Sky)',
+                    'sanskrit': 'ताडासन / ऊर्ध्व हस्तासन',
+                    'category': 'warm-up',
+                    'duration_secs': 120,
+                    'duration_text': '2 mins',
+                    'breath': 'Inhale sweep arms upward, Exhale ground feet into the earth',
+                    'cue': 'Stand root-to-crown, interlace fingers above, gentle side stretch left and right to expand intercostal muscles.',
+                    'benefits': 'Awakens posture, decompresses spine after sleep, promotes venous return.'
+                },
+                {
+                    'name': 'Classical Surya Namaskar A (Sun Salutation Flow)',
+                    'sanskrit': 'सूर्य नमस्कार',
+                    'category': 'warm-up',
+                    'duration_secs': 300,
+                    'duration_text': '5 mins (3-5 rounds)',
+                    'breath': '1 breath per movement linked seamlessly with awareness',
+                    'cue': 'Flow from Mountain -> Forward Fold -> Half Lift -> Plank -> Chaturanga -> Upward Dog -> Downward Dog.',
+                    'benefits': 'Warms whole body musculature, boosts lymphatic circulation and synovial joint lubrication.'
+                },
+                {
+                    'name': 'Virabhadrasana II (Warrior II Flow)',
+                    'sanskrit': 'वीरभद्रासन २',
+                    'category': 'flow',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins (2m/side)',
+                    'breath': 'Inhale warrior stability, Exhale reverse warrior opening',
+                    'cue': 'Wide stance, front knee bent 90°, arms outstretched parallel to earth. Gaze over front middle finger with unwavering focus.',
+                    'benefits': 'Builds stamina, opens hips and groin, ignites inner willpower (Ichha Shakti).'
+                },
+                {
+                    'name': 'Utkatasana (Chair Pose & Core Hold)',
+                    'sanskrit': 'उत्कटासन',
+                    'category': 'peak',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Strong steady inhales and exhales through the nose',
+                    'cue': 'Bend knees, sink hips back as if sitting in an invisible chair, raise arms overhead alongside ears, chest proud.',
+                    'benefits': 'Strengthens quadriceps, glutes, and awakens abdominal core Agni.'
+                },
+                {
+                    'name': 'Nadi Shodhana Pranayama (Alternate Nostril Breath)',
+                    'sanskrit': 'नाड़ी शोधन प्राणायाम',
+                    'category': 'cool-down',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Alternate nostril breathing (Inhale Left, Exhale Right, Inhale Right, Exhale Left)',
+                    'cue': 'Use right Vishnu mudra to alternate nostrils. Keep breath silent, slow, smooth, and balanced.',
+                    'benefits': 'Harmonizes Ida and Pingala nadis and left/right brain hemispheres for supreme focus.'
+                }
+            ]
+        },
+        'flexibility': {
+            'title': f"Deep Fascial Release & Yin Flexibility Immersion ({duration}m)",
+            'summary': "Targeted long-hold yin-inspired postures to melt tension in hamstrings, hips, and thoracic spine while pacifying excess Pitta heat.",
+            'dosha': {'vata': 'Deeply Calming', 'pitta': 'Cools Inflammatory Heat', 'kapha': 'Unlocks Stiff Connective Tissue'},
+            'chakra': 'Svadhisthana (Sacral) & Muladhara (Root)',
+            'pranayama': 'Sheetali / Sheetkari (Cooling Breath) & Deep Diaphragmatic Flow',
+            'mudra': 'Yoni Mudra (Honoring Fluidity & Internal Shakti)',
+            'dinacharya': 'Optimal in late afternoon (4:00 PM - 6:00 PM) or after physical training.',
+            'biomechanics': 'Prolonged static tensile stress promotes fibroblast stimulation, collagen remodeling, and myofascial hyaluronic acid hydration.',
+            'contraindications': 'Joint hypermobility or active hamstring tendon avulsion (do not overstretch).',
+            'poses': [
+                {
+                    'name': 'Uttanasana (Standing Forward Fold with Ragdoll)',
+                    'sanskrit': 'उत्तानासन',
+                    'category': 'warm-up',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Inhale lengthen spine, Exhale hinge deeper from hips',
+                    'cue': 'Feet hip-width apart, clasp opposite elbows, let head hang heavy, micro-bend knees to protect hamstrings.',
+                    'benefits': 'Decompresses cervical spine and lengthens the entire superficial back line fascia.'
+                },
+                {
+                    'name': 'Eka Pada Rajakapotasana (Pigeon Pose / Sleeping Swan)',
+                    'sanskrit': 'एकपाद राजकपोतासन',
+                    'category': 'flow',
+                    'duration_secs': 300,
+                    'duration_text': '5 mins (2.5m/side)',
+                    'breath': 'Slow calming exhales directing prana into the hip joint',
+                    'cue': 'Slide right shin forward parallel to mat top, extend left leg back, square hips, fold torso over front leg onto forearms or block.',
+                    'benefits': 'Deep release for piriformis, glutes, and sciatic nerve pathway.'
+                },
+                {
+                    'name': 'Paschimottanasana (Seated Forward Bend)',
+                    'sanskrit': 'पश्चिमोत्तानासन',
+                    'category': 'peak',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins',
+                    'breath': 'Inhale reach crown forward, Exhale soften abdomen toward thighs',
+                    'cue': 'Extend legs forward, flex toes, lead with sternum toward shins, hold feet or use strap without rounding upper back.',
+                    'benefits': 'Complete posterior chain elongation, stimulates kidney and digestion meridians.'
+                },
+                {
+                    'name': 'Baddha Konasana (Butterfly Pose)',
+                    'sanskrit': 'बद्धकोणासन',
+                    'category': 'cool-down',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Deep belly expansion on inhale; surrender on exhale',
+                    'cue': 'Soles of feet together, knees open wide like wings. Hold ankles and gently fold forward with long spine.',
+                    'benefits': 'Opens inner thighs (adductors) and soothes pelvic floor congestion.'
+                }
+            ]
+        },
+        'desk worker spine': {
+            'title': f"Desk Worker Spine, Neck & Posture Antidote ({duration}m)",
+            'summary': "Corrects forward-head posture, opens rounded shoulders, and decompresses seated lumbar compression.",
+            'dosha': {'vata': 'Soothes Cervical & Lumbar Dryness', 'pitta': 'Releases Mental & Ocular Strain', 'kapha': 'Dispels Lethargy from Sitting'},
+            'chakra': 'Vishuddha (Throat/Neck) & Anahata (Heart)',
+            'pranayama': 'Ujjayi (Ocean Breath) & Brahamari Humming',
+            'mudra': 'Vayu Mudra (Alleviates Joint & Nerve Compression)',
+            'dinacharya': 'Midday break (1:00 PM - 3:00 PM) or immediately upon finishing desk work.',
+            'biomechanics': 'Traction and thoracic extension counteract hyperkyphosis, retrain deep neck flexors, and reactivate inhibited gluteus maximus.',
+            'contraindications': 'Severe acute cervical stenosis (avoid aggressive backward head drops).',
+            'poses': [
+                {
+                    'name': 'Garudasana Arms & Neck Release',
+                    'sanskrit': 'गरुडासन मुद्रा',
+                    'category': 'warm-up',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Deep expansion between shoulder blades',
+                    'cue': 'Wrap right elbow under left, palms press together. Lift elbows to shoulder height and drop right ear to shoulder gently.',
+                    'benefits': 'Releases levator scapulae and upper trapezius stiffness from keyboard and screen use.'
+                },
+                {
+                    'name': 'Bhujangasana (Cobra Pose / Sphinx Pose)',
+                    'sanskrit': 'भुजङ्गासन',
+                    'category': 'flow',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins',
+                    'breath': 'Inhale lift chest, Exhale roll shoulders back and down',
+                    'cue': 'Lie prone, palms under shoulders. Press through tops of feet and peel sternum forward and up without compressing lumbar spine.',
+                    'benefits': 'Strengthens weak posterior spinal extensors and counteracts computer slouching.'
+                },
+                {
+                    'name': 'Setu Bandhasana (Bridge Pose with Chest Expansion)',
+                    'sanskrit': 'सेतुबन्धासन',
+                    'category': 'peak',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins',
+                    'breath': 'Inhale lift hips higher, Exhale press shoulders firmly into mat',
+                    'cue': 'Lie on back, bend knees, feet hip-width. Press through heels to lift hips, interlace fingers beneath back and expand ribcage.',
+                    'benefits': 'Re-activates inhibited glutes and stretches tight pectoral muscles and anterior hip flexors.'
+                },
+                {
+                    'name': 'Viparita Karani (Legs-Up-The-Wall Pose)',
+                    'sanskrit': 'विपरीत करणी',
+                    'category': 'cool-down',
+                    'duration_secs': 300,
+                    'duration_text': '5 mins',
+                    'breath': 'Slow meditative abdominal breaths',
+                    'cue': 'Sit close to a wall, pivot and swing legs straight up the wall, arms resting open beside you in a gentle surrender.',
+                    'benefits': 'Reverses venous blood pooling in legs and completely unloads the lower lumbar spine.'
+                }
+            ]
+        },
+        'core & strength': {
+            'title': f"Core Stability & Warrior Strength Flow ({duration}m)",
+            'summary': "High-energy isometric holds and balance postures to fortify core, back, and functional joint strength.",
+            'dosha': {'vata': 'Builds Physical Density & Grounding', 'pitta': 'Channels Fire into Focused Will', 'kapha': 'Highly Energizing & Fat-Burning'},
+            'chakra': 'Manipura (Solar Plexus) & Muladhara (Root)',
+            'pranayama': 'Kapalabhati & Ujjayi with Mula Bandha engagement',
+            'mudra': 'Prakriti / Prana Mudra (Vital Life Energy)',
+            'dinacharya': 'Morning or early evening prior to heavy meals.',
+            'biomechanics': 'Co-activation of transverse abdominis, multifidus, and pelvic floor reinforces intra-abdominal pressure and spinal stability.',
+            'contraindications': 'Active abdominal hernia or uncontrolled high blood pressure.',
+            'poses': [
+                {
+                    'name': 'Phalakasana to Vasisthasana (Plank to Side Plank)',
+                    'sanskrit': 'फलकासन / वसिष्ठासन',
+                    'category': 'warm-up',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins',
+                    'breath': 'Strong powerful diaphragmatic breathing',
+                    'cue': 'High plank position, engage transverse abdominis, rotate to right side lifting left hand to ceiling, stacking feet or modifying with bottom knee down.',
+                    'benefits': 'Ignites obliques, stabilizes shoulder girdle and serratus anterior.'
+                },
+                {
+                    'name': 'Navasana (Boat Pose Variations)',
+                    'sanskrit': 'नावासन',
+                    'category': 'flow',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins',
+                    'breath': 'Inhale lift chest, Exhale draw navel firmly to spine',
+                    'cue': 'Balance on sit bones, lift shins parallel to ground or straighten legs into V-shape, arms reaching forward parallel to the earth.',
+                    'benefits': 'Deep core strengthening, stabilizes hip flexors and deep spinal musculature.'
+                },
+                {
+                    'name': 'Virabhadrasana III (Warrior III Balance)',
+                    'sanskrit': 'वीरभद्रासन ३',
+                    'category': 'peak',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins (2m/side)',
+                    'breath': 'Steady focused gaze (Drishti) and rhythmic breathing',
+                    'cue': 'From standing, hinge torso forward while extending one leg straight back parallel to the floor, arms extended forward or at heart.',
+                    'benefits': 'Demands total body synergy, ankle proprioception, and mental resilience.'
+                }
+            ]
+        }
+    }
+
+    # Match selected goal to curated dataset or fallback
+    selected_curated = None
+    for key, val in CURATED_SEQUENCES.items():
+        if key in goal or goal in key or any(w in goal for w in key.split()):
+            selected_curated = val
+            break
     
-    duration = data.get('duration', '20')
-    difficulty = data.get('difficulty', 'beginner')
-    goal = data.get('goal', 'stress relief')
+    if not selected_curated:
+        selected_curated = CURATED_SEQUENCES['stress relief']
 
-    if not _is_groq_configured():
-        return jsonify({'error': "I'm sorry, but the AI session generator is currently offline."}), 500
+    # Generate rich Yogic & Ayurvedic Monograph Markdown
+    def generate_monograph_markdown(title, summary, duration, difficulty, focus, accommodation, dosha_dict, chakra, pranayama, mudra, dinacharya, biomechanics, contraindications, poses_list):
+        lines = [
+            f"# 📜 {title}",
+            f"> *{summary}*",
+            "",
+            "## 🌿 Ayurvedic Dosha & Energetic Blueprint",
+            f"- **Vata Dosha:** {dosha_dict.get('vata', 'Grounding & Harmonizing')}",
+            f"- **Pitta Dosha:** {dosha_dict.get('pitta', 'Cooling & Balancing')}",
+            f"- **Kapha Dosha:** {dosha_dict.get('kapha', 'Energizing & Invigorating')}",
+            f"- **Chakras Activated:** **{chakra}**",
+            f"- **Recommended Mudra:** **{mudra}**",
+            f"- **Pranayama Synergy:** **{pranayama}**",
+            f"- **Ideal Dinacharya Timing:** {dinacharya}",
+            "",
+            "## 🔬 Biomechanical & Clinical Mechanism",
+            f"{biomechanics}",
+            "",
+            "## 🛡️ Clinical Precautions & Contraindications",
+            f"{contraindications} (Special Accommodation Applied: *{accommodation.title()}*).",
+            "",
+            "## 🧘 Step-by-Step Yogic Sequence & Alignment Directives",
+            ""
+        ]
+        for idx, p in enumerate(poses_list, 1):
+            lines.append(f"### {idx}. {p['name']} (*{p.get('sanskrit', '')}*) — `{p.get('duration_text', '2 mins')}`")
+            lines.append(f"- **Breathwork (Prana):** {p.get('breath', 'Smooth inhalations and exhalations')}")
+            lines.append(f"- **Alignment Cue:** {p.get('cue', '')}")
+            lines.append(f"- **Clinical & Therapeutic Benefit:** {p.get('benefits', '')}")
+            lines.append("")
 
-    system_prompt = (
-        "You are an expert yoga instructor. Create a structured yoga session based on the user's request. "
-        "The session should be a sequence of poses. For each pose, provide the name, a brief instruction, and a recommended duration. "
-        "Structure the response clearly using Markdown. Start with a warm-up, move to the main sequence, and end with a cool-down. "
-        "The entire response should be just the yoga session in Markdown format."
+        lines.append("## 🌸 Savasana, Pratyahara & Integration")
+        lines.append("Conclude your practice lying completely motionless in Savasana for 5 minutes. Allow the subtle Pranic currents to settle into deep Ojas (vital vitality).")
+        return "\n".join(lines)
+
+    # If Groq is configured, attempt dynamic AI expansion with full Ayurvedic monograph instructions
+    if _is_groq_configured():
+        system_prompt = (
+            "You are a world-class Master Ayurvedic Physician, Clinical Yoga Therapist, and Sanskrit Scholar. "
+            "Generate an exhaustive, beautifully formatted Yogic Monograph & Ayurvedic Philosophy Guide for the user's custom yoga sequence. "
+            "Your output must be richly detailed markdown including:\n"
+            "1. # Title & Executive Summary\n"
+            "2. ## 🌿 Ayurvedic Dosha & Energetic Blueprint (Detailed breakdown of Vata, Pitta, Kapha impact, Prana Vayu activation, Primary Chakras, and Mudra synergy)\n"
+            "3. ## 🔬 Biomechanical & Clinical Mechanism (Fascial lines, autonomic vagal tone, neuromuscular benefits)\n"
+            "4. ## 🛡️ Clinical Precautions & Contraindications (Accommodations for knees, wrists, or spine)\n"
+            "5. ## 🧘 Step-by-Step Yogic Sequence & Alignment Directives (With Sanskrit names, exact breath cues, alignment tips, and benefits)\n"
+            "6. ## 🌸 Savasana, Pratyahara & Dinacharya Integration\n"
+            "Use clear, authoritative, yet warm therapeutic language with emojis and clean markdown formatting."
+        )
+        user_prompt = (
+            f"Generate an expert Yogic Monograph and Sequence for: Duration: {duration} minutes, Level: {difficulty}, "
+            f"Goal: {goal}, Target Body Focus: {focus}, Physical Accommodation: {accommodation}."
+        )
+        try:
+            endpoint = f"{GROQ_API_BASE.rstrip('/')}/chat/completions"
+            headers = {'Authorization': f'Bearer {GROQ_API_KEY}', 'Content-Type': 'application/json'}
+            payload = {
+                'model': GROQ_API_MODEL,
+                'messages': [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                'temperature': 0.6,
+                'max_tokens': 2048
+            }
+            resp = requests.post(endpoint, headers=headers, json=payload, timeout=25)
+            if resp.status_code == 200:
+                reply_text = _extract_groq_text_response(resp.json())
+                return jsonify({
+                    'success': True,
+                    'title': f"{goal.title()} Yoga Ritual ({duration}m)",
+                    'session_markdown': reply_text.strip(),
+                    'poses': selected_curated['poses'],
+                    'summary': selected_curated['summary'],
+                    'dosha': selected_curated.get('dosha'),
+                    'chakra': selected_curated.get('chakra'),
+                    'pranayama': selected_curated.get('pranayama'),
+                    'mudra': selected_curated.get('mudra'),
+                    'dinacharya': selected_curated.get('dinacharya'),
+                    'biomechanics': selected_curated.get('biomechanics'),
+                    'contraindications': selected_curated.get('contraindications'),
+                    'duration': duration,
+                    'difficulty': difficulty,
+                    'source': 'groq_ai'
+                })
+        except Exception as e:
+            print(f"⚠️ Groq Yoga Generator error: {e}")
+
+    # Rich default Yogic Monograph using clinical library
+    full_monograph = generate_monograph_markdown(
+        title=selected_curated['title'],
+        summary=selected_curated['summary'],
+        duration=duration,
+        difficulty=difficulty,
+        focus=focus,
+        accommodation=accommodation,
+        dosha_dict=selected_curated.get('dosha', {}),
+        chakra=selected_curated.get('chakra', 'Anahata (Heart) & Muladhara (Root)'),
+        pranayama=selected_curated.get('pranayama', 'Nadi Shodhana Pranayama'),
+        mudra=selected_curated.get('mudra', 'Gyan & Chin Mudra'),
+        dinacharya=selected_curated.get('dinacharya', 'Optimal during early morning or sunset transitions.'),
+        biomechanics=selected_curated.get('biomechanics', 'Promotes spinal decompression, enhances vagal tone, and improves joint proprioception.'),
+        contraindications=selected_curated.get('contraindications', 'Move within comfortable range of motion; avoid forced hyperextension.'),
+        poses_list=selected_curated['poses']
     )
-    
-    user_prompt = f"Generate a {duration}-minute yoga session for a {difficulty}-level practitioner. The primary goal is {goal}."
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
-    ]
-
-    endpoint = f"{GROQ_API_BASE.rstrip('/')}/chat/completions"
-    headers = {
-        'Authorization': f'Bearer {GROQ_API_KEY}',
-        'Content-Type': 'application/json'
-    }
-    payload = {
-        'model': GROQ_API_MODEL,
-        'messages': messages,
-        'temperature': 0.7,
-        'max_tokens': 2048
-    }
-
-    try:
-        resp = requests.post(endpoint, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        reply_text = _extract_groq_text_response(resp.json())
-        return jsonify({'session_markdown': reply_text.strip()})
-    except Exception as e:
-        print(f"Yoga Session Generator error: {e}")
-        return jsonify({'error': "I'm having trouble generating a session right now. Please try again in a moment."}), 500
+    return jsonify({
+        'success': True,
+        'title': selected_curated['title'],
+        'session_markdown': full_monograph,
+        'poses': selected_curated['poses'],
+        'summary': selected_curated['summary'],
+        'dosha': selected_curated.get('dosha'),
+        'chakra': selected_curated.get('chakra'),
+        'pranayama': selected_curated.get('pranayama'),
+        'mudra': selected_curated.get('mudra'),
+        'dinacharya': selected_curated.get('dinacharya'),
+        'biomechanics': selected_curated.get('biomechanics'),
+        'contraindications': selected_curated.get('contraindications'),
+        'duration': duration,
+        'difficulty': difficulty,
+        'source': 'clinical_ayur_library'
+    })
 
 
 

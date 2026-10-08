@@ -1,13 +1,3 @@
----
-title: Spherix Clinic
-emoji: 🏥
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # 🏥 Spherix Clinic — AI-Powered Smart Healthcare & Hospital Management Platform
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
@@ -17,67 +7,165 @@ pinned: false
 [![TailwindCSS](https://img.shields.io/badge/Styling-Tailwind%20CSS%20%2B%20Glassmorphism-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
-**Spherix Clinic** is a next-generation, AI-driven digital healthcare and hospital management ecosystem. Combining multi-modal AI clinical diagnostics (Groq LLMs + Google Vision Computer Vision), comprehensive electronic health records (EHR), multi-role administrative portals, real-time hospital bed & ICU telemetry, an online pharmacy, and international medical travel desks — all wrapped in an ultra-modern glassmorphic UI.
+**Spherix Clinic** is an enterprise-grade, AI-driven healthcare intelligence and hospital operations ecosystem. Engineered with a modular Flask blueprint architecture, Spherix Clinic unifies multi-modal clinical AI diagnostics, comprehensive electronic health records (EHR), multi-role administrative workflows, real-time ICU and bed telemetry, pathology laboratory automation, e-pharmacy with 250k+ medicines, and international medical travel desks — wrapped in a modern, responsive glassmorphic user interface.
 
 ---
 
 ## 🌟 Key Highlights & Feature Matrix
 
 ### 🧠 1. Multi-Modal AI Clinical Diagnostic Suite
-* **Interactive Symptom Checker**: Multi-step diagnostic workflow with body region mapping, pain intensity sliders, duration qualifiers, and secondary symptom refinement.
-* **Google Cloud Vision Multimodal Analysis**: Visual inspection of dermatological issues, wounds, rashes, and document OCR.
-* **Radiology AI Scanner**: Automated classification and preliminary interpretation of Chest X-Rays, CT Scans, and MRI imagery.
-* **Prescription OCR & Drug Interaction Intelligence**: Instant extraction of medication schedules from doctor handwriting and automated openFDA/Groq safety cross-checks.
-* **Automated PDF Diagnostic Reports & Email Delivery**: Instant generation of official PDF medical reports with a 1-click option to automatically email the document to the patient's registered inbox.
-
-### 🏛️ 2. Multi-Role Portal Architecture
-* **Patient Portal**: Profile management, digital vitals logging, appointment scheduling, prescription archives, live consultation queue tracking, and pharmacy order histories.
-* **Doctor Workspace**: Consultation scheduler, live OPD queue management, digital e-prescriptions, clinical notes, and live telemetry chat widget.
-* **Hospital & Staff Dashboards**:
-  * **Reception Desk**: Walk-in token generator, live queue broadcast with Web Speech API audio chimes, and instant prescription slip printing.
-  * **Nursing Station**: Patient acuity classification (Stable/Guarded/Critical), digital Medication Administration Record (MAR), and vitals telemetry charting.
-  * **Bed & Ward Management**: Real-time room occupancy grids, ICU vs. General Ward utilization bars, and 1-click bed transfers.
-  * **Blood Bank & Donation**: Live blood inventory gauges by blood group (A+, B+, O+, AB+, etc.), surplus tracking, and donor registration.
-  * **Organ Donor Registry**: Confidential organ donor registration and matching hub.
-* **System Administrator (Root Portal)**: System-wide platform metrics, role delegations, audit logging, emergency announcements, and database sync utilities.
-
-### 🏥 3. Hospital Discovery & Global Medical Travel
-* **Live Hospital Bed & ICU Tracker**: Real-time hospital directory with available general bed count, ICU availability percentage, and daily admission tariffs.
-* **Medical Travel & Visa Desk Drawer**: Slide-over international patient drawer for visa assistance, airport transfers, translator bookings, and cross-border doctor consultations.
-
-### 💊 4. Digital Pharmacy & Wellness
-* **Medical Shop E-Commerce**: Searchable medicine catalog with categories, dosage recommendations, cart management, and downloadable PDF tax invoices.
-* **Zen Yoga & Holistic Wellness Hub**: Interactive guided meditation and therapeutic yoga programs tailored to stress and chronic ailment recovery.
+* **Interactive Symptom Checker**: Multi-step diagnostic workflow with body region mapping, pain intensity rating, duration qualifiers, secondary symptom refinement, and emergency triage warnings.
+* **Radiology AI Scanner**: Preliminary automated classification and visual feature analysis of Chest X-Rays, CT Scans, and MRI imaging powered by Google Cloud Vision and Groq LLMs.
+* **Dermatology AI Analysis**: Computer vision skin lesion classification, rash inspection, and clinical severity index estimation.
+* **Prescription OCR & Drug Interaction Intelligence**: Instant extraction of medication names, dosages, and schedules from handwritten or printed prescriptions with cross-referenced openFDA/Groq drug conflict checks.
+* **AyurGenix AI**: Evidence-backed synthesis of traditional Ayurvedic formulations with modern allopathic pharmaceutical profiles.
+* **Cancer Screening Intelligence**: Early-risk indicator assessment across oncological symptom matrices.
+* **Automated PDF Diagnostic Reports & Email Delivery**: Instant vector PDF report generation with QR verification and automatic transactional email dispatch to patients.
 
 ---
 
-## 🏗️ Technical Stack
+### 🔬 2. Pathology & Diagnostic Laboratory Management
+* **Comprehensive Test Catalog**: Pre-configured registry of 500+ pathology, biochemistry, hematology, and radiology investigations with reference intervals.
+* **Pathology Center Portal**: Dedicated dashboard for pathology centers to manage walk-in lab bookings, update sample statuses (Collected, Processing, Completed), and input test parameters.
+* **AI-Assisted Lab Analysis**: Automatic abnormal value highlighting, flag markers (High/Low/Critical), and clinician-ready diagnostic summaries.
+* **Downloadable Test Reports**: Standardized patient diagnostic slips and multi-panel PDF reports with electronic validation stamps.
 
-| Component | Technology |
-|---|---|
-| **Backend Framework** | Python 3.11+, Flask 3.1.2 |
-| **Database & Persistence** | SQLite (SQLAlchemy / Raw SQL Engine) with automatic sync & in-memory caching |
-| **Realtime WebSockets** | Flask-SocketIO & Web Speech API |
-| **AI & LLM Services** | Groq API (`llama-3.3-70b-versatile`), Google Cloud Vision API |
-| **PDF Generation** | FPDF2 & Custom Vector Rendering |
-| **Security & Auth** | Flask-Login, Werkzeug Security (PBKDF2/SHA256), CSRF Protection, HTTPS/SSL |
-| **Frontend & UI** | Vanilla JS (ES6+), Tailwind CSS CDN, FontAwesome 6 Pro, Animate.css, Glassmorphism design |
+---
+
+### 🏛️ 3. Multi-Role Healthcare Workspaces
+
+```
+                               ┌─────────────────────────┐
+                               │   Spherix Clinic Core   │
+                               └────────────┬────────────┘
+         ┌───────────────────┬──────────────┼──────────────┬───────────────────┐
+         │                   │              │              │                   │
+┌────────▼────────┐ ┌────────▼────────┐ ┌───▼────┐ ┌───────▼────────┐ ┌────────▼────────┐
+│ Patient Portal  │ │ Doctor Desk     │ │ Admin  │ │ Hospital Desk  │ │ Pathology Lab   │
+│ - Health Vitals │ │ - Live OPD Queue│ │ - Audit│ │ - Reception    │ │ - Test Booking  │
+│ - Appointments  │ │ - e-Prescribe   │ │ - Roles│ │ - Nurse Station│ │ - Specimen Track│
+│ - Lab Reports   │ │ - Consultations │ │ - Stats│ │ - Bed / ICU    │ │ - AI Lab Report │
+│ - Medicine Cart │ │ - Clinical Notes│ │ - Sync │ │ - Blood / Organ│ │ - Verification  │
+└─────────────────┘ └─────────────────┘ └────────┘ └────────────────┘ └─────────────────┘
+```
+
+* **Patient Portal**: Profile & medical history management, live vital signs tracking, appointment booking, e-prescription vault, and live queue status.
+* **Doctor Workspace**: Interactive OPD appointment queues, telemedicine scheduling, digital e-prescriptions, clinical notes, and live chat telemetry.
+* **Hospital & Staff Dashboards**:
+  * **Reception Desk**: Walk-in token generation, real-time queue broadcasting with Web Speech API audio chimes, and instant print slips.
+  * **Nursing Station**: Patient acuity stratification (Stable / Guarded / Critical), digital Medication Administration Record (MAR), and vitals telemetry.
+  * **Bed & Ward Management**: Real-time room occupancy grid, ICU vs. General Ward availability meters, and 1-click bed transfers.
+  * **Blood Bank & Donor Hub**: Real-time blood unit inventory by group (A+, B+, O+, AB+, etc.), surplus tracking, and donor registration.
+  * **Organ Donor Registry**: Confidential matching registry for organ donors and recipient waitlists.
+* **System Administrator (Root Portal)**: System health telemetry, role delegation, database migrations, security audit logs, and global emergency broadcast banners.
+
+---
+
+### 💊 4. Digital Pharmacy & Wellness E-Commerce
+* **Extensive Drug Catalog**: Over 250,000+ indexed pharmaceutical products, composition mappings, side effects, and alternative generics.
+* **Prescription Upload & Verification**: Digital verification flow for prescription-only pharmaceuticals.
+* **Cart & Checkout Engine**: Multi-item cart, Razorpay payment gateway integration, and multi-currency formatting (USD, INR, EUR, GBP, AED).
+* **Automated PDF Invoices**: Itemized tax invoices with unique order tracking numbers and automatic email receipts.
+* **Zen Yoga & Holistic Health Hub**: Curated wellness routines, guided meditation timers, and AI-personalized nutrition & fitness planners.
+
+---
+
+### 🌍 5. Global Medical Travel & Hospital Discovery
+* **International Hospital Directory**: Filter hospitals by specialty, accreditation, bed capacity, ICU availability, and daily tariffs.
+* **Medical Visa & Travel Concierge**: Dedicated drawer for visa clearance assistance, multilingual translator requests, and airport transport coordination.
+
+---
+
+## 🏗️ Technical Stack & Architecture
+
+| Layer | Technology | Details |
+|---|---|---|
+| **Backend Framework** | Python 3.11+, Flask 3.1.2 | Modular Blueprint architecture (`spherix/routes/`) |
+| **Data & Persistence** | SQLite / SQLAlchemy Engine | Automated schema migrations, in-memory caching (`TEMP_DATA`) |
+| **Realtime & Audio** | Flask-SocketIO & Web Speech API | Live OPD queue broadcast, token callouts, WebSocket updates |
+| **AI & LLM Services** | Groq API (`llama-3.3-70b-versatile`) | Symptom analysis, differential diagnosis, medical summarization |
+| **Computer Vision** | Google Cloud Vision API | Skin lesion analysis, X-ray scanning, Prescription OCR |
+| **Document Engine** | FPDF2 | Clinical lab reports, e-prescriptions, and tax invoices |
+| **Security & Auth** | Flask-Login, Flask-WTF (CSRF), Flask-Talisman, Flask-Limiter, PBKDF2/SHA-256 | HTTPS/TLS enforcement, OAuth (Google/Apple), rate limiting |
+| **Frontend & UI** | Vanilla JS (ES6+), Tailwind CSS, FontAwesome 6, Animate.css | Glassmorphism UI, dual-currency switcher, responsive layout |
+
+---
+
+## 📂 Project Directory Structure
+
+```plaintext
+spherixclinic/
+├── app.py                         # Application entrypoint & SSL / SocketIO bootstrap
+├── config.py                      # Global configuration, currencies, exchange rates
+├── extensions.py                  # Initialized Flask extensions (Login, SocketIO, CSRF, etc.)
+├── requirements.txt               # Python package dependencies
+├── .env.example                   # Environment configuration template
+│
+├── spherix/                       # Core Application Package
+│   ├── __init__.py                # App factory (create_app), blueprints, filters & error handlers
+│   ├── models/                    # Data models & schemas
+│   │   ├── user.py                # Patient, Doctor, Staff, Hospital, Admin models
+│   │   ├── clinical.py            # Appointment, Vitals, BedBooking, BloodDonor, OrganDonor
+│   │   └── commerce.py            # Order, Review, Message, Notification, ActivityLog
+│   ├── routes/                    # Modular Flask Blueprints
+│   │   ├── admin.py               # Root admin operations & telemetry
+│   │   ├── auth.py                # Multi-role authentication & OAuth
+│   │   ├── blood_organ.py         # Blood bank & organ donor registry
+│   │   ├── clinical_ai.py         # Symptom checker, Vision, OCR, AyurGenix, Cancer AI
+│   │   ├── diagnostic.py          # Diagnostic test booking & reports
+│   │   ├── doctor.py              # Doctor workspace, queue, e-prescriptions
+│   │   ├── hospital.py            # Hospital profile & ward management
+│   │   ├── main.py                # Public landing, medical travel, emergency SOS
+│   │   ├── pathology.py           # Pathology center portal & test processing
+│   │   ├── patient.py             # Patient dashboard & health records
+│   │   ├── pharmacy.py            # E-Pharmacy storefront, cart & checkout
+│   │   └── staff.py               # Reception, Nursing (MAR), and Bed desks
+│   └── services/                  # Business logic & external integrations
+│       ├── ai_service.py          # Groq AI LLM orchestration
+│       ├── diagnostic_ai.py       # Diagnostic and radiology AI processing
+│       ├── diagnostic_catalog.py  # 500+ diagnostic test catalog definitions
+│       ├── diagnostic_db.py       # Pathology database operations
+│       ├── mail_service.py        # Transactional email dispatcher (SMTP)
+│       ├── nutrition_fitness_service.py # AI personalized diet & fitness plans
+│       ├── payment_service.py     # Razorpay payment handler
+│       ├── pdf_service.py         # FPDF2 clinical & invoice document builder
+│       └── upload_service.py      # Secure file & image upload handler
+│
+├── static/                        # Static assets
+│   ├── css/                       # Glassmorphism design system & utility stylesheets
+│   ├── js/                        # Client-side scripts, WebSockets, OCR & queue chimes
+│   └── uploads/                   # Radiographs, prescriptions & user attachments
+│
+└── templates/                     # 50+ Jinja2 Healthcare & Portal Templates
+    ├── layout.html                # Base layout with navigation & glassmorphic theme
+    ├── index.html                 # Homepage with live search & AI quick-check
+    ├── doctor.html                # Doctor workspace & live consultation room
+    ├── patient_dashboard.html     # Patient health profile & clinical records
+    ├── pathology_dashboard.html   # Pathology lab management console
+    ├── staff_reception_dashboard.html # Token desk & patient queue
+    ├── staff_nursing_dashboard.html   # Nurse station with digital MAR
+    ├── staff_bed_dashboard.html       # Live ICU & Ward bed grid
+    ├── staff_blood_dashboard.html     # Blood bank inventory telemetry
+    ├── symptom_checker.html       # Multi-step AI clinical symptom checker
+    ├── medical_shop.html          # Online pharmacy catalog
+    └── admin_dashboard.html       # Super admin analytics & system control
+```
 
 ---
 
 ## 🚀 Quick Start Guide
 
 ### 1. Prerequisites
-* Python 3.10+ (Recommended: Python 3.11, 3.12, or 3.13)
-* `git` and `pip`
+* **Python**: `3.11`, `3.12`, or `3.13`
+* **Git** & **Pip**
 
 ### 2. Clone the Repository
 ```bash
-git clone https://github.com/your-username/spherixclinic.git
+git clone https://github.com/sunnykumark28/spherixclinic.git
 cd spherixclinic
 ```
 
-### 3. Create & Activate Virtual Environment
+### 3. Set Up Virtual Environment
 ```bash
 # macOS / Linux
 python3 -m venv venv
@@ -93,91 +181,85 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 5. Environment Configuration
-Create a `.env` file in the root directory (or copy from `.env.example`):
+### 5. Configure Environment Variables
+Create a `.env` file in the root directory by copying `.env.example`:
+```bash
+cp .env.example .env
+```
+
+Configure your secrets in `.env`:
 ```env
-# Flask Settings
-SECRET_KEY=replace-with-a-random-value-of-at-least-32-bytes
+# Core Flask Settings
+SECRET_KEY=generate_a_secure_random_32_byte_secret_key
 FLASK_ENV=development
-DEBUG=True
+FLASK_DEBUG=False
+FLASK_PORT=5001
 
-# Groq AI Key (Required for Symptom Checker & AI Doctors)
+# AI & Multimodal Credentials
 GROQ_API_KEY=your_groq_api_key_here
-
-# Google Cloud Vision (Optional for Computer Vision & Radiology)
-GOOGLE_VISION_API_KEY=your_google_vision_api_key_here
+GOOGLE_VISION_API_KEY=your_google_cloud_vision_key_here
 ENABLE_IMAGE_ANALYSIS=true
 
-# Email Service (Optional for auto-sending PDF reports)
+# Security & HTTPS
+USE_SSL=True
+SSL_CERT_PATH=ssl/cert.pem
+SSL_KEY_PATH=ssl/key.pem
+
+# Email Service (Optional for transactional PDF dispatches)
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USE_TLS=True
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
+MAIL_USERNAME=your-clinic-email@gmail.com
+MAIL_PASSWORD=your-gmail-app-password
 
-# Optional browser origins (comma-separated). Empty means same-origin only.
-CORS_ALLOWED_ORIGINS=https://your-domain.example
-SOCKETIO_CORS_ALLOWED_ORIGINS=https://your-domain.example
+# Payment Gateway (Optional for pharmacy checkouts)
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 
-# Set unique values before first startup to provision initial portal accounts.
-ADMIN_BOOTSTRAP_PASSWORD=choose-a-unique-admin-password
-HOSPITAL_BOOTSTRAP_PASSWORD=choose-a-unique-hospital-password
+# Initial Portal Bootstrap Credentials
+ADMIN_BOOTSTRAP_PASSWORD=your-super-admin-password
+HOSPITAL_BOOTSTRAP_PASSWORD=your-hospital-admin-password
 ```
 
 ### 6. Run the Application
 ```bash
 python app.py
 ```
-Open your browser and navigate to: **`https://127.0.0.1:5001`** (the local self-signed certificate may trigger a browser warning).
+
+* The system automatically provisions a self-signed SAN SSL certificate if missing.
+* Access the platform at: **`https://localhost:5001`** (or `http://localhost:5001` if SSL is disabled).
 
 ---
 
-## 🔑 Initial Portal Setup
+## 🔑 Access Portals & Role Endpoints
 
-| Portal | Email / Identifier | Password | Access URL |
+| Portal | Role | Access URL | Description |
 |---|---|---|---|
-| **System Administrator** | Configure `ADMIN_BOOTSTRAP_PASSWORD` before first startup | Set during setup | `/admin/login` |
-| **Hospital Facility** | Configure `HOSPITAL_BOOTSTRAP_PASSWORD` before first startup | Set during setup | `/hospital/login` |
-| **Staff and Patient Portals** | Create accounts through the registration flow | Set during setup | Portal login pages |
+| **System Admin** | Super Administrator | `/admin/login` | Platform telemetry, audit trail, role provisioning |
+| **Doctor Workspace** | Medical Practitioner | `/doctor/login` | OPD queue, consultations, e-prescriptions |
+| **Patient Portal** | Patient / User | `/patient/login` | Health vitals, appointments, reports & orders |
+| **Pathology Center** | Lab Technician / Center | `/pathology/login` | Diagnostic test queue, sample processing & reports |
+| **Hospital Facility** | Hospital Administrator | `/hospital/login` | Ward occupancy, emergency bed bookings & staff |
+| **Reception Desk** | Hospital Staff | `/staff/reception` | Walk-in tokens, public queue audio broadcaster |
+| **Nursing Station** | Nursing Staff | `/staff/nursing` | Patient acuity, digital MAR, vital telemetry |
+| **Bed Management** | Ward Staff | `/staff/beds` | ICU and general ward occupancy grid |
+| **Blood Bank** | Blood Bank Manager | `/staff/blood` | Unit inventory by blood group & donor records |
 
 ---
 
-## 📂 Project Directory Structure
-
-```plaintext
-spherixclinic/
-├── app.py                     # Main Flask Application & Route Controllers
-├── requirements.txt           # Python Package Dependencies
-├── .env.example               # Sample Environment Variables
-├── audit_logger.py            # Clinical & Administrative Audit Logger
-├── symptoms_analyzer.py       # Groq & Heuristic Clinical Symptom Engine
-├── drug_data.py               # Pharmaceutical Database & Dosage Index
-├── countries_data.py          # Medical Visa & Travel Desk Registry
-├── knowledge_base.json        # 48+ Indexed Diseases & Condition Mapping
-├── static/
-│   ├── css/                   # Stylesheets & Glassmorphism Utilities
-│   ├── js/                    # Client-side Controllers & SocketIO
-│   └── uploads/               # User Radiographs & Clinical Uploads
-└── templates/                 # 40+ Jinja2 Healthcare Templates
-    ├── login_landing.html     # Multi-Role Access Gateway
-    ├── patient_dashboard.html # Patient Health Record & Telemetry
-    ├── admin_dashboard.html   # Root Administrator Analytics
-    ├── staff_reception_dashboard.html # Reception & Token Desk
-    ├── staff_nursing_dashboard.html   # Nurse Station & MAR
-    ├── staff_bed_dashboard.html       # Bed Allocation Matrix
-    ├── staff_blood_dashboard.html     # Blood Bank Telemetry
-    ├── hospital_detail.html   # Hospital Profile & Travel Sidebar
-    ├── symptom_result.html    # AI Clinical Diagnostic Assessment
-    └── medical_shop.html      # Digital Pharmacy Storefront
-```
+## 🛡️ Security & Compliance Features
+* **Encryption**: TLS 1.2 / TLS 1.3 HTTPS enforcement with HTTP Strict Transport Security (HSTS).
+* **Password Hashing**: Cryptographically secure PBKDF2/SHA-256 password hashing via Werkzeug.
+* **Request Guardrails**: CSRF token validation on all POST/PUT requests, Content Security Policy (CSP) headers, and IP-level rate limiting with Flask-Limiter.
+* **Audit Trails**: Real-time logging of clinical actions, authentication events, and administrative overrides.
 
 ---
 
-## 🛡️ License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
+## 📄 License
+This project is open-source under the [MIT License](LICENSE).
 
 ---
 
-## 🩺 Developed for Next-Gen Healthcare
-**Spherix Clinic** — *Empowering patients and clinicians with cutting-edge artificial intelligence and unified hospital operations.*
+<p align="center">
+  <b>Spherix Clinic</b> — <i>Pioneering the Future of Intelligent Healthcare Systems.</i>
+</p>

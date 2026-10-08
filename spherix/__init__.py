@@ -2,7 +2,7 @@ import os
 import sys
 from datetime import datetime, timezone
 
-from flask import Flask, session, request, redirect, url_for, flash, jsonify, current_app, send_from_directory
+from flask import Flask, session, request, redirect, url_for, flash, jsonify, current_app, send_from_directory, render_template
 from flask_login import current_user, logout_user
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -12,7 +12,7 @@ from spherix.config import (
     convert_currency, get_currency_symbol, parse_route_id, utcnow, search_countries
 )
 from spherix.models import Notification
-from spherix.services.database import TEMP_DATA, load_data, get_db_connection, save_data
+from spherix.services.database import TEMP_DATA, load_data, get_db_connection, save_data, setup_admin_user
 from spherix.extensions import (
     login_manager, csrf, limiter, talisman, cors, jwt, oauth, socketio
 )

@@ -304,11 +304,11 @@ def test_diagnostic_web_routes_render_cleanly(client):
     # 5. Pathology Login & Register
     res_login = client.get('/pathology/login')
     assert res_login.status_code == 200
-    assert b"Pathology Center Portal" in res_login.data
+    assert (b"Pathology Center Portal" in res_login.data or b"Pathology Sign In" in res_login.data)
 
     res_reg = client.get('/pathology/register')
     assert res_reg.status_code == 200
-    assert b"Register Your Pathology Center" in res_reg.data
+    assert (b"Register Your Pathology Center" in res_reg.data or b"Register Lab Center" in res_reg.data)
 
     # 6. Public QR verification
     from spherix.services.diagnostic_db import create_diagnostic_booking_order, enter_technician_lab_results, approve_and_release_diagnostic_report

@@ -1,142 +1,463 @@
 {% extends 'layout.html' %}
 
-{% block title %}Clinical Health &amp; Biometric Calculators | Spherix Clinic{% endblock %}
+{% block title %}Health Calculators Suite — BMI (Metric & Imperial/Asian) & BMR Engine | Spherix Clinic{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-[#f8fafc] py-8 px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 w-full">
-    <div class="w-full space-y-8">
-        
-        <!-- Hero Header -->
-        <div class="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white shadow-2xl relative overflow-hidden border border-slate-800">
-            <div class="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+<div class="min-h-screen bg-[#f8fafc] text-slate-900 pb-20 w-full">
 
-            <div class="relative z-10 max-w-4xl">
-                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md">
+    <!-- ================= 1. FULL-WIDTH HERO SECTION (TOUCH TO SIDE SCREEN) ================= -->
+    <section class="w-full bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 border-b border-slate-800 shadow-xl relative overflow-hidden">
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto w-full relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+            <div class="max-w-3xl space-y-3">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
                     <i class="fas fa-calculator text-blue-400"></i>
-                    <span>Clinical Biometrics &amp; Energy Expenditure</span>
+                    <span>Clinical Biometric Computing Station</span>
                 </div>
-                <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3">
-                    Health &amp; Metabolic Calculators
+                <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+                    Biometric &amp; Metabolic Calculators
                 </h1>
-                <p class="text-sm sm:text-base text-slate-300 font-normal leading-relaxed mb-0 max-w-2xl">
-                    Quantify your body composition, basal metabolic rate, and caloric requirements with clinical-grade formulas verified by the World Health Organization (WHO) and Mifflin-St Jeor equation.
+                <p class="text-sm sm:text-base text-slate-300 font-normal leading-relaxed mb-0">
+                    Evidence-based clinical health analytics. Real-time assessment of Body Mass Index (WHO International &amp; Asian Guidelines), Ideal Body Weight (IBW), Body Fat %, and Basal Metabolic Rate (Mifflin-St Jeor equation).
                 </p>
             </div>
-        </div>
 
-        <!-- Main Calculator Station -->
-        <div x-data="{ tab: '{{ active_tab or 'bmi' }}' }" class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-            <!-- Tabs Navigation -->
-            <div class="flex border-b border-slate-200 bg-slate-50/70 p-2 gap-2">
-                <button @click="tab = 'bmi'" :class="{ 'bg-white text-blue-900 font-black shadow-xs border border-slate-200': tab === 'bmi', 'text-slate-600 hover:text-slate-900': tab !== 'bmi' }" class="flex-1 py-3.5 px-6 rounded-2xl font-bold transition-all flex items-center justify-center gap-2.5 text-xs sm:text-sm cursor-pointer">
-                    <i class="fas fa-weight-scale text-base text-blue-600"></i>
-                    <span>Body Mass Index (BMI)</span>
-                </button>
-                <button @click="tab = 'bmr'" :class="{ 'bg-white text-blue-900 font-black shadow-xs border border-slate-200': tab === 'bmr', 'text-slate-600 hover:text-slate-900': tab !== 'bmr' }" class="flex-1 py-3.5 px-6 rounded-2xl font-bold transition-all flex items-center justify-center gap-2.5 text-xs sm:text-sm cursor-pointer">
-                    <i class="fas fa-fire text-base text-amber-500"></i>
-                    <span>Basal Metabolic Rate (BMR)</span>
-                </button>
-            </div>
-
-            <div class="p-6 sm:p-10">
-                <!-- BMI Calculator -->
-                <div x-show="tab === 'bmi'" x-transition.opacity class="space-y-6">
-                    <div>
-                        <h3 class="text-xl sm:text-2xl font-black text-slate-900 mb-1">Body Mass Index (BMI) Assessment</h3>
-                        <p class="text-xs sm:text-sm text-slate-500 mb-0">BMI provides a validated heuristic estimate of total body tissue mass (muscle, fat, and bone) based on height and weight.</p>
-                    </div>
-
-                    <form action="{{ url_for('health_calculators') }}" method="POST" class="space-y-6">
-                        <input type="hidden" name="calculator_type" value="bmi">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label for="bmi_weight" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Weight (in Kilograms - kg)</label>
-                                <input type="number" name="weight" id="bmi_weight" step="0.1" placeholder="e.g. 70" required class="block w-full px-4 py-3.5 border-2 border-slate-200 rounded-2xl shadow-inner focus:outline-none focus:border-blue-600 text-sm font-semibold">
-                            </div>
-                            <div>
-                                <label for="bmi_height" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Height (in Centimeters - cm)</label>
-                                <input type="number" name="height" id="bmi_height" placeholder="e.g. 175" required class="block w-full px-4 py-3.5 border-2 border-slate-200 rounded-2xl shadow-inner focus:outline-none focus:border-blue-600 text-sm font-semibold">
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold py-4 px-6 rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg text-sm uppercase tracking-wider cursor-pointer">
-                            Calculate BMI Index
-                        </button>
-                    </form>
-
-                    {% if bmi_result and active_tab == 'bmi' %}
-                    <div class="p-6 bg-blue-50/90 border border-blue-200 rounded-2xl animate-fade-in-up">
-                        <div class="flex items-center justify-between flex-wrap gap-4">
-                            <div>
-                                <div class="text-xs font-bold text-blue-900 uppercase tracking-wider mb-1">Your Calculated BMI</div>
-                                <div class="text-4xl font-black text-blue-700 font-mono">{{ bmi_result.bmi }}</div>
-                            </div>
-                            <div class="px-4 py-2 rounded-xl bg-white border border-blue-200 text-sm font-black text-slate-900">
-                                Category: <span class="text-blue-700">{{ bmi_result.category }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
+            <!-- Quick Metric Highlights Badge -->
+            <div class="grid grid-cols-3 gap-3 w-full lg:w-auto shrink-0 bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-md shadow-inner">
+                <div class="text-center px-3">
+                    <div class="text-[10px] font-bold uppercase text-slate-400">WHO Standard</div>
+                    <div class="text-base font-black text-blue-400">BMI Metric</div>
                 </div>
-
-                <!-- BMR Calculator -->
-                <div x-show="tab === 'bmr'" x-cloak x-transition.opacity class="space-y-6">
-                    <div>
-                        <h3 class="text-xl sm:text-2xl font-black text-slate-900 mb-1">Basal Metabolic Rate (BMR)</h3>
-                        <p class="text-xs sm:text-sm text-slate-500 mb-0">BMR estimates the minimum baseline kilocalories your body consumes per 24 hours at complete physiological rest.</p>
-                    </div>
-
-                    <form action="{{ url_for('health_calculators') }}" method="POST" class="space-y-6">
-                        <input type="hidden" name="calculator_type" value="bmr">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div>
-                                <label for="bmr_age" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Age (Years)</label>
-                                <input type="number" name="age" id="bmr_age" placeholder="e.g. 28" required class="block w-full px-4 py-3.5 border-2 border-slate-200 rounded-2xl shadow-inner focus:outline-none focus:border-blue-600 text-sm font-semibold">
-                            </div>
-                            <div>
-                                <label for="bmr_gender" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Biological Gender</label>
-                                <select name="gender" id="bmr_gender" required class="block w-full px-4 py-3.5 border-2 border-slate-200 rounded-2xl shadow-inner focus:outline-none focus:border-blue-600 text-sm font-semibold bg-white">
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="bmr_weight" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Weight (kg)</label>
-                                <input type="number" name="weight" id="bmr_weight" step="0.1" placeholder="e.g. 72" required class="block w-full px-4 py-3.5 border-2 border-slate-200 rounded-2xl shadow-inner focus:outline-none focus:border-blue-600 text-sm font-semibold">
-                            </div>
-                            <div>
-                                <label for="bmr_height" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Height (cm)</label>
-                                <input type="number" name="height" id="bmr_height" placeholder="e.g. 175" required class="block w-full px-4 py-3.5 border-2 border-slate-200 rounded-2xl shadow-inner focus:outline-none focus:border-blue-600 text-sm font-semibold">
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-extrabold py-4 px-6 rounded-2xl hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg text-sm uppercase tracking-wider cursor-pointer">
-                            Calculate Baseline BMR
-                        </button>
-                    </form>
-
-                    {% if bmr_result and active_tab == 'bmr' %}
-                    <div class="p-6 bg-amber-50/90 border border-amber-200 rounded-2xl animate-fade-in-up">
-                        <div class="text-xs font-bold text-amber-900 uppercase tracking-wider mb-1">Your Resting Energy Expenditure</div>
-                        <div class="text-4xl font-black text-amber-700 font-mono">{{ bmr_result.bmr }} <span class="text-base text-slate-600 font-normal">kcal/day</span></div>
-                        <p class="text-xs text-slate-600 mt-2 mb-0">This is the minimum energy required at rest. Active daily calories will be higher depending on your physical workout frequency.</p>
-                    </div>
-                    {% endif %}
+                <div class="text-center px-3 border-x border-white/10">
+                    <div class="text-[10px] font-bold uppercase text-slate-400">Cardio-Risk</div>
+                    <div class="text-base font-black text-emerald-400">Asian BMI</div>
+                </div>
+                <div class="text-center px-3">
+                    <div class="text-[10px] font-bold uppercase text-slate-400">Energy (TDEE)</div>
+                    <div class="text-base font-black text-amber-400">BMR Engine</div>
                 </div>
             </div>
         </div>
+    </section>
 
-        <!-- Nutrition & Fitness Planner Callout Card -->
-        <div class="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-800 rounded-3xl shadow-xl p-6 sm:p-10 text-white flex flex-col md:flex-row items-center justify-between gap-6 border border-emerald-600/30">
+    <!-- ================= 2. MAIN CALCULATOR CONTENT ================= -->
+    <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-8 sm:pt-12 space-y-8 sm:space-y-12">
+
+        <!-- ================= 3-CARD CALCULATOR SUITE ================= -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            
+            <!-- ================= CARD 1: BMI METRIC (WHO STANDARD) ================= -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-2xl transition-all duration-300 hover:border-blue-300">
+                <!-- Card Header -->
+                <div class="p-6 bg-gradient-to-br from-blue-50/80 via-white to-sky-50/50 border-b border-slate-100">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 text-[10px] font-black uppercase tracking-wider border border-blue-200">
+                            Card 1 • Metric System
+                        </span>
+                        <span class="text-xs font-bold text-slate-400">WHO Standard</span>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-weight-scale text-blue-600"></i> Body Mass Index (BMI)
+                    </h2>
+                    <p class="text-xs text-slate-500 font-medium mt-1 mb-0">
+                        International standard using Kilograms (kg) and Centimeters (cm).
+                    </p>
+                </div>
+
+                <!-- Card Body / Inputs -->
+                <div class="p-6 space-y-5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Age</label>
+                            <input type="number" id="c1_age" value="28" min="5" max="120" oninput="calculateCard1BMI();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Gender</label>
+                            <select id="c1_gender" onchange="calculateCard1BMI();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition cursor-pointer">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Height (cm)</label>
+                            <span class="text-xs font-black text-blue-600 font-mono" id="c1_height_val">175 cm</span>
+                        </div>
+                        <input type="range" id="c1_height_slider" min="100" max="230" value="175" oninput="document.getElementById('c1_height').value = this.value; calculateCard1BMI();" class="w-full accent-blue-600 cursor-pointer mb-2">
+                        <input type="number" id="c1_height" value="175" min="100" max="230" oninput="document.getElementById('c1_height_slider').value = this.value; calculateCard1BMI();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition">
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Weight (kg)</label>
+                            <span class="text-xs font-black text-blue-600 font-mono" id="c1_weight_val">70.0 kg</span>
+                        </div>
+                        <input type="range" id="c1_weight_slider" min="30" max="200" step="0.5" value="70" oninput="document.getElementById('c1_weight').value = this.value; calculateCard1BMI();" class="w-full accent-blue-600 cursor-pointer mb-2">
+                        <input type="number" id="c1_weight" value="70" step="0.1" min="20" max="250" oninput="document.getElementById('c1_weight_slider').value = this.value; calculateCard1BMI();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition">
+                    </div>
+
+                    <!-- Live Results Box -->
+                    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5" id="c1_results_box">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Calculated BMI</div>
+                                <div class="text-3xl font-black text-blue-700 font-mono" id="c1_bmi_score">22.9</div>
+                            </div>
+                            <div class="text-right">
+                                <span class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 inline-block shadow-xs" id="c1_category_badge">
+                                    Normal Weight
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Mini Spectrum Bar -->
+                        <div>
+                            <div class="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden flex relative">
+                                <div class="h-full bg-cyan-400" style="width: 20%" title="Underweight (< 18.5)"></div>
+                                <div class="h-full bg-emerald-500" style="width: 25%" title="Normal (18.5 - 24.9)"></div>
+                                <div class="h-full bg-amber-400" style="width: 25%" title="Overweight (25 - 29.9)"></div>
+                                <div class="h-full bg-rose-500" style="width: 15%" title="Obese Class I (30 - 34.9)"></div>
+                                <div class="h-full bg-red-600" style="width: 15%" title="Obese Class II+ (≥ 35)"></div>
+                            </div>
+                            <div class="flex justify-between text-[9px] font-extrabold text-slate-400 mt-1 px-0.5">
+                                <span>18.5</span>
+                                <span>25.0</span>
+                                <span>30.0</span>
+                                <span>35.0</span>
+                            </div>
+                        </div>
+
+                        <!-- Target Healthy Range -->
+                        <div class="pt-2 border-t border-slate-200/80 text-xs space-y-1">
+                            <div class="flex justify-between text-slate-600 font-medium">
+                                <span>Healthy Weight Range:</span>
+                                <span class="font-extrabold text-slate-900 font-mono" id="c1_healthy_range">56.7 – 76.3 kg</span>
+                            </div>
+                            <div class="flex justify-between text-slate-600 font-medium">
+                                <span>Clinical Insight:</span>
+                                <span class="font-bold text-emerald-700" id="c1_status_text">Optimal Biometric Range</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer -->
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                    <span>Formula: kg / (m)²</span>
+                    <button type="button" onclick="copyCalculatorResult('c1');" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer">
+                        <i class="fas fa-copy text-[10px]"></i> Copy Summary
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= CARD 2: BMI IMPERIAL & ASIAN-ADJUSTED CRITERIA ================= -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-2xl transition-all duration-300 hover:border-emerald-300">
+                <!-- Card Header -->
+                <div class="p-6 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/50 border-b border-slate-100">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-wider border border-emerald-200">
+                            Card 2 • Imperial / Asian Criteria
+                        </span>
+                        <span class="text-xs font-bold text-slate-400">Deurenberg + Devine</span>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-emerald-600"></i> Asian BMI &amp; Body Fat %
+                    </h2>
+                    <p class="text-xs text-slate-500 font-medium mt-1 mb-0">
+                        Lower cardiometabolic risk cutoffs + Estimated % Body Fat &amp; Ideal Weight.
+                    </p>
+                </div>
+
+                <!-- Card Body / Inputs -->
+                <div class="p-6 space-y-5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Age</label>
+                            <input type="number" id="c2_age" value="28" min="5" max="120" oninput="calculateCard2AsianBMI();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Gender</label>
+                            <select id="c2_gender" onchange="calculateCard2AsianBMI();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none transition cursor-pointer">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Height in Feet & Inches -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Height (Feet &amp; Inches)</label>
+                            <span class="text-xs font-black text-emerald-600 font-mono" id="c2_height_val">5' 9" (69 in)</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="relative">
+                                <input type="number" id="c2_height_ft" value="5" min="3" max="8" oninput="calculateCard2AsianBMI();" class="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none transition">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">ft</span>
+                            </div>
+                            <div class="relative">
+                                <input type="number" id="c2_height_in" value="9" min="0" max="11" oninput="calculateCard2AsianBMI();" class="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none transition">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">in</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weight in lbs -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Weight (Pounds - lbs)</label>
+                            <span class="text-xs font-black text-emerald-600 font-mono" id="c2_weight_val">154.3 lbs</span>
+                        </div>
+                        <input type="range" id="c2_weight_slider" min="60" max="450" step="1" value="154" oninput="document.getElementById('c2_weight').value = this.value; calculateCard2AsianBMI();" class="w-full accent-emerald-600 cursor-pointer mb-2">
+                        <input type="number" id="c2_weight" value="154.3" step="0.5" min="50" max="500" oninput="document.getElementById('c2_weight_slider').value = this.value; calculateCard2AsianBMI();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none transition">
+                    </div>
+
+                    <!-- Live Results Box -->
+                    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5" id="c2_results_box">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Asian Adjusted BMI</div>
+                                <div class="text-3xl font-black text-emerald-700 font-mono" id="c2_bmi_score">22.8</div>
+                            </div>
+                            <div class="text-right">
+                                <span class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 inline-block shadow-xs" id="c2_category_badge">
+                                    Normal (Asian WHO)
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Body Fat % & Ideal Weight Grid -->
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200 text-center">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase">Est. Body Fat %</div>
+                                <div class="text-lg font-black text-emerald-700 font-mono" id="c2_bfp_score">17.6%</div>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-white border border-slate-200 text-center">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase">Ideal Body Weight</div>
+                                <div class="text-lg font-black text-slate-800 font-mono" id="c2_ibw_score">156.0 lbs</div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-200/80 text-xs space-y-1">
+                            <div class="flex justify-between text-slate-600 font-medium">
+                                <span>Asian Cutoffs (WHO):</span>
+                                <span class="font-extrabold text-slate-900">Overweight ≥ 23.0</span>
+                            </div>
+                            <div class="flex justify-between text-slate-600 font-medium">
+                                <span>Cardio-Risk Profile:</span>
+                                <span class="font-bold text-emerald-700" id="c2_risk_text">Low Metabolic Risk</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer -->
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                    <span>Formula: 703 × (lbs / in²)</span>
+                    <button type="button" onclick="copyCalculatorResult('c2');" class="text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-1 cursor-pointer">
+                        <i class="fas fa-copy text-[10px]"></i> Copy Summary
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= CARD 3: BASAL METABOLIC RATE (BMR) & TDEE ================= -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-2xl transition-all duration-300 hover:border-amber-300">
+                <!-- Card Header -->
+                <div class="p-6 bg-gradient-to-br from-amber-50/80 via-white to-orange-50/50 border-b border-slate-100">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider border border-amber-200">
+                            Card 3 • Metabolic Energy
+                        </span>
+                        <span class="text-xs font-bold text-slate-400">Mifflin-St Jeor</span>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-fire text-amber-500"></i> Basal Metabolic Rate (BMR)
+                    </h2>
+                    <p class="text-xs text-slate-500 font-medium mt-1 mb-0">
+                        Resting energy expenditure + Total Daily Energy Expenditure (TDEE).
+                    </p>
+                </div>
+
+                <!-- Card Body / Inputs -->
+                <div class="p-6 space-y-5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Age</label>
+                            <input type="number" id="c3_age" value="28" min="10" max="120" oninput="calculateCard3BMR();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Gender</label>
+                            <select id="c3_gender" onchange="calculateCard3BMR();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:outline-none transition cursor-pointer">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Height (cm)</label>
+                            <input type="number" id="c3_height" value="175" min="100" max="230" oninput="calculateCard3BMR();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Weight (kg)</label>
+                            <input type="number" id="c3_weight" value="70" step="0.5" min="20" max="250" oninput="calculateCard3BMR();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:outline-none transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">Physical Activity Level</label>
+                        <select id="c3_activity" onchange="calculateCard3BMR();" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:outline-none transition cursor-pointer">
+                            <option value="1.2">Sedentary (Little or no exercise)</option>
+                            <option value="1.375">Light Exercise (1–3 days/week)</option>
+                            <option value="1.55" selected>Moderate Exercise (3–5 days/week)</option>
+                            <option value="1.725">Heavy Exercise (6–7 days/week)</option>
+                            <option value="1.9">Athlete / Strenuous Physical Job</option>
+                        </select>
+                    </div>
+
+                    <!-- Live Results Box -->
+                    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5" id="c3_results_box">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Baseline Resting BMR</div>
+                                <div class="text-3xl font-black text-amber-600 font-mono" id="c3_bmr_score">1,659 <span class="text-xs text-slate-500 font-bold">kcal</span></div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Daily TDEE</div>
+                                <div class="text-2xl font-black text-slate-900 font-mono" id="c3_tdee_score">2,571 <span class="text-xs text-slate-500 font-bold">kcal</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Macro Targets Grid -->
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <div class="p-2 rounded-xl bg-blue-50 border border-blue-100 text-center">
+                                <div class="text-[9px] font-bold text-blue-600 uppercase">Protein (30%)</div>
+                                <div class="text-sm font-black text-blue-900 font-mono" id="c3_protein_g">193g</div>
+                            </div>
+                            <div class="p-2 rounded-xl bg-amber-50 border border-amber-100 text-center">
+                                <div class="text-[9px] font-bold text-amber-700 uppercase">Carbs (40%)</div>
+                                <div class="text-sm font-black text-amber-900 font-mono" id="c3_carb_g">257g</div>
+                            </div>
+                            <div class="p-2 rounded-xl bg-rose-50 border border-rose-100 text-center">
+                                <div class="text-[9px] font-bold text-rose-600 uppercase">Fats (30%)</div>
+                                <div class="text-sm font-black text-rose-900 font-mono" id="c3_fat_g">86g</div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-200/80 text-xs space-y-1">
+                            <div class="flex justify-between text-slate-600 font-medium">
+                                <span>Weight Loss Target (-500 kcal):</span>
+                                <span class="font-extrabold text-emerald-700 font-mono" id="c3_loss_cal">2,071 kcal/day</span>
+                            </div>
+                            <div class="flex justify-between text-slate-600 font-medium">
+                                <span>Muscle Gain Target (+350 kcal):</span>
+                                <span class="font-extrabold text-indigo-700 font-mono" id="c3_gain_cal">2,921 kcal/day</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer -->
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                    <span>Equation: 10W + 6.25H - 5A + s</span>
+                    <button type="button" onclick="copyCalculatorResult('c3');" class="text-amber-600 hover:text-amber-800 font-bold flex items-center gap-1 cursor-pointer">
+                        <i class="fas fa-copy text-[10px]"></i> Copy Summary
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= CLINICAL REFERENCE MATRIX ================= -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-10 space-y-6">
+            <div>
+                <h3 class="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-book-medical text-blue-600"></i> Clinical Biometric Reference &amp; Guidelines
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1 mb-0">
+                    Comparative classification chart of WHO International thresholds vs Asian Population Adjusted Criteria.
+                </p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/80">
+                            <th class="p-3 font-extrabold text-slate-700 uppercase tracking-wider">Classification</th>
+                            <th class="p-3 font-extrabold text-slate-700 uppercase tracking-wider">WHO Standard BMI</th>
+                            <th class="p-3 font-extrabold text-slate-700 uppercase tracking-wider">Asian Criteria BMI</th>
+                            <th class="p-3 font-extrabold text-slate-700 uppercase tracking-wider">Associated Health Risk</th>
+                            <th class="p-3 font-extrabold text-slate-700 uppercase tracking-wider">Cardiometabolic Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="p-3 font-bold flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span> Underweight
+                            </td>
+                            <td class="p-3 font-mono font-bold">&lt; 18.5</td>
+                            <td class="p-3 font-mono font-bold">&lt; 18.5</td>
+                            <td class="p-3 text-cyan-700">Nutritional deficiency, osteopenia</td>
+                            <td class="p-3 text-slate-500">Low (increased non-cardiac risk)</td>
+                        </tr>
+                        <tr class="bg-emerald-50/30 hover:bg-emerald-50/60">
+                            <td class="p-3 font-bold text-emerald-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Normal Weight
+                            </td>
+                            <td class="p-3 font-mono font-bold text-emerald-800">18.5 – 24.9</td>
+                            <td class="p-3 font-mono font-bold text-emerald-800">18.5 – 22.9</td>
+                            <td class="p-3 text-emerald-700">Lowest all-cause mortality rate</td>
+                            <td class="p-3 text-emerald-700">Average / Ideal baseline</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="p-3 font-bold text-amber-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Overweight / Pre-Obese
+                            </td>
+                            <td class="p-3 font-mono font-bold text-amber-800">25.0 – 29.9</td>
+                            <td class="p-3 font-mono font-bold text-amber-800">23.0 – 24.9</td>
+                            <td class="p-3 text-amber-700">Elevated blood pressure, insulin resistance</td>
+                            <td class="p-3 text-amber-700 font-bold">Increased Risk</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="p-3 font-bold text-rose-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Obese Class I
+                            </td>
+                            <td class="p-3 font-mono font-bold text-rose-800">30.0 – 34.9</td>
+                            <td class="p-3 font-mono font-bold text-rose-800">25.0 – 29.9</td>
+                            <td class="p-3 text-rose-700">Type 2 Diabetes, hypertension, dyslipidemia</td>
+                            <td class="p-3 text-rose-700 font-bold">High Risk</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50/60">
+                            <td class="p-3 font-bold text-red-900 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-600"></span> Obese Class II / III
+                            </td>
+                            <td class="p-3 font-mono font-bold text-red-800">&ge; 35.0</td>
+                            <td class="p-3 font-mono font-bold text-red-800">&ge; 30.0</td>
+                            <td class="p-3 text-red-700">Coronary artery disease, stroke, sleep apnea</td>
+                            <td class="p-3 text-red-700 font-black">Very High to Severe Risk</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= NUTRITION & WORKOUT PLANNER BANNER ================= -->
+        <div class="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 rounded-3xl shadow-xl p-6 sm:p-10 text-white flex flex-col md:flex-row items-center justify-between gap-6 border border-emerald-600/30">
             <div>
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-emerald-100 text-xs font-bold uppercase tracking-wider mb-2">
-                    <i class="fas fa-apple-whole"></i> Complete Wellness Solution
+                    <i class="fas fa-apple-whole"></i> Personalized Clinical Care
                 </div>
-                <h3 class="text-2xl sm:text-3xl font-black">Looking for Full Meal &amp; Workout Plans?</h3>
+                <h3 class="text-2xl sm:text-3xl font-black">Ready to Put Your Targets Into Action?</h3>
                 <p class="text-xs sm:text-sm text-emerald-100 mt-1 max-w-2xl font-normal leading-relaxed">
-                    Generate customized 7-day nutritional meal recipes, macro targets, and personalized weekly workout splits with our clinical AI engine.
+                    Generate an AI-customized 7-day nutritional meal plan with exact calorie targets, macro recipes, and a structured weekly workout schedule.
                 </p>
             </div>
-            <a href="{{ url_for('clinical_ai.nutrition_fitness_planner') }}" class="px-6 py-4 bg-white text-emerald-900 font-extrabold rounded-2xl hover:bg-emerald-50 transition shadow-lg whitespace-nowrap text-xs sm:text-sm flex items-center gap-2 text-decoration-none shrink-0">
+            <a href="{{ url_for('clinical_ai.nutrition_fitness_planner') }}" class="px-6 py-4 bg-white text-emerald-950 font-extrabold rounded-2xl hover:bg-emerald-50 transition shadow-lg whitespace-nowrap text-xs sm:text-sm flex items-center gap-2 text-decoration-none shrink-0">
                 <span>Open Nutrition Planner</span>
                 <i class="fas fa-arrow-right"></i>
             </a>
@@ -144,4 +465,201 @@
 
     </div>
 </div>
+
+<!-- ================= REAL-TIME JAVASCRIPT COMPUTATION ENGINE ================= -->
+<script>
+    // 1. Calculate Card 1: Standard Metric BMI (WHO)
+    function calculateCard1BMI() {
+        const age = parseInt(document.getElementById('c1_age').value) || 28;
+        const gender = document.getElementById('c1_gender').value || 'male';
+        const height = parseFloat(document.getElementById('c1_height').value) || 175;
+        const weight = parseFloat(document.getElementById('c1_weight').value) || 70;
+
+        document.getElementById('c1_height_val').innerText = height + ' cm';
+        document.getElementById('c1_weight_val').innerText = weight.toFixed(1) + ' kg';
+
+        if (height <= 0 || weight <= 0) return;
+
+        const heightM = height / 100;
+        const bmi = weight / (heightM * heightM);
+        const bmiRounded = bmi.toFixed(1);
+
+        document.getElementById('c1_bmi_score').innerText = bmiRounded;
+
+        // Classification (WHO International)
+        let catText = 'Normal Weight';
+        let catClass = 'px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 inline-block shadow-xs';
+        let statusText = 'Optimal Biometric Range';
+
+        if (bmi < 18.5) {
+            catText = 'Underweight';
+            catClass = 'px-3 py-1.5 rounded-xl bg-cyan-100 text-cyan-800 text-xs font-black border border-cyan-200 inline-block shadow-xs';
+            statusText = 'Below Standard Weight Threshold';
+        } else if (bmi >= 18.5 && bmi < 25) {
+            catText = 'Normal Weight';
+            catClass = 'px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 inline-block shadow-xs';
+            statusText = 'Optimal Biometric Range';
+        } else if (bmi >= 25 && bmi < 30) {
+            catText = 'Overweight';
+            catClass = 'px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 text-xs font-black border border-amber-200 inline-block shadow-xs';
+            statusText = 'Moderate Health Risk';
+        } else if (bmi >= 30 && bmi < 35) {
+            catText = 'Obese (Class I)';
+            catClass = 'px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-black border border-rose-200 inline-block shadow-xs';
+            statusText = 'High Cardiometabolic Risk';
+        } else {
+            catText = 'Severe Obesity (Class II/III)';
+            catClass = 'px-3 py-1.5 rounded-xl bg-red-100 text-red-800 text-xs font-black border border-red-200 inline-block shadow-xs';
+            statusText = 'Very High Clinical Health Risk';
+        }
+
+        const badge = document.getElementById('c1_category_badge');
+        badge.innerText = catText;
+        badge.className = catClass;
+
+        document.getElementById('c1_status_text').innerText = statusText;
+
+        const minW = (18.5 * heightM * heightM).toFixed(1);
+        const maxW = (24.9 * heightM * heightM).toFixed(1);
+        document.getElementById('c1_healthy_range').innerText = `${minW} – ${maxW} kg`;
+    }
+
+    // 2. Calculate Card 2: Imperial & Asian Adjusted BMI (+ % Body Fat & Ideal Weight)
+    function calculateCard2AsianBMI() {
+        const age = parseInt(document.getElementById('c2_age').value) || 28;
+        const gender = document.getElementById('c2_gender').value || 'male';
+        const ft = parseFloat(document.getElementById('c2_height_ft').value) || 5;
+        const inches = parseFloat(document.getElementById('c2_height_in').value) || 9;
+        const weightLbs = parseFloat(document.getElementById('c2_weight').value) || 154;
+
+        const totalInches = (ft * 12) + inches;
+        document.getElementById('c2_height_val').innerText = `${ft}' ${inches}" (${totalInches} in)`;
+        document.getElementById('c2_weight_val').innerText = weightLbs.toFixed(1) + ' lbs';
+
+        if (totalInches <= 0 || weightLbs <= 0) return;
+
+        const bmi = 703 * (weightLbs / (totalInches * totalInches));
+        const bmiRounded = bmi.toFixed(1);
+
+        document.getElementById('c2_bmi_score').innerText = bmiRounded;
+
+        // Asian WHO Classification (lower cutoffs)
+        let catText = 'Normal (Asian WHO)';
+        let catClass = 'px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 inline-block shadow-xs';
+        let riskText = 'Low Metabolic Risk';
+
+        if (bmi < 18.5) {
+            catText = 'Underweight';
+            catClass = 'px-3 py-1.5 rounded-xl bg-cyan-100 text-cyan-800 text-xs font-black border border-cyan-200 inline-block shadow-xs';
+            riskText = 'Increased Nutritional Risk';
+        } else if (bmi >= 18.5 && bmi < 23) {
+            catText = 'Normal (Asian WHO)';
+            catClass = 'px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 inline-block shadow-xs';
+            riskText = 'Optimal Asian Baseline';
+        } else if (bmi >= 23 && bmi < 25) {
+            catText = 'Increased Risk (Pre-Obese)';
+            catClass = 'px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 text-xs font-black border border-amber-200 inline-block shadow-xs';
+            riskText = 'Elevated Visceral Fat Risk';
+        } else if (bmi >= 25 && bmi < 30) {
+            catText = 'High Risk (Obese I)';
+            catClass = 'px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-black border border-rose-200 inline-block shadow-xs';
+            riskText = 'High Metabolic Risk (Diabetes/CVD)';
+        } else {
+            catText = 'Very High Risk (Obese II)';
+            catClass = 'px-3 py-1.5 rounded-xl bg-red-100 text-red-800 text-xs font-black border border-red-200 inline-block shadow-xs';
+            riskText = 'Severe Cardiometabolic Risk';
+        }
+
+        const badge = document.getElementById('c2_category_badge');
+        badge.innerText = catText;
+        badge.className = catClass;
+        document.getElementById('c2_risk_text').innerText = riskText;
+
+        // Devine Ideal Body Weight
+        let ibwKg = (gender === 'male') ? (50.0 + 2.3 * Math.max(0, totalInches - 60)) : (45.5 + 2.3 * Math.max(0, totalInches - 60));
+        let ibwLbs = (ibwKg * 2.20462).toFixed(1);
+        document.getElementById('c2_ibw_score').innerText = `${ibwLbs} lbs`;
+
+        // Deurenberg Body Fat %
+        const sexNum = (gender === 'male') ? 1 : 0;
+        let bfp = (1.20 * bmi) + (0.23 * age) - (10.8 * sexNum) - 5.4;
+        bfp = Math.max(3.0, Math.min(65.0, bfp)).toFixed(1);
+        document.getElementById('c2_bfp_score').innerText = `${bfp}%`;
+    }
+
+    // 3. Calculate Card 3: Basal Metabolic Rate (BMR) & TDEE (Mifflin-St Jeor)
+    function calculateCard3BMR() {
+        const age = parseInt(document.getElementById('c3_age').value) || 28;
+        const gender = document.getElementById('c3_gender').value || 'male';
+        const height = parseFloat(document.getElementById('c3_height').value) || 175;
+        const weight = parseFloat(document.getElementById('c3_weight').value) || 70;
+        const activity = parseFloat(document.getElementById('c3_activity').value) || 1.55;
+
+        if (height <= 0 || weight <= 0 || age <= 0) return;
+
+        // Mifflin-St Jeor Equation
+        let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+        if (gender === 'male') {
+            bmr += 5;
+        } else {
+            bmr -= 161;
+        }
+
+        const bmrRound = Math.round(bmr);
+        const tdeeRound = Math.round(bmr * activity);
+
+        document.getElementById('c3_bmr_score').innerHTML = `${bmrRound.toLocaleString()} <span class="text-xs text-slate-500 font-bold">kcal</span>`;
+        document.getElementById('c3_tdee_score').innerHTML = `${tdeeRound.toLocaleString()} <span class="text-xs text-slate-500 font-bold">kcal</span>`;
+
+        // Macro targets (30% Protein, 40% Carbs, 30% Fat)
+        const proteinG = Math.round((tdeeRound * 0.30) / 4);
+        const carbG = Math.round((tdeeRound * 0.40) / 4);
+        const fatG = Math.round((tdeeRound * 0.30) / 9);
+
+        document.getElementById('c3_protein_g').innerText = proteinG + 'g';
+        document.getElementById('c3_carb_g').innerText = carbG + 'g';
+        document.getElementById('c3_fat_g').innerText = fatG + 'g';
+
+        const lossCal = Math.max(1200, tdeeRound - 500);
+        const gainCal = tdeeRound + 350;
+
+        document.getElementById('c3_loss_cal').innerText = `${lossCal.toLocaleString()} kcal/day`;
+        document.getElementById('c3_gain_cal').innerText = `${gainCal.toLocaleString()} kcal/day`;
+    }
+
+    // Copy Summary Helper
+    function copyCalculatorResult(cardKey) {
+        let text = "";
+        if (cardKey === 'c1') {
+            const bmi = document.getElementById('c1_bmi_score').innerText;
+            const cat = document.getElementById('c1_category_badge').innerText;
+            const range = document.getElementById('c1_healthy_range').innerText;
+            text = `[Spherix Clinic Health Assessment]\nMetric BMI: ${bmi}\nCategory: ${cat}\nHealthy Weight Range: ${range}\nCalculated with WHO International Standard.`;
+        } else if (cardKey === 'c2') {
+            const bmi = document.getElementById('c2_bmi_score').innerText;
+            const cat = document.getElementById('c2_category_badge').innerText;
+            const bfp = document.getElementById('c2_bfp_score').innerText;
+            const ibw = document.getElementById('c2_ibw_score').innerText;
+            text = `[Spherix Clinic Health Assessment]\nAsian-Adjusted BMI: ${bmi}\nCategory: ${cat}\nEstimated Body Fat: ${bfp}\nIdeal Body Weight: ${ibw}\nCalculated via Asian WHO & Deurenberg Equation.`;
+        } else if (cardKey === 'c3') {
+            const bmr = document.getElementById('c3_bmr_score').innerText;
+            const tdee = document.getElementById('c3_tdee_score').innerText;
+            const loss = document.getElementById('c3_loss_cal').innerText;
+            text = `[Spherix Clinic Health Assessment]\nBasal Metabolic Rate (BMR): ${bmr}\nTotal Daily Energy Expenditure (TDEE): ${tdee}\nWeight Loss Caloric Target: ${loss}\nCalculated via Mifflin-St Jeor Equation.`;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert("✅ Health calculator summary copied to clipboard!");
+        }).catch(err => {
+            console.error("Clipboard error:", err);
+        });
+    }
+
+    // Initialize all 3 cards on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        calculateCard1BMI();
+        calculateCard2AsianBMI();
+        calculateCard3BMR();
+    });
+</script>
 {% endblock %}
