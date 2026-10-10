@@ -18,6 +18,7 @@ from spherix.config import (
 from spherix.models import (
     Doctor, Patient, Staff, HospitalStaff, Hospital, BloodDonor, OrganDonor,
     Appointment, PatientVital, LabRequest, OrganRequest, BedBooking, PatientMedicalRecord,
+    Job, JobApplication,
     Order, Review, Feedback, Message, ActivityLog, Referral, Notification
 )
 
@@ -122,6 +123,8 @@ TEMP_DATA = {
     "notifications": {},
     "patient_vitals": {},
     "lab_requests": {},
+    "jobs": {},
+    "job_applications": {},
     "broadcast_history": [],
     "symptom_reviews": [],
     "next_ids": {
@@ -146,6 +149,8 @@ TEMP_DATA = {
         "patient_vital": 1,
         "medical_record": 1,
         "notification": 1,
+        "job": 1,
+        "job_application": 1,
     }
 }
 
@@ -322,6 +327,37 @@ def ensure_sqlite_columns(cursor):
     except Exception:
         pass
 
+    # Doctor table columns
+    for col, col_def in [
+        ('hospital_id', 'INTEGER'), ('hospital_approval_status', 'TEXT'),
+        ('is_blocked', 'INTEGER DEFAULT 0'), ('is_hidden', 'INTEGER DEFAULT 0'),
+        ('is_verified', 'INTEGER DEFAULT 1'), ('profile_picture_url', 'TEXT'),
+        ('consultation_fee', 'TEXT DEFAULT "1500"'), ('currency', 'TEXT DEFAULT "INR"'),
+        ('timezone', 'TEXT DEFAULT "IST (UTC+5:30)"'), ('is_international', 'INTEGER DEFAULT 0'),
+        ('availability_status', 'TEXT DEFAULT "available"'), ('city', 'TEXT'), ('state', 'TEXT'),
+        ('district', 'TEXT'), ('pincode', 'TEXT'), ('country', 'TEXT DEFAULT "India"'),
+        ('qualification', 'TEXT'), ('license_number', 'TEXT'), ('experience', 'TEXT'),
+        ('consultation_type', 'TEXT DEFAULT "Video & In-Person"'), ('working_hours', 'TEXT'),
+        ('languages_spoken', 'TEXT'), ('social_links', 'TEXT')
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE doctors ADD COLUMN {col} {col_def}")
+        except Exception:
+            pass
+
+    # Patient table columns
+    for col, col_def in [
+        ('license_number', 'TEXT'), ('profile_picture_url', 'TEXT'),
+        ('is_blocked', 'INTEGER DEFAULT 0'), ('is_hidden', 'INTEGER DEFAULT 0'),
+        ('clinical_record', 'TEXT'), ('emergency_contact', 'TEXT'), ('blood_group', 'TEXT'),
+        ('city', 'TEXT'), ('state', 'TEXT'), ('district', 'TEXT'), ('pincode', 'TEXT'),
+        ('country', 'TEXT DEFAULT "India"')
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE patients ADD COLUMN {col} {col_def}")
+        except Exception:
+            pass
+
     # Staff table columns
     try:
         cursor.execute("ALTER TABLE staff ADD COLUMN profile_picture_url TEXT")
@@ -331,10 +367,18 @@ def ensure_sqlite_columns(cursor):
         cursor.execute("ALTER TABLE staff ADD COLUMN hospital_id TEXT")
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE staff ADD COLUMN license_number TEXT")
+    except Exception:
+        pass
 
     # Blood Donors table columns
     try:
         cursor.execute("ALTER TABLE blood_donors ADD COLUMN hospital_id TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE blood_donors ADD COLUMN status TEXT DEFAULT 'approved'")
     except Exception:
         pass
 
@@ -343,12 +387,49 @@ def ensure_sqlite_columns(cursor):
         cursor.execute("ALTER TABLE organ_donors ADD COLUMN hospital_id TEXT")
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE organ_donors ADD COLUMN status TEXT DEFAULT 'approved'")
+    except Exception:
+        pass
 
     # Notifications table columns
     try:
         cursor.execute("ALTER TABLE notifications ADD COLUMN link TEXT")
     except Exception:
         pass
+
+    # Jobs and Job Applications tables
+    try:
+        cursor.execute("CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, req_id TEXT, title TEXT, dept TEXT, location TEXT, salary TEXT, summary TEXT, full_desc TEXT, responsibilities TEXT, requirements TEXT, tech_stack TEXT, apply_deadline TEXT, is_active INTEGER DEFAULT 1, is_hot INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    except Exception:
+        pass
+    try:
+        cursor.execute("CREATE TABLE IF NOT EXISTS job_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, job_title TEXT, applicant_name TEXT, email TEXT, phone TEXT, experience_years TEXT, current_company TEXT, linkedin_portfolio TEXT, resume_link TEXT, cover_note TEXT, status TEXT DEFAULT 'Pending Review', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    except Exception:
+        pass
+    for col in ['job_title', 'applicant_name', 'email', 'phone', 'experience_years', 'current_company', 'linkedin_portfolio', 'resume_link', 'cover_note', 'status']:
+        try:
+            cursor.execute(f"ALTER TABLE job_applications ADD COLUMN {col} TEXT")
+        except Exception:
+            pass
+
+    # Medicines Inventory Columns
+    for col, col_def in [
+        ('stock', 'INTEGER DEFAULT 100'),
+        ('min_threshold', 'INTEGER DEFAULT 25'),
+        ('dosage_form', "TEXT DEFAULT 'Tablet'"),
+        ('manufacturer', "TEXT DEFAULT 'Spherix Pharma'"),
+        ('batch_number', 'TEXT'),
+        ('expiry_date', 'TEXT'),
+        ('composition', 'TEXT'),
+        ('rx_required', 'INTEGER DEFAULT 1'),
+        ('description', 'TEXT'),
+        ('image_url', 'TEXT')
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE medicines ADD COLUMN {col} {col_def}")
+        except Exception:
+            pass
 
 
 def migrate_legacy_schema(cursor):
@@ -1841,6 +1922,67 @@ def save_data():
         except Exception as e:
             print(f"⚠️ Skipping visitor_passes sync: {e}")
 
+        # 23. Jobs & Job Applications
+        try:
+            ensure_table_schema(
+                cursor, 'jobs',
+                "id INTEGER PRIMARY KEY, req_id TEXT, title TEXT, dept TEXT, location TEXT, salary TEXT, summary TEXT, full_desc TEXT, responsibilities TEXT, requirements TEXT, tech_stack TEXT, apply_deadline TEXT, is_active INTEGER DEFAULT 1, is_hot INTEGER DEFAULT 0, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, req_id NVARCHAR(100) NULL, title NVARCHAR(255) NOT NULL, dept NVARCHAR(100) NOT NULL, location NVARCHAR(255) NULL, salary NVARCHAR(255) NULL, summary NVARCHAR(MAX) NULL, full_desc NVARCHAR(MAX) NULL, responsibilities NVARCHAR(MAX) NULL, requirements NVARCHAR(MAX) NULL, tech_stack NVARCHAR(MAX) NULL, apply_deadline NVARCHAR(100) NULL, is_active BIT DEFAULT 1, is_hot BIT DEFAULT 0, created_at DATETIME DEFAULT GETDATE()"
+            )
+            ensure_table_schema(
+                cursor, 'job_applications',
+                "id INTEGER PRIMARY KEY, job_id INTEGER, job_title TEXT, applicant_name TEXT, email TEXT, phone TEXT, experience_years TEXT, current_company TEXT, linkedin_portfolio TEXT, resume_link TEXT, cover_note TEXT, status TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, job_id INT, job_title NVARCHAR(255), applicant_name NVARCHAR(255), email NVARCHAR(255), phone NVARCHAR(50), experience_years NVARCHAR(50), current_company NVARCHAR(255), linkedin_portfolio NVARCHAR(255), resume_link NVARCHAR(500), cover_note NVARCHAR(MAX), status NVARCHAR(50), created_at DATETIME"
+            )
+            cursor.execute("SELECT id FROM jobs")
+            db_job_ids = {row[0] for row in cursor.fetchall()}
+            mem_job_ids = set(TEMP_DATA.get('jobs', {}).keys())
+            for del_id in db_job_ids - mem_job_ids:
+                cursor.execute("DELETE FROM jobs WHERE id = ?", (del_id,))
+
+            for j_id, j in TEMP_DATA.get('jobs', {}).items():
+                resp_json = json.dumps(j.responsibilities) if isinstance(j.responsibilities, list) else str(j.responsibilities or '')
+                reqs_json = json.dumps(j.requirements) if isinstance(j.requirements, list) else str(j.requirements or '')
+                tech_json = json.dumps(j.tech_stack) if isinstance(j.tech_stack, list) else str(j.tech_stack or '')
+                dl_str = j.apply_deadline.strftime('%Y-%m-%d') if hasattr(j.apply_deadline, 'strftime') else str(j.apply_deadline or '')
+                c_at = getattr(j, 'created_at', utcnow())
+
+                if j_id in db_job_ids:
+                    cursor.execute("""
+                        UPDATE jobs SET req_id=?, title=?, dept=?, location=?, salary=?, summary=?, full_desc=?, responsibilities=?, requirements=?, tech_stack=?, apply_deadline=?, is_active=?, is_hot=?, created_at=?
+                        WHERE id=?
+                    """, (j.req_id, j.title, j.dept, j.location, j.salary, j.summary, j.full_desc, resp_json, reqs_json, tech_json, dl_str, 1 if j.is_active else 0, 1 if j.is_hot else 0, c_at, j_id))
+                else:
+                    cursor.execute("""
+                        INSERT INTO jobs (id, req_id, title, dept, location, salary, summary, full_desc, responsibilities, requirements, tech_stack, apply_deadline, is_active, is_hot, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (j_id, j.req_id, j.title, j.dept, j.location, j.salary, j.summary, j.full_desc, resp_json, reqs_json, tech_json, dl_str, 1 if j.is_active else 0, 1 if j.is_hot else 0, c_at))
+
+            cursor.execute("SELECT id FROM job_applications")
+            db_app_ids = {row[0] for row in cursor.fetchall()}
+            mem_app_ids = set(TEMP_DATA.get('job_applications', {}).keys())
+            for del_app_id in db_app_ids - mem_app_ids:
+                cursor.execute("DELETE FROM job_applications WHERE id = ?", (del_app_id,))
+
+            for a_id, a in TEMP_DATA.get('job_applications', {}).items():
+                c_at = getattr(a, 'created_at', utcnow())
+                job_title_val = getattr(a, 'job_title', '')
+                if not job_title_val and a.job_id in TEMP_DATA.get('jobs', {}):
+                    job_title_val = TEMP_DATA['jobs'][a.job_id].title
+
+                if a_id in db_app_ids:
+                    cursor.execute("""
+                        UPDATE job_applications SET job_id=?, job_title=?, applicant_name=?, email=?, phone=?, experience_years=?, current_company=?, linkedin_portfolio=?, resume_link=?, cover_note=?, status=?, created_at=?
+                        WHERE id=?
+                    """, (a.job_id, job_title_val, a.applicant_name, a.email, a.phone, a.experience_years, a.current_company, a.linkedin_portfolio, a.resume_link, a.cover_note, a.status, c_at, a_id))
+                else:
+                    cursor.execute("""
+                        INSERT INTO job_applications (id, job_id, job_title, applicant_name, email, phone, experience_years, current_company, linkedin_portfolio, resume_link, cover_note, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (a_id, a.job_id, job_title_val, a.applicant_name, a.email, a.phone, a.experience_years, a.current_company, a.linkedin_portfolio, a.resume_link, a.cover_note, a.status, c_at))
+        except Exception as e:
+            print(f"⚠️ Skipping jobs sync: {e}")
+
         conn.commit()
         conn.close()
         print("✅ Data synced to SQL successfully.")
@@ -2730,6 +2872,70 @@ def load_data():
             print(f"⚠️ Skipping visitor_passes load: {e}")
             if 'visitor_passes' not in TEMP_DATA: TEMP_DATA['visitor_passes'] = {}
 
+        # 23. Jobs
+        try:
+            ensure_table_schema(
+                cursor, 'jobs',
+                "id INTEGER PRIMARY KEY, title TEXT, department TEXT, location TEXT, employment_type TEXT, experience TEXT, openings INTEGER, salary_range TEXT, overview TEXT, responsibilities TEXT, requirements TEXT, benefits TEXT, apply_deadline TEXT, is_active INTEGER, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, title NVARCHAR(255), department NVARCHAR(100), location NVARCHAR(100), employment_type NVARCHAR(50), experience NVARCHAR(50), openings INT, salary_range NVARCHAR(100), overview NVARCHAR(MAX), responsibilities NVARCHAR(MAX), requirements NVARCHAR(MAX), benefits NVARCHAR(MAX), apply_deadline NVARCHAR(50), is_active INT, created_at DATETIME"
+            )
+            job_rows = fetch_dict("SELECT * FROM jobs")
+            if 'jobs' not in TEMP_DATA: TEMP_DATA['jobs'] = {}
+            for j in job_rows:
+                j_obj = Job(
+                    id=j['id'],
+                    title=j['title'],
+                    department=j.get('department') or 'General Medicine',
+                    location=j.get('location') or 'Main Campus, New Delhi',
+                    employment_type=j.get('employment_type') or 'Full-time',
+                    experience=j.get('experience') or '2+ Years',
+                    openings=j.get('openings') or 1,
+                    salary_range=j.get('salary_range') or 'Competitive / Best in Industry',
+                    overview=j.get('overview') or '',
+                    responsibilities=j.get('responsibilities') or '',
+                    requirements=j.get('requirements') or '',
+                    benefits=j.get('benefits') or '',
+                    apply_deadline=j.get('apply_deadline') or '',
+                    is_active=bool(j.get('is_active', 1)),
+                    created_at=j.get('created_at')
+                )
+                TEMP_DATA['jobs'][j_obj.id] = j_obj
+        except Exception as e:
+            print(f"⚠️ Skipping jobs load: {e}")
+            if 'jobs' not in TEMP_DATA: TEMP_DATA['jobs'] = {}
+
+        seed_initial_jobs()
+
+        # 24. Job Applications
+        try:
+            ensure_table_schema(
+                cursor, 'job_applications',
+                "id INTEGER PRIMARY KEY, job_id INTEGER, job_title TEXT, applicant_name TEXT, email TEXT, phone TEXT, experience_years TEXT, current_company TEXT, linkedin_portfolio TEXT, resume_link TEXT, cover_note TEXT, status TEXT, created_at TIMESTAMP",
+                "id INT PRIMARY KEY, job_id INT, job_title NVARCHAR(255), applicant_name NVARCHAR(255), email NVARCHAR(255), phone NVARCHAR(50), experience_years NVARCHAR(50), current_company NVARCHAR(255), linkedin_portfolio NVARCHAR(255), resume_link NVARCHAR(500), cover_note NVARCHAR(MAX), status NVARCHAR(50), created_at DATETIME"
+            )
+            app_rows = fetch_dict("SELECT * FROM job_applications")
+            if 'job_applications' not in TEMP_DATA: TEMP_DATA['job_applications'] = {}
+            for a in app_rows:
+                a_obj = JobApplication(
+                    id=a['id'],
+                    job_id=a['job_id'],
+                    job_title=a.get('job_title') or '',
+                    applicant_name=a['applicant_name'],
+                    email=a['email'],
+                    phone=a['phone'],
+                    experience_years=a.get('experience_years') or '',
+                    current_company=a.get('current_company') or '',
+                    linkedin_portfolio=a.get('linkedin_portfolio') or '',
+                    resume_link=a.get('resume_link') or '',
+                    cover_note=a.get('cover_note') or '',
+                    status=a.get('status') or 'Pending Review',
+                    created_at=a.get('created_at')
+                )
+                TEMP_DATA['job_applications'][a_obj.id] = a_obj
+        except Exception as e:
+            print(f"⚠️ Skipping job_applications load: {e}")
+            if 'job_applications' not in TEMP_DATA: TEMP_DATA['job_applications'] = {}
+
         # 16. Calculate Next IDs (based on max existing IDs)
         for entity, prefix in [('doctor', 'DOC'), ('patient', 'PAT'), ('hospital', 'HPT'), 
                                ('staff', 'STF'), ('blood_donor', 'BD'), ('organ_donor', 'OD')]:
@@ -2746,8 +2952,8 @@ def load_data():
                         pass
             TEMP_DATA['next_ids'][entity] = max_val + 1
 
-        # Simple integer IDs (Including bed_booking & visitor_pass)
-        for entity in ['appointment', 'review', 'message', 'order', 'camp', 'camp_registration', 'bed_booking', 'activity_log', 'organ_request', 'patient_vital', 'referral', 'notification', 'visitor_pass']:
+        # Simple integer IDs (Including bed_booking, visitor_pass, job & job_application)
+        for entity in ['appointment', 'review', 'message', 'order', 'camp', 'camp_registration', 'bed_booking', 'activity_log', 'organ_request', 'patient_vital', 'referral', 'notification', 'visitor_pass', 'job', 'job_application']:
             dict_key = f"{entity}s" if entity != 'visitor_pass' else 'visitor_passes'
             collection = TEMP_DATA.get(dict_key, {})
             if collection:
@@ -2770,7 +2976,7 @@ def load_data():
 
 
         conn.close()
-        print("✅ Data loaded from SQL successfully. Cleaned temporary and duplicate data.")
+        print("✅ Data loaded from SQL database successfully. All user accounts and records preserved.")
     except Exception as e:
         print(f"❌ Error loading data from SQL: {e}")
 
@@ -2860,181 +3066,99 @@ def seed_initial_patient_medical_records():
     for rec in records:
         TEMP_DATA['medical_records'][rec.id] = rec
 
+
+def seed_initial_jobs():
+    """Seeds default realistic job openings with future deadlines if jobs dictionary is empty."""
+    global TEMP_DATA
+    if 'jobs' not in TEMP_DATA:
+        TEMP_DATA['jobs'] = {}
+    if len(TEMP_DATA['jobs']) > 0:
+        return
+
+    now = datetime.now()
+    default_jobs = [
+        Job(
+            id=1,
+            title="Staff Machine Learning Engineer (Clinical LLMs & Vision)",
+            department="Engineering & AI",
+            location="Remote / New Delhi / Bangalore",
+            employment_type="Full-time",
+            experience="5+ Years",
+            openings=2,
+            salary_range="₹1.4Cr – ₹2.1Cr ($170k–$250k) + Equity",
+            overview="Lead the architecture of our 5,125+ MedQuAD condition reasoning engine, multi-spectral optical lab document OCR, and Groq LPU low-latency inference pipelines.",
+            responsibilities="Architect zero-latency inference pipelines on Groq LPUs delivering <350ms response times.\nFine-tune clinical foundational models on structured OpenFDA and PubMed multi-omics graphs.\nImplement differential diagnostic ranking algorithms evaluated against USMLE & board benchmarks.\nCollaborate directly with our oncology and cardiology medical advisory boards.",
+            requirements="5+ years production experience with PyTorch, distributed training, and CUDA optimization.\nDemonstrated track record of deploying LLM reasoning engines or computer vision at scale.\nFamiliarity with biomedical ontology standards (ICD-10, SNOMED-CT, RxNorm, MeSH).",
+            benefits="100% Comprehensive health & dental coverage\n$3,500 Home workstation & hardware budget\nFlexible remote-first work schedule\nAnnual medical research conference stipend",
+            apply_deadline=(now + timedelta(days=45)).strftime('%Y-%m-%d'),
+            is_active=True,
+            created_at=now - timedelta(days=2)
+        ),
+        Job(
+            id=2,
+            title="Senior Distributed Backend Architect (Python 3.11 / WebSockets)",
+            department="Engineering & AI",
+            location="Remote / Hybrid",
+            employment_type="Full-time",
+            experience="4+ Years",
+            openings=3,
+            salary_range="₹1.1Cr – ₹1.6Cr ($135k–$190k) + Equity",
+            overview="Design high-throughput event queues, live hospital bed telemetry synchronization, WebRTC encrypted video consults, and 10km GPS SOS routing networks.",
+            responsibilities="Build fault-tolerant WebSockets state engines for live OPD queue displays and doctor telemedicine.\nMaintain AES-256 database column encryption and strict HIPAA-compliant audit logs.\nScale automated pharmacy cold-chain order routing and Razorpay escrow integrations.",
+            requirements="4+ years building high-concurrency Python backend services.\nDeep understanding of relational schemas, ACID transactions, and Redis caching topologies.\nExperience with real-time streaming protocols (WebSockets, WebRTC, SSE).",
+            benefits="Comprehensive health coverage + family genomics\nGenerous equity stock options\nAnnual learning & certification budget",
+            apply_deadline=(now + timedelta(days=30)).strftime('%Y-%m-%d'),
+            is_active=True,
+            created_at=now - timedelta(days=3)
+        ),
+        Job(
+            id=3,
+            title="Clinical Research & Oncology Medical Lead (MD / DM)",
+            department="Clinical Science & MD",
+            location="New Delhi / Bangalore / Remote",
+            employment_type="Full-time",
+            experience="6+ Years",
+            openings=1,
+            salary_range="₹1.2Cr – ₹1.8Cr ($150k–$220k) + Equity",
+            overview="Oversee algorithm validation, NCCN/AJCC 8th TNM clinical staging logic, genomic biomarker trials, and physician peer review boards.",
+            responsibilities="Validate AI diagnostic outputs and maintain gold-standard clinical ground truth datasets.\nLead our Multidisciplinary Tumor Board (MTB) case studies and precision oncology protocols.\nAuthor peer-reviewed publications showcasing Spherix clinical trials in medical journals.",
+            requirements="Board-certified Physician (MD, MS, DM, DNB, or MRCP).\nClinical trial oversight experience or academic medical publication background.\nPassion for AI-assisted clinical decision support.",
+            benefits="Competitive base compensation + clinical advisory equity\nSponsored medical CME & international oncology symposia\nFlexible clinic / research schedule",
+            apply_deadline=(now + timedelta(days=60)).strftime('%Y-%m-%d'),
+            is_active=True,
+            created_at=now - timedelta(days=1)
+        ),
+        Job(
+            id=4,
+            title="Lead Product & Clinical Systems Designer",
+            department="Product & Systems Design",
+            location="Remote (Global)",
+            employment_type="Full-time",
+            experience="4+ Years",
+            openings=1,
+            salary_range="₹95L – ₹1.4Cr ($120k–$170k) + Equity",
+            overview="Design high-density, cognitive-load-reducing clinical interfaces for ICU displays, doctor prescription pads, and patient mobile biometrics.",
+            responsibilities="Build and maintain the Spherix Clinical Design System (tokens, dark/light modes, micro-interactions).\nPrototype interactive emergency triage dashboards and pharmacy polypharmacy matrices.\nConduct usability research sessions with verified surgeons, nurses, and chronic care patients.",
+            requirements="4+ years designing complex SaaS or data-heavy web applications.\nObsession with typography, spacing harmony, and responsive ergonomics.\nProficiency with interactive Figma prototyping and component libraries.",
+            benefits="Full hardware & monitor setup\nComprehensive family health insurance\nWellness & fitness allowances",
+            apply_deadline=(now + timedelta(days=40)).strftime('%Y-%m-%d'),
+            is_active=True,
+            created_at=now - timedelta(days=4)
+        )
+    ]
+    for j in default_jobs:
+        TEMP_DATA['jobs'][j.id] = j
+    TEMP_DATA['next_ids']['job'] = max(j.id for j in default_jobs) + 1
+
+
 def cleanup_temporary_and_duplicate_data():
     """
-    Removes mock, demo, and test data from TEMP_DATA,
-    ensuring only the primary Administrator and genuine live user accounts exist.
-    Purges test doctors, hospitals, staff, patients, and donors.
-    Returns True if any items were purged or deduplicated.
+    Safely ensures no duplicate keys exist in memory while PRESERVING all registered
+    accounts, patients, doctors, staff, hospitals, blood donors, organ donors, and job applicants.
+    Data is NEVER automatically deleted without explicit Admin action.
     """
-    global TEMP_DATA
-    data_changed = False
-    
-    mock_doctor_emails = {
-        'sarah.jenkins@spherixclinic.com', 'elena.rostova@spherixclinic.com',
-        'kenji.sato@spherixclinic.com', 'aris.thorne@spherixclinic.com',
-        'amelie.laurent@spherixclinic.com', 'liam.o.connor@spherixclinic.com',
-        'hans.schmidt@spherixclinic.com', 'fatima.al-mansoor@spherixclinic.com',
-        'marcus.vance@spherixclinic.com', 'olivia.williams@spherixclinic.com',
-        'doctor@example.com', 'doctor@spherixclinic.com', 'chen@example.com',
-        'marie@example.com', 'arun.verma@example.com'
-    }
-    mock_hospital_emails = {
-        'contact@aiims.edu.in', 'care@apollohealthcity.in', 'fmri@fortishealthcare.com',
-        'info@medanta.org', 'international@mayoclinic.org', 'globaldesk@clevelandclinic.ae',
-        'international@mountelizabeth.sg', 'international@londonbridge.co.uk',
-        'international@charite.de', 'globaldesk@uhn.ca', 'international@mh.org.au',
-        'metro@example.com', 'hospital@spherixclinic.com', 'apollo@example.com',
-        'stjude@example.com', 'hospital.test@spherixclinic.com', 'apollo.test@example.com'
-    }
-    mock_staff_emails = {
-        'sumit@gmail.com', 'pooja.nurse@example.com', 'kevin.reception@example.com',
-        'blood.smch@example.com', 'organ.smch@example.com', 'priya.reception@example.com',
-        'bed.smch@example.com', 'nurse.smch@example.com', 'general.smch@example.com',
-        'blood.apollo@example.com', 'organ.apollo@example.com', 'kevin.apollo@example.com',
-        'bed.apollo@example.com', 'nurse.apollo@example.com', 'general.apollo@example.com',
-        'blood.metro@example.com', 'organ.metro@example.com', 'bed.metro@example.com',
-        'nurse.metro@example.com', 'general.metro@example.com', 'reception.smch@example.com'
-    }
-    mock_patient_emails = {
-        'patient@spherixclinic.com', 'patient@example.com', 'emily.watson@example.com',
-        'vikram@example.com', 'anita@example.com', 'rajesh.sharma@example.com',
-        'test@example.com'
-    }
-    mock_blood_donor_emails = {
-        'rohan.donor@spherixclinic.com', 'aarav.donor@spherixclinic.com',
-        'sunny28skk@gmail.com', 'david.m@example.com', 'rohan.g@example.com',
-        'sarah.lin@example.com'
-    }
-    mock_organ_donor_emails = {
-        'aditya.organdonor@spherixclinic.com', 'ananya.organdonor@spherixclinic.com',
-        'elena@example.com', 'ramesh.c@example.com'
-    }
-
-    # 1. Doctors (Preserve only genuine admin and non-test verified doctors)
-    cleaned_doctors = {}
-    seen_doc_emails = set()
-    for doc_id, doc in list(TEMP_DATA.get('doctors', {}).items()):
-        doc_email = (getattr(doc, 'email', '') or '').strip().lower()
-        doc_fname = (getattr(doc, 'first_name', '') or '').strip().lower()
-        doc_lname = (getattr(doc, 'last_name', '') or '').strip().lower()
-        if doc_email in mock_doctor_emails or doc_email.endswith('@example.com') or doc_email.startswith('sarah.jenkins.') or (doc_fname == 'aarav' and doc_lname == 'verma'):
-            data_changed = True
-            continue
-        if doc_email and doc_email in seen_doc_emails:
-            data_changed = True
-            continue
-        if 'metro health' in (getattr(doc, 'hospital_name', '') or '').lower():
-            doc.hospital_name = ''
-            doc.hospital_id = ''
-            data_changed = True
-        if doc_email:
-            seen_doc_emails.add(doc_email)
-        cleaned_doctors[doc_id] = doc
-    if len(cleaned_doctors) != len(TEMP_DATA.get('doctors', {})):
-        data_changed = True
-    TEMP_DATA['doctors'] = cleaned_doctors
-
-    # 2. Patients (Purge test patients)
-    cleaned_patients = {}
-    seen_pat_emails = set()
-    for pat_id, pat in list(TEMP_DATA.get('patients', {}).items()):
-        pat_email = (getattr(pat, 'email', '') or '').strip().lower()
-        pat_name = (getattr(pat, 'name', '') or '').strip().lower()
-        if pat_email in mock_patient_emails or pat_email.endswith('@example.com') or pat_email.endswith('@spherixclinic.local') or 'test integration' in pat_name or getattr(pat, 'address', '') == "Verified Resident, City Portal":
-            data_changed = True
-            continue
-        if pat_email and pat_email in seen_pat_emails:
-            data_changed = True
-            continue
-        if pat_email:
-            seen_pat_emails.add(pat_email)
-        cleaned_patients[pat_id] = pat
-    if len(cleaned_patients) != len(TEMP_DATA.get('patients', {})):
-        data_changed = True
-    TEMP_DATA['patients'] = cleaned_patients
-
-    # 3. Hospitals (Purge test hospitals)
-    cleaned_hospitals = {}
-    seen_hosp_emails = set()
-    for hosp_id, hosp in list(TEMP_DATA.get('hospitals', {}).items()):
-        hosp_email = (getattr(hosp, 'email', '') or '').strip().lower()
-        hosp_name = (getattr(hosp, 'name', '') or '').strip().lower()
-        if hosp_email in mock_hospital_emails or hosp_email.endswith('@example.com') or 'metro health' in hosp_name or 'test' in hosp_email:
-            data_changed = True
-            continue
-        if hosp_email and hosp_email in seen_hosp_emails:
-            data_changed = True
-            continue
-        if hosp_email:
-            seen_hosp_emails.add(hosp_email)
-        cleaned_hospitals[hosp_id] = hosp
-    if len(cleaned_hospitals) != len(TEMP_DATA.get('hospitals', {})):
-        data_changed = True
-    TEMP_DATA['hospitals'] = cleaned_hospitals
-
-    # 4. Staff (Purge test staff)
-    cleaned_staff = {}
-    seen_staff_emails = set()
-    for staff_id, staff in list(TEMP_DATA.get('staff', {}).items()):
-        staff_email = (getattr(staff, 'email', '') or '').strip().lower()
-        staff_hosp_name = (getattr(staff, 'hospital_name', '') or '').strip().lower()
-        if staff_email in mock_staff_emails or staff_email.endswith('@example.com') or staff_email.endswith('@metro.com') or 'metro@' in staff_email:
-            data_changed = True
-            continue
-        if staff_email and staff_email in seen_staff_emails:
-            data_changed = True
-            continue
-        if staff_email:
-            seen_staff_emails.add(staff_email)
-        cleaned_staff[staff_id] = staff
-    if len(cleaned_staff) != len(TEMP_DATA.get('staff', {})):
-        data_changed = True
-    TEMP_DATA['staff'] = cleaned_staff
-
-    # 5. Blood Donors (Purge test blood donors)
-    cleaned_blood_donors = {}
-    seen_bd_emails = set()
-    for bd_id, bd in list(TEMP_DATA.get('blood_donors', {}).items()):
-        bd_email = (getattr(bd, 'email', '') or '').strip().lower()
-        if bd_email in mock_blood_donor_emails or bd_email.endswith('@example.com') or str(bd_id) in ['BD/2026/001', 'BD/2026/002', 'BD/2026/003', 'BD/2026/004']:
-            data_changed = True
-            continue
-        if bd_email and bd_email in seen_bd_emails:
-            data_changed = True
-            continue
-        if bd_email:
-            seen_bd_emails.add(bd_email)
-        cleaned_blood_donors[bd_id] = bd
-    if len(cleaned_blood_donors) != len(TEMP_DATA.get('blood_donors', {})):
-        data_changed = True
-    TEMP_DATA['blood_donors'] = cleaned_blood_donors
-
-    # 6. Organ Donors (Purge test organ donors)
-    cleaned_organ_donors = {}
-    seen_od_emails = set()
-    for od_id, od in list(TEMP_DATA.get('organ_donors', {}).items()):
-        od_email = (getattr(od, 'email', '') or '').strip().lower()
-        if od_email in mock_organ_donor_emails or od_email.endswith('@example.com') or str(od_id) in ['OD/2026/001', 'OD/2026/002']:
-            data_changed = True
-            continue
-        if od_email and od_email in seen_od_emails:
-            data_changed = True
-            continue
-        if od_email:
-            seen_od_emails.add(od_email)
-        cleaned_organ_donors[od_id] = od
-    if len(cleaned_organ_donors) != len(TEMP_DATA.get('organ_donors', {})):
-        data_changed = True
-    TEMP_DATA['organ_donors'] = cleaned_organ_donors
-
-    # 7. Purge test camps and registrations
-    if 'camps' in TEMP_DATA:
-        TEMP_DATA['camps'] = {k: v for k, v in TEMP_DATA['camps'].items() if getattr(v, 'id', None) not in [101, 102]}
-    if 'camp_registrations' in TEMP_DATA:
-        TEMP_DATA['camp_registrations'] = {k: v for k, v in TEMP_DATA['camp_registrations'].items() if getattr(v, 'email', '') not in mock_patient_emails and not (getattr(v, 'email', '') or '').endswith('@example.com')}
-
-    return data_changed
+    # Strict persistence: Never automatically purge or delete user accounts.
+    return False
 
 def deduplicate_entities(entities):
     """Returns a list with duplicate entities removed preserving original order."""

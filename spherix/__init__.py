@@ -386,10 +386,12 @@ def create_app(config_object=None):
         except Exception:
             return "Internal Server Error", 500
 
-    # Initial Data Load (Fail-safe for serverless cold start)
+    # Initial Data Load & Full Medicine Catalog Indexing
     try:
         load_data()
+        from medicine_catalog import load_all_medicines
+        load_all_medicines()
     except Exception as e:
-        print(f"⚠️ Non-blocking warning during initial data load: {e}")
+        print(f"⚠️ Non-blocking warning during initial data/medicine load: {e}")
 
     return app

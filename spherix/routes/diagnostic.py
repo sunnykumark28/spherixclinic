@@ -477,6 +477,11 @@ def center_detail(center_id):
 @diagnostic_bp.route('/diagnostic/book', methods=['GET', 'POST'])
 def book_diagnostic_test():
     """Multi-service booking flow: Doorstep Home Collection vs Walk-in Lab Visit."""
+    if not current_user.is_authenticated:
+        flash("Please sign in to your patient account before booking medical tests.", "warning")
+        next_url = request.url if request.method == 'GET' else url_for('diagnostic.diagnostic_home')
+        return redirect(url_for('patient_login', next=next_url))
+
     if request.method == 'POST':
         test_codes_str = request.form.get('test_codes', '')
         package_codes_str = request.form.get('package_codes', '')

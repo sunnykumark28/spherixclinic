@@ -35,7 +35,8 @@ from spherix.config import (
 )
 from spherix.models import (
     Doctor, Patient, Staff, HospitalStaff, Hospital, BloodDonor, OrganDonor,
-    Appointment, PatientVital, LabRequest, OrganRequest, BedBooking,
+    Appointment, PatientVital, LabRequest, OrganRequest, BedBooking, PatientMedicalRecord,
+    Job, JobApplication,
     Order, Review, Feedback, Message, ActivityLog, Referral, Notification
 )
 from spherix.services.database import (
@@ -345,6 +346,8 @@ def admin_dashboard():
                            current_time=time_module.time(),
                            medicines=list(TEMP_DATA.get('medicines', [])),
                            lab_requests=all_lab_requests,
+                           jobs=list(reversed(sorted(TEMP_DATA.get('jobs', {}).values(), key=lambda j: getattr(j, 'id', 0)))),
+                           job_applications=list(reversed(sorted(TEMP_DATA.get('job_applications', {}).values(), key=lambda a: getattr(a, 'id', 0)))),
                            auth_stats=get_auth_telemetry_stats(),
                            auth_logs=list(TEMP_DATA.get('auth_activity_logs', [])))
 
@@ -638,7 +641,23 @@ def admin_add_medicine():
     batch_number = (request.form.get('batch_number') or f"SPX-2026-B{len(TEMP_DATA.get('medicines', [])) + 1:03d}").strip()
     expiry_date = (request.form.get('expiry_date') or '2027-12-31').strip()
     description = (request.form.get('description') or '').strip()
+    image_url = (request.form.get('image_url') or '').strip()
     rx_required = 1 if request.form.get('rx_required') in ['1', 'true', 'on', True] else 0
+
+    # Process uploaded image file if provided
+    file = request.files.get('image') or request.files.get('medicine_image')
+    if file and file.filename != '' and allowed_file(file.filename):
+        try:
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
+            unique_filename = f"med_{int(time_module.time())}_{uuid.uuid4().hex[:8]}.{ext}"
+            upload_dir = os.path.join(current_app.root_path, '..', 'static', 'uploads', 'medicines')
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, unique_filename)
+            file.save(file_path)
+            image_url = url_for('static', filename=f"uploads/medicines/{unique_filename}")
+        except Exception as upload_err:
+            print(f"⚠️ Error saving uploaded medicine image: {upload_err}")
 
     try:
         price = float(request.form.get('price', 0.0))
@@ -665,20 +684,23 @@ def admin_add_medicine():
             if conn:
                 try:
                     cursor = conn.cursor()
-                    # Try inserting with full schema, fallback if columns differ
                     try:
                         cursor.execute("""
-                            INSERT INTO medicines (name, category, price, stock, description)
-                            VALUES (?, ?, ?, ?, ?)
-                        """, (name, category, price, stock, description or composition))
+                            INSERT INTO medicines (name, category, price, stock, description, image_url)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (name, category, price, stock, description or composition, image_url))
                         conn.commit()
                         cursor.execute("SELECT @@IDENTITY AS id")
                         row = cursor.fetchone()
                         if row and row[0]:
                             new_id = int(row[0])
                     except Exception:
-                        cursor.execute("INSERT INTO medicines (name, category, price) VALUES (?, ?, ?)", (name, category, price))
-                        conn.commit()
+                        try:
+                            cursor.execute("INSERT INTO medicines (name, category, price, image_url) VALUES (?, ?, ?, ?)", (name, category, price, image_url))
+                            conn.commit()
+                        except Exception:
+                            cursor.execute("INSERT INTO medicines (name, category, price) VALUES (?, ?, ?)", (name, category, price))
+                            conn.commit()
                     conn.close()
                 except Exception as db_err:
                     print(f"⚠️ Error inserting medicine to DB: {db_err}")
@@ -696,6 +718,7 @@ def admin_add_medicine():
                 'batch_number': batch_number,
                 'expiry_date': expiry_date,
                 'description': description,
+                'image_url': image_url,
                 'rx_required': rx_required
             }
             if 'medicines' not in TEMP_DATA:
@@ -706,7 +729,7 @@ def admin_add_medicine():
             if name not in MEDICINE_LIST:
                 MEDICINE_LIST.append(name)
             
-            flash(f'✅ Medicine "{name}" added to pharmacy inventory with {stock} units in stock.', 'success')
+            flash(f'✅ Medicine "{name}" added to pharmacy inventory with image and {stock} units in stock.', 'success')
     else:
         flash('Medicine name and category are required fields.', 'error')
     return redirect(url_for('admin_dashboard') + '?tab=pharmacy')
@@ -724,7 +747,23 @@ def admin_edit_medicine(med_id):
     batch_number = (request.form.get('batch_number') or '').strip()
     expiry_date = (request.form.get('expiry_date') or '').strip()
     description = (request.form.get('description') or '').strip()
+    image_url = (request.form.get('image_url') or '').strip()
     rx_required = 1 if request.form.get('rx_required') in ['1', 'true', 'on', True] else 0
+
+    # Process uploaded image file if provided
+    file = request.files.get('image') or request.files.get('medicine_image')
+    if file and file.filename != '' and allowed_file(file.filename):
+        try:
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
+            unique_filename = f"med_{med_id}_{int(time_module.time())}_{uuid.uuid4().hex[:6]}.{ext}"
+            upload_dir = os.path.join(current_app.root_path, '..', 'static', 'uploads', 'medicines')
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, unique_filename)
+            file.save(file_path)
+            image_url = url_for('static', filename=f"uploads/medicines/{unique_filename}")
+        except Exception as upload_err:
+            print(f"⚠️ Error saving edited medicine image: {upload_err}")
 
     try:
         price = float(request.form.get('price', 0.0))
@@ -755,6 +794,7 @@ def admin_edit_medicine(med_id):
             if batch_number: med['batch_number'] = batch_number
             if expiry_date: med['expiry_date'] = expiry_date
             if description: med['description'] = description
+            if image_url: med['image_url'] = image_url
             med['rx_required'] = rx_required
             med_found = True
             break
@@ -764,13 +804,26 @@ def admin_edit_medicine(med_id):
         try:
             cursor = conn.cursor()
             try:
-                cursor.execute("""
-                    UPDATE medicines 
-                    SET name=?, category=?, price=?, stock=?, description=?
-                    WHERE id=?
-                """, (name, category, price, stock, description or composition, med_id))
+                if image_url:
+                    cursor.execute("""
+                        UPDATE medicines 
+                        SET name=?, category=?, price=?, stock=?, description=?, image_url=?
+                        WHERE id=?
+                    """, (name, category, price, stock, description or composition, image_url, med_id))
+                else:
+                    cursor.execute("""
+                        UPDATE medicines 
+                        SET name=?, category=?, price=?, stock=?, description=?
+                        WHERE id=?
+                    """, (name, category, price, stock, description or composition, med_id))
             except Exception:
-                cursor.execute("UPDATE medicines SET name=?, category=?, price=? WHERE id=?", (name, category, price, med_id))
+                try:
+                    if image_url:
+                        cursor.execute("UPDATE medicines SET name=?, category=?, price=?, image_url=? WHERE id=?", (name, category, price, image_url, med_id))
+                    else:
+                        cursor.execute("UPDATE medicines SET name=?, category=?, price=? WHERE id=?", (name, category, price, med_id))
+                except Exception:
+                    cursor.execute("UPDATE medicines SET name=?, category=?, price=? WHERE id=?", (name, category, price, med_id))
             conn.commit()
             conn.close()
         except Exception as db_err:
@@ -1288,9 +1341,11 @@ def admin_verify_doctor(doc_id):
 
 
 @admin_bp.route('/admin/hospital/verify/<path:hospital_id>', methods=['POST'])
+@admin_bp.route('/admin/hospital/verify-hosp/<path:hosp_id>', methods=['POST'])
 @admin_required
-def admin_verify_hospital(hospital_id):
-    hospital, _ = resolve_entity_and_key('hospitals', hospital_id)
+def admin_verify_hospital(hospital_id=None, hosp_id=None):
+    target_id = hospital_id or hosp_id or request.form.get('hospital_id') or request.form.get('hosp_id')
+    hospital, _ = resolve_entity_and_key('hospitals', target_id)
     if hospital:
         hospital.is_verified = True
         if not getattr(hospital, 'license_number', None) and not getattr(hospital, 'license_no', None):
@@ -2529,4 +2584,169 @@ def admin_delete_hospital_type(type_id):
     else:
         flash(message, "error")
     return redirect(url_for('admin_dashboard') + '?tab=hospital_types')
+
+
+# ========================================================
+# CAREERS & JOB POSTING MANAGEMENT ROUTES (ADMIN)
+# ========================================================
+
+@admin_bp.route('/admin/jobs/add', methods=['POST'])
+@admin_required
+def admin_add_job():
+    """Admin endpoint to create a new job opening with apply deadline."""
+    try:
+        title = request.form.get('title', '').strip()
+        department = request.form.get('department', '').strip() or 'General Medicine'
+        location = request.form.get('location', '').strip() or 'Main Campus, New Delhi'
+        employment_type = request.form.get('employment_type', '').strip() or 'Full-time'
+        experience = request.form.get('experience', '').strip() or '2+ Years'
+        openings = int(request.form.get('openings', 1) or 1)
+        salary_range = request.form.get('salary_range', '').strip() or 'Competitive / Best in Industry'
+        overview = request.form.get('overview', '').strip()
+        responsibilities = request.form.get('responsibilities', '').strip()
+        requirements = request.form.get('requirements', '').strip()
+        benefits = request.form.get('benefits', '').strip()
+        tech_stack = request.form.get('tech_stack', '').strip()
+        apply_deadline = request.form.get('apply_deadline', '').strip()
+        is_active = request.form.get('is_active', '1') in ['1', 'true', 'on', True]
+        is_hot = request.form.get('is_hot') in ['1', 'true', 'on', True]
+
+        if not title:
+            flash("Job position title is required.", "error")
+            return redirect(url_for('admin_dashboard') + '?tab=jobs')
+
+        if 'jobs' not in TEMP_DATA:
+            TEMP_DATA['jobs'] = {}
+
+        job_id = TEMP_DATA['next_ids'].get('job', 1)
+        while job_id in TEMP_DATA['jobs']:
+            job_id += 1
+
+        new_job = Job(
+            id=job_id,
+            title=title,
+            department=department,
+            location=location,
+            employment_type=employment_type,
+            experience=experience,
+            openings=openings,
+            salary_range=salary_range,
+            overview=overview,
+            responsibilities=responsibilities,
+            requirements=requirements,
+            benefits=benefits,
+            tech_stack=tech_stack,
+            apply_deadline=apply_deadline,
+            is_active=is_active,
+            is_hot=is_hot,
+            created_at=datetime.now()
+        )
+
+        TEMP_DATA['jobs'][job_id] = new_job
+        TEMP_DATA['next_ids']['job'] = job_id + 1
+        save_data()
+
+        flash(f"Job opening '{title}' has been successfully published!", "success")
+    except Exception as e:
+        flash(f"Error publishing job opening: {str(e)}", "error")
+
+    return redirect(url_for('admin_dashboard') + '?tab=jobs')
+
+
+@admin_bp.route('/admin/jobs/edit/<int:job_id>', methods=['POST'])
+@admin_required
+def admin_edit_job(job_id):
+    """Admin endpoint to update an existing job posting."""
+    try:
+        job = TEMP_DATA.get('jobs', {}).get(job_id)
+        if not job:
+            flash(f"Job posting #{job_id} not found.", "error")
+            return redirect(url_for('admin_dashboard') + '?tab=jobs')
+
+        job.title = request.form.get('title', job.title).strip()
+        job.department = request.form.get('department', job.department).strip()
+        job.location = request.form.get('location', job.location).strip()
+        job.employment_type = request.form.get('employment_type', job.employment_type).strip()
+        job.experience = request.form.get('experience', job.experience).strip()
+        job.openings = int(request.form.get('openings', job.openings) or 1)
+        job.salary_range = request.form.get('salary_range', job.salary_range).strip()
+        job.overview = request.form.get('overview', job.overview).strip()
+        job.responsibilities = request.form.get('responsibilities', job.responsibilities).strip()
+        job.requirements = request.form.get('requirements', job.requirements).strip()
+        job.benefits = request.form.get('benefits', job.benefits).strip()
+        if 'tech_stack' in request.form:
+            ts_val = request.form.get('tech_stack', '').strip()
+            job.tech_stack = [t.strip() for t in ts_val.split(',') if t.strip()] if ts_val else []
+        job.apply_deadline = request.form.get('apply_deadline', job.apply_deadline).strip()
+        job.is_active = request.form.get('is_active') in ['1', 'true', 'on', True]
+        job.is_hot = request.form.get('is_hot') in ['1', 'true', 'on', True]
+
+        save_data()
+        flash(f"Job opening '{job.title}' updated successfully.", "success")
+    except Exception as e:
+        flash(f"Error updating job: {str(e)}", "error")
+
+    return redirect(url_for('admin_dashboard') + '?tab=jobs')
+
+
+@admin_bp.route('/admin/jobs/toggle/<int:job_id>', methods=['POST'])
+@admin_required
+def admin_toggle_job(job_id):
+    """Toggles active/inactive status of a job opening."""
+    job = TEMP_DATA.get('jobs', {}).get(job_id)
+    if not job:
+        flash(f"Job #{job_id} not found.", "error")
+    else:
+        job.is_active = not job.is_active
+        save_data()
+        status_text = "activated" if job.is_active else "paused/deactivated"
+        flash(f"Job opening '{job.title}' has been {status_text}.", "success")
+
+    return redirect(url_for('admin_dashboard') + '?tab=jobs')
+
+
+@admin_bp.route('/admin/jobs/delete/<int:job_id>', methods=['POST', 'GET'])
+@admin_required
+def admin_delete_job(job_id):
+    """Deletes a job opening from the system."""
+    if job_id in TEMP_DATA.get('jobs', {}):
+        job_title = TEMP_DATA['jobs'][job_id].title
+        del TEMP_DATA['jobs'][job_id]
+        save_data()
+        flash(f"Job opening '{job_title}' has been removed.", "success")
+    else:
+        flash(f"Job #{job_id} not found.", "error")
+
+    return redirect(url_for('admin_dashboard') + '?tab=jobs')
+
+
+@admin_bp.route('/admin/jobs/application/status/<int:app_id>', methods=['POST'])
+@admin_required
+def admin_update_job_application_status(app_id):
+    """Updates candidate job application status (Pending Review, Shortlisted, Interview Scheduled, Rejected, Hired)."""
+    app_obj = TEMP_DATA.get('job_applications', {}).get(app_id)
+    if not app_obj:
+        flash(f"Job Application #{app_id} not found.", "error")
+    else:
+        new_status = request.form.get('status', 'Pending Review').strip()
+        app_obj.status = new_status
+        save_data()
+        flash(f"Application for '{app_obj.applicant_name}' updated to '{new_status}'.", "success")
+
+    return redirect(url_for('admin_dashboard') + '?tab=job_applications')
+
+
+@admin_bp.route('/admin/jobs/application/delete/<int:app_id>', methods=['POST', 'GET'])
+@admin_required
+def admin_delete_job_application(app_id):
+    """Deletes a candidate application record."""
+    if app_id in TEMP_DATA.get('job_applications', {}):
+        del TEMP_DATA['job_applications'][app_id]
+        save_data()
+        flash(f"Application #{app_id} deleted successfully.", "success")
+    else:
+        flash(f"Application #{app_id} not found.", "error")
+
+    return redirect(url_for('admin_dashboard') + '?tab=job_applications')
+
 

@@ -56,7 +56,8 @@ from spherix.config import (
 )
 from spherix.models import (
     Doctor, Patient, Staff, HospitalStaff, Hospital, BloodDonor, OrganDonor,
-    Appointment, PatientVital, LabRequest, OrganRequest, BedBooking,
+    Appointment, PatientVital, LabRequest, OrganRequest, BedBooking, PatientMedicalRecord,
+    Job, JobApplication,
     Order, Review, Feedback, Message, ActivityLog, Referral, Notification
 )
 from spherix.services.database import (
@@ -187,6 +188,59 @@ def api_countries():
     return jsonify(search_countries(q))
 
 
+@main_bp.route('/api/currency/rates', methods=['GET'])
+def api_currency_rates():
+    """Returns supported currencies, real-time rates (in INR base), symbols, and country mappings."""
+    return jsonify({
+        'base': 'INR',
+        'rates': GLOBAL_CURRENCY_RATES,
+        'symbols': GLOBAL_CURRENCY_SYMBOLS,
+        'countries': COUNTRIES_195,
+        'user_currency': session.get('user_currency', 'INR')
+    })
+
+
+@main_bp.route('/api/currency/set', methods=['POST'])
+def api_currency_set():
+    """Saves user currency preference to Flask session."""
+    data = request.get_json(silent=True) or request.form or {}
+    currency_code = str(data.get('currency') or data.get('currency_code') or 'INR').upper()
+    if currency_code in GLOBAL_CURRENCY_RATES or currency_code in GLOBAL_CURRENCY_SYMBOLS:
+        session['user_currency'] = currency_code
+        return jsonify({'success': True, 'currency': currency_code, 'symbol': get_currency_symbol(currency_code)})
+    return jsonify({'success': False, 'error': f'Unsupported currency: {currency_code}'}), 400
+
+
+@main_bp.route('/api/currency/detect', methods=['GET'])
+def api_currency_detect():
+    """Infers client country & currency from headers/GeoIP hints."""
+    cf_country = request.headers.get('CF-IPCountry', '').upper()
+    x_country = request.headers.get('X-Country-Code', '').upper()
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    
+    detected_country_code = cf_country or x_country or ''
+    matched_country = next((c for c in COUNTRIES_195 if c.get('code') == detected_country_code), None)
+    
+    if matched_country:
+        currency = matched_country.get('currency', 'INR')
+        country_name = matched_country.get('name', 'India')
+        flag = matched_country.get('flag', '🌍')
+    else:
+        # Default or check if user is localhost / IN
+        currency = session.get('user_currency', 'INR')
+        country_name = 'India' if currency == 'INR' else 'International'
+        flag = '🇮🇳' if currency == 'INR' else '🌍'
+
+    return jsonify({
+        'country_code': detected_country_code or ('IN' if currency == 'INR' else ''),
+        'country_name': country_name,
+        'currency': currency,
+        'symbol': get_currency_symbol(currency),
+        'flag': flag,
+        'ip': client_ip
+    })
+
+
 
 @main_bp.route('/notifications/mark-read', methods=['POST'])
 @login_required
@@ -222,18 +276,26 @@ def bulk_mark_notifications_read():
 @main_bp.route('/')
 def home():
     current_year = datetime.now().year
+
+    # Strictly registered account counts across all user roles
+    doc_count = len(TEMP_DATA.get('doctors', {}))
+    hosp_count = len(TEMP_DATA.get('hospitals', {}))
+    pat_count = len(TEMP_DATA.get('patients', {}))
+    staff_count = len(TEMP_DATA.get('staff', {}))
+    blood_count = len(TEMP_DATA.get('blood_donors', {}))
+    organ_count = len(TEMP_DATA.get('organ_donors', {}))
+    total_accounts = doc_count + hosp_count + pat_count + staff_count + blood_count + organ_count
+
     stats = {
-        'doctors': len(TEMP_DATA.get('doctors', {})),
-        'hospitals': len(TEMP_DATA.get('hospitals', {})),
-        'patients': len(TEMP_DATA.get('patients', {})),
-        'emergencies': len(TEMP_DATA.get('bed_bookings', {})),
+        'total_accounts': total_accounts,
+        'doctors': doc_count,
+        'hospitals': hosp_count,
+        'patients': pat_count,
+        'staff': staff_count,
+        'blood_donors': blood_count,
+        'organ_donors': organ_count,
         'appointments': len(TEMP_DATA.get('appointments', {})),
-        'blood_donors': len(TEMP_DATA.get('blood_donors', {})),
-        'organ_donors': len(TEMP_DATA.get('organ_donors', {})),
-        'orders': len(TEMP_DATA.get('orders', {})),
-        'medicines': len(TEMP_DATA.get('medicines', {})),
-        'camps': len(TEMP_DATA.get('camps', {})),
-        'countries': len(COUNTRIES_195),
+        'emergencies': len(TEMP_DATA.get('bed_bookings', {})) + len(TEMP_DATA.get('blood_requests', {})),
         'feedbacks': len(TEMP_DATA.get('feedbacks', {}))
     }
     
@@ -2571,9 +2633,86 @@ def log_patient_vitals():
 
 @main_bp.route("/careers")
 def careers():
-    return render_template("careers.html")
+    # Only show active jobs whose apply deadline has not expired
+    all_jobs = list(TEMP_DATA.get('jobs', {}).values())
+    active_jobs = [j for j in all_jobs if getattr(j, 'is_active', True) and not getattr(j, 'is_expired', False)]
+    # Sort latest first
+    active_jobs.sort(key=lambda j: getattr(j, 'id', 0), reverse=True)
+    jobs_data = [j.to_dict() for j in active_jobs]
+    return render_template("careers.html", jobs=active_jobs, jobs_json=json.dumps(jobs_data))
 
 
+@main_bp.route("/api/jobs/apply", methods=["POST"])
+def apply_for_job():
+    """Candidate job application submission endpoint."""
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict()
+        job_id = int(data.get('job_id') or 0)
+        applicant_name = (data.get('applicant_name') or data.get('name') or '').strip()
+        email = (data.get('email') or '').strip()
+        phone = (data.get('phone') or '').strip()
+        experience_years = (data.get('experience_years') or data.get('experience') or '').strip()
+        current_company = (data.get('current_company') or '').strip()
+        linkedin_portfolio = (data.get('linkedin_portfolio') or data.get('portfolio') or '').strip()
+        resume_link = (data.get('resume_link') or data.get('resume') or '').strip()
+        cover_note = (data.get('cover_note') or data.get('notes') or '').strip()
+
+        if not applicant_name or not email or not phone:
+            return jsonify({'success': False, 'error': 'Name, email, and phone number are required.'}), 400
+
+        job = TEMP_DATA.get('jobs', {}).get(job_id)
+        if not job:
+            return jsonify({'success': False, 'error': 'The requested job opening does not exist.'}), 404
+
+        if not job.is_active or job.is_expired:
+            return jsonify({'success': False, 'error': 'Applications for this position are closed as the deadline has passed.'}), 400
+
+        if 'job_applications' not in TEMP_DATA:
+            TEMP_DATA['job_applications'] = {}
+
+        app_id = TEMP_DATA['next_ids'].get('job_application', 1)
+        while app_id in TEMP_DATA['job_applications']:
+            app_id += 1
+
+        new_app = JobApplication(
+            id=app_id,
+            job_id=job_id,
+            job_title=job.title,
+            applicant_name=applicant_name,
+            email=email,
+            phone=phone,
+            experience_years=experience_years,
+            current_company=current_company,
+            linkedin_portfolio=linkedin_portfolio,
+            resume_link=resume_link,
+            cover_note=cover_note,
+            status='Pending Review',
+            created_at=datetime.now()
+        )
+
+        TEMP_DATA['job_applications'][app_id] = new_app
+        TEMP_DATA['next_ids']['job_application'] = app_id + 1
+
+        # Create notification for admin
+        try:
+            create_notification(
+                user_id='admin',
+                user_type='admin',
+                message=f"New Job Application received from {applicant_name} for position '{job.title}'.",
+                link="/admin/dashboard?tab=job_applications"
+            )
+        except Exception:
+            pass
+
+        save_data()
+
+        return jsonify({
+            'success': True,
+            'message': f"Thank you, {applicant_name}! Your application for '{job.title}' has been successfully submitted.",
+            'application_id': app_id
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': f"Failed to submit application: {str(e)}"}), 500
 
 
 @main_bp.route("/blog")

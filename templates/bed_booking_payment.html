@@ -5,7 +5,7 @@
     <div class="max-w-2xl mx-auto">
         
         <!-- Header Card -->
-        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
             <div class="bg-gradient-to-r from-rose-950 via-slate-900 to-red-950 px-8 py-7 text-white relative overflow-hidden">
                 <div class="absolute right-0 top-0 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
                 
@@ -25,9 +25,9 @@
 
             <div class="p-6 sm:p-8 space-y-6">
                 <!-- Bed & Hospital Details Card -->
-                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="bg-slate-50 rounded-lg p-5 border border-slate-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div class="flex items-center gap-3.5">
-                        <div class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-rose-600/30">
+                        <div class="w-12 h-12 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-rose-600/30">
                             <i class="fas fa-hospital"></i>
                         </div>
                         <div>
@@ -46,7 +46,7 @@
                 </div>
 
                 <!-- Fee Breakdown -->
-                <div class="bg-rose-50/60 rounded-2xl p-5 border border-rose-200/80 space-y-2.5">
+                <div class="bg-rose-50/60 rounded-lg p-5 border border-rose-200/80 space-y-2.5">
                     <div class="flex justify-between items-center text-xs text-slate-600">
                         <span>{{ booking.bed_type }} Bed Admission &amp; Triage Deposit</span>
                         <span class="font-mono font-semibold text-slate-900">₹{{ "%.2f"|format(fee) }}</span>
@@ -61,38 +61,166 @@
                     </div>
                 </div>
 
-                <!-- Razorpay Payment Options Banner -->
-                <div class="rounded-2xl p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-3 border border-slate-800">
-                    <div class="flex items-center gap-3">
-                        <span class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-sm border border-rose-400/30">
-                            <i class="fas fa-shield-check"></i>
+                <!-- Payment Method Selection Tabs (UPI & QR / Razorpay / Cards) -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                            <i class="fas fa-credit-card text-rose-600"></i> Select Deposit Method
+                        </label>
+                        <span class="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                            <i class="fas fa-bolt"></i> Instant Bed Reservation
                         </span>
-                        <div>
-                            <div class="text-xs font-bold text-white">Instant Online Payment via Razorpay</div>
-                            <div class="text-[10px] text-slate-400">Supports UPI, Google Pay, PhonePe, Debit/Credit Cards, NetBanking</div>
+                    </div>
+
+                    <!-- Payment Tabs Header -->
+                    <div class="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                        <button type="button" onclick="switchPayTab('upi_qr')" id="tabBtn_upi_qr"
+                            class="py-2.5 px-3 rounded-lg text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 bg-white text-rose-900 shadow-sm border border-slate-200/80 cursor-pointer">
+                            <i class="fas fa-qrcode text-rose-600 text-sm"></i>
+                            <span>UPI &amp; QR Code</span>
+                        </button>
+                        <button type="button" onclick="switchPayTab('cards')" id="tabBtn_cards"
+                            class="py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer">
+                            <i class="fas fa-credit-card text-slate-500 text-sm"></i>
+                            <span>Cards &amp; NetBank</span>
+                        </button>
+                        <button type="button" onclick="switchPayTab('razorpay_modal')" id="tabBtn_razorpay_modal"
+                            class="py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer">
+                            <i class="fas fa-shield-halved text-emerald-600 text-sm"></i>
+                            <span>Razorpay All</span>
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: UPI & QR CODE SECTION -->
+                    <div id="tabContent_upi_qr" class="space-y-4">
+                        <div class="bg-gradient-to-br from-slate-900 via-rose-950 to-slate-900 text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-lg relative overflow-hidden">
+                            <div class="flex flex-col md:flex-row items-center gap-6 relative z-10">
+                                <!-- Dynamic QR Code Container -->
+                                <div class="bg-white p-3.5 rounded-2xl shadow-xl flex flex-col items-center shrink-0 border-2 border-rose-400/40">
+                                    <div class="relative">
+                                        <img id="dynamicUpiQr" 
+                                             src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi%3A%2F%2Fpay%3Fpa%3Dspherixclinic%40okhdfcbank%26pn%3DSpherix%2520Hospital%26am%3D{{ fee }}%26cu%3DINR%26tn%3DBed%2520Deposit%2520%2523{{ booking.id }}" 
+                                             alt="UPI QR Code" 
+                                             class="w-40 h-40 rounded-lg object-contain">
+                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div class="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center p-1 border border-slate-200">
+                                                <i class="fas fa-bed-pulse text-rose-600 text-base"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="mt-2 text-[10px] font-black font-mono text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        <i class="fas fa-camera text-rose-600"></i> Scan with any UPI App
+                                    </span>
+                                </div>
+
+                                <!-- QR Instructions & UPI App Shortcuts -->
+                                <div class="flex-1 text-center md:text-left space-y-3">
+                                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                                        <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-wider border border-rose-500/30">
+                                            Live Dynamic QR
+                                        </span>
+                                        <span class="text-xs text-slate-300 font-mono">
+                                            Deposit: <strong class="text-white text-sm">₹{{ "%.2f"|format(fee) }}</strong>
+                                        </span>
+                                    </div>
+                                    
+                                    <p class="text-xs text-slate-300 leading-relaxed">
+                                        Scan with <strong>Google Pay, PhonePe, Paytm, BHIM</strong> to lock admission immediately.
+                                    </p>
+
+                                    <!-- Copy UPI ID Row -->
+                                    <div class="bg-white/10 rounded-lg p-2 flex items-center justify-between gap-2 border border-white/10 text-xs">
+                                        <div class="truncate font-mono text-slate-300 text-[11px]">
+                                            <span class="text-slate-400">UPI VPA:</span> <strong class="text-emerald-300" id="upiVpaText">spherixclinic@okhdfcbank</strong>
+                                        </div>
+                                        <button type="button" onclick="copyUpiId()" class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1" id="copyUpiBtn">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+
+                                    <!-- Quick UPI Trigger Button via Razorpay -->
+                                    <button type="button" onclick="launchRazorpayPayment('upi')"
+                                        class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-rose-500 via-red-500 to-rose-600 hover:from-rose-400 hover:to-red-400 text-white font-black text-xs shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer">
+                                        <i class="fas fa-bolt text-sm"></i>
+                                        <span>Open Razorpay UPI &amp; QR Modal</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Supported UPI Apps Badges -->
+                        <div class="grid grid-cols-4 gap-2">
+                            <button type="button" onclick="launchRazorpayPayment('upi')" class="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-400 transition-all text-center flex flex-col items-center justify-center gap-1 cursor-pointer">
+                                <i class="fab fa-google-pay text-2xl text-slate-800"></i>
+                                <span class="text-[10px] font-bold text-slate-700">Google Pay</span>
+                            </button>
+                            <button type="button" onclick="launchRazorpayPayment('upi')" class="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-purple-400 transition-all text-center flex flex-col items-center justify-center gap-1 cursor-pointer">
+                                <i class="fas fa-mobile-screen-button text-xl text-purple-600"></i>
+                                <span class="text-[10px] font-bold text-slate-700">PhonePe</span>
+                            </button>
+                            <button type="button" onclick="launchRazorpayPayment('upi')" class="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-sky-400 transition-all text-center flex flex-col items-center justify-center gap-1 cursor-pointer">
+                                <i class="fas fa-wallet text-xl text-sky-600"></i>
+                                <span class="text-[10px] font-bold text-slate-700">Paytm UPI</span>
+                            </button>
+                            <button type="button" onclick="launchRazorpayPayment('upi')" class="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-emerald-400 transition-all text-center flex flex-col items-center justify-center gap-1 cursor-pointer">
+                                <i class="fas fa-building-columns text-xl text-emerald-600"></i>
+                                <span class="text-[10px] font-bold text-slate-700">BHIM / Any</span>
+                            </button>
                         </div>
                     </div>
-                    <span class="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950 px-2 py-1 rounded border border-emerald-500/30">
-                        256-BIT ENCRYPTED
-                    </span>
+
+                    <!-- TAB 2: CARDS & NETBANKING SECTION -->
+                    <div id="tabContent_cards" class="hidden space-y-4">
+                        <div class="bg-white rounded-xl p-5 border border-slate-200 space-y-4">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-900">Debit / Credit Card &amp; NetBanking</h4>
+                                    <p class="text-xs text-slate-500">Supports Visa, Mastercard, RuPay &amp; 50+ Banks</p>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-slate-600 text-lg">
+                                    <i class="fab fa-cc-visa text-blue-600"></i>
+                                    <i class="fab fa-cc-mastercard text-rose-500"></i>
+                                    <i class="fas fa-credit-card text-emerald-600"></i>
+                                </div>
+                            </div>
+
+                            <button type="button" onclick="launchRazorpayPayment('card')"
+                                class="w-full py-3.5 px-6 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fas fa-lock"></i>
+                                <span>Pay ₹{{ "%.2f"|format(fee) }} via Card / NetBanking</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: RAZORPAY STANDARD ALL-IN-ONE MODAL -->
+                    <div id="tabContent_razorpay_modal" class="hidden space-y-4">
+                        <div class="bg-white rounded-xl p-5 border border-slate-200 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <img src="https://razorpay.com/assets/razorpay-glyph.svg" alt="Razorpay" class="w-8 h-8">
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-900">Razorpay All-in-One Checkout</h4>
+                                    <p class="text-xs text-slate-500">Universal payment gateway with UPI, QR, Wallets &amp; NetBanking</p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="launchRazorpayPayment()"
+                                class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fas fa-bolt"></i>
+                                <span>Launch Standard Razorpay Gateway</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Payment Form with Razorpay Standard Checkout -->
-                <form id="payment-form" method="POST" action="{{ url_for('bed_booking_payment', booking_id=booking.id) }}">
+                <!-- Hidden Form with Razorpay Callback -->
+                <form id="payment-form" method="POST" action="{{ url_for('bed_booking_payment', booking_id=booking.id) }}" style="display:none;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
                     <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
                     <input type="hidden" name="razorpay_signature" id="razorpay_signature">
                     <input type="hidden" name="payment_method" value="razorpay">
-
-                    <button type="button" id="rzp-button"
-                        class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black text-base shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2.5 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
-                        <i class="fas fa-lock text-sm"></i>
-                        <span>Pay ₹{{ "%.2f"|format(fee) }} &amp; Reserve Bed</span>
-                    </button>
                 </form>
 
-                <div class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
+                <div class="text-center text-[11px] text-slate-400 flex items-center justify-center gap-2 pt-2">
                     <i class="fas fa-circle-check text-emerald-500"></i>
                     <span>Immediate confirmation alert dispatched to hospital triage desk upon verification.</span>
                 </div>
@@ -105,9 +233,45 @@
 <!-- Razorpay Checkout Integration Script -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-document.getElementById('rzp-button').onclick = function(e){
-    e.preventDefault();
+function switchPayTab(tabId) {
+    const tabs = ['upi_qr', 'cards', 'razorpay_modal'];
+    tabs.forEach(t => {
+        const content = document.getElementById('tabContent_' + t);
+        const btn = document.getElementById('tabBtn_' + t);
+        if (content) {
+            if (t === tabId) {
+                content.classList.remove('hidden');
+            } else {
+                content.classList.add('hidden');
+            }
+        }
+        if (btn) {
+            if (t === tabId) {
+                btn.className = "py-2.5 px-3 rounded-lg text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 bg-white text-rose-900 shadow-sm border border-slate-200/80 cursor-pointer";
+            } else {
+                btn.className = "py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer";
+            }
+        }
+    });
+}
 
+function copyUpiId() {
+    const vpa = document.getElementById('upiVpaText').innerText.trim();
+    navigator.clipboard.writeText(vpa).then(() => {
+        const btn = document.getElementById('copyUpiBtn');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check text-emerald-300"></i> Copied!';
+        btn.classList.add('bg-emerald-600');
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.classList.remove('bg-emerald-600');
+        }, 2000);
+    }).catch(err => {
+        console.error("Copy failed", err);
+    });
+}
+
+function launchRazorpayPayment(preferredMethod) {
     const keyId = "{{ razorpay_key_id }}";
     const orderId = "{{ razorpay_order_id }}";
     const amountPaise = {{ amount_paise }};
@@ -137,7 +301,8 @@ document.getElementById('rzp-button').onclick = function(e){
         },
         "prefill": {
             "name": patientName,
-            "contact": patientPhone
+            "contact": patientPhone,
+            "method": preferredMethod === 'upi' ? 'upi' : (preferredMethod === 'card' ? 'card' : undefined)
         },
         "theme": {
             "color": "#e11d48"
@@ -149,6 +314,33 @@ document.getElementById('rzp-button').onclick = function(e){
         }
     };
 
+    if (preferredMethod === 'upi') {
+        options.config = {
+            display: {
+                blocks: {
+                    upi: {
+                        name: "Pay via UPI & QR Code",
+                        instruments: [
+                            { method: "upi" }
+                        ]
+                    },
+                    other: {
+                        name: "Other Payment Modes",
+                        instruments: [
+                            { method: "card" },
+                            { method: "netbanking" },
+                            { method: "wallet" }
+                        ]
+                    }
+                },
+                sequence: ["block.upi", "block.other"],
+                preferences: {
+                    show_default_blocks: true
+                }
+            }
+        };
+    }
+
     try {
         const rzp1 = new Razorpay(options);
         rzp1.on('payment.failed', function (response){
@@ -159,6 +351,6 @@ document.getElementById('rzp-button').onclick = function(e){
         console.error("Razorpay open error:", err);
         document.getElementById('payment-form').submit();
     }
-};
+}
 </script>
 {% endblock %}

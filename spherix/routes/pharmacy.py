@@ -465,6 +465,7 @@ Required keys:
 
 
 
+@pharmacy_bp.route('/api/pharmacy/search')
 @pharmacy_bp.route('/api/medicines/search')
 def api_search_medicines():
     """

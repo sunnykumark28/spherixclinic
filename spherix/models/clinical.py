@@ -195,3 +195,211 @@ class PatientMedicalRecord:
             "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 
+
+class Job:
+    def __init__(self, id, title, dept=None, department=None, location='Remote / Global', salary=None, salary_range=None, summary='', overview=None, full_desc=None, responsibilities=None, requirements=None, benefits=None, tech_stack=None, apply_deadline=None, is_active=True, is_hot=False, employment_type=None, experience=None, openings=1, created_at=None, **kwargs):
+        self.id = int(id or 0) if str(id).isdigit() else id
+        self.req_id = kwargs.get('req_id', f"REQ-2026-{self.id:02d}" if isinstance(self.id, int) else f"REQ-{self.id}")
+        self.title = str(title).strip()
+        
+        dept_val = department or dept or 'Engineering & AI'
+        self.department = str(dept_val).strip()
+        dept_lower = self.department.lower()
+        if 'ai' in dept_lower or 'eng' in dept_lower or 'tech' in dept_lower or 'dev' in dept_lower:
+            self.dept = 'ai'
+        elif 'clinic' in dept_lower or 'med' in dept_lower or 'oncol' in dept_lower or 'card' in dept_lower or 'doc' in dept_lower:
+            self.dept = 'clinical'
+        elif 'design' in dept_lower or 'product' in dept_lower or 'ux' in dept_lower:
+            self.dept = 'product'
+        elif 'secur' in dept_lower or 'hipaa' in dept_lower or 'cloud' in dept_lower:
+            self.dept = 'security'
+        else:
+            self.dept = 'ops'
+            
+        self.dept_label = kwargs.get('dept_label') or self.department or self._get_dept_label(self.dept)
+        self.employment_type = str(employment_type or kwargs.get('type') or 'Full-Time • Remote / Hybrid').strip()
+        self.type = self.employment_type
+        self.experience = str(experience or '2+ Years').strip()
+        self.openings = int(openings or 1)
+        self.location = str(location or 'Remote / Global').strip()
+        self.salary_range = str(salary_range or salary or 'Competitive + Equity').strip()
+        self.salary = self.salary_range
+        self.overview = str(overview or summary or '').strip()
+        self.summary = self.overview
+        self.full_desc = str(full_desc or self.overview).strip()
+        
+        if isinstance(responsibilities, list):
+            self.responsibilities = [str(r).strip() for r in responsibilities if str(r).strip()]
+        elif isinstance(responsibilities, str) and responsibilities.strip():
+            self.responsibilities = [r.strip() for r in responsibilities.split('\n') if r.strip()]
+        else:
+            self.responsibilities = []
+            
+        if isinstance(requirements, list):
+            self.requirements = [str(r).strip() for r in requirements if str(r).strip()]
+        elif isinstance(requirements, str) and requirements.strip():
+            self.requirements = [r.strip() for r in requirements.split('\n') if r.strip()]
+        else:
+            self.requirements = []
+
+        if isinstance(benefits, list):
+            self.benefits = [str(b).strip() for b in benefits if str(b).strip()]
+        elif isinstance(benefits, str) and benefits.strip():
+            self.benefits = [b.strip() for b in benefits.split('\n') if b.strip()]
+        else:
+            self.benefits = []
+            
+        if isinstance(tech_stack, list):
+            self.tech_stack = [str(t).strip() for t in tech_stack if str(t).strip()]
+        elif isinstance(tech_stack, str) and tech_stack.strip():
+            self.tech_stack = [t.strip() for t in tech_stack.split(',') if t.strip()]
+        else:
+            self.tech_stack = [r for r in self.requirements[:4]] if self.requirements else ['Healthcare Systems', 'Clinical AI']
+
+        self.apply_deadline = ensure_safe_date(apply_deadline) if apply_deadline else None
+        self.is_active = bool(is_active)
+        self.is_hot = bool(is_hot) or (self.openings > 1)
+        self.created_at = ensure_safe_date(created_at or utcnow())
+        self.applications_count = int(kwargs.get('applications_count', 0))
+
+    def _get_dept_label(self, d):
+        mapping = {
+            'ai': 'Engineering & AI',
+            'clinical': 'Clinical Science & MD',
+            'product': 'Product & Systems Design',
+            'security': 'HIPAA & Cloud Security',
+            'ops': 'Hospital & Clinic Operations'
+        }
+        return mapping.get(str(d).lower(), 'General')
+
+    @property
+    def is_expired(self):
+        """Returns True if the application deadline has passed, meaning the job should automatically hide."""
+        if not self.apply_deadline:
+            return False
+        try:
+            today = datetime.now().date()
+            if isinstance(self.apply_deadline, datetime):
+                return self.apply_deadline.date() < today
+            elif hasattr(self.apply_deadline, 'year') and hasattr(self.apply_deadline, 'month') and hasattr(self.apply_deadline, 'day'):
+                return self.apply_deadline < today
+            elif isinstance(self.apply_deadline, str):
+                cleaned = self.apply_deadline.split('T')[0].split(' ')[0]
+                dl = datetime.strptime(cleaned, '%Y-%m-%d').date()
+                return dl < today
+        except Exception:
+            return False
+        return False
+
+    @property
+    def deadline_formatted(self):
+        if not self.apply_deadline:
+            return "Open until filled"
+        try:
+            if isinstance(self.apply_deadline, datetime):
+                return self.apply_deadline.strftime("%b %d, %Y")
+            elif hasattr(self.apply_deadline, 'strftime'):
+                return self.apply_deadline.strftime("%b %d, %Y")
+            elif isinstance(self.apply_deadline, str):
+                cleaned = self.apply_deadline.split('T')[0].split(' ')[0]
+                dt = datetime.strptime(cleaned, '%Y-%m-%d')
+                return dt.strftime("%b %d, %Y")
+        except Exception:
+            return str(self.apply_deadline)
+        return str(self.apply_deadline)
+
+    def to_dict(self):
+        deadline_str = ''
+        if self.apply_deadline:
+            if hasattr(self.apply_deadline, 'strftime'):
+                deadline_str = self.apply_deadline.strftime('%Y-%m-%d')
+            else:
+                deadline_str = str(self.apply_deadline).split('T')[0].split(' ')[0]
+
+        return {
+            'id': self.id,
+            'reqId': self.req_id,
+            'title': self.title,
+            'dept': self.dept,
+            'department': self.department,
+            'deptLabel': self.dept_label,
+            'type': self.type,
+            'employmentType': self.employment_type,
+            'experience': self.experience,
+            'openings': self.openings,
+            'location': self.location,
+            'salary': self.salary,
+            'salaryRange': self.salary_range,
+            'summary': self.summary,
+            'overview': self.overview,
+            'fullDesc': self.full_desc,
+            'responsibilities': self.responsibilities,
+            'requirements': self.requirements,
+            'benefits': self.benefits,
+            'techStack': self.tech_stack,
+            'apply_deadline': deadline_str,
+            'applyDeadline': deadline_str,
+            'deadline_formatted': self.deadline_formatted,
+            'deadlineFormatted': self.deadline_formatted,
+            'isActive': self.is_active,
+            'is_active': self.is_active,
+            'isHot': self.is_hot,
+            'is_hot': self.is_hot,
+            'isExpired': self.is_expired,
+            'is_expired': self.is_expired,
+            'applicationsCount': self.applications_count
+        }
+
+
+class JobApplication:
+    def __init__(self, id, job_id, applicant_name=None, candidate_name=None, email=None, candidate_email=None, phone='', experience_years='', current_company='', linkedin_portfolio='', candidate_url=None, resume_link='', cover_note='', note='', status='Pending Review', created_at=None, **kwargs):
+        self.id = int(id or 0) if str(id).isdigit() else id
+        self.job_id = int(job_id or 0) if str(job_id).isdigit() else job_id
+        self.applicant_name = str(applicant_name or candidate_name or '').strip()
+        self.candidate_name = self.applicant_name
+        self.email = str(email or candidate_email or '').strip().lower()
+        self.candidate_email = self.email
+        self.phone = str(phone or '').strip()
+        self.experience_years = str(experience_years or kwargs.get('experience') or '').strip()
+        self.current_company = str(current_company or kwargs.get('company') or '').strip()
+        self.linkedin_portfolio = str(linkedin_portfolio or candidate_url or kwargs.get('portfolio') or '').strip()
+        self.candidate_url = self.linkedin_portfolio
+        self.resume_link = str(resume_link or kwargs.get('resume') or '').strip()
+        self.cover_note = str(cover_note or note or '').strip()
+        self.note = self.cover_note
+        self.status = str(status or 'Pending Review').strip()
+        self.created_at = ensure_safe_date(created_at or utcnow())
+        self.job_title = kwargs.get('job_title', '')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'jobId': self.job_id,
+            'job_id': self.job_id,
+            'jobTitle': self.job_title,
+            'job_title': self.job_title,
+            'applicantName': self.applicant_name,
+            'applicant_name': self.applicant_name,
+            'candidateName': self.applicant_name,
+            'email': self.email,
+            'candidateEmail': self.email,
+            'phone': self.phone,
+            'experienceYears': self.experience_years,
+            'experience_years': self.experience_years,
+            'currentCompany': self.current_company,
+            'current_company': self.current_company,
+            'linkedinPortfolio': self.linkedin_portfolio,
+            'linkedin_portfolio': self.linkedin_portfolio,
+            'candidateUrl': self.linkedin_portfolio,
+            'resumeLink': self.resume_link,
+            'resume_link': self.resume_link,
+            'coverNote': self.cover_note,
+            'cover_note': self.cover_note,
+            'note': self.cover_note,
+            'status': self.status,
+            'createdAt': self.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(self.created_at, 'strftime') else str(self.created_at),
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(self.created_at, 'strftime') else str(self.created_at)
+        }
+
+
+
