@@ -331,4 +331,3 @@ def register_api_blueprints(app):
     """
     app.register_blueprint(api_bp)
     print("✅ Registered Spherix Clinic REST API v1 blueprint at /api/v1")
-
