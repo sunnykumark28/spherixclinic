@@ -18,6 +18,8 @@ from spherix.config import (
     COUNTRIES_195, GLOBAL_COUNTRY_FLAGS, GLOBAL_COUNTRY_TIMEZONES,
     format_dual_currency, convert_currency, get_currency_symbol, utcnow
 )
+from spherix.extensions import limiter
+from security.captcha import verify_and_consume_challenge
 from spherix.services.database import TEMP_DATA, save_data
 from spherix.services.diagnostic_catalog import (
     DIAGNOSTIC_MASTER_CATEGORIES, MASTER_TESTS_CATALOG, MASTER_PACKAGES_CATALOG,
@@ -81,9 +83,20 @@ def pathology_login_required(f):
 # ==============================================================================
 
 @pathology_bp.route('/pathology/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def pathology_login():
     """Pathology Staff & Administrator Login."""
     if request.method == 'POST':
+        # Validate Spherix Secure CAPTCHA atomically
+        captcha_valid, captcha_msg = verify_and_consume_challenge(
+            user_answer=request.form.get('captcha'),
+            portal_type='pathology',
+            session_obj=session
+        )
+        if not captcha_valid:
+            flash(captcha_msg, 'error')
+            return redirect(url_for('pathology.pathology_login'))
+
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
 

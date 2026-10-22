@@ -248,10 +248,71 @@ python app.py
 ---
 
 ## 🛡️ Security & Compliance Features
+* **Spherix Secure CAPTCHA**: Production-grade visual verification system protecting all 8 clinical portals against brute-force and credential stuffing attacks.
+  * **Zero Plaintext Storage**: Challenges are stored in Redis solely as keyed HMAC-SHA256 digests. Plaintext codes are never stored, logged, or exposed in HTML/JS/APIs.
+  * **Atomic Single-Use & Replay Defense**: Validated via atomic `GETDEL` (Redis 6.2+) and Lua transactions to eliminate race conditions and replay attempts.
+  * **High-Readability Medical Distortion**: Rendered dynamically using Pillow on clean light background with subtle security grid, wave interference, rotation, and speckle noise using bundled font `DejaVuSans-Bold.ttf`.
+  * **Fail-Closed Architecture**: Fails closed if the Redis verification cluster is offline or timing out, preventing unauthorized bypass.
+  * **Strict Rate Limiting**: Throttled image generation (60/min) and login attempts (10/min) backed by Redis/Flask-Limiter.
 * **Encryption**: TLS 1.2 / TLS 1.3 HTTPS enforcement with HTTP Strict Transport Security (HSTS).
 * **Password Hashing**: Cryptographically secure PBKDF2/SHA-256 password hashing via Werkzeug.
 * **Request Guardrails**: CSRF token validation on all POST/PUT requests, Content Security Policy (CSP) headers, and IP-level rate limiting with Flask-Limiter.
 * **Audit Trails**: Real-time logging of clinical actions, authentication events, and administrative overrides.
+
+---
+
+## 🔒 Spherix Secure CAPTCHA Configuration & Deployment
+
+### 1. Environment Configuration
+Add the following configuration options to your `.env` file:
+```env
+# Spherix Secure CAPTCHA & Redis Configuration
+REDIS_URL=redis://localhost:6379/0              # Or rediss://:pass@host:port/0 with TLS in production
+CAPTCHA_SECRET_KEY=generate_a_secure_32_byte_hmac_secret_key
+CAPTCHA_TTL_SECONDS=180                         # 3-minute challenge expiration window
+RATELIMIT_STORAGE_URI=redis://localhost:6379/1   # Shared Redis storage for rate limiting
+```
+
+To generate a cryptographically strong HMAC secret key:
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+### 2. Local Development vs. Production Redis Setup
+* **Local Development**:
+  * You can start a local Redis instance using Docker or Homebrew:
+    ```bash
+    # Homebrew (macOS)
+    brew install redis && brew services start redis
+
+    # Or Docker
+    docker run --name spherix-redis -p 6379:6379 -d redis:alpine
+    ```
+  * During automated test runs (`pytest`), the system automatically uses an isolated, in-memory `fakeredis` store that requires zero external services.
+* **Production Deployment**:
+  * Set `REDIS_URL=rediss://:password@your-redis-cluster:6379/0` (using TLS `rediss://`).
+  * Ensure Redis persistence (`appendonly yes`) or adequate memory sizing.
+
+### 3. Running Automated Security & CAPTCHA Tests
+To execute the dedicated 30-test automated security suite:
+```bash
+./.venv/bin/pytest tests/test_spherix_secure_captcha.py -v
+```
+
+To run the complete role authentication test suite:
+```bash
+./.venv/bin/pytest tests/test_role_login_logout_flow.py -v
+```
+
+### 4. Troubleshooting Common Issues
+* **"Security verification service temporarily unavailable"**:
+  * Verify your Redis service is running: `redis-cli ping` (should return `PONG`).
+  * Check the `REDIS_URL` connection string and credentials in `.env`.
+* **"Security verification challenge expired or missing"**:
+  * Verify that browser session cookies are enabled and properly passed.
+  * Ensure the user submits the form within the configured TTL window (default: 180 seconds).
+* **HTTP 429 Too Many Requests**:
+  * Image generation is limited to 60 requests per minute per IP. Wait 60 seconds or configure `RATELIMIT_DEFAULT` in `spherix/config.py`.
 
 ---
 

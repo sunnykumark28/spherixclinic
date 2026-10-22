@@ -329,7 +329,9 @@ from spherix.services.database import (
     sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item
 )
 from spherix.services.mail_service import (
-    send_notification_email, send_notification_email_async, get_premium_otp_email_html
+    send_notification_email, send_notification_email_async, get_premium_otp_email_html,
+    BRAND_FONTS_HEAD_HTML, get_brand_header_table, get_brand_footer_table,
+    get_branded_general_email_html, enrich_brand_fonts_html
 )
 from spherix.services.payment_service import (
     verify_razorpay_signature, create_razorpay_order
@@ -1866,25 +1868,27 @@ def symptom_receipt_details():
             
             # Send Welcome Email to Subscriber
             user_subject = "Welcome to the Spherix Clinic Newsletter!"
-            user_body = f"""
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #020617; color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #1e293b;">
-                <div style="background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%); padding: 30px 20px; text-align: center;">
-                    <h2 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 1px;">Spherix Clinic</h2>
-                    <p style="color: #cffafe; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px;">Medical Intelligence Network</p>
+            user_body = get_branded_general_email_html(
+                title="Welcome to Spherix Network",
+                greeting=f"Welcome to the Spherix Network, {name or 'there'}.",
+                content_html=f"""
+                <p style="font-size: 15px; line-height: 1.6; color: #334155; margin-bottom: 20px;">
+                    Thank you for subscribing. You are now connected to our intelligence broadcast and will be the first to receive exclusive clinical updates on <strong>Neural Diagnostics</strong>, <strong>Bio-Telemetry</strong>, and <strong>Longevity Science</strong>.
+                </p>
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 20px 0;">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #0284c7; letter-spacing: 1.2px; margin-bottom: 6px;">
+                        Global Health Intelligence Network Node
+                    </div>
+                    <div style="font-size: 13px; color: #475569; line-height: 1.5;">
+                        Status: <span style="color: #059669; font-weight: 700;">● Active Subscriber</span> &bull; Transmission Channel: Verified Direct Node
+                    </div>
                 </div>
-                <div style="padding: 40px 30px; background-color: #0f172a;">
-                    <h3 style="color: #38bdf8; font-size: 20px; margin-top: 0;">Sync Established.</h3>
-                    <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px;">Welcome to the Spherix Network, {name or 'there'}.</p>
-                    <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin-bottom: 30px;">Thank you for subscribing. You are now connected to our intelligence broadcast and will be the first to receive exclusive updates on Neural Diagnostics, Bio-Telemetry, and Longevity Science.</p>
-                    <p style="font-size: 14px; color: #94a3b8; margin-bottom: 0;">Stay optimized,</p>
-                    <p style="font-size: 14px; color: #f8fafc; font-weight: bold; margin-top: 5px;">Spherix Clinic Core Team</p>
-                </div>
-                <div style="background-color: #020617; padding: 20px; text-align: center; border-top: 1px solid #1e293b;">
-                    <p style="color: #64748b; font-size: 11px; margin: 0;">&copy; {datetime.now().year} Spherix Clinic. All rights reserved.</p>
-                    <p style="color: #64748b; font-size: 11px; margin-top: 5px;">Headquarters: Motihari, Bihar - 845401, India | +91 933 4325 920</p>
-                </div>
-            </div>
-            """
+                <p style="font-size: 14px; color: #64748b; margin-bottom: 4px;">Stay optimized,</p>
+                <p style="font-size: 14px; color: #0f172a; font-weight: bold; margin-top: 0;">Spherix Clinic Core Team</p>
+                """,
+                role_color="#0284c7",
+                badge_text="Medical Intelligence Network"
+            )
             send_notification_email(email, user_subject, user_body, is_html=True)
         
         try:
@@ -1960,50 +1964,67 @@ def symptom_receipt_details():
                 try:
                     primary_condition = result.get('conditions', ['General Symptom Assessment'])[0] if result.get('conditions') else 'General Symptom Assessment'
                     email_subject = f"🩺 Your Spherix Official Medical Prescription & Diagnostic Report - {name or 'Patient'}"
-                    email_body = f"""
-                    <!DOCTYPE html>
-                    <html>
-                    <head><meta charset="utf-8"></head>
-                    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
-                        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                            <div style="background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
-                                <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px;">SPHERIX CLINICAL DIAGNOSTICS</h1>
-                                <p style="margin: 6px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #e0f2fe;">Official AI-Generated Medical Prescription</p>
-                            </div>
-                            
-                            <div style="padding: 32px 24px;">
-                                <p style="font-size: 15px; margin: 0 0 16px;">Dear <strong>{name or 'Patient'}</strong>,</p>
-                                <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px;">
-                                    Your requested <strong>Spherix Clinical Diagnostic Prescription & Medical Report</strong> has been generated and is attached to this email as a verified multi-page PDF document.
-                                </p>
-                                
-                                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
-                                    <h3 style="margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #0284c7; font-weight: 700;">Intake & Assessment Summary</h3>
-                                    <table style="width: 100%; font-size: 13px; line-height: 1.8; color: #334155;">
-                                        <tr><td style="width: 40%; color: #64748b;">Primary Finding:</td><td><strong>{primary_condition}</strong></td></tr>
-                                        <tr><td style="color: #64748b;">Risk / Triage Level:</td><td><strong>{result.get('risk_level', '🟡 Moderate')}</strong></td></tr>
-                                        <tr><td style="color: #64748b;">Affected Area:</td><td><strong>{patient_info.get('body_part', 'General').capitalize()}</strong></td></tr>
-                                        <tr><td style="color: #64748b;">Duration & Severity:</td><td><strong>{patient_info.get('duration')} &bull; {patient_info.get('severity')}</strong></td></tr>
+                    brand_header_ai = get_brand_header_table(role_color="#0284c7")
+                    brand_footer_ai = get_brand_footer_table(datetime.now().year)
+                    email_body = f"""<!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="utf-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>{email_subject}</title>
+                        {BRAND_FONTS_HEAD_HTML}
+                    </head>
+                    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1120; margin: 0; padding: 32px 16px; color: #1e293b; -webkit-font-smoothing: antialiased;">
+                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(180deg, #0b1120 0%, #0f172a 100%);">
+                            <tr>
+                                <td align="center">
+                                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);">
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 34px 24px 28px; text-align: center; border-bottom: 3px solid #0284c7;">
+                                                {brand_header_ai}
+                                                <div style="display: inline-block; margin-top: 8px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 9999px; padding: 4px 14px;">
+                                                    <span class="brand-font-ghi font-zen-dots" style="font-family: 'Zen Dots', 'Courier New', sans-serif !important; font-size: 10px; font-weight: 500; color: #38bdf8; text-transform: uppercase; letter-spacing: 1.6px;">
+                                                        Official AI-Generated Medical Prescription
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <tr>
+                                            <td style="padding: 34px 28px; background-color: #ffffff;">
+                                                <p style="font-size: 15px; margin: 0 0 16px; color: #1e293b;">Dear <strong>{name or 'Patient'}</strong>,</p>
+                                                <p style="font-size: 14px; line-height: 1.65; color: #475569; margin: 0 0 20px;">
+                                                    Your requested <strong>Spherix Clinic Clinical Diagnostic Prescription &amp; Medical Report</strong> has been generated and is attached to this email as an authenticated multi-page PDF document.
+                                                </p>
+                                                
+                                                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;">
+                                                    <h3 style="margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: #0284c7; font-weight: 800;">Intake &amp; Assessment Summary</h3>
+                                                    <table style="width: 100%; font-size: 13px; line-height: 1.8; color: #334155;">
+                                                        <tr><td style="width: 40%; color: #64748b; font-weight: 600;">Primary Finding:</td><td><strong>{primary_condition}</strong></td></tr>
+                                                        <tr><td style="color: #64748b; font-weight: 600;">Risk / Triage Level:</td><td><strong>{result.get('risk_level', '🟡 Moderate')}</strong></td></tr>
+                                                        <tr><td style="color: #64748b; font-weight: 600;">Affected Area:</td><td><strong>{patient_info.get('body_part', 'General').capitalize()}</strong></td></tr>
+                                                        <tr><td style="color: #64748b; font-weight: 600;">Duration &amp; Severity:</td><td><strong>{patient_info.get('duration')} &bull; {patient_info.get('severity')}</strong></td></tr>
+                                                    </table>
+                                                </div>
+                                                
+                                                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 18px; margin-bottom: 24px;">
+                                                    <div style="font-size: 13px; color: #166534; line-height: 1.5;">
+                                                        📎 <strong>Attached:</strong> <code style="background-color: #dcfce7; padding: 2px 6px; border-radius: 4px; font-weight: 600;">spherix_medical_prescription.pdf</code><br>
+                                                        Includes full Google Cloud Vision biomarkers, OpenFDA supportive medication matrix, dietary recovery protocols, and physician validation.
+                                                    </div>
+                                                </div>
+                                                
+                                                <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; margin: 0; border-top: 1px dashed #e2e8f0; padding-top: 16px;">
+                                                    <strong>Important Medical Disclaimer:</strong> This clinical report provides AI-guided supportive insights and does not replace in-person examination by a licensed medical practitioner.
+                                                </p>
+                                            </td>
+                                        </tr>
+                                        
+                                        {brand_footer_ai}
                                     </table>
-                                </div>
-                                
-                                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-                                    <div style="font-size: 13px; color: #166534;">
-                                        📎 <strong>Attached:</strong> <code style="background-color: #dcfce7; padding: 2px 6px; border-radius: 4px;">spherix_medical_prescription.pdf</code><br>
-                                        Includes full Google Cloud Vision biomarkers, OpenFDA supportive medication matrix, dietary recovery protocols, and physician validation.
-                                    </div>
-                                </div>
-                                
-                                <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; margin: 0;">
-                                    <strong>Important Medical Disclaimer:</strong> This clinical report provides AI-guided supportive insights and does not replace in-person examination by a licensed medical practitioner.
-                                </p>
-                            </div>
-                            
-                            <div style="background-color: #f8fafc; padding: 18px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
-                                &copy; {datetime.now().year} Spherix Clinic Digital Health System. All rights reserved.<br>
-                                Motihari, Bihar - 845401 | +91 933 4325 920
-                            </div>
-                        </div>
+                                </td>
+                            </tr>
+                        </table>
                     </body>
                     </html>
                     """

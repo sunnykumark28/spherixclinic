@@ -34,6 +34,76 @@
     .minimal-input-wrap:focus-within .minimal-label {
         color: #0284c7;
     }
+
+    /* Modern floating label underline input for Doctor ID / Email */
+    .floating-input-wrap {
+        position: relative;
+        padding-top: 1.25rem;
+        transition: all 0.2s ease;
+    }
+    .floating-input-wrap .floating-input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        border-bottom: 1.5px solid #cbd5e1;
+        padding: 0.5rem 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #000000;
+        outline: none;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .floating-input-wrap .floating-input:focus {
+        border-bottom-color: #0284c7;
+        box-shadow: 0 1px 0 0 #0284c7;
+    }
+    .floating-input-wrap .floating-label {
+        position: absolute !important;
+        display: block !important;
+        left: 0 !important;
+        top: 1.65rem !important;
+        font-size: 0.95rem !important;
+        font-weight: 500 !important;
+        color: #64748b !important;
+        cursor: text !important;
+        user-select: none !important;
+        white-space: nowrap !important;
+        transform-origin: left top !important;
+        transform: translateY(0) scale(1) !important;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+                    color 0.22s ease, 
+                    font-weight 0.22s ease !important;
+        will-change: transform, color;
+        pointer-events: auto !important;
+        z-index: 10 !important;
+    }
+    /* When input is focused, label floats up and turns sky blue */
+    .floating-input-wrap .floating-input:focus ~ .floating-label,
+    .floating-input-wrap:focus-within .floating-label,
+    .floating-input-wrap.is-focused .floating-label,
+    .floating-input-wrap .floating-label.is-focused {
+        transform: translateY(-1.5rem) scale(0.8) !important;
+        color: #0284c7 !important;
+        font-weight: 700 !important;
+    }
+    /* When input has text (not empty) or autofilled, label stays up */
+    .floating-input-wrap.has-val .floating-label,
+    .floating-input-wrap .floating-input:not(:placeholder-shown) ~ .floating-label,
+    .floating-input-wrap .floating-input:-webkit-autofill ~ .floating-label,
+    .floating-input-wrap .floating-label.floating-active {
+        transform: translateY(-1.5rem) scale(0.8) !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+    /* When input has text AND is focused, maintain active focus sky blue color */
+    .floating-input-wrap.has-val:focus-within .floating-label,
+    .floating-input-wrap .floating-input:not(:placeholder-shown):focus ~ .floating-label,
+    .floating-input-wrap:focus-within .floating-label.floating-active,
+    .floating-input-wrap .floating-label.floating-active.is-focused {
+        transform: translateY(-1.5rem) scale(0.8) !important;
+        color: #0284c7 !important;
+        font-weight: 700 !important;
+    }
     .btn-pill-soft {
         background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
         box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.4);
@@ -47,13 +117,26 @@
 </style>
 
 <div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-sky-400 selection:text-white"
-     x-data="{ showPassword: false, isRefreshing: false, captchaUrl: '{{ url_for('get_captcha_image', portal_type='doctor') }}', isSubmitting: false }">
+     x-data="{ showPassword: false, isRefreshing: false, captchaUrl: '{{ url_for('get_captcha_image', portal_type='doctor') }}', isSubmitting: false, emailFocused: false, emailHasVal: {{ 'true' if request.form.email else 'false' }} }">
 
     <!-- Main Clean Minimalist Card Container (Two Columns: 5/12 Form, 7/12 Large Image) -->
     <div class="w-full max-w-[1500px] bg-white rounded-lg p-6 sm:p-10 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
 
         <!-- ================= COLUMN 1: Form ================= -->
         <div class="w-full lg:col-span-5 max-w-xl mx-auto lg:mx-0 flex flex-col justify-center lg:border-r lg:border-slate-200 lg:pr-12">
+
+            <!-- Spherix Clinic Brand Identity Header (Logo & Typography) -->
+            <div class="mb-6">
+                <a href="{{ url_for('home') }}" class="inline-flex items-center gap-2.5 text-decoration-none group" title="Return to Spherix Clinic Home">
+                    <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" 
+                        alt="Spherix Clinic" 
+                        class="w-14 h-14"/>
+                    <span class="flex items-baseline gap-1">
+                        <span class="spherix-brand-gradient brand-font-spherix font-iceland text-3xl font-bold">Spherix</span>
+                        <span class="brand-font-clinic font-ballet text-3xl text-[#005eb8]">Clinic</span>
+                    </span>
+                </a>
+            </div>
 
             <!-- Switcher Tabs -->
             <div class="flex items-center gap-6 mb-8 border-b border-slate-200 pb-3">
@@ -62,8 +145,9 @@
                     Physician Sign In
                 </a>
                 <a href="{{ url_for('doctor_register') }}" 
-                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors">
-                    Join Network
+                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors"
+                   title="Register as a Medical Specialist">
+                    Register / Join Network
                 </a>
                 <a href="{{ url_for('login_landing') }}" 
                    class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors ml-auto">
@@ -136,13 +220,25 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="role" value="doctor">
 
-                <!-- Doctor ID / Email Input -->
-                <div class="minimal-input-wrap">
-                    <label for="doctorEmail" class="minimal-label block">Doctor ID or Professional Email</label>
-                    <input type="text" name="email" id="doctorEmail" required 
-                           placeholder="wright@mayoclinic.org or DOC/2026/006"
+                <!-- Doctor ID / Email Input with Floating Label -->
+                <div class="floating-input-wrap">
+                    <input type="text" 
+                           name="email" 
+                           id="doctorEmail" 
+                           x-ref="docEmailInput"
+                           required 
+                           placeholder=" " 
                            value="{{ request.form.email or '' }}"
-                           class="minimal-input placeholder:text-slate-400">
+                           @focus="emailFocused = true"
+                           @blur="emailFocused = false"
+                           @input="emailHasVal = $event.target.value.trim().length > 0"
+                           x-init="emailHasVal = $el.value.trim().length > 0"
+                           class="floating-input peer"
+                           autocomplete="username">
+                    <label for="doctorEmail" 
+                           @click="$refs.docEmailInput.focus()"
+                           :class="{ 'floating-active': emailHasVal, 'is-focused': emailFocused }"
+                           class="floating-label">Doctor ID or Professional Email</label>
                 </div>
 
                 <!-- Password Input -->
@@ -167,7 +263,7 @@
                 <!-- Security Verification CAPTCHA -->
                 <div class="pt-2">
                     <div class="flex items-center justify-between mb-1.5">
-                        <label class="minimal-label block">Security Verification (CAPTCHA)</label>
+                        <label for="captchaInput" class="minimal-label block">Security Verification (CAPTCHA)</label>
                         <span class="text-[10px] text-slate-600 font-bold">Case-insensitive</span>
                     </div>
 
@@ -175,21 +271,22 @@
                         <!-- Distorted Captcha Image Box -->
                         <div class="flex items-center gap-2">
                             <div class="p-0.5 rounded-lg bg-black border border-slate-300 overflow-hidden shadow-xs shrink-0">
-                                <img :src="captchaUrl" id="doctorCaptchaImg" alt="Security CAPTCHA"
+                                <img :src="captchaUrl" id="doctorCaptchaImg" alt="Security CAPTCHA challenge"
                                      class="h-10 w-[150px] object-cover rounded-lg select-none pointer-events-none">
                             </div>
                             <button type="button" 
                                     @click="isRefreshing = true; captchaUrl = '/api/captcha/image/doctor?refresh=1&t=' + Date.now(); setTimeout(()=>isRefreshing=false, 400);"
                                     class="w-10 h-10 rounded-lg bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-sky-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                                    title="Regenerate CAPTCHA image">
+                                    title="Regenerate CAPTCHA image"
+                                    aria-label="Refresh verification challenge">
                                 <i class="fas fa-arrows-rotate text-xs" :class="isRefreshing ? 'fa-spin text-sky-600' : ''"></i>
                             </button>
                         </div>
 
                         <!-- Underline Input for Captcha -->
                         <div class="minimal-input-wrap flex-grow">
-                            <input type="text" name="captcha" id="captchaInput" required maxlength="6"
-                                   placeholder="Enter 5-character code" autocomplete="off"
+                            <input type="text" name="captcha" id="captchaInput" required maxlength="6" minlength="6"
+                                   placeholder="Enter 6-character code" autocomplete="off" spellcheck="false"
                                    class="minimal-input uppercase font-mono font-bold tracking-wider placeholder:text-slate-400">
                         </div>
                     </div>
@@ -219,7 +316,7 @@
 
             <!-- Bottom Note -->
             <div class="mt-8 text-xs text-slate-700">
-                <span>New medical practitioner? <a href="{{ url_for('doctor_register') }}" class="text-sky-600 hover:underline font-bold">Apply to Join Specialist Network</a></span>
+                <span>New medical practitioner? <a href="{{ url_for('doctor_register') }}" class="text-sky-600 hover:underline font-bold">Register &amp; Apply to Join Specialist Network</a></span>
             </div>
 
         </div>

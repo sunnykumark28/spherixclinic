@@ -28,22 +28,23 @@ DATABASE = os.getenv('DB_NAME', 'spherixclinic')
 USERNAME = os.getenv('DB_USER', 'sa')
 PASSWORD = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', '')
 DRIVER   = os.getenv('DB_DRIVER', '{ODBC Driver 17 for SQL Server}')
-is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+is_serverless = bool(os.getenv('VERCEL') or os.getenv('SERVERLESS') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
 SQLITE_DB_PATH = '/tmp/spherixclinic.db' if is_serverless else os.getenv('SQLITE_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db'))
 
 # ─── PyODBC Import with site-packages fallback ───────────────────────────────
 try:
-    import pyodbc
+    import pyodbc  # type: ignore
     HAS_PYODBC = True
 except ImportError:
     for sp in ['/opt/anaconda3/lib/python3.13/site-packages', '/opt/homebrew/lib/python3.11/site-packages', '/opt/homebrew/lib/python3.12/site-packages']:
         if os.path.exists(sp) and sp not in sys.path:
             sys.path.insert(0, sp)
     try:
-        import pyodbc
+        import pyodbc  # type: ignore
         HAS_PYODBC = True
     except ImportError:
         HAS_PYODBC = False
+        pyodbc = None  # type: ignore
 
 # ─── Connection Utilities ─────────────────────────────────────────────────────
 def get_sql_server_connection(db_name=DATABASE):

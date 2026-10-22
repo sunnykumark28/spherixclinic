@@ -3,6 +3,7 @@ from functools import wraps
 from flask import flash, redirect, url_for, request
 from flask_login import current_user, login_required, logout_user
 from spherix.services.database import TEMP_DATA
+from spherix.config import safe_date_sort_key
 
 def patient_required(f):
     @wraps(f)
@@ -10,7 +11,7 @@ def patient_required(f):
     def decorated_function(*args, **kwargs):
         if getattr(current_user, 'is_doctor', False) and getattr(current_user, 'email', '') != 'admin@spherixclinic.com':
             flash("Access denied. This page is for patients only.", "error")
-            return redirect(url_for('login_landing'))
+            return redirect(url_for('patient_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -18,9 +19,9 @@ def doctor_required(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if not current_user.is_doctor:
+        if not getattr(current_user, 'is_doctor', False):
             flash("Access denied. This page is for doctors only.", "error")
-            return redirect(url_for('login_landing'))
+            return redirect(url_for('doctor_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -30,7 +31,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not hasattr(current_user, 'email') or current_user.email != 'admin@spherixclinic.com':
             flash("You do not have administrative privileges.", "error")
-            return redirect(url_for('home'))
+            return redirect(url_for('admin.admin_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -40,7 +41,7 @@ def hospital_required(f):
     def decorated_function(*args, **kwargs):
         if not getattr(current_user, 'is_hospital', False):
             flash("Access denied. This page is for hospital administrators only.", "error")
-            return redirect(url_for('login_landing'))
+            return redirect(url_for('hospital_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -50,7 +51,7 @@ def staff_required(f):
     def decorated_function(*args, **kwargs):
         if not getattr(current_user, 'is_staff', False):
             flash("Access denied. This page is for hospital staff only.", "error")
-            return redirect(url_for('login_landing'))
+            return redirect(url_for('staff_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -70,7 +71,8 @@ def hospital_or_staff_role_required(*allowed_roles):
                 return f(*args, **kwargs)
             else:
                 flash("Access denied. You do not have the required permissions.", "error")
-                return redirect(url_for('login_landing'))
+                target = 'staff_login' if 'staff' in request.path.lower() else 'hospital_login'
+                return redirect(url_for(target))
         return decorated_function
     return decorator
 
@@ -139,5 +141,5 @@ def get_common_staff_data(staff_user):
     activity_logs = []
     if hospital and hasattr(hospital, 'id'):
         activity_logs = [log for log in TEMP_DATA.get('activity_logs', {}).values() if str(getattr(log, 'hospital_id', '')) == str(hospital.id)]
-        activity_logs.sort(key=lambda x: getattr(x, 'created_at', None) or datetime.min, reverse=True)
+        activity_logs.sort(key=lambda x: safe_date_sort_key(getattr(x, 'created_at', None)), reverse=True)
     return hospital_name, hospital, activity_logs

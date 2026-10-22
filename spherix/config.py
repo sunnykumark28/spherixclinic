@@ -2,7 +2,7 @@ import os
 import sys
 import random
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, timedelta
 
 # Automatically configure unixODBC paths on macOS for Homebrew installations
 if sys.platform == 'darwin' and not os.environ.get('ODBCSYSINI'):
@@ -28,9 +28,14 @@ def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class DateString(str):
-    """A string subclass that supports .strftime() formatting without crashing."""
-    def strftime(self, format_str):
+    """A robust string subclass representing a date/datetime that supports
+    .strftime() formatting, rich comparisons against datetime and date instances,
+    subtraction, and property access without crashing."""
+
+    def _to_datetime(self):
         clean_val = str(self).strip()
+        if not clean_val or clean_val.lower() in ('none', 'null', 'tbd', 'n/a'):
+            return None
         for fmt in (
             '%Y-%m-%d %H:%M:%S',
             '%Y-%m-%d %H:%M',
@@ -48,19 +53,178 @@ class DateString(str):
         ):
             try:
                 dt = datetime.strptime(clean_val, fmt)
-                return dt.strftime(format_str)
+                if dt.tzinfo is not None:
+                    dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+                return dt
             except (ValueError, TypeError):
                 continue
         try:
             dt = datetime.fromisoformat(clean_val.replace('Z', '+00:00'))
-            return dt.strftime(format_str)
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
         except Exception:
-            return clean_val
+            return None
+
+    def _normalize_other(self, other):
+        if other is None:
+            return None
+        if isinstance(other, datetime):
+            if other.tzinfo is not None:
+                return other.astimezone(timezone.utc).replace(tzinfo=None)
+            return other
+        if isinstance(other, date):
+            return datetime.combine(other, datetime.min.time())
+        if isinstance(other, str):
+            other_ds = DateString(other)
+            return other_ds._to_datetime()
+        return None
+
+    def strftime(self, format_str):
+        dt = self._to_datetime()
+        if dt is not None:
+            return dt.strftime(format_str)
+        return str(self)
+
+    def date(self):
+        dt = self._to_datetime()
+        return dt.date() if dt else None
+
+    def time(self):
+        dt = self._to_datetime()
+        return dt.time() if dt else None
+
+    def timestamp(self):
+        dt = self._to_datetime()
+        return dt.timestamp() if dt else 0.0
+
+    def isoformat(self, *args, **kwargs):
+        dt = self._to_datetime()
+        return dt.isoformat(*args, **kwargs) if dt else str(self)
+
+    @property
+    def year(self):
+        dt = self._to_datetime()
+        return dt.year if dt else None
+
+    @property
+    def month(self):
+        dt = self._to_datetime()
+        return dt.month if dt else None
+
+    @property
+    def day(self):
+        dt = self._to_datetime()
+        return dt.day if dt else None
+
+    @property
+    def hour(self):
+        dt = self._to_datetime()
+        return dt.hour if dt else None
+
+    @property
+    def minute(self):
+        dt = self._to_datetime()
+        return dt.minute if dt else None
+
+    @property
+    def second(self):
+        dt = self._to_datetime()
+        return dt.second if dt else None
+
+    def __lt__(self, other):
+        s_dt = self._to_datetime()
+        o_dt = self._normalize_other(other)
+        if s_dt is not None and o_dt is not None:
+            return s_dt < o_dt
+        if isinstance(other, (datetime, date)):
+            return False
+        return super().__lt__(other)
+
+    def __gt__(self, other):
+        s_dt = self._to_datetime()
+        o_dt = self._normalize_other(other)
+        if s_dt is not None and o_dt is not None:
+            return s_dt > o_dt
+        if isinstance(other, (datetime, date)):
+            return False
+        return super().__gt__(other)
+
+    def __le__(self, other):
+        s_dt = self._to_datetime()
+        o_dt = self._normalize_other(other)
+        if s_dt is not None and o_dt is not None:
+            return s_dt <= o_dt
+        if isinstance(other, (datetime, date)):
+            return False
+        return super().__le__(other)
+
+    def __ge__(self, other):
+        s_dt = self._to_datetime()
+        o_dt = self._normalize_other(other)
+        if s_dt is not None and o_dt is not None:
+            return s_dt >= o_dt
+        if isinstance(other, (datetime, date)):
+            return False
+        return super().__ge__(other)
+
+    def __eq__(self, other):
+        s_dt = self._to_datetime()
+        o_dt = self._normalize_other(other)
+        if s_dt is not None and o_dt is not None:
+            return s_dt == o_dt
+        if isinstance(other, (datetime, date)):
+            return False
+        return super().__eq__(other)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __sub__(self, other):
+        s_dt = self._to_datetime()
+        o_dt = self._normalize_other(other)
+        if s_dt is not None and o_dt is not None:
+            return s_dt - o_dt
+        if s_dt is not None and isinstance(other, timedelta):
+            res = s_dt - other
+            return DateString(res.strftime('%Y-%m-%d %H:%M:%S'))
+        return NotImplemented
+
+    def __rsub__(self, other):
+        s_dt = self._to_datetime()
+        o_dt = self._normalize_other(other)
+        if s_dt is not None and o_dt is not None:
+            return o_dt - s_dt
+        return NotImplemented
+
+
+def safe_date_sort_key(val):
+    """Normalize any date representation (datetime, date, DateString, str, None)
+    into a timezone-naive UTC datetime for guaranteed safe comparisons."""
+    if val is None:
+        return datetime.min
+    if isinstance(val, datetime):
+        return val.astimezone(timezone.utc).replace(tzinfo=None) if val.tzinfo else val
+    if isinstance(val, date):
+        return datetime.combine(val, datetime.min.time())
+    if hasattr(val, '_to_datetime'):
+        dt = val._to_datetime()
+        if dt:
+            return dt
+    if isinstance(val, str):
+        ds = DateString(val)
+        dt = ds._to_datetime()
+        if dt:
+            return dt
+    return datetime.min
+
 
 def ensure_safe_date(val):
     if val is None:
         return val
-    if hasattr(val, 'strftime'):
+    if isinstance(val, DateString):
+        return val
+    if hasattr(val, 'strftime') and not isinstance(val, str):
         return val
     if isinstance(val, str):
         return DateString(val)
@@ -71,9 +235,9 @@ def ensure_safe_date(val):
 # per-process key so a published default cannot be used to forge sessions.
 _secret_key = os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET')
 if not _secret_key:
-    if os.environ.get('FLASK_ENV', '').lower() == 'production' and not os.environ.get('VERCEL'):
+    if os.environ.get('FLASK_ENV', '').lower() == 'production':
         print("⚠️ Warning: SECRET_KEY not explicitly set in production environment.")
-SECRET_KEY = _secret_key or os.environ.get('VERCEL_GIT_COMMIT_SHA') or 'spherix-clinic-production-fallback-key-2026'
+SECRET_KEY = _secret_key or 'spherix-clinic-production-fallback-key-2026'
 
 # Mail configuration
 MAIL_SERVER = str(os.getenv('MAIL_SERVER', '')).strip(" '\"")
@@ -524,130 +688,17 @@ BLOG_POSTS = [
 
 
 
-def generate_captcha_text(length=5):
-    """Generate a clean, unambiguous alphanumeric CAPTCHA text."""
-    # Excludes easily confusable characters (0/O, 1/I/L, 5/S, 8/B) for effortless readability
-    chars = "234679ACDEFHJKMNPRTWXYZ"
-    return "".join(random.choices(chars, k=length))
+# Spherix Secure CAPTCHA Integration
+from security.captcha import (
+    generate_captcha_text,
+    generate_captcha_image_bytes,
+    create_captcha_challenge,
+    verify_and_consume_challenge,
+    compute_captcha_digest,
+    CAPTCHA_CHARSET,
+    CAPTCHA_LENGTH
+)
 
-def generate_captcha_image_bytes(text):
-    """Generate a high-security visual CAPTCHA image with anti-bot distortions, crossing sine waves, character rotation, and noise."""
-    from PIL import Image, ImageDraw, ImageFont
-    import io, random, math, os
-
-    width, height = 190, 54
-    # Modern dark slate background
-    bg_color = (15, 23, 42)
-    img = Image.new('RGBA', (width, height), color=(*bg_color, 255))
-    draw = ImageDraw.Draw(img)
-
-    # 1. Background geometric noise & grid lines
-    for _ in range(5):
-        p1 = (random.randint(0, width), random.randint(0, height))
-        p2 = (random.randint(0, width), random.randint(0, height))
-        line_color = (random.randint(40, 80), random.randint(60, 110), random.randint(90, 150), 160)
-        draw.line([p1, p2], fill=line_color, width=random.randint(1, 2))
-
-    # 2. Cross-platform Font Resolution
-    font_candidates = [
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'fonts', 'DejaVuSans-Bold.ttf'),
-        os.path.join(os.getcwd(), 'static', 'fonts', 'DejaVuSans-Bold.ttf'),
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-        '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf',
-        '/System/Library/Fonts/Helvetica.ttc',
-        '/Library/Fonts/Arial.ttf',
-        'Arial.ttf',
-        'DejaVuSans-Bold.ttf'
-    ]
-    font_path = None
-    for p in font_candidates:
-        if p and os.path.exists(p):
-            font_path = p
-            break
-
-    # 3. High-contrast character palette with distinct security colors
-    palette = [
-        (52, 211, 153),   # emerald-400
-        (56, 189, 248),   # sky-400
-        (251, 191, 36),   # amber-400
-        (244, 114, 182),  # pink-400
-        (167, 139, 250),  # violet-400
-        (250, 204, 21),   # yellow-400
-        (236, 72, 153),   # rose-400
-        (226, 232, 240),  # bright slate
-    ]
-
-    # 4. Render characters with random rotation, variable size, and jitter
-    text_layer = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    total_chars = len(text)
-    slot_width = (width - 24) / total_chars
-
-    for i, char in enumerate(text):
-        char_size = random.randint(26, 32)
-        if font_path:
-            try:
-                char_font = ImageFont.truetype(font_path, char_size)
-            except Exception:
-                char_font = ImageFont.load_default()
-        else:
-            char_font = ImageFont.load_default()
-
-        char_box_size = 52
-        char_img = Image.new('RGBA', (char_box_size, char_box_size), (0, 0, 0, 0))
-        char_draw = ImageDraw.Draw(char_img)
-        char_color = (*random.choice(palette), 255)
-
-        try:
-            bbox = char_draw.textbbox((0, 0), char, font=char_font)
-            cw, ch = bbox[2] - bbox[0], bbox[3] - bbox[1]
-            cx = (char_box_size - cw) // 2
-            cy = (char_box_size - ch) // 2
-        except Exception:
-            cx, cy = 10, 8
-
-        # Subtle shadow / edge for anti-segmentation
-        char_draw.text((cx + 1, cy + 1), char, font=char_font, fill=(5, 10, 25, 180))
-        char_draw.text((cx, cy), char, font=char_font, fill=char_color)
-
-        # Distort angle (-24° to +24°)
-        angle = random.randint(-24, 24)
-        rotated = char_img.rotate(angle, expand=False, resample=Image.BILINEAR)
-
-        pos_x = int(8 + i * slot_width + random.randint(-3, 3))
-        pos_y = int(2 + random.randint(-2, 4))
-        text_layer.paste(rotated, (pos_x, pos_y), rotated)
-
-    # Composite characters over background
-    img = Image.alpha_composite(img, text_layer)
-    draw = ImageDraw.Draw(img)
-
-    # 5. Crossing strike-through security sine waves
-    for _ in range(3):
-        points = []
-        phase = random.uniform(0, 2 * math.pi)
-        freq = random.uniform(0.025, 0.05)
-        amp = random.randint(6, 11)
-        base_y = random.randint(14, height - 14)
-        for x in range(0, width, 2):
-            y = int(base_y + amp * math.sin(freq * x + phase))
-            points.append((x, max(2, min(height - 2, y))))
-        curve_color = (*random.choice(palette), random.randint(160, 220))
-        draw.line(points, fill=curve_color, width=random.randint(1, 2))
-
-    # 6. Anti-bot noise speckles & cross marks
-    for _ in range(80):
-        x = random.randint(0, width - 1)
-        y = random.randint(0, height - 1)
-        c = (*random.choice(palette), random.randint(120, 200))
-        draw.point((x, y), fill=c)
-        if random.random() < 0.2:
-            draw.line([(max(0, x - 1), y), (min(width - 1, x + 1), y)], fill=c, width=1)
-
-    final_img = img.convert('RGB')
-    buf = io.BytesIO()
-    final_img.save(buf, format='PNG')
-    return buf.getvalue()
 
 
 

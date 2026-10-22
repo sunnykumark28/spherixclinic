@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from spherix.config import utcnow, ensure_safe_date
 
@@ -196,6 +197,57 @@ class PatientMedicalRecord:
         }
 
 
+def _clean_list_field(val):
+    """Safely extracts a list of clean strings from lists, JSON strings, or newline/comma strings without recursive escaping."""
+    if not val:
+        return []
+    # If it's a string, attempt JSON decoding repeatedly (to unwrap any previously nested JSON strings)
+    if isinstance(val, str):
+        val = val.strip()
+        if not val:
+            return []
+        while isinstance(val, str) and val and ((val.startswith('[') and val.endswith(']')) or (val.startswith('"[') and val.endswith(']"')) or (val.startswith("'[") and val.endswith("]'"))):
+            try:
+                decoded = json.loads(val)
+                val = decoded
+            except Exception:
+                break
+    if isinstance(val, (list, tuple)):
+        items = []
+        for item in val:
+            if isinstance(item, str):
+                s = item.strip()
+                if not s:
+                    continue
+                if (s.startswith('[') and s.endswith(']')) or (s.startswith('"[') and s.endswith(']"')):
+                    items.extend(_clean_list_field(s))
+                else:
+                    items.append(s)
+            elif isinstance(item, (list, tuple)):
+                items.extend(_clean_list_field(item))
+            elif item is not None and str(item).strip():
+                items.append(str(item).strip())
+        return items
+    if isinstance(val, str):
+        lines = [r.strip() for r in val.split('\n') if r.strip()]
+        return lines
+    return []
+
+
+def _clean_tech_stack_field(val):
+    """Parses tech stack into list of clean tokens, splitting by commas or newlines."""
+    if not val:
+        return []
+    cleaned = _clean_list_field(val)
+    result = []
+    for item in cleaned:
+        if ',' in item:
+            result.extend([t.strip() for t in item.split(',') if t.strip()])
+        else:
+            result.append(item)
+    return result
+
+
 class Job:
     def __init__(self, id, title, dept=None, department=None, location='Remote / Global', salary=None, salary_range=None, summary='', overview=None, full_desc=None, responsibilities=None, requirements=None, benefits=None, tech_stack=None, apply_deadline=None, is_active=True, is_hot=False, employment_type=None, experience=None, openings=1, created_at=None, **kwargs):
         self.id = int(id or 0) if str(id).isdigit() else id
@@ -228,31 +280,12 @@ class Job:
         self.summary = self.overview
         self.full_desc = str(full_desc or self.overview).strip()
         
-        if isinstance(responsibilities, list):
-            self.responsibilities = [str(r).strip() for r in responsibilities if str(r).strip()]
-        elif isinstance(responsibilities, str) and responsibilities.strip():
-            self.responsibilities = [r.strip() for r in responsibilities.split('\n') if r.strip()]
-        else:
-            self.responsibilities = []
-            
-        if isinstance(requirements, list):
-            self.requirements = [str(r).strip() for r in requirements if str(r).strip()]
-        elif isinstance(requirements, str) and requirements.strip():
-            self.requirements = [r.strip() for r in requirements.split('\n') if r.strip()]
-        else:
-            self.requirements = []
-
-        if isinstance(benefits, list):
-            self.benefits = [str(b).strip() for b in benefits if str(b).strip()]
-        elif isinstance(benefits, str) and benefits.strip():
-            self.benefits = [b.strip() for b in benefits.split('\n') if b.strip()]
-        else:
-            self.benefits = []
-            
-        if isinstance(tech_stack, list):
-            self.tech_stack = [str(t).strip() for t in tech_stack if str(t).strip()]
-        elif isinstance(tech_stack, str) and tech_stack.strip():
-            self.tech_stack = [t.strip() for t in tech_stack.split(',') if t.strip()]
+        self.responsibilities = _clean_list_field(responsibilities)
+        self.requirements = _clean_list_field(requirements)
+        self.benefits = _clean_list_field(benefits)
+        
+        if tech_stack:
+            self.tech_stack = _clean_tech_stack_field(tech_stack)
         else:
             self.tech_stack = [r for r in self.requirements[:4]] if self.requirements else ['Healthcare Systems', 'Clinical AI']
 

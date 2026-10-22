@@ -3,11 +3,14 @@ from spherix.services.database import (
     auto_migrate_local_data, migrate_legacy_schema,
     cleanup_temporary_and_duplicate_data, deduplicate_entities,
     setup_admin_user, setup_hospital_user, setup_international_network,
-    create_notification, get_temp_data_item, reset_factory_database
+    create_notification, get_temp_data_item, reset_factory_database,
+    get_paid_appointment_doctor_ids_for_patient
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html,
-    send_approval_notification, get_account_approval_email_html
+    send_approval_notification, get_account_approval_email_html,
+    BRAND_FONTS_HEAD_HTML, get_brand_header_table, get_brand_footer_table,
+    get_branded_general_email_html, enrich_brand_fonts_html
 )
 from spherix.services.payment_service import (
     verify_razorpay_signature, create_razorpay_order,
@@ -27,6 +30,7 @@ __all__ = [
     'cleanup_temporary_and_duplicate_data', 'deduplicate_entities',
     'setup_admin_user', 'setup_hospital_user', 'setup_international_network',
     'create_notification', 'get_temp_data_item', 'reset_factory_database',
+    'get_paid_appointment_doctor_ids_for_patient',
     'send_notification_email', 'send_notification_email_async', 'get_premium_otp_email_html',
     'send_approval_notification', 'get_account_approval_email_html',
     'verify_razorpay_signature', 'create_razorpay_order',

@@ -16,8 +16,10 @@ class Doctor(UserMixin):
         self.department = department
         self.phone = kwargs.get('phone')
         self.specialization = kwargs.get('specialization')
-        self.address = kwargs.get('address')
         self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.profile_picture_data = kwargs.get('profile_picture_data')
+        self.profile_picture_content_type = kwargs.get('profile_picture_content_type')
+        self.address = kwargs.get('address')
         self.bio = kwargs.get('bio')
         self.hospital_name = kwargs.get('hospital_name')
         self.hospital_address = kwargs.get('hospital_address')
@@ -105,6 +107,8 @@ class Patient(UserMixin):
         self.age = kwargs.get('age')
         self.gender = kwargs.get('gender')
         self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.profile_picture_data = kwargs.get('profile_picture_data')
+        self.profile_picture_content_type = kwargs.get('profile_picture_content_type')
         self.phone = kwargs.get('phone')
         self.address = kwargs.get('address')
         self.country = kwargs.get('country', 'India')
@@ -112,6 +116,7 @@ class Patient(UserMixin):
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('health_id') or generate_user_license_id('patient')
         self.license_no = self.license_number
         self.health_id = self.license_number
+        self.is_verified = bool(kwargs.get('is_verified', False))
         self.is_blocked = kwargs.get('is_blocked', False)
         self.is_hidden = kwargs.get('is_hidden', False)
         self.is_patient = True
@@ -165,8 +170,9 @@ class Staff(UserMixin):
         self.is_hospital = False
         self.is_patient = False
         self.is_blood_donor = False
-        self.is_organ_donor = False
         self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.profile_picture_data = kwargs.get('profile_picture_data')
+        self.profile_picture_content_type = kwargs.get('profile_picture_content_type')
         self.shift = kwargs.get('shift', 'Day Shift (08:00 - 16:00)')
         self.department = kwargs.get('department', self.role)
         self.on_duty = kwargs.get('on_duty', True)
@@ -410,6 +416,8 @@ class BloodDonor(UserMixin):
         self.password = password
         self.last_donation = ensure_safe_date(last_donation)
         self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.profile_picture_data = kwargs.get('profile_picture_data')
+        self.profile_picture_content_type = kwargs.get('profile_picture_content_type')
         self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('donor_card_id') or generate_user_license_id('blood_donor')
         self.license_no = self.license_number
@@ -450,6 +458,8 @@ class OrganDonor(UserMixin):
         self.city = city
         self.password = password
         self.profile_picture_url = kwargs.get('profile_picture_url')
+        self.profile_picture_data = kwargs.get('profile_picture_data')
+        self.profile_picture_content_type = kwargs.get('profile_picture_content_type')
         self.created_at = ensure_safe_date(kwargs.get('created_at', utcnow()))
         self.license_number = kwargs.get('license_number') or kwargs.get('license_no') or kwargs.get('pledge_id') or generate_user_license_id('organ_donor')
         self.license_no = self.license_number

@@ -150,6 +150,15 @@ def pharmacist():
 
 
 
+@staff_bp.route('/staff', endpoint='staff_portal')
+@staff_bp.route('/staff/', endpoint='staff_portal_slash')
+def staff_portal():
+    if current_user and current_user.is_authenticated and getattr(current_user, 'is_staff', False):
+        return redirect(url_for('staff_dashboard'))
+    return redirect(url_for('staff_login'))
+
+
+
 @staff_bp.route('/staff/dashboard')
 @staff_required
 def staff_dashboard():
@@ -195,10 +204,90 @@ def staff_update_profile():
         )
         if saved_filename:
             current_user.profile_picture_url = saved_filename
+            img_bytes, mime = UPLOAD_CACHE.get(saved_filename, (None, None))
+            if not img_bytes and os.path.basename(saved_filename) in UPLOAD_CACHE:
+                img_bytes, mime = UPLOAD_CACHE[os.path.basename(saved_filename)]
+            if img_bytes:
+                current_user.profile_picture_data = img_bytes
+                current_user.profile_picture_content_type = mime
+                try:
+                    conn = get_db_connection()
+                    if conn:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "UPDATE staff SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                            (saved_filename, img_bytes, mime, str(current_user.id))
+                        )
+                        conn.commit()
+                        conn.close()
+                except Exception as e:
+                    print(f"Staff DB photo sync note: {e}")
 
     save_data()
     flash('Profile updated successfully!', 'success')
     return redirect(request.referrer or url_for('staff_dashboard'))
+
+
+@staff_bp.route('/staff/image/<path:staff_id>')
+@staff_bp.route('/image/staff/<path:staff_id>')
+def get_staff_image(staff_id):
+    """Serves staff profile image from memory, database BLOB, or disk."""
+    staff_id = parse_route_id(staff_id)
+    stf = TEMP_DATA.get('staff', {}).get(staff_id)
+    if not stf:
+        stf = next((s for s in TEMP_DATA.get('staff', {}).values() if str(getattr(s, 'id', '')).lower() == str(staff_id).lower()), None)
+
+    # 1. Check UPLOAD_CACHE
+    if stf and getattr(stf, 'profile_picture_url', None):
+        s_url = str(stf.profile_picture_url).strip()
+        s_base = os.path.basename(s_url)
+        if s_url in UPLOAD_CACHE:
+            data, mime = UPLOAD_CACHE[s_url]
+            return send_file(BytesIO(data), mimetype=mime)
+        if s_base in UPLOAD_CACHE:
+            data, mime = UPLOAD_CACHE[s_base]
+            return send_file(BytesIO(data), mimetype=mime)
+
+    # 2. Check staff object profile_picture_data
+    if stf and getattr(stf, 'profile_picture_data', None):
+        mime = getattr(stf, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
+        return send_file(BytesIO(stf.profile_picture_data), mimetype=mime)
+
+    # 3. Check Database BLOB
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT profile_picture_data, profile_picture_content_type, profile_picture_url FROM staff WHERE id = ? AND profile_picture_data IS NOT NULL", (str(staff_id),))
+            row = cursor.fetchone()
+            conn.close()
+            if row and row[0]:
+                mime = row[1] or 'image/jpeg'
+                if row[2]:
+                    UPLOAD_CACHE[str(row[2]).strip()] = (row[0], mime)
+                    UPLOAD_CACHE[os.path.basename(str(row[2]).strip())] = (row[0], mime)
+                return send_file(BytesIO(row[0]), mimetype=mime)
+    except Exception as e:
+        print(f"Error fetching staff image from DB for {staff_id}: {e}")
+
+    # 4. Check filesystem
+    static_dir = current_app.static_folder or os.path.join(current_app.root_path, '..', 'static')
+    if stf and getattr(stf, 'profile_picture_url', None):
+        pic_url = str(stf.profile_picture_url).strip()
+        candidate_paths = [
+            os.path.join(static_dir, 'uploads', pic_url),
+            os.path.join(static_dir, pic_url),
+            os.path.join(static_dir, 'uploads', os.path.basename(pic_url)),
+            os.path.join(os.getcwd(), 'static', 'uploads', pic_url),
+            os.path.join(os.getcwd(), 'static', 'uploads', os.path.basename(pic_url)),
+            os.path.join('/tmp', 'uploads', os.path.basename(pic_url))
+        ]
+        for cp in candidate_paths:
+            if os.path.exists(cp) and os.path.isfile(cp):
+                return send_file(cp)
+
+    name_clean = stf.name if stf else str(staff_id)
+    return redirect(f"https://api.dicebear.com/7.x/initials/svg?seed={name_clean}")
 
 
 

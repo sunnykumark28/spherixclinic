@@ -315,8 +315,8 @@
     <!-- ================= 2. DIRECTORY & SIDEBAR FILTER SUITE ================= -->
     <div class="max-w-[1850px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 pt-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        <!-- LEFT SIDEBAR: FILTERS CONSOLE (Increased Card Width: lg:col-span-4 xl:col-span-3.5 2xl:col-span-3) -->
-        <aside class="lg:col-span-4 xl:col-span-3.5 2xl:col-span-3" x-data="{
+        <!-- LEFT SIDEBAR: FILTERS CONSOLE -->
+        <aside class="lg:col-span-3 xl:col-span-3 2xl:col-span-2.5" x-data="{
             userLat: '{{ user_lat or '' }}',
             userLng: '{{ user_lng or '' }}',
             isGettingLocation: false,
@@ -520,8 +520,8 @@
             </div>
         </aside>
 
-        <!-- RIGHT CONTENT: (lg:col-span-8 xl:col-span-8.5 2xl:col-span-9) -->
-        <div class="lg:col-span-8 xl:col-span-8.5 2xl:col-span-9 space-y-6">
+        <!-- RIGHT CONTENT: (4 CARDS PER ROW, 6 ROWS PER PAGE) -->
+        <div class="lg:col-span-9 xl:col-span-9 2xl:col-span-9.5 space-y-6">
 
             <!-- Active Classification Spotlight Banner -->
             {% if active_type_obj %}
@@ -581,9 +581,9 @@
                 </div>
             </div>
 
-            <!-- ================= HOSPITAL CARDS: GRID VIEW (4 CARDS PER ROW) ================= -->
+            <!-- ================= HOSPITAL CARDS: GRID VIEW (4 CARDS PER ROW - 4x6 LAYOUT) ================= -->
             {% if hospitals and view_mode != 'list' %}
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4 xl:gap-5">
             {% for hospital in hospitals %}
             <!-- HOSPITAL CARD (GRID) -->
             <div class="hospital-card rounded-lg overflow-hidden flex flex-col justify-between group border-2 border-slate-200 bg-white cursor-pointer relative hover:-translate-y-1.5 transition-all duration-300 shadow-sm hover:shadow-xl"
@@ -864,40 +864,89 @@
         </div>
         {% endif %}
 
-        <!-- Pagination Controls -->
-        {% if total_pages > 1 %}
+        <!-- Pagination Controls (4 Columns x 6 Rows = 24 Cards Per Page) -->
+        {% if total_pages > 1 or total_filtered > 0 %}
         <div class="mt-12 pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-                <p class="text-xs text-slate-500 font-semibold">
-                    Showing Page <strong class="text-slate-800">{{ page }}</strong> of <strong class="text-slate-800">{{ total_pages }}</strong> ({{ total_filtered }} total facilities)
-                </p>
+            <div class="text-xs text-slate-500 font-semibold text-center sm:text-left">
+                {% if total_filtered > 0 %}
+                Showing <span class="font-bold text-slate-800">{{ (page - 1) * per_page + 1 }}</span> &ndash; <span class="font-bold text-slate-800">{{ [page * per_page, total_filtered]|min }}</span> of <span class="font-bold text-slate-800">{{ total_filtered }}</span> facilities
+                <span class="text-slate-400 mx-1.5">&bull;</span>
+                Page <span class="font-bold text-slate-800">{{ page }}</span> of <span class="font-bold text-slate-800">{{ total_pages or 1 }}</span>
+                {% else %}
+                Showing 0 facilities
+                {% endif %}
             </div>
             
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                <!-- Previous Button -->
                 {% if page > 1 %}
-                <a href="{{ url_for('hospitals_list', page=page-1, q=q, city=city, state=state, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 shadow-sm">
+                <a href="{{ url_for('hospitals_list', page=page-1, q=q, city=city, state=state, locality=locality, country=active_country, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" 
+                   class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 text-xs font-bold transition-all flex items-center gap-1 shadow-sm">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                     <span>Prev</span>
                 </a>
+                {% else %}
+                <span class="px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold cursor-not-allowed flex items-center gap-1 opacity-60">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                    <span>Prev</span>
+                </span>
                 {% endif %}
 
-                {% for p in range(1, total_pages + 1) %}
-                    {% if p == page %}
-                    <span class="w-9 h-9 rounded-lg bg-sky-600 text-white text-xs font-bold flex items-center justify-center shadow-md shadow-sky-600/30">
-                        {{ p }}
-                    </span>
-                    {% elif p <= 5 or p == total_pages or (p >= page - 1 and p <= page + 1) %}
-                    <a href="{{ url_for('hospitals_list', page=p, q=q, city=city, state=state, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" class="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center transition-colors shadow-sm">
-                        {{ p }}
+                <!-- Page Numbers -->
+                {% if total_pages > 1 %}
+                    {% set start_p = [1, page - 2]|max %}
+                    {% set end_p = [total_pages, page + 2]|min %}
+
+                    {% if start_p > 1 %}
+                    <a href="{{ url_for('hospitals_list', page=1, q=q, city=city, state=state, locality=locality, country=active_country, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" 
+                       class="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 text-xs font-bold flex items-center justify-center transition-colors shadow-sm">
+                        1
+                    </a>
+                    {% if start_p > 2 %}
+                    <span class="w-7 text-center text-slate-400 text-xs font-bold">&hellip;</span>
+                    {% endif %}
+                    {% endif %}
+
+                    {% for p in range(start_p, end_p + 1) %}
+                        {% if p == page %}
+                        <span class="w-9 h-9 rounded-lg bg-emerald-600 text-white text-xs font-black flex items-center justify-center shadow-md shadow-emerald-600/30">
+                            {{ p }}
+                        </span>
+                        {% else %}
+                        <a href="{{ url_for('hospitals_list', page=p, q=q, city=city, state=state, locality=locality, country=active_country, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" 
+                           class="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 text-xs font-bold flex items-center justify-center transition-colors shadow-sm">
+                            {{ p }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if end_p < total_pages %}
+                    {% if end_p < total_pages - 1 %}
+                    <span class="w-7 text-center text-slate-400 text-xs font-bold">&hellip;</span>
+                    {% endif %}
+                    <a href="{{ url_for('hospitals_list', page=total_pages, q=q, city=city, state=state, locality=locality, country=active_country, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" 
+                       class="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 text-xs font-bold flex items-center justify-center transition-colors shadow-sm">
+                        {{ total_pages }}
                     </a>
                     {% endif %}
-                {% endfor %}
+                {% else %}
+                    <span class="w-9 h-9 rounded-lg bg-emerald-600 text-white text-xs font-black flex items-center justify-center shadow-md shadow-emerald-600/30">
+                        1
+                    </span>
+                {% endif %}
 
+                <!-- Next Button -->
                 {% if page < total_pages %}
-                <a href="{{ url_for('hospitals_list', page=page+1, q=q, city=city, state=state, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 shadow-sm">
+                <a href="{{ url_for('hospitals_list', page=page+1, q=q, city=city, state=state, locality=locality, country=active_country, type=active_type_id, specialty=active_specialty, scope=active_scope, verified=verified_only, emergency=emergency_only, nearby=nearby_only, lat=user_lat, lng=user_lng, view=view_mode) }}" 
+                   class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 text-xs font-bold transition-all flex items-center gap-1 shadow-sm">
                     <span>Next</span>
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </a>
+                {% else %}
+                <span class="px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold cursor-not-allowed flex items-center gap-1 opacity-60">
+                    <span>Next</span>
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </span>
                 {% endif %}
             </div>
         </div>

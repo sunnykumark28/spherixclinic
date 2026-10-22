@@ -43,7 +43,8 @@ from spherix.models import (
 from spherix.services.database import (
     deduplicate_entities,
     TEMP_DATA, get_db_connection, save_data, load_data,
-    sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item
+    sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item,
+    get_paid_appointment_doctor_ids_for_patient
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html
@@ -114,15 +115,11 @@ def patient_chat(doctor_id):
         flash("Doctor not found.", "error")
         return redirect(url_for('patient_dashboard'))
 
-    # Ensure the current patient has an appointment with this doctor
-    has_appointment = any(
-        appt.doctor_id == doctor_id
-        for appt in TEMP_DATA['appointments'].values()
-        if appt.patient_id == current_user.id
-    )
-    if not has_appointment:
-        flash("You can only chat with doctors you have an appointment with.", "error")
-        return redirect(url_for('patient_dashboard'))
+    # Ensure the current patient has booked an appointment and made payment with this specific doctor
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
+    if str(doctor_id) not in paid_doctor_ids:
+        flash("You can only chat with doctors with whom you have booked an appointment and completed payment.", "error")
+        return redirect(url_for('patient_dashboard') + '?tab=notifications-messages&view=messages')
 
     return render_template('patient_chat.html', doctor=doctor, patient=current_user)
 
@@ -297,6 +294,7 @@ def export_reception_appointments_csv():
 @patient_bp.route('/patient/create-account', methods=['GET', 'POST'])
 @patient_bp.route('/patient-create-account', methods=['GET', 'POST'])
 @patient_bp.route('/patient-register', methods=['GET', 'POST'])
+@patient_bp.route('/patient/register', methods=['GET', 'POST'])
 def patient_create_account():
     if request.method == 'POST':
         name = request.form.get('name')
@@ -368,28 +366,207 @@ def patient_create_account():
 
 
 
+def verify_user_password(user, password):
+    if not user or not getattr(user, 'password', None) or not password:
+        return False
+    try:
+        if check_password_hash(user.password, password):
+            return True
+    except Exception:
+        pass
+    return getattr(user, 'password', '') == password
+
+
+@patient_bp.route('/patient', endpoint='patient_portal')
+@patient_bp.route('/patient/', endpoint='patient_portal_slash')
+def patient_portal():
+    if current_user and current_user.is_authenticated and getattr(current_user, 'is_patient', False):
+        return redirect(url_for('patient_dashboard'))
+    return redirect(url_for('patient_login'))
+
+
+
 @patient_bp.route('/patient/dashboard', methods=['GET', 'POST'])
 @patient_required
 def patient_dashboard():
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'change_password':
-            current_password = request.form.get('current_password')
-            new_password = request.form.get('new_password')
-            confirm_password = request.form.get('confirm_password')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.form.get('ajax') == '1' or 'json' in request.headers.get('Accept', '') or request.is_json
 
-            if not check_password_hash(current_user.password, current_password):
+        if action == 'change_password':
+            current_password = request.form.get('current_password', '')
+            new_password = request.form.get('new_password', '')
+            confirm_password = request.form.get('confirm_password', '')
+
+            if not verify_user_password(current_user, current_password):
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'Current password is incorrect.'}), 400
                 flash('Current password is incorrect.', 'error')
-                return redirect(url_for('patient_dashboard', tab='settings'))
+                return redirect(url_for('patient_dashboard', tab='security'))
+
+            if not new_password or len(new_password) < 6:
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'New password must be at least 6 characters long.'}), 400
+                flash('New password must be at least 6 characters long.', 'error')
+                return redirect(url_for('patient_dashboard', tab='security'))
 
             if new_password != confirm_password:
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'New passwords do not match.'}), 400
                 flash('New passwords do not match.', 'error')
-                return redirect(url_for('patient_dashboard', tab='settings'))
+                return redirect(url_for('patient_dashboard', tab='security'))
 
             current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
             save_data()
+            sync_data_to_sql()
+            if is_ajax:
+                return jsonify({'success': True, 'message': 'Password changed successfully!'})
             flash('Password changed successfully!', 'success')
-            return redirect(url_for('patient_dashboard', tab='settings'))
+            return redirect(url_for('patient_dashboard', tab='security'))
+
+        if action == 'request_security_otp':
+            otp = str(random.randint(100000, 999999))
+            session['security_otp'] = {'otp': otp, 'timestamp': time_module.time()}
+            email = getattr(current_user, 'email', '')
+            sent = False
+            if email:
+                subject = "Security OTP Verification - Spherix Clinic"
+                body = get_premium_otp_email_html(
+                    title="Password Reset Verification",
+                    user_name=current_user.name,
+                    subject_label="Patient Account Security OTP",
+                    message="Use this 6-digit One-Time Password (OTP) to reset your password in the Patient Portal:",
+                    otp=otp,
+                    role_color="#0284c7",
+                    accent_bg="#f0f9ff"
+                )
+                sent = send_notification_email(email, subject, body, is_html=True)
+            
+            if is_ajax:
+                msg = f"A 6-digit OTP has been sent to your email ({email})." if sent else f"Verification code generated: {otp}"
+                return jsonify({'success': True, 'message': msg, 'email': email, 'demo_otp': otp})
+
+            if sent:
+                flash(f"A 6-digit OTP has been sent to your email ({email}). Enter it below to reset your password.", "info")
+            else:
+                flash(f"Verification code generated. (Demo OTP: {otp})", "warning")
+            return redirect(url_for('patient_dashboard', tab='security', otp_sent='1'))
+
+        if action == 'reset_password_otp':
+            entered_otp = (request.form.get('otp') or '').strip()
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+
+            stored_otp = session.get('security_otp', {}).get('otp')
+            if not stored_otp or entered_otp != str(stored_otp):
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'Invalid or expired OTP code. Please request a new verification code.'}), 400
+                flash('Invalid or expired OTP. Please request a new verification code.', 'error')
+                return redirect(url_for('patient_dashboard', tab='security', otp_sent='1'))
+
+            if not new_password or len(new_password) < 6:
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'New password must be at least 6 characters long.'}), 400
+                flash('New password must be at least 6 characters long.', 'error')
+                return redirect(url_for('patient_dashboard', tab='security', otp_sent='1'))
+
+            if new_password != confirm_password:
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'New passwords do not match.'}), 400
+                flash('New passwords do not match.', 'error')
+                return redirect(url_for('patient_dashboard', tab='security', otp_sent='1'))
+
+            current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
+            session.pop('security_otp', None)
+            save_data()
+            sync_data_to_sql()
+            if is_ajax:
+                return jsonify({'success': True, 'message': 'Your password has been successfully reset via OTP verification!'})
+            flash('Your password has been successfully reset via OTP verification!', 'success')
+            return redirect(url_for('patient_dashboard', tab='security'))
+
+        if action == 'request_delete_account_otp':
+            verify_password = request.form.get('verify_password') or request.form.get('password') or ''
+            if not verify_user_password(current_user, verify_password):
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'Current password is incorrect. Authentication failed.'}), 400
+                flash('Current password is incorrect. Authentication failed.', 'error')
+                return redirect(url_for('patient_dashboard', tab='security'))
+
+            otp = str(random.randint(100000, 999999))
+            session['delete_account_otp'] = {'otp': otp, 'timestamp': time_module.time()}
+            email = getattr(current_user, 'email', '')
+            sent = False
+            if email:
+                subject = "Account Security Authorization - Spherix Clinic"
+                body = get_premium_otp_email_html(
+                    title="Account Security Authorization",
+                    user_name=current_user.name,
+                    subject_label="Account Deletion/Deactivation OTP",
+                    message="You have initiated an account modification request (Deactivate or Delete). Use this 6-digit OTP to authorize this action:",
+                    otp=otp,
+                    role_color="#dc2626",
+                    accent_bg="#fef2f2"
+                )
+                sent = send_notification_email(email, subject, body, is_html=True)
+
+            if is_ajax:
+                msg = f"A 6-digit authorization OTP has been sent to your email ({email})." if sent else f"Authorization OTP generated: {otp}"
+                return jsonify({'success': True, 'message': msg, 'email': email, 'demo_otp': otp})
+
+            flash(f"A 6-digit authorization OTP has been sent to your email ({email}).", "info")
+            return redirect(url_for('patient_dashboard', tab='security', delete_step='otp'))
+
+        if action == 'delete_or_deactivate_profile':
+            op_type = request.form.get('op_type', 'deactivate')
+            verify_password = request.form.get('verify_password', '')
+            entered_otp = (request.form.get('otp') or '').strip()
+
+            if not verify_user_password(current_user, verify_password):
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'Incorrect password! Authentication failed.'}), 400
+                flash('Incorrect password! Authentication failed. Your profile was not changed.', 'error')
+                return redirect(url_for('patient_dashboard', tab='security'))
+
+            stored_otp = session.get('delete_account_otp', {}).get('otp') or session.get('security_otp', {}).get('otp')
+            if not stored_otp or entered_otp != str(stored_otp):
+                if is_ajax:
+                    return jsonify({'success': False, 'error': 'Invalid or expired OTP code. Please enter the 6-digit verification code sent to your email.'}), 400
+                flash('Invalid or expired OTP code. Please enter the verification code sent to your email.', 'error')
+                return redirect(url_for('patient_dashboard', tab='security'))
+
+            session.pop('delete_account_otp', None)
+            session.pop('security_otp', None)
+
+            if op_type == 'delete':
+                p_id = str(current_user.id)
+                if p_id in TEMP_DATA.get('patients', {}):
+                    del TEMP_DATA['patients'][p_id]
+                try:
+                    conn = get_db_connection()
+                    if conn:
+                        cursor = conn.cursor()
+                        cursor.execute("DELETE FROM patients WHERE id = ?", (p_id,))
+                        conn.commit()
+                        conn.close()
+                except Exception as e:
+                    print(f"Error removing patient from DB: {e}")
+                save_data()
+                sync_data_to_sql()
+                logout_user()
+                if is_ajax:
+                    return jsonify({'success': True, 'redirect_url': url_for('patient_login'), 'message': 'Your Spherix Clinic patient profile and account have been permanently deleted.'})
+                flash('Your Spherix Clinic patient profile and account have been permanently deleted.', 'info')
+                return redirect(url_for('patient_login'))
+            else:
+                current_user.is_deactivated = True
+                save_data()
+                sync_data_to_sql()
+                logout_user()
+                if is_ajax:
+                    return jsonify({'success': True, 'redirect_url': url_for('patient_login'), 'message': 'Your patient account has been deactivated.'})
+                flash('Your patient account has been deactivated. You can contact support to reactivate it at any time.', 'info')
+                return redirect(url_for('patient_login'))
 
         if action == 'book_appointment':
             doctor_id = request.form.get('doctor_id')
@@ -554,10 +731,28 @@ def patient_dashboard():
                 )
                 if saved_filename:
                     current_user.profile_picture_url = saved_filename
+                    img_bytes, mime = UPLOAD_CACHE.get(saved_filename, (None, None))
+                    if not img_bytes and os.path.basename(saved_filename) in UPLOAD_CACHE:
+                        img_bytes, mime = UPLOAD_CACHE[os.path.basename(saved_filename)]
+                    if img_bytes:
+                        current_user.profile_picture_data = img_bytes
+                        current_user.profile_picture_content_type = mime
+                        try:
+                            conn = get_db_connection()
+                            if conn:
+                                cursor = conn.cursor()
+                                cursor.execute(
+                                    "UPDATE patients SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                                    (saved_filename, img_bytes, mime, str(current_user.id))
+                                )
+                                conn.commit()
+                                conn.close()
+                        except Exception as e:
+                            print(f"Patient DB photo sync note: {e}")
             
             save_data()
             flash("Patient health profile and clinical records updated successfully!", "success")
-            return redirect(url_for('patient_dashboard', tab='settings'))
+            return redirect(url_for('patient_dashboard', tab='profile'))
 
     # The @patient_required decorator handles authentication and role checking.
     today = date.today()
@@ -576,6 +771,13 @@ def patient_dashboard():
         if str(getattr(bb, 'patient_id', '')) == str(current_user.id)
     ]
     patient_bed_bookings.sort(key=lambda bb: str(getattr(bb, 'created_at', '') or ''), reverse=True)
+
+    # Fetch patient's ambulance bookings
+    patient_ambulance_bookings = [
+        amb for amb in TEMP_DATA.get('ambulance_bookings', {}).values()
+        if str(amb.get('user_id', '')) == str(current_user.id) or amb.get('patient_phone') == getattr(current_user, 'phone', '')
+    ]
+    patient_ambulance_bookings.sort(key=lambda a: str(a.get('timestamp', '')), reverse=True)
 
     # Enrich appointments with the doctor object for the rating feature
     for appt in current_user.appointments:
@@ -597,12 +799,31 @@ def patient_dashboard():
     vitals_systolic = [getattr(v, 'systolic_bp', None) for v in patient_vitals]
     vitals_diastolic = [getattr(v, 'diastolic_bp', None) for v in patient_vitals]
 
-    # Fetch patient's messages with doctors
+    # Fetch patient's messages only from the specific doctor with whom the patient booked an appointment and made a payment
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
+    consulted_doctors = [
+        TEMP_DATA.get('doctors', {}).get(doc_id)
+        for doc_id in paid_doctor_ids
+        if TEMP_DATA.get('doctors', {}).get(doc_id) is not None
+    ]
+    consulted_doctors = deduplicate_entities(consulted_doctors)
+
     patient_messages = [
         m for m in TEMP_DATA.get('messages', {}).values()
-        if str(m.patient_id) == str(current_user.id)
+        if str(m.patient_id) == str(current_user.id) and str(m.doctor_id) in paid_doctor_ids
     ]
     patient_messages.sort(key=lambda m: str(m.created_at or ''), reverse=True)
+
+    unread_messages_count = len([
+        m for m in patient_messages
+        if m.sender == 'doctor' and not getattr(m, 'is_read', False)
+    ])
+    doctor_unread_counts = {}
+    for d in consulted_doctors:
+        doctor_unread_counts[str(d.id)] = len([
+            m for m in patient_messages
+            if str(m.doctor_id) == str(d.id) and m.sender == 'doctor' and not getattr(m, 'is_read', False)
+        ])
 
     # Fetch patient appointments
     patient_appointments = list(current_user.appointments)
@@ -665,9 +886,13 @@ def patient_dashboard():
                            appointments=patient_appointments,
                            orders=sorted_orders, 
                            bed_bookings=patient_bed_bookings, 
+                           ambulance_bookings=patient_ambulance_bookings,
                            hospitals=TEMP_DATA.get('hospitals', {}),
                            doctors=TEMP_DATA.get('doctors', {}),
-                           all_doctors=all_registered_doctors,
+                           all_doctors=consulted_doctors,
+                           consulted_doctors=consulted_doctors,
+                           paid_doctors=consulted_doctors,
+                           all_registered_doctors=all_registered_doctors,
                            medical_records=patient_medical_records,
                            lab_requests=patient_lab_requests,
                            diagnostic_bookings=diagnostic_data.get('bookings', []),
@@ -684,6 +909,8 @@ def patient_dashboard():
                            vitals_diastolic=vitals_diastolic,
                            referrals=patient_referrals,
                            messages=patient_messages,
+                           unread_messages_count=unread_messages_count,
+                           doctor_unread_counts=doctor_unread_counts,
                            unread_notifications=unread_notifications)
 
 
@@ -869,23 +1096,238 @@ def patient_delete_medical_record(record_id):
 @patient_bp.route('/patient/send-message', methods=['POST'])
 @patient_required
 def patient_send_message():
-    doctor_id = request.form.get('doctor_id')
+    doctor_id = request.form.get('doctor_id') or request.args.get('doctor_id')
     content = (request.form.get('content') or '').strip()
-    if doctor_id and content:
+    is_async_req = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'json' in request.headers.get('Accept', '') or request.form.get('ajax') == '1'
+
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
+    if not doctor_id or str(doctor_id) not in paid_doctor_ids:
+        err_msg = "You can only message doctors with whom you have booked an appointment and completed payment."
+        if is_async_req:
+            return jsonify({'success': False, 'error': err_msg}), 403
+        flash(err_msg, 'error')
+        return redirect(url_for('patient_dashboard') + '?tab=notifications-messages&view=messages')
+    
+    # Handle File Upload or Image Attachment
+    attachment_url = None
+    file = request.files.get('attachment') or request.files.get('image') or request.files.get('chat_file')
+    if file and file.filename != '':
+        orig_name = secure_filename(file.filename)
+        ext = orig_name.rsplit('.', 1)[-1].lower() if '.' in orig_name else ''
+        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'pdf', 'doc', 'docx', 'txt']:
+            upload_dir = os.path.join(current_app.static_folder, 'uploads', 'chat_attachments')
+            os.makedirs(upload_dir, exist_ok=True)
+            timestamp_prefix = int(datetime.now().timestamp())
+            clean_pid = str(current_user.id).replace('/', '_').replace('\\', '_')
+            unique_name = f"chat_{clean_pid}_{timestamp_prefix}_{uuid.uuid4().hex[:6]}_{orig_name}"
+            dest_path = os.path.join(upload_dir, unique_name)
+            file.save(dest_path)
+            attachment_url = f"uploads/chat_attachments/{unique_name}"
+            
+    # Also support base64 image data url if supplied
+    base64_image = request.form.get('base64_image')
+    if not attachment_url and base64_image and 'data:image' in base64_image:
+        try:
+            import base64
+            header, encoded = base64_image.split(',', 1)
+            ext = 'png' if 'png' in header.lower() else 'jpg'
+            img_bytes = base64.b64decode(encoded)
+            upload_dir = os.path.join(current_app.static_folder, 'uploads', 'chat_attachments')
+            os.makedirs(upload_dir, exist_ok=True)
+            timestamp_prefix = int(datetime.now().timestamp())
+            clean_pid = str(current_user.id).replace('/', '_').replace('\\', '_')
+            unique_name = f"chat_{clean_pid}_{timestamp_prefix}_{uuid.uuid4().hex[:6]}.{ext}"
+            dest_path = os.path.join(upload_dir, unique_name)
+            with open(dest_path, 'wb') as f:
+                f.write(img_bytes)
+            attachment_url = f"uploads/chat_attachments/{unique_name}"
+        except Exception as e:
+            print(f"Error saving base64 chat image: {e}")
+
+    # Fallback default content if only attachment is sent
+    if not content and attachment_url:
+        is_img = any(attachment_url.lower().endswith(x) for x in ['.jpg', '.jpeg', '.png', '.webp', '.gif'])
+        content = "Photo attached" if is_img else "Document attached"
+
+    if doctor_id and (content or attachment_url):
         msg_id = max([0] + [int(k) for k in TEMP_DATA.get('messages', {}).keys() if str(k).isdigit()]) + 1
-        TEMP_DATA['messages'][msg_id] = Message(
+        new_msg = Message(
             id=msg_id,
             doctor_id=doctor_id,
             patient_id=current_user.id,
             sender='patient',
             content=content,
+            attachment_url=attachment_url,
+            is_read=False,
             created_at=utcnow()
         )
+        TEMP_DATA.setdefault('messages', {})[msg_id] = new_msg
         save_data()
-        flash('Message sent to doctor successfully.', 'success')
+
+        # Emit Socket.IO event if available
+        try:
+            from spherix import socketio
+            room = f"doctor_patient_{doctor_id}_{current_user.id}"
+            socketio.emit('new_message', {
+                'id': msg_id,
+                'sender': 'patient',
+                'doctor_id': doctor_id,
+                'patient_id': current_user.id,
+                'content': content,
+                'attachment_url': attachment_url,
+                'created_at': new_msg.created_at.isoformat() if hasattr(new_msg.created_at, 'isoformat') else str(new_msg.created_at)
+            }, room=room)
+        except Exception:
+            pass
+
+        # Return JSON if XMLHttpRequest or fetch
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'json' in request.headers.get('Accept', '') or request.form.get('ajax') == '1':
+            return jsonify({
+                'success': True,
+                'message': {
+                    'id': msg_id,
+                    'doctor_id': str(doctor_id),
+                    'doctor_name': getattr(new_msg, 'doctor_name', 'Doctor'),
+                    'patient_id': str(current_user.id),
+                    'sender': 'patient',
+                    'content': content,
+                    'attachment_url': attachment_url,
+                    'is_read': False,
+                    'created_at': new_msg.created_at.strftime('%I:%M %p') if hasattr(new_msg.created_at, 'strftime') else 'Just now',
+                    'date': new_msg.created_at.strftime('%b %d, %Y') if hasattr(new_msg.created_at, 'strftime') else 'Today'
+                }
+            })
+
+        flash('Message and attachment sent successfully.', 'success')
     else:
-        flash('Message content cannot be empty.', 'error')
-    return redirect(url_for('patient_dashboard') + '#messages')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'json' in request.headers.get('Accept', '') or request.form.get('ajax') == '1':
+            return jsonify({'success': False, 'error': 'Message content or attachment cannot be empty.'}), 400
+        flash('Message content or attachment cannot be empty.', 'error')
+
+    return redirect(url_for('patient_dashboard') + '?tab=notifications-messages&view=messages')
+
+
+@patient_bp.route('/api/patient/chat-history/<path:doctor_id>', methods=['GET'])
+@patient_bp.route('/api/patient/chat-history', methods=['GET'])
+@patient_required
+def get_patient_chat_history(doctor_id=None):
+    if not doctor_id:
+        doctor_id = request.args.get('doctor_id')
+    
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
+
+    # If no specific doctor was requested or 'support' was requested, default to the first paid doctor
+    if not doctor_id or str(doctor_id) == 'support':
+        if paid_doctor_ids:
+            doctor_id = sorted(list(paid_doctor_ids))[0]
+        else:
+            return jsonify({
+                'success': True,
+                'has_paid_doctor': False,
+                'doctor': None,
+                'messages': []
+            })
+
+    if str(doctor_id) not in paid_doctor_ids:
+        return jsonify({
+            'success': False,
+            'error': 'Messages are only accessible for doctors with whom you have booked an appointment and completed payment.',
+            'has_paid_doctor': len(paid_doctor_ids) > 0,
+            'doctor': None,
+            'messages': []
+        }), 403
+
+    doc = None
+    for d in TEMP_DATA.get('doctors', {}).values():
+        if str(d.id) == str(doctor_id):
+            doc = d
+            break
+
+    # Mark messages from the doctor as read when viewed by the patient
+    marked_any_read = False
+    for m in TEMP_DATA.get('messages', {}).values():
+        if str(m.patient_id) == str(current_user.id) and str(m.doctor_id) == str(doctor_id):
+            if m.sender == 'doctor' and not getattr(m, 'is_read', False):
+                m.is_read = True
+                marked_any_read = True
+
+    if marked_any_read:
+        save_data()
+        try:
+            from spherix import socketio
+            room = f"doctor_patient_{doctor_id}_{current_user.id}"
+            socketio.emit('messages_read', {'reader': 'patient', 'doctor_id': str(doctor_id), 'patient_id': str(current_user.id)}, room=room)
+        except Exception:
+            pass
+
+    msgs = []
+    for m in TEMP_DATA.get('messages', {}).values():
+        if str(m.patient_id) == str(current_user.id) and str(m.doctor_id) == str(doctor_id):
+            msgs.append(m)
+
+    msgs.sort(key=lambda x: str(getattr(x, 'created_at', '') or ''))
+
+    total_unread_messages = len([
+        m for m in TEMP_DATA.get('messages', {}).values()
+        if str(m.patient_id) == str(current_user.id) and m.sender == 'doctor' and not getattr(m, 'is_read', False)
+    ])
+
+    msg_list = []
+    for m in msgs:
+        dt = getattr(m, 'created_at', None)
+        time_str = dt.strftime('%I:%M %p') if (dt and hasattr(dt, 'strftime')) else 'Recently'
+        date_str = dt.strftime('%b %d, %Y') if (dt and hasattr(dt, 'strftime')) else 'Recent'
+        msg_list.append({
+            'id': m.id,
+            'doctor_id': str(m.doctor_id),
+            'doctor_name': getattr(m, 'doctor_name', f"Dr. {doc.first_name} {doc.last_name}" if doc else 'Doctor'),
+            'patient_id': str(m.patient_id),
+            'sender': m.sender,
+            'content': m.content,
+            'attachment_url': getattr(m, 'attachment_url', None),
+            'is_read': bool(getattr(m, 'is_read', False)),
+            'created_at': time_str,
+            'date': date_str
+        })
+
+    doc_info = {
+        'id': str(doc.id) if doc else str(doctor_id),
+        'name': f"Dr. {doc.first_name} {doc.last_name}" if doc else "Attending Specialist",
+        'specialty': getattr(doc, 'specialty', getattr(doc, 'department', 'Clinical Specialist')) if doc else "Clinical Specialist",
+        'avatar': getattr(doc, 'profile_picture_url', None) if doc else None,
+        'online': True,
+        'phone': getattr(doc, 'phone', '+91 933 4325 920') if doc else '+91 933 4325 920'
+    }
+
+    return jsonify({
+        'success': True,
+        'has_paid_doctor': True,
+        'doctor': doc_info,
+        'messages': msg_list,
+        'total_unread_messages': total_unread_messages,
+        'doctor_unread_messages': 0
+    })
+
+
+@patient_bp.route('/api/patient/order/<int:order_id>', methods=['GET'])
+@patient_required
+def get_patient_order_details_api(order_id):
+    """API returning complete structured order details, formatted address, items, tracking & invoice URLs."""
+    order = TEMP_DATA.get('orders', {}).get(order_id)
+    if not order or str(getattr(order, 'patient_id', '')) != str(current_user.id):
+        return jsonify({'success': False, 'error': 'Order not found'}), 404
+    
+    order_data = order.to_dict() if hasattr(order, 'to_dict') else {
+        'id': order.id,
+        'total_price': getattr(order, 'total_price', 0),
+        'total_amount': getattr(order, 'total_price', 0),
+        'status': getattr(order, 'status', 'Processing'),
+        'order_date': str(getattr(order, 'order_date', '')),
+        'items': getattr(order, 'items', [])
+    }
+    order_data['track_url'] = url_for('pharmacy.medicine_delivery_portal', order_id=order.id)
+    order_data['invoice_url'] = url_for('main.print_invoice', order_id=order.id)
+    return jsonify({'success': True, 'order': order_data})
 
 
 
@@ -914,7 +1356,8 @@ def patient_live_status():
             'fee_amount': getattr(appt, 'fee_amount', 300)
         })
 
-    # Messages
+    # Messages strictly from doctors with booked and paid appointments
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
     msgs = [
         {
             'id': m.id,
@@ -924,7 +1367,7 @@ def patient_live_status():
             'created_at': m.created_at.strftime('%b %d, %H:%M') if m.created_at else ''
         }
         for m in TEMP_DATA.get('messages', {}).values()
-        if str(m.patient_id) == str(current_user.id)
+        if str(m.patient_id) == str(current_user.id) and str(m.doctor_id) in paid_doctor_ids
     ]
     msgs.sort(key=lambda x: x.get('id', 0))
 
@@ -1127,6 +1570,7 @@ def appointment_payment(appointment_id):
                 appointment.status = 'confirmed'
                 appointment.payment_id = razorpay_payment_id
                 appointment.payment_method = 'Razorpay Online'
+                appointment.payment_status = 'paid'
                 save_data()
                 flash("🎉 Payment verified via Razorpay! Your appointment is confirmed.", "success")
                 return redirect(url_for('appointment_success', appointment_id=appointment.id, razorpay_payment_id=razorpay_payment_id))
@@ -1155,6 +1599,7 @@ def appointment_payment(appointment_id):
         # 3. Direct confirmation fallback (sandbox / offline)
         appointment.status = 'confirmed'
         appointment.payment_method = 'Confirmed'
+        appointment.payment_status = 'paid'
         save_data()
         flash("Payment successful! Appointment confirmed.", "success")
         return redirect(url_for('appointment_success', appointment_id=appointment.id))
@@ -1191,11 +1636,13 @@ def appointment_success(appointment_id):
         appointment.status = 'confirmed'
         appointment.payment_id = razorpay_payment_id or 'rzp_verified'
         appointment.payment_method = 'Razorpay Online'
+        appointment.payment_status = 'paid'
         save_data()
         
     session_id = request.args.get('session_id')
     if session_id and appointment.status == 'awaiting_payment':
         appointment.status = 'confirmed'
+        appointment.payment_status = 'paid'
         save_data()
         flash("Online payment successful! Appointment confirmed.", "success")
         
@@ -2001,3 +2448,65 @@ def order_prescription_medicines():
     sync_data_to_sql()
     flash(f"Prescription Order #{order_id} placed successfully! Doorstep delivery dispatched to {shipping_address}.", "success")
     return redirect(url_for('patient_dashboard', tab='orders'))
+
+
+@patient_bp.route('/patient/image/<path:patient_id>')
+@patient_bp.route('/image/patient/<path:patient_id>')
+def get_patient_image(patient_id):
+    """Serves patient profile image from memory, filesystem, or database BLOB."""
+    patient_id = parse_route_id(patient_id)
+    pat = TEMP_DATA.get('patients', {}).get(patient_id)
+    if not pat:
+        pat = next((p for p in TEMP_DATA.get('patients', {}).values() if str(getattr(p, 'id', '')).lower() == str(patient_id).lower()), None)
+
+    # 1. Check in-memory UPLOAD_CACHE
+    if pat and getattr(pat, 'profile_picture_url', None):
+        p_url = str(pat.profile_picture_url).strip()
+        p_base = os.path.basename(p_url)
+        if p_url in UPLOAD_CACHE:
+            data, mime = UPLOAD_CACHE[p_url]
+            return send_file(BytesIO(data), mimetype=mime)
+        if p_base in UPLOAD_CACHE:
+            data, mime = UPLOAD_CACHE[p_base]
+            return send_file(BytesIO(data), mimetype=mime)
+
+    # 2. Check patient object profile_picture_data
+    if pat and getattr(pat, 'profile_picture_data', None):
+        mime = getattr(pat, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
+        return send_file(BytesIO(pat.profile_picture_data), mimetype=mime)
+
+    # 3. Check Database BLOB
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT profile_picture_data, profile_picture_content_type, profile_picture_url FROM patients WHERE id = ? AND profile_picture_data IS NOT NULL", (str(patient_id),))
+            row = cursor.fetchone()
+            conn.close()
+            if row and row[0]:
+                mime = row[1] or 'image/jpeg'
+                if row[2]:
+                    UPLOAD_CACHE[str(row[2]).strip()] = (row[0], mime)
+                    UPLOAD_CACHE[os.path.basename(str(row[2]).strip())] = (row[0], mime)
+                return send_file(BytesIO(row[0]), mimetype=mime)
+    except Exception as e:
+        print(f"Error fetching patient image from DB for {patient_id}: {e}")
+
+    # 4. Check filesystem
+    static_dir = current_app.static_folder or os.path.join(current_app.root_path, '..', 'static')
+    if pat and getattr(pat, 'profile_picture_url', None):
+        pic_url = str(pat.profile_picture_url).strip()
+        candidate_paths = [
+            os.path.join(static_dir, 'uploads', pic_url),
+            os.path.join(static_dir, pic_url),
+            os.path.join(static_dir, 'uploads', os.path.basename(pic_url)),
+            os.path.join(os.getcwd(), 'static', 'uploads', pic_url),
+            os.path.join(os.getcwd(), 'static', 'uploads', os.path.basename(pic_url)),
+            os.path.join('/tmp', 'uploads', os.path.basename(pic_url))
+        ]
+        for cp in candidate_paths:
+            if os.path.exists(cp) and os.path.isfile(cp):
+                return send_file(cp)
+
+    name_clean = pat.name if pat else str(patient_id)
+    return redirect(f"https://api.dicebear.com/7.x/initials/svg?seed={name_clean}")

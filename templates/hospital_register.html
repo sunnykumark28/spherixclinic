@@ -59,517 +59,7 @@
     }
 </style>
 
-<div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-sky-400 selection:text-white"
-     x-data="hospitalRegisterApp()">
-
-    <!-- Main Clean Minimalist Card Container (Two Columns: 5/12 Form, 7/12 Large Image) -->
-    <div class="w-full max-w-[1500px] bg-white rounded-lg p-6 sm:p-10 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
-
-        <!-- ================= COLUMN 1: Multi-Step Form ================= -->
-        <div class="w-full lg:col-span-5 max-w-xl mx-auto lg:mx-0 flex flex-col justify-center lg:border-r lg:border-slate-200 lg:pr-12">
-
-            <!-- Switcher Tabs -->
-            <div class="flex items-center gap-6 mb-6 border-b border-slate-200 pb-3">
-                <a href="{{ url_for('hospital_register') }}" 
-                   class="text-xs font-bold uppercase tracking-wider text-sky-600 border-b-2 border-sky-500 pb-3 -mb-3.5 transition-colors">
-                    Register Facility
-                </a>
-                <a href="{{ url_for('hospital_login') }}" 
-                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors">
-                    Facility Sign In
-                </a>
-                <a href="{{ url_for('staff_login') }}" 
-                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors ml-auto">
-                    Staff Portal &rarr;
-                </a>
-            </div>
-
-            <!-- Step Progress Indicator Bar -->
-            <div class="mb-6">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-600 text-white text-[11px] font-extrabold" x-text="currentStep"></span>
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-900" 
-                              x-text="currentStep === 1 ? '1. Facility Profile & Identity' : (currentStep === 2 ? '2. Geographic Location' : (currentStep === 3 ? '3. Capacity & Accreditations' : '4. Administrative Security'))"></span>
-                    </div>
-                    <span class="text-xs font-bold text-slate-500" x-text="`Step ${currentStep} of ${totalSteps}`"></span>
-                </div>
-                <!-- 4 Segment Progress Track -->
-                <div class="grid grid-cols-4 gap-2">
-                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 1 ? 'bg-sky-500' : 'bg-slate-200'"></div>
-                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 2 ? 'bg-sky-500' : 'bg-slate-200'"></div>
-                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 3 ? 'bg-sky-500' : 'bg-slate-200'"></div>
-                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 4 ? 'bg-sky-500' : 'bg-slate-200'"></div>
-                </div>
-            </div>
-
-            <!-- Dynamic Heading & Subtitle per Slide -->
-            <div class="mb-6">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-xs font-bold mb-2 border border-sky-200">
-                    <i class="fas fa-shield-halved text-sky-600"></i> Institutional Partner Gateway
-                </div>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 1">
-                    Connect your facility <br><span class="text-sky-500">to the health grid.</span>
-                </h1>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 2" style="display: none;">
-                    Where is your <br><span class="text-sky-500">facility located?</span>
-                </h1>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 3" style="display: none;">
-                    Clinical Capacity &amp; <br><span class="text-sky-500">Accreditation.</span>
-                </h1>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 4" style="display: none;">
-                    Secure your <br><span class="text-sky-500">administrator portal.</span>
-                </h1>
-                <p class="text-slate-600 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
-                    <span x-show="currentStep === 1">Enroll your hospital to publish real-time ICU beds, coordinate emergency admissions, and manage specialist rosters.</span>
-                    <span x-show="currentStep === 2" style="display: none;">Set physical location to enable geo-mapped emergency ambulance routing and regional patient intake.</span>
-                    <span x-show="currentStep === 3" style="display: none;">Configure bed metrics, ICU availability, quality accreditations, and official crest logo.</span>
-                    <span x-show="currentStep === 4" style="display: none;">Set master administrative credentials and verify institutional compliance protocols.</span>
-                </p>
-            </div>
-
-            <!-- Step Validation Error Alert -->
-            <div x-show="stepError" x-transition class="mb-5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2" style="display: none;">
-                <i class="fas fa-circle-exclamation text-rose-600 text-sm flex-shrink-0"></i>
-                <span x-text="stepError"></span>
-            </div>
-
-            <!-- Flash Notification Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="mb-6 space-y-2.5">
-                        {% for category, message in messages %}
-                            <div class="flex items-center gap-3 text-xs p-3.5 rounded-lg {{ 'bg-emerald-50 text-emerald-900 border border-emerald-300' if category == 'success' else 'bg-rose-50 text-rose-900 border border-rose-300' }}">
-                                <i class="fas {{ 'fa-check-circle text-emerald-600' if category == 'success' else 'fa-circle-exclamation text-rose-600' }} text-sm flex-shrink-0"></i>
-                                <span class="font-bold">{{ message }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-
-            <!-- Registration Form (4 Slides) -->
-            <form method="POST" action="{{ url_for('hospital_register') }}" enctype="multipart/form-data" novalidate class="space-y-5" id="hospitalRegisterForm" @submit="handleFormSubmit($event)">
-                
-                <!-- ================= SLIDE 1: Facility Profile & Identity ================= -->
-                <div x-show="currentStep === 1" class="step-fade-slide space-y-4">
-                    <!-- Social Institutional Registration Options (Google, Microsoft & Apple) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2">
-                        <a href="{{ url_for('google_login', role='hospital') }}" 
-                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Google">
-                            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-                                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                            </svg>
-                            <span>Google</span>
-                        </a>
-                        <a href="{{ url_for('microsoft_login', role='hospital') }}" 
-                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Microsoft">
-                            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 23 23">
-                                <path fill="#f35325" d="M1 1h10v10H1z"/>
-                                <path fill="#81bc06" d="M12 1h10v10H12z"/>
-                                <path fill="#05a6f0" d="M1 12h10v10H1z"/>
-                                <path fill="#ffba08" d="M12 12h10v10H12z"/>
-                            </svg>
-                            <span>Microsoft</span>
-                        </a>
-                        <a href="{{ url_for('apple_login', role='hospital') }}" 
-                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-black bg-black hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Apple">
-                            <i class="fab fa-apple text-base flex-shrink-0"></i>
-                            <span>Apple</span>
-                        </a>
-                    </div>
-
-                    <!-- Divider -->
-                    <div class="relative flex items-center justify-center mb-3">
-                        <div class="border-t border-slate-300 w-full"></div>
-                        <span class="bg-white px-3 text-[11px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">or enroll with facility details</span>
-                    </div>
-
-                    <!-- Facility Legal Name -->
-                    <div class="minimal-input-wrap">
-                        <label for="hospitalName" class="minimal-label block">Official Hospital / Facility Name *</label>
-                        <input type="text" name="name" id="hospitalName" required 
-                               x-model="formData.name"
-                               placeholder="e.g., Mayo Specialty Clinic & Trauma Center"
-                               class="minimal-input placeholder:text-slate-400"
-                               @keydown.enter.prevent="goToNextStep()">
-                    </div>
-
-                    <!-- Institutional Primary Category & Registration License -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="minimal-input-wrap">
-                            <label for="hospitalTypeId" class="minimal-label block">Primary Hospital Classification *</label>
-                            <select name="hospital_type_id" id="hospitalTypeId" x-model="formData.hospital_type_id" @change="onTypeChange()" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
-                                {% if hospital_types %}
-                                    {% for ht in hospital_types %}
-                                    <option value="{{ ht.id }}">{{ ht.name }}</option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="1">General Hospital</option>
-                                    <option value="2">Multispecialty Hospital</option>
-                                    <option value="3">Super Specialty Hospital</option>
-                                    <option value="4">Cardiology Hospital</option>
-                                    <option value="5">Oncology Hospital</option>
-                                    <option value="6">Neurology Hospital</option>
-                                    <option value="7">Orthopedic Hospital</option>
-                                    <option value="8">Maternity Hospital</option>
-                                    <option value="9">Pediatric Hospital</option>
-                                    <option value="10">Psychiatric Hospital</option>
-                                    <option value="11">Eye Hospital</option>
-                                    <option value="12">Dental Hospital</option>
-                                    <option value="13">ENT Hospital</option>
-                                    <option value="14">Nephrology Hospital</option>
-                                    <option value="15">Rehabilitation Hospital</option>
-                                    <option value="16">Infectious Disease Hospital</option>
-                                    <option value="17">Burns and Plastic Surgery Hospital</option>
-                                    <option value="18">Emergency and Trauma Hospital</option>
-                                    <option value="19">Other</option>
-                                {% endif %}
-                            </select>
-                            <input type="hidden" name="facility_type" :value="formData.facility_type">
-                        </div>
-                        <div class="minimal-input-wrap">
-                            <label for="licenseNo" class="minimal-label block">Establishment License / Reg. ID *</label>
-                            <input type="text" name="license_no" id="licenseNo" required 
-                                   x-model="formData.license_no"
-                                   placeholder="e.g., MED-REG-2024-9981"
-                                   class="minimal-input placeholder:text-slate-400"
-                                   @keydown.enter.prevent="goToNextStep()">
-                        </div>
-                    </div>
-
-                    <!-- Custom Hospital Classification Input (Active when Other / Custom is selected) -->
-                    <div class="minimal-input-wrap bg-sky-50/60 border border-sky-200 rounded-lg p-4 transition-all"
-                         x-show="formData.hospital_type_id === '19' || formData.facility_type === 'Other'"
-                         x-transition>
-                        <label for="customHospitalType" class="minimal-label block text-sky-800 font-bold mb-1">
-                            <i class="fas fa-edit text-sky-600 mr-1.5"></i> Specify Custom Classification / Specialty *
-                        </label>
-                        <input type="text" name="custom_hospital_type" id="customHospitalType"
-                               x-model="formData.custom_hospital_type"
-                               @input="formData.facility_type = formData.custom_hospital_type"
-                               placeholder="e.g., Integrative Ayur-Genix Center, Cosmetic & Laser Surgery Hub..."
-                               class="minimal-input bg-white border-sky-300 focus:border-sky-500 placeholder:text-slate-400">
-                        <p class="text-[11px] text-sky-700 font-medium mt-1">Enter your custom facility category or institutional clinical classification.</p>
-                    </div>
-
-                    <!-- Category Description Helper Card -->
-                    <div class="p-3 bg-sky-50/70 border border-sky-100 rounded-lg flex items-start gap-2.5">
-                        <i class="fas fa-circle-info text-sky-600 text-xs mt-0.5 flex-shrink-0"></i>
-                        <p class="text-[11px] text-slate-700 font-medium" x-text="formData.selected_type_desc || 'Select your primary hospital specialization'"></p>
-                    </div>
-
-                    <!-- Secondary Specialties (Multi-Select Pills) -->
-                    <div class="minimal-input-wrap pt-1">
-                        <label class="minimal-label block mb-1.5">Additional Clinical Specialties (Optional)</label>
-                        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-                            <template x-for="spec in availableSpecialties" :key="spec">
-                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all"
-                                       :class="selectedSpecialties.includes(spec) ? 'bg-sky-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'">
-                                    <input type="checkbox" name="specialties" :value="spec" class="hidden" 
-                                           @change="toggleSpecialty(spec)" :checked="selectedSpecialties.includes(spec)">
-                                    <i class="fas fa-check text-[9px]" x-show="selectedSpecialties.includes(spec)"></i>
-                                    <span x-text="spec"></span>
-                                </label>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Admin Email & Contact Phone -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="minimal-input-wrap">
-                            <label for="hospitalEmail" class="minimal-label block">Administration / Official Email *</label>
-                            <input type="email" name="email" id="hospitalEmail" required 
-                                   x-model="formData.email"
-                                   placeholder="admissions@hospital.org"
-                                   class="minimal-input placeholder:text-slate-400"
-                                   @keydown.enter.prevent="goToNextStep()">
-                        </div>
-                        <div class="minimal-input-wrap">
-                            <label for="hospitalPhone" class="minimal-label block">Emergency Dispatch Phone *</label>
-                            <input type="tel" name="phone" id="hospitalPhone" required 
-                                   x-model="formData.phone"
-                                   placeholder="+1 (800) 555-0199"
-                                   class="minimal-input placeholder:text-slate-400"
-                                   @keydown.enter.prevent="goToNextStep()">
-                        </div>
-                    </div>
-
-                    <!-- Step 1 Actions -->
-                    <div class="pt-4">
-                        <button type="button" @click="goToNextStep()"
-                                class="btn-pill-soft w-full py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
-                            <span>Continue to Geographic Location</span>
-                            <i class="fas fa-arrow-right text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ================= SLIDE 2: Geographic Location ================= -->
-                <div x-show="currentStep === 2" class="step-fade-slide space-y-4" style="display: none;">
-                    <!-- Complete Address -->
-                    <div class="minimal-input-wrap">
-                        <label for="hospitalAddress" class="minimal-label block">Complete Street Address *</label>
-                        <input type="text" name="address" id="hospitalAddress" required 
-                               x-model="formData.address"
-                               placeholder="e.g., 200 1st St SW, Medical District"
-                               class="minimal-input placeholder:text-slate-400"
-                               @keydown.enter.prevent="goToNextStep()">
-                    </div>
-
-                    <!-- City, State & Country -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="minimal-input-wrap">
-                            <label for="hospitalCity" class="minimal-label block">City / Metro *</label>
-                            <input type="text" name="city" id="hospitalCity" required 
-                                   x-model="formData.city"
-                                   placeholder="e.g., Rochester"
-                                   class="minimal-input placeholder:text-slate-400"
-                                   @keydown.enter.prevent="goToNextStep()">
-                        </div>
-                        <div class="minimal-input-wrap">
-                            <label for="hospitalState" class="minimal-label block">State / Province</label>
-                            <input type="text" name="state" id="hospitalState" 
-                                   x-model="formData.state"
-                                   placeholder="e.g., Minnesota"
-                                   class="minimal-input placeholder:text-slate-400"
-                                   @keydown.enter.prevent="goToNextStep()">
-                        </div>
-                        <div class="minimal-input-wrap">
-                            <label for="hospitalCountry" class="minimal-label block">Country *</label>
-                            <select name="country" id="hospitalCountry" required x-model="formData.country" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
-                                {% for c in all_countries_195 %}
-                                <option value="{{ c.name }}" {% if c.name == 'India' or c.name == 'United States' %}selected{% endif %}>{{ c.flag }} {{ c.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Step 2 Navigation Actions -->
-                    <div class="pt-4 flex items-center gap-3">
-                        <button type="button" @click="goToPrevStep()"
-                                class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
-                            <i class="fas fa-arrow-left text-xs"></i>
-                            <span>Back</span>
-                        </button>
-                        <button type="button" @click="goToNextStep()"
-                                class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
-                            <span>Clinical Capacity</span>
-                            <i class="fas fa-arrow-right text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ================= SLIDE 3: Clinical Capacity & Accreditations ================= -->
-                <div x-show="currentStep === 3" class="step-fade-slide space-y-4" style="display: none;">
-                    <!-- Accreditation Standard -->
-                    <div class="minimal-input-wrap">
-                        <label for="hospitalAccreditation" class="minimal-label block">Accreditation Standard *</label>
-                        <select name="accreditation" id="hospitalAccreditation" x-model="formData.accreditation" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
-                            <option value="NABH & NABL Accredited">NABH & NABL Accredited</option>
-                            <option value="JCI Gold Standard Accredited">JCI Gold Standard Accredited</option>
-                            <option value="ISO 9001:2015 Healthcare Certified">ISO 9001:2015 Healthcare Certified</option>
-                            <option value="Government Apex Institute">Government Apex Institute</option>
-                            <option value="State Certified Healthcare Facility">State Certified Healthcare Facility</option>
-                        </select>
-                    </div>
-
-                    <!-- Bed Capacity Metrics (Underline Inputs) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="minimal-input-wrap">
-                            <label for="totalBeds" class="minimal-label block">Total Licensed Beds *</label>
-                            <input type="number" name="total_beds" id="totalBeds" min="1" required 
-                                   x-model="formData.total_beds"
-                                   placeholder="150"
-                                   class="minimal-input placeholder:text-slate-400">
-                        </div>
-                        <div class="minimal-input-wrap">
-                            <label for="icuBeds" class="minimal-label block">ICU / CCU Beds *</label>
-                            <input type="number" name="icu_beds" id="icuBeds" min="0" required 
-                                   x-model="formData.icu_beds"
-                                   placeholder="30"
-                                   class="minimal-input placeholder:text-slate-400">
-                        </div>
-                        <div class="minimal-input-wrap">
-                            <label for="emergencyBeds" class="minimal-label block">Emergency / Trauma Beds</label>
-                            <input type="number" name="emergency_beds" id="emergencyBeds" min="0" 
-                                   x-model="formData.emergency_beds"
-                                   placeholder="20"
-                                   class="minimal-input placeholder:text-slate-400">
-                        </div>
-                    </div>
-
-                    <!-- 24/7 Emergency & Critical Care Toggle -->
-                    <div class="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-lg flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-                                <i class="fas fa-truck-medical"></i>
-                            </div>
-                            <div>
-                                <span class="text-xs font-bold text-slate-900 block">24/7 Emergency & Trauma Services</span>
-                                <span class="text-[11px] text-slate-600">Enables urgent patient admission and ambulance dispatch</span>
-                            </div>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="emergency_services" value="on" class="sr-only peer" x-model="formData.emergency_services">
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
-                        </label>
-                    </div>
-
-                    <!-- Available Clinical Facilities Checklist -->
-                    <div class="minimal-input-wrap pt-1">
-                        <label class="minimal-label block mb-1.5">Available Clinical & Diagnostic Facilities</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px]">
-                            {% if master_facilities %}
-                                {% for fac in master_facilities %}
-                                {% set fac_name = fac.name if fac.name is defined else (fac['name'] if fac is mapping else fac) %}
-                                {% set fac_icon = fac.icon if fac.icon is defined else (fac['icon'] if fac is mapping else 'fa-solid fa-circle-check') %}
-                                <label class="cursor-pointer flex items-center gap-2 p-1.5 rounded-lg bg-white border border-slate-200 hover:border-sky-300 transition-colors font-medium text-slate-800">
-                                    <input type="checkbox" name="facilities" value="{{ fac_name }}" class="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5" checked>
-                                    <i class="{{ fac_icon }} text-sky-600 text-xs flex-shrink-0"></i>
-                                    <span class="truncate">{{ fac_name }}</span>
-                                </label>
-                                {% endfor %}
-                            {% else %}
-                                {% for fac in ['24/7 Pharmacy', 'Emergency Room (ER)', 'Intensive Care Unit (ICU)', 'Blood Bank', 'MRI & CT Scan', 'Dialysis Center', 'Cath Lab (Cardiac)', 'Neonatal ICU (NICU)', 'Ambulance Service', 'Pathology Laboratory'] %}
-                                <label class="cursor-pointer flex items-center gap-2 p-1.5 rounded-lg bg-white border border-slate-200 hover:border-sky-300 transition-colors font-medium text-slate-800">
-                                    <input type="checkbox" name="facilities" value="{{ fac }}" class="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5" checked>
-                                    <i class="fa-solid fa-circle-check text-sky-600 text-xs flex-shrink-0"></i>
-                                    <span class="truncate">{{ fac }}</span>
-                                </label>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- About / Hospital Overview -->
-                    <div class="minimal-input-wrap">
-                        <label for="hospitalAbout" class="minimal-label block">About Hospital / Clinical Overview (Optional)</label>
-                        <textarea name="about" id="hospitalAbout" rows="2" x-model="formData.about" 
-                                  placeholder="Provide a brief clinical summary, center of excellence, or mission..."
-                                  class="minimal-input placeholder:text-slate-400 resize-none"></textarea>
-                    </div>
-
-                    <!-- Logo / Brand Emblem Upload -->
-                    <div class="minimal-input-wrap pt-1">
-                        <label class="minimal-label block mb-2">Hospital Logo / Official Crest (Optional)</label>
-                        <div class="flex items-center gap-4">
-                            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-black text-xs font-bold transition-colors">
-                                <i class="fas fa-cloud-arrow-up text-sky-600"></i>
-                                <span>Choose Image File</span>
-                                <input type="file" name="logo" accept="image/*" class="hidden" @change="handleLogo">
-                            </label>
-                            <template x-if="logoPreview">
-                                <div class="flex items-center gap-2 text-xs text-black">
-                                    <img :src="logoPreview" class="w-8 h-8 rounded-lg object-cover border border-slate-300">
-                                    <span class="font-bold text-emerald-600">Selected</span>
-                                </div>
-                            </template>
-                            <span x-show="!logoPreview" class="text-xs text-slate-600 font-medium">PNG, JPG or SVG (Max 5MB)</span>
-                        </div>
-                    </div>
-
-                    <!-- Step 3 Navigation Actions -->
-                    <div class="pt-4 flex items-center gap-3">
-                        <button type="button" @click="goToPrevStep()"
-                                class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
-                            <i class="fas fa-arrow-left text-xs"></i>
-                            <span>Back</span>
-                        </button>
-                        <button type="button" @click="goToNextStep()"
-                                class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
-                            <span>Security &amp; Password</span>
-                            <i class="fas fa-arrow-right text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ================= SLIDE 4: Administrative Security ================= -->
-                <div x-show="currentStep === 4" class="step-fade-slide space-y-4" style="display: none;">
-                    <!-- Password & Confirmation -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="minimal-input-wrap">
-                            <label for="password" class="minimal-label block">Administrator Master Password *</label>
-                            <div class="relative">
-                                <input :type="showPass ? 'text' : 'password'" name="password" id="password" required minlength="8"
-                                       x-model="formData.password"
-                                       placeholder="••••••••••••"
-                                       class="minimal-input pr-7 placeholder:text-slate-400">
-                                <button type="button" @click="showPass = !showPass" 
-                                        class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
-                                    <i class="fas text-xs" :class="showPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="minimal-input-wrap">
-                            <label for="confirmPassword" class="minimal-label block">Confirm Master Password *</label>
-                            <div class="relative">
-                                <input :type="showConfirmPass ? 'text' : 'password'" name="confirm_password" id="confirmPassword" required minlength="8"
-                                       x-model="formData.confirm_password"
-                                       placeholder="••••••••••••"
-                                       class="minimal-input pr-7 placeholder:text-slate-400">
-                                <button type="button" @click="showConfirmPass = !showConfirmPass" 
-                                        class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
-                                    <i class="fas text-xs" :class="showConfirmPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Terms & Compliance Checkbox -->
-                    <div class="flex items-start gap-3 pt-2">
-                        <input id="terms" name="terms" type="checkbox" required x-model="formData.terms"
-                                class="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer">
-                        <label for="terms" class="text-xs text-slate-800 font-medium select-none cursor-pointer leading-relaxed">
-                            I certify that I am a verified representative of this medical institution and agree to the <a href="/legal/privacy" target="_blank" class="text-sky-600 hover:underline font-bold">Spherix Health Grid Data Compliance & Telemetry Protocols</a>.
-                        </label>
-                    </div>
-
-                    <!-- Step 4 Navigation Actions / Submit -->
-                    <div class="pt-4 flex items-center gap-3">
-                        <button type="button" @click="goToPrevStep()"
-                                class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
-                            <i class="fas fa-arrow-left text-xs"></i>
-                            <span>Back</span>
-                        </button>
-                        <button type="submit" :disabled="isSubmitting"
-                                class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                            <span x-show="!isSubmitting">Register Hospital Facility</span>
-                            <span x-show="isSubmitting" style="display: none;" class="flex items-center gap-2">
-                                <i class="fas fa-circle-notch fa-spin text-xs"></i>
-                                <span>Verifying & Sending OTP...</span>
-                            </span>
-                        </button>
-                    </div>
-                </div>
-
-            </form>
-
-            <!-- Support & Assistance Callout -->
-            <div class="mt-8 pt-6 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700">
-                <span>Already enrolled? <a href="{{ url_for('hospital_login') }}" class="text-sky-600 hover:underline font-bold">Sign in to Hospital Portal</a></span>
-                <span class="hidden sm:inline">Partner Helpline: <strong class="text-black">+1 (800) SPHERIX</strong></span>
-            </div>
-
-        </div>
-
-        <!-- ================= COLUMN 2: Art Illustration (Fixed / Sticky in Viewport) ================= -->
-        <div class="w-full lg:col-span-7 lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex items-center justify-center p-0 self-start lg:pl-6">
-            <div class="relative w-full h-full flex items-center justify-center">
-                <img src="{{ url_for('static', filename='images/hospital_staff_art.jpg') }}" 
-                     alt="Hospital Operations" 
-                     class="w-full h-full max-h-[85vh] object-contain select-none pointer-events-none border-0 shadow-none">
-            </div>
-        </div>
-
-    </div>
-
-</div>
-
-<!-- Safe JSON Data Script to eliminate inline Jinja JS parser issues -->
+<!-- Safe JSON Data Script defined before Alpine component mounts -->
 <script id="hospital-register-init-data" type="application/json">
 {
     "hospitalTypesMap": {
@@ -608,9 +98,9 @@
 }
 </script>
 
-<!-- Alpine Component Logic in dedicated script -->
 <script>
-    function hospitalRegisterApp() {
+    // Ensure hospitalRegisterApp is globally defined before Alpine initializes
+    window.hospitalRegisterApp = function() {
         const initDataElement = document.getElementById('hospital-register-init-data');
         const parsedInitData = initDataElement ? JSON.parse(initDataElement.textContent || '{}') : {};
         const typesMap = parsedInitData.hospitalTypesMap || {};
@@ -773,10 +263,633 @@
                 this.isSubmitting = true;
             }
         };
-    }
+    };
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('hospitalRegisterApp', hospitalRegisterApp);
-    });
+    if (window.Alpine) {
+        Alpine.data('hospitalRegisterApp', window.hospitalRegisterApp);
+    } else {
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('hospitalRegisterApp', window.hospitalRegisterApp);
+        });
+    }
+</script>
+
+<div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-sky-400 selection:text-white"
+     x-data="hospitalRegisterApp()">
+
+    <!-- Main Clean Minimalist Card Container (Two Columns: 5/12 Form, 7/12 Large Image) -->
+    <div class="w-full max-w-[1500px] bg-white rounded-lg p-6 sm:p-10 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
+
+        <!-- ================= COLUMN 1: Multi-Step Form ================= -->
+        <div class="w-full lg:col-span-5 max-w-xl mx-auto lg:mx-0 flex flex-col justify-center lg:border-r lg:border-slate-200 lg:pr-12">
+
+            <!-- Spherix Clinic Brand Identity Header (Logo & Typography) -->
+            <div class="mb-6">
+                <a href="{{ url_for('home') }}" class="inline-flex items-center gap-2.5 text-decoration-none group" title="Return to Spherix Clinic Home">
+                    <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" 
+                         alt="Spherix Clinic" 
+                            class="w-14 h-14"/>
+                    <span class="flex items-baseline gap-1">
+                        <span class="spherix-brand-gradient brand-font-spherix font-iceland text-3xl font-bold">Spherix</span>
+                        <span class="brand-font-clinic font-ballet text-3xl text-[#005eb8]">Clinic</span>
+                    </span>
+                </a>
+            </div>
+
+            <!-- Switcher Tabs -->
+            <div class="flex items-center gap-6 mb-6 border-b border-slate-200 pb-3">
+                <a href="{{ url_for('hospital_register') }}" 
+                   class="text-xs font-bold uppercase tracking-wider text-sky-600 border-b-2 border-sky-500 pb-3 -mb-3.5 transition-colors">
+                    Register Facility
+                </a>
+                <a href="{{ url_for('hospital_login') }}" 
+                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors">
+                    Facility Sign In
+                </a>
+                <a href="{{ url_for('staff_login') }}" 
+                   class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors ml-auto">
+                    Staff Portal &rarr;
+                </a>
+            </div>
+
+            <!-- Step Progress Indicator Bar -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span id="hospStepBadge" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-600 text-white text-[11px] font-extrabold" x-text="currentStep">1</span>
+                        <span id="hospStepTitle" class="text-xs font-bold uppercase tracking-wider text-slate-900" 
+                              x-text="currentStep === 1 ? '1. Facility Profile & Identity' : (currentStep === 2 ? '2. Geographic Location' : (currentStep === 3 ? '3. Capacity & Accreditations' : '4. Administrative Security'))">1. Facility Profile &amp; Identity</span>
+                    </div>
+                    <span id="hospStepIndicator" class="text-xs font-bold text-slate-500" x-text="`Step ${currentStep} of ${totalSteps}`">Step 1 of 4</span>
+                </div>
+                <!-- 4 Segment Progress Track -->
+                <div class="grid grid-cols-4 gap-2">
+                    <div id="hospTrack1" class="h-1.5 rounded-full transition-all duration-300 bg-sky-500" :class="currentStep >= 1 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div id="hospTrack2" class="h-1.5 rounded-full transition-all duration-300 bg-slate-200" :class="currentStep >= 2 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div id="hospTrack3" class="h-1.5 rounded-full transition-all duration-300 bg-slate-200" :class="currentStep >= 3 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div id="hospTrack4" class="h-1.5 rounded-full transition-all duration-300 bg-slate-200" :class="currentStep >= 4 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                </div>
+            </div>
+
+            <!-- Dynamic Heading & Subtitle per Slide -->
+            <div class="mb-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-xs font-bold mb-2 border border-sky-200">
+                    <i class="fas fa-shield-halved text-sky-600"></i> Institutional Partner Gateway
+                </div>
+                <h1 id="hospHeading1" class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 1">
+                    Connect your facility <br><span class="text-sky-500">to the health grid.</span>
+                </h1>
+                <h1 id="hospHeading2" class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 2" style="display: none;">
+                    Where is your <br><span class="text-sky-500">facility located?</span>
+                </h1>
+                <h1 id="hospHeading3" class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 3" style="display: none;">
+                    Clinical Capacity &amp; <br><span class="text-sky-500">Accreditation.</span>
+                </h1>
+                <h1 id="hospHeading4" class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 4" style="display: none;">
+                    Secure your <br><span class="text-sky-500">administrator portal.</span>
+                </h1>
+                <p class="text-slate-600 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
+                    <span id="hospDesc1" x-show="currentStep === 1">Enroll your hospital to publish real-time ICU beds, coordinate emergency admissions, and manage specialist rosters.</span>
+                    <span id="hospDesc2" x-show="currentStep === 2" style="display: none;">Set physical location to enable geo-mapped emergency ambulance routing and regional patient intake.</span>
+                    <span id="hospDesc3" x-show="currentStep === 3" style="display: none;">Configure bed metrics, ICU availability, quality accreditations, and official crest logo.</span>
+                    <span id="hospDesc4" x-show="currentStep === 4" style="display: none;">Set master administrative credentials and verify institutional compliance protocols.</span>
+                </p>
+            </div>
+
+            <!-- Step Validation Error Alert -->
+            <div id="hospStepError" x-show="stepError" x-transition class="mb-5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2" style="display: none;">
+                <i class="fas fa-circle-exclamation text-rose-600 text-sm flex-shrink-0"></i>
+                <span id="hospStepErrorText" x-text="stepError"></span>
+            </div>
+
+            <!-- Flash Notification Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6 space-y-2.5">
+                        {% for category, message in messages %}
+                            <div class="flex items-center gap-3 text-xs p-3.5 rounded-lg {{ 'bg-emerald-50 text-emerald-900 border border-emerald-300' if category == 'success' else 'bg-rose-50 text-rose-900 border border-rose-300' }}">
+                                <i class="fas {{ 'fa-check-circle text-emerald-600' if category == 'success' else 'fa-circle-exclamation text-rose-600' }} text-sm flex-shrink-0"></i>
+                                <span class="font-bold">{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Registration Form (4 Slides) -->
+            <form method="POST" action="{{ url_for('hospital_register') }}" enctype="multipart/form-data" novalidate class="space-y-5" id="hospitalRegisterForm" @submit="handleFormSubmit($event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <!-- ================= SLIDE 1: Facility Profile & Identity ================= -->
+                <div x-show="currentStep === 1" id="hospStep1" class="step-fade-slide space-y-4">
+                    <!-- Social Institutional Registration Options (Google, Microsoft & Apple) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2">
+                        <a href="{{ url_for('google_login', role='hospital') }}" 
+                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Google">
+                            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                            </svg>
+                            <span>Google</span>
+                        </a>
+                        <a href="{{ url_for('microsoft_login', role='hospital') }}" 
+                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Microsoft">
+                            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 23 23">
+                                <path fill="#f35325" d="M1 1h10v10H1z"/>
+                                <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                                <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                                <path fill="#ffba08" d="M12 12h10v10H12z"/>
+                            </svg>
+                            <span>Microsoft</span>
+                        </a>
+                        <a href="{{ url_for('apple_login', role='hospital') }}" 
+                           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-black bg-black hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-xs hover:shadow active:scale-[0.99] cursor-pointer" title="Sign up with Apple">
+                            <i class="fab fa-apple text-base flex-shrink-0"></i>
+                            <span>Apple</span>
+                        </a>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="relative flex items-center justify-center mb-3">
+                        <div class="border-t border-slate-300 w-full"></div>
+                        <span class="bg-white px-3 text-[11px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">or enroll with facility details</span>
+                    </div>
+
+                    <!-- Facility Legal Name -->
+                    <div class="minimal-input-wrap">
+                        <label for="hospitalName" class="minimal-label block">Official Hospital / Facility Name *</label>
+                        <input type="text" name="name" id="hospitalName" required 
+                               x-model="formData.name"
+                               placeholder="Official hospital or facility name"
+                               class="minimal-input placeholder:text-slate-400"
+                               @keydown.enter.prevent="goToNextStep()">
+                    </div>
+
+                    <!-- Institutional Primary Category & Registration License -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="minimal-input-wrap">
+                            <label for="hospitalTypeId" class="minimal-label block">Primary Hospital Classification *</label>
+                            <select name="hospital_type_id" id="hospitalTypeId" x-model="formData.hospital_type_id" @change="onTypeChange()" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
+                                {% if hospital_types %}
+                                    {% for ht in hospital_types %}
+                                    <option value="{{ ht.id }}">{{ ht.name }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="1">General Hospital</option>
+                                    <option value="2">Multispecialty Hospital</option>
+                                    <option value="3">Super Specialty Hospital</option>
+                                    <option value="4">Cardiology Hospital</option>
+                                    <option value="5">Oncology Hospital</option>
+                                    <option value="6">Neurology Hospital</option>
+                                    <option value="7">Orthopedic Hospital</option>
+                                    <option value="8">Maternity Hospital</option>
+                                    <option value="9">Pediatric Hospital</option>
+                                    <option value="10">Psychiatric Hospital</option>
+                                    <option value="11">Eye Hospital</option>
+                                    <option value="12">Dental Hospital</option>
+                                    <option value="13">ENT Hospital</option>
+                                    <option value="14">Nephrology Hospital</option>
+                                    <option value="15">Rehabilitation Hospital</option>
+                                    <option value="16">Infectious Disease Hospital</option>
+                                    <option value="17">Burns and Plastic Surgery Hospital</option>
+                                    <option value="18">Emergency and Trauma Hospital</option>
+                                    <option value="19">Other</option>
+                                {% endif %}
+                            </select>
+                            <input type="hidden" name="facility_type" :value="formData.facility_type">
+                        </div>
+                        <div class="minimal-input-wrap">
+                            <label for="licenseNo" class="minimal-label block">Establishment License / Reg. ID *</label>
+                            <input type="text" name="license_no" id="licenseNo" required 
+                                   x-model="formData.license_no"
+                                   placeholder="Establishment license or registration ID"
+                                   class="minimal-input placeholder:text-slate-400"
+                                   @keydown.enter.prevent="goToNextStep()">
+                        </div>
+                    </div>
+
+                    <!-- Custom Hospital Classification Input (Active when Other / Custom is selected) -->
+                    <div class="minimal-input-wrap bg-sky-50/60 border border-sky-200 rounded-lg p-4 transition-all"
+                         x-show="formData.hospital_type_id === '19' || formData.facility_type === 'Other'"
+                         x-transition>
+                        <label for="customHospitalType" class="minimal-label block text-sky-800 font-bold mb-1">
+                            <i class="fas fa-edit text-sky-600 mr-1.5"></i> Specify Custom Classification / Specialty *
+                        </label>
+                        <input type="text" name="custom_hospital_type" id="customHospitalType"
+                               x-model="formData.custom_hospital_type"
+                               @input="formData.facility_type = formData.custom_hospital_type"
+                               placeholder="Specify custom classification or specialty"
+                               class="minimal-input bg-white border-sky-300 focus:border-sky-500 placeholder:text-slate-400">
+                        <p class="text-[11px] text-sky-700 font-medium mt-1">Enter your custom facility category or institutional clinical classification.</p>
+                    </div>
+
+                    <!-- Category Description Helper Card -->
+                    <div class="p-3 bg-sky-50/70 border border-sky-100 rounded-lg flex items-start gap-2.5">
+                        <i class="fas fa-circle-info text-sky-600 text-xs mt-0.5 flex-shrink-0"></i>
+                        <p class="text-[11px] text-slate-700 font-medium" x-text="formData.selected_type_desc || 'Select your primary hospital specialization'"></p>
+                    </div>
+
+                    <!-- Secondary Specialties (Multi-Select Pills) -->
+                    <div class="minimal-input-wrap pt-1">
+                        <spam class=" text-[14px] text-slate-700 font-medium">Additional Clinical Specialties (Optional)</spam>
+                        <label class="minimal-label block mb-1.5"></label>
+                        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                            <template x-for="spec in availableSpecialties" :key="spec">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all"
+                                       :class="selectedSpecialties.includes(spec) ? 'bg-sky-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'">
+                                    <input type="checkbox" name="specialties" :value="spec" class="hidden" 
+                                           @change="toggleSpecialty(spec)" :checked="selectedSpecialties.includes(spec)">
+                                    <i class="fas fa-check text-[9px]" x-show="selectedSpecialties.includes(spec)"></i>
+                                    <span x-text="spec"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Admin Email & Contact Phone -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="minimal-input-wrap">
+                            <label for="hospitalEmail" class="minimal-label block">Administration / Official Email *</label>
+                            <input type="email" name="email" id="hospitalEmail" required 
+                                   x-model="formData.email"
+                                   placeholder="Official administration email"
+                                   class="minimal-input placeholder:text-slate-400"
+                                   @keydown.enter.prevent="goToNextStep()">
+                        </div>
+                        <div class="minimal-input-wrap">
+                            <label for="hospitalPhone" class="minimal-label block">Emergency Dispatch Phone *</label>
+                            <input type="tel" name="phone" id="hospitalPhone" required 
+                                   x-model="formData.phone"
+                                   placeholder="Emergency dispatch phone"
+                                   class="minimal-input placeholder:text-slate-400"
+                                   @keydown.enter.prevent="goToNextStep()">
+                        </div>
+                    </div>
+
+                    <!-- Step 1 Actions -->
+                    <div class="pt-4">
+                        <button type="button" @click="goToNextStep()" data-step-next="1"
+                                class="btn-pill-soft w-full py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <span>Continue to Geographic Location</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ================= SLIDE 2: Geographic Location ================= -->
+                <div x-show="currentStep === 2" id="hospStep2" class="step-fade-slide space-y-4" style="display: none;">
+                    <!-- Complete Address -->
+                    <div class="minimal-input-wrap">
+                        <label for="hospitalAddress" class="minimal-label block">Complete Street Address *</label>
+                        <input type="text" name="address" id="hospitalAddress" required 
+                               x-model="formData.address"
+                               placeholder="Complete street address"
+                               class="minimal-input placeholder:text-slate-400"
+                               @keydown.enter.prevent="goToNextStep()">
+                    </div>
+
+                    <!-- City, State & Country -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="minimal-input-wrap">
+                            <label for="hospitalCity" class="minimal-label block">City / Metro *</label>
+                            <input type="text" name="city" id="hospitalCity" required 
+                                   x-model="formData.city"
+                                   placeholder="City or metro area"
+                                   class="minimal-input placeholder:text-slate-400"
+                                   @keydown.enter.prevent="goToNextStep()">
+                        </div>
+                        <div class="minimal-input-wrap">
+                            <label for="hospitalState" class="minimal-label block">State / Province</label>
+                            <input type="text" name="state" id="hospitalState" 
+                                   x-model="formData.state"
+                                   placeholder="State or province"
+                                   class="minimal-input placeholder:text-slate-400"
+                                   @keydown.enter.prevent="goToNextStep()">
+                        </div>
+                        <div class="minimal-input-wrap">
+                            <label for="hospitalCountry" class="minimal-label block">Country *</label>
+                            <select name="country" id="hospitalCountry" required x-model="formData.country" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
+                                {% for c in all_countries_195 %}
+                                <option value="{{ c.name }}" {% if c.name == 'India' or c.name == 'United States' %}selected{% endif %}>{{ c.flag }} {{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 Navigation Actions -->
+                    <div class="pt-4 flex items-center gap-3">
+                        <button type="button" @click="goToPrevStep()" data-step-prev="2"
+                                class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <i class="fas fa-arrow-left text-xs"></i>
+                            <span>Back</span>
+                        </button>
+                        <button type="button" @click="goToNextStep()" data-step-next="2"
+                                class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <span>Clinical Capacity</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ================= SLIDE 3: Clinical Capacity & Accreditations ================= -->
+                <div x-show="currentStep === 3" id="hospStep3" class="step-fade-slide space-y-4" style="display: none;">
+                    <!-- Accreditation Standard -->
+                    <div class="minimal-input-wrap">
+                        <label for="hospitalAccreditation" class="minimal-label block">Accreditation Standard *</label>
+                        <select name="accreditation" id="hospitalAccreditation" x-model="formData.accreditation" class="minimal-input bg-transparent text-black font-semibold cursor-pointer">
+                            <option value="NABH & NABL Accredited">NABH & NABL Accredited</option>
+                            <option value="JCI Gold Standard Accredited">JCI Gold Standard Accredited</option>
+                            <option value="ISO 9001:2015 Healthcare Certified">ISO 9001:2015 Healthcare Certified</option>
+                            <option value="Government Apex Institute">Government Apex Institute</option>
+                            <option value="State Certified Healthcare Facility">State Certified Healthcare Facility</option>
+                        </select>
+                    </div>
+
+                    <!-- Bed Capacity Metrics (Underline Inputs) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="minimal-input-wrap">
+                            <label for="totalBeds" class="minimal-label block">Total Licensed Beds *</label>
+                            <input type="number" name="total_beds" id="totalBeds" min="1" required 
+                                   x-model="formData.total_beds"
+                                   placeholder="Total licensed beds"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                        <div class="minimal-input-wrap">
+                            <label for="icuBeds" class="minimal-label block">ICU / CCU Beds *</label>
+                            <input type="number" name="icu_beds" id="icuBeds" min="0" required 
+                                   x-model="formData.icu_beds"
+                                   placeholder="ICU / CCU beds"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                        <div class="minimal-input-wrap">
+                            <label for="emergencyBeds" class="minimal-label block">Emergency / Trauma Beds</label>
+                            <input type="number" name="emergency_beds" id="emergencyBeds" min="0" 
+                                   x-model="formData.emergency_beds"
+                                   placeholder="Emergency beds"
+                                   class="minimal-input placeholder:text-slate-400">
+                        </div>
+                    </div>
+
+                    <!-- 24/7 Emergency & Critical Care Toggle -->
+                    <div class="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-lg flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                                <i class="fas fa-truck-medical"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 block">24/7 Emergency & Trauma Services</span>
+                                <span class="text-[11px] text-slate-600">Enables urgent patient admission and ambulance dispatch</span>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="emergency_services" value="on" class="sr-only peer" x-model="formData.emergency_services">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                        </label>
+                    </div>
+
+                    <!-- Available Clinical Facilities Checklist -->
+                    <div class="minimal-input-wrap pt-1">
+                        <label class="minimal-label block mb-1.5">Available Clinical & Diagnostic Facilities</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px]">
+                            {% if master_facilities %}
+                                {% for fac in master_facilities %}
+                                {% set fac_name = fac.name if fac.name is defined else (fac['name'] if fac is mapping else fac) %}
+                                {% set fac_icon = fac.icon if fac.icon is defined else (fac['icon'] if fac is mapping else 'fa-solid fa-circle-check') %}
+                                <label class="cursor-pointer flex items-center gap-2 p-1.5 rounded-lg bg-white border border-slate-200 hover:border-sky-300 transition-colors font-medium text-slate-800">
+                                    <input type="checkbox" name="facilities" value="{{ fac_name }}" class="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5" checked>
+                                    <i class="{{ fac_icon }} text-sky-600 text-xs flex-shrink-0"></i>
+                                    <span class="truncate">{{ fac_name }}</span>
+                                </label>
+                                {% endfor %}
+                            {% else %}
+                                {% for fac in ['24/7 Pharmacy', 'Emergency Room (ER)', 'Intensive Care Unit (ICU)', 'Blood Bank', 'MRI & CT Scan', 'Dialysis Center', 'Cath Lab (Cardiac)', 'Neonatal ICU (NICU)', 'Ambulance Service', 'Pathology Laboratory'] %}
+                                <label class="cursor-pointer flex items-center gap-2 p-1.5 rounded-lg bg-white border border-slate-200 hover:border-sky-300 transition-colors font-medium text-slate-800">
+                                    <input type="checkbox" name="facilities" value="{{ fac }}" class="rounded text-sky-600 focus:ring-sky-500 h-3.5 w-3.5" checked>
+                                    <i class="fa-solid fa-circle-check text-sky-600 text-xs flex-shrink-0"></i>
+                                    <span class="truncate">{{ fac }}</span>
+                                </label>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- About / Hospital Overview -->
+                    <div class="minimal-input-wrap">
+                        <label for="hospitalAbout" class="minimal-label block">About Hospital / Clinical Overview (Optional)</label>
+                        <textarea name="about" id="hospitalAbout" rows="2" x-model="formData.about" 
+                                  placeholder="Provide a brief clinical summary, center of excellence, or mission..."
+                                  class="minimal-input placeholder:text-slate-400 resize-none"></textarea>
+                    </div>
+
+                    <!-- Logo / Brand Emblem Upload -->
+                    <div class="minimal-input-wrap pt-1">
+                        <label class="minimal-label block mb-2">Hospital Logo / Official Crest (Optional)</label>
+                        <div class="flex items-center gap-4">
+                            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-black text-xs font-bold transition-colors">
+                                <i class="fas fa-cloud-arrow-up text-sky-600"></i>
+                                <span>Choose Image File</span>
+                                <input type="file" name="logo" accept="image/*" class="hidden" @change="handleLogo">
+                            </label>
+                            <template x-if="logoPreview">
+                                <div class="flex items-center gap-2 text-xs text-black">
+                                    <img :src="logoPreview" class="w-8 h-8 rounded-lg object-cover border border-slate-300">
+                                    <span class="font-bold text-emerald-600">Selected</span>
+                                </div>
+                            </template>
+                            <span x-show="!logoPreview" class="text-xs text-slate-600 font-medium">PNG, JPG or SVG (Max 5MB)</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 Navigation Actions -->
+                    <div class="pt-4 flex items-center gap-3">
+                        <button type="button" @click="goToPrevStep()" data-step-prev="3"
+                                class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <i class="fas fa-arrow-left text-xs"></i>
+                            <span>Back</span>
+                        </button>
+                        <button type="button" @click="goToNextStep()" data-step-next="3"
+                                class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <span>Security &amp; Password</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ================= SLIDE 4: Administrative Security ================= -->
+                <div x-show="currentStep === 4" id="hospStep4" class="step-fade-slide space-y-4" style="display: none;">
+                    <!-- Password & Confirmation -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="minimal-input-wrap">
+                            <label for="hospPassword" class="minimal-label block">Administrator Master Password *</label>
+                            <div class="relative">
+                                <input :type="showPass ? 'text' : 'password'" name="password" id="hospPassword" required minlength="8"
+                                       x-model="formData.password"
+                                       placeholder="••••••••••••"
+                                       class="minimal-input pr-7 placeholder:text-slate-400">
+                                <button type="button" id="hospTogglePass" @click="showPass = !showPass" 
+                                        class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
+                                    <i class="fas text-xs" :class="showPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="minimal-input-wrap">
+                            <label for="hospConfirmPassword" class="minimal-label block">Confirm Master Password *</label>
+                            <div class="relative">
+                                <input :type="showConfirmPass ? 'text' : 'password'" name="confirm_password" id="hospConfirmPassword" required minlength="8"
+                                       x-model="formData.confirm_password"
+                                       placeholder="••••••••••••"
+                                       class="minimal-input pr-7 placeholder:text-slate-400">
+                                <button type="button" id="hospToggleConfirmPass" @click="showConfirmPass = !showConfirmPass" 
+                                        class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
+                                    <i class="fas text-xs" :class="showConfirmPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terms & Compliance Checkbox -->
+                    <div class="flex items-start gap-3 pt-2">
+                        <input id="terms" name="terms" type="checkbox" required x-model="formData.terms"
+                                class="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer">
+                        <label for="terms" class="text-xs text-slate-800 font-medium select-none cursor-pointer leading-relaxed">
+                            I certify that I am a verified representative of this medical institution and agree to the <a href="/legal/privacy" target="_blank" class="text-sky-600 hover:underline font-bold">Spherix Health Grid Data Compliance & Telemetry Protocols</a>.
+                        </label>
+                    </div>
+
+                    <!-- Step 4 Navigation Actions / Submit -->
+                    <div class="pt-4 flex items-center gap-3">
+                        <button type="button" @click="goToPrevStep()" data-step-prev="4"
+                                class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <i class="fas fa-arrow-left text-xs"></i>
+                            <span>Back</span>
+                        </button>
+                        <button type="submit" :disabled="isSubmitting"
+                                class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                            <span x-show="!isSubmitting">Register Hospital Facility</span>
+                            <span x-show="isSubmitting" style="display: none;" class="flex items-center gap-2">
+                                <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                                <span>Verifying & Sending OTP...</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+            <!-- Support & Assistance Callout -->
+            <div class="mt-8 pt-6 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700">
+                <span>Already enrolled? <a href="{{ url_for('hospital_login') }}" class="text-sky-600 hover:underline font-bold">Sign in to Hospital Portal</a></span>
+                <span class="hidden sm:inline">Partner Helpline: <strong class="text-black">+1 (800) SPHERIX</strong></span>
+            </div>
+
+        </div>
+
+        <!-- ================= COLUMN 2: Art Illustration (Fixed / Sticky in Viewport) ================= -->
+        <div class="w-full lg:col-span-7 lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex items-center justify-center p-0 self-start lg:pl-6">
+            <div class="relative w-full h-full flex items-center justify-center">
+                <img src="{{ url_for('static', filename='images/hospital_staff_art.jpg') }}" 
+                     alt="Hospital Operations" 
+                     class="w-full h-full max-h-[85vh] object-contain select-none pointer-events-none border-0 shadow-none">
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Resilient Fail-Safe Navigation & Interaction Script -->
+<script>
+    (function() {
+        // Password Visibility Toggles
+        document.addEventListener('click', function(e) {
+            const togglePass = e.target.closest('#hospTogglePass');
+            if (togglePass) {
+                const input = document.getElementById('hospPassword');
+                if (input) {
+                    const isPwd = input.type === 'password';
+                    input.type = isPwd ? 'text' : 'password';
+                    const icon = togglePass.querySelector('i');
+                    if (icon) {
+                        icon.className = isPwd ? 'fas text-xs fa-eye-slash text-sky-600' : 'fas text-xs fa-eye';
+                    }
+                }
+            }
+
+            const toggleConfirmPass = e.target.closest('#hospToggleConfirmPass');
+            if (toggleConfirmPass) {
+                const input = document.getElementById('hospConfirmPassword');
+                if (input) {
+                    const isPwd = input.type === 'password';
+                    input.type = isPwd ? 'text' : 'password';
+                    const icon = toggleConfirmPass.querySelector('i');
+                    if (icon) {
+                        icon.className = isPwd ? 'fas text-xs fa-eye-slash text-sky-600' : 'fas text-xs fa-eye';
+                    }
+                }
+            }
+        });
+
+        // Fail-safe Click Handler: if Alpine has not bound the event, advance step natively
+        function syncVanillaStep(step) {
+            const total = 4;
+            for (let i = 1; i <= total; i++) {
+                const stepEl = document.getElementById('hospStep' + i);
+                if (stepEl) {
+                    stepEl.style.display = (i === step) ? 'block' : 'none';
+                }
+                const headEl = document.getElementById('hospHeading' + i);
+                if (headEl) {
+                    headEl.style.display = (i === step) ? 'block' : 'none';
+                }
+                const descEl = document.getElementById('hospDesc' + i);
+                if (descEl) {
+                    descEl.style.display = (i === step) ? 'inline' : 'none';
+                }
+                const trackEl = document.getElementById('hospTrack' + i);
+                if (trackEl) {
+                    trackEl.className = 'h-1.5 rounded-full transition-all duration-300 ' + (step >= i ? 'bg-sky-500' : 'bg-slate-200');
+                }
+            }
+            const badge = document.getElementById('hospStepBadge');
+            if (badge) badge.textContent = step;
+            const ind = document.getElementById('hospStepIndicator');
+            if (ind) ind.textContent = 'Step ' + step + ' of ' + total;
+            const titles = ['1. Facility Profile & Identity', '2. Geographic Location', '3. Capacity & Accreditations', '4. Administrative Security'];
+            const titleEl = document.getElementById('hospStepTitle');
+            if (titleEl) titleEl.textContent = titles[step - 1];
+        }
+
+        document.addEventListener('click', function(e) {
+            const nextBtn = e.target.closest('[data-step-next]');
+            if (nextBtn) {
+                const appRoot = document.querySelector('[x-data]');
+                if (appRoot && appRoot._x_dataStack && appRoot._x_dataStack[0]) {
+                    return;
+                }
+                e.preventDefault();
+                const cur = parseInt(nextBtn.getAttribute('data-step-next'), 10);
+                if (cur < 4) {
+                    syncVanillaStep(cur + 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+
+            const prevBtn = e.target.closest('[data-step-prev]');
+            if (prevBtn) {
+                const appRoot = document.querySelector('[x-data]');
+                if (appRoot && appRoot._x_dataStack && appRoot._x_dataStack[0]) {
+                    return;
+                }
+                e.preventDefault();
+                const cur = parseInt(prevBtn.getAttribute('data-step-prev'), 10);
+                if (cur > 1) {
+                    syncVanillaStep(cur - 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        });
+    })();
 </script>
 {% endblock %}

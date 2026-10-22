@@ -199,9 +199,9 @@ def hospitals_list():
     all_states = sorted(list(set(h.state.strip() for h in all_hospitals if getattr(h, 'state', None) and h.state.strip())))
     available_countries = sorted(list(set(getattr(h, 'country', 'India') for h in all_hospitals if getattr(h, 'country', None))))
 
-    # Pagination
+    # Pagination (4 columns x 6 rows = 24 items per page)
     page = request.args.get('page', 1, type=int)
-    per_page = 9 if view_mode == 'grid' else 10
+    per_page = 24
     total_filtered = len(filtered_hospitals)
     total_pages = (total_filtered + per_page - 1) // per_page
     page = max(1, min(page, total_pages)) if total_pages > 0 else 1
@@ -282,6 +282,7 @@ def hospitals_list():
         country_flags=GLOBAL_COUNTRY_FLAGS,
         page=page,
         total_pages=total_pages,
+        per_page=per_page,
         total_partner_hospitals=total_partner_hospitals,
         total_avail_icu_beds=total_avail_icu_beds,
         total_avail_gen_beds=total_avail_gen_beds,
@@ -1786,6 +1787,15 @@ def email_bed_booking_invoice(booking_id):
 
     return redirect(url_for('hospital_dashboard') + '#beds')
 
+
+
+
+@hospital_bp.route('/hospital', endpoint='hospital_portal')
+@hospital_bp.route('/hospital/', endpoint='hospital_portal_slash')
+def hospital_portal():
+    if current_user and current_user.is_authenticated and getattr(current_user, 'is_hospital', False):
+        return redirect(url_for('hospital_dashboard'))
+    return redirect(url_for('hospital_login'))
 
 
 

@@ -59,6 +59,128 @@
     }
 </style>
 
+<script>
+    window.patientRegisterApp = function() {
+        return {
+            currentStep: 1,
+            totalSteps: 3,
+            showPass: false,
+            showConfirmPass: false,
+            isSubmitting: false,
+            stepError: '',
+            formData: {
+                name: '',
+                age: '',
+                gender: 'Male',
+                blood_group: 'Unknown',
+                email: '',
+                phone: '',
+                address: '',
+                password: '',
+                confirm_password: '',
+                terms: true
+            },
+            validateCurrentStep() {
+                this.stepError = '';
+                const step = this.currentStep;
+                const getVal = (name) => {
+                    const fd = this.formData ? this.formData[name] : null;
+                    if (fd !== undefined && fd !== null && String(fd).trim().length > 0) return String(fd).trim();
+                    const el = document.querySelector(`[name="${name}"]`);
+                    return el ? el.value.trim() : '';
+                };
+
+                if (step === 1) {
+                    if (!getVal('name')) {
+                        this.stepError = 'Please enter your full legal name.';
+                        return false;
+                    }
+                    const ageNum = parseInt(getVal('age'), 10);
+                    if (!ageNum || ageNum < 1 || ageNum > 120) {
+                        this.stepError = 'Please enter a valid age between 1 and 120.';
+                        return false;
+                    }
+                    if (!getVal('gender')) {
+                        this.stepError = 'Please select your gender.';
+                        return false;
+                    }
+                    return true;
+                } else if (step === 2) {
+                    const em = getVal('email');
+                    if (!em || !em.includes('@')) {
+                        this.stepError = 'Please enter a valid email address.';
+                        return false;
+                    }
+                    if (!getVal('phone')) {
+                        this.stepError = 'Please enter your contact phone number.';
+                        return false;
+                    }
+                    if (!getVal('address')) {
+                        this.stepError = 'Please enter your residential address or city.';
+                        return false;
+                    }
+                    return true;
+                } else if (step === 3) {
+                    const pwd = getVal('password');
+                    const cpwd = getVal('confirm_password');
+                    if (!pwd || pwd.length < 6) {
+                        this.stepError = 'Password must be at least 6 characters long.';
+                        return false;
+                    }
+                    if (pwd !== cpwd) {
+                        this.stepError = 'Passwords do not match.';
+                        return false;
+                    }
+                    const termsEl = document.getElementById('terms');
+                    const termsChecked = termsEl ? termsEl.checked : Boolean(this.formData.terms);
+                    if (!termsChecked) {
+                        this.stepError = 'You must agree to the Terms & Privacy Policy.';
+                        return false;
+                    }
+                    return true;
+                }
+                return true;
+            },
+            goToNextStep() {
+                if (this.validateCurrentStep()) {
+                    if (this.currentStep < this.totalSteps) {
+                        this.currentStep++;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                }
+            },
+            goToPrevStep() {
+                this.stepError = '';
+                if (this.currentStep > 1) {
+                    this.currentStep--;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            },
+            handleFormSubmit(e) {
+                if (this.currentStep < this.totalSteps) {
+                    e.preventDefault();
+                    this.goToNextStep();
+                    return false;
+                }
+                if (!this.validateCurrentStep()) {
+                    e.preventDefault();
+                    return false;
+                }
+                this.isSubmitting = true;
+            }
+        };
+    };
+
+    if (window.Alpine) {
+        window.Alpine.data('patientRegisterApp', window.patientRegisterApp);
+    }
+    document.addEventListener('alpine:init', function() {
+        if (window.Alpine) {
+            window.Alpine.data('patientRegisterApp', window.patientRegisterApp);
+        }
+    });
+</script>
+
 <div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-sky-400 selection:text-white"
      x-data="patientRegisterApp()">
 
@@ -68,11 +190,24 @@
         <!-- ================= COLUMN 1: Multi-Step Slide Form ================= -->
         <div class="w-full lg:col-span-5 max-w-xl mx-auto lg:mx-0 flex flex-col justify-center lg:border-r lg:border-slate-200 lg:pr-12">
 
+            <!-- Spherix Clinic Brand Identity Header (Logo & Typography) -->
+            <div class="mb-6">
+                <a href="{{ url_for('home') }}" class="inline-flex items-center gap-2.5 text-decoration-none group" title="Return to Spherix Clinic Home">
+                    <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" 
+                         alt="Spherix Clinic" 
+                         class="w-14 h-14"/>
+                    <span class="flex items-baseline gap-1">
+                        <span class="spherix-brand-gradient brand-font-spherix font-iceland text-3xl font-bold">Spherix</span>
+                        <span class="brand-font-clinic font-ballet text-3xl text-[#005eb8]">Clinic</span>
+                    </span>
+                </a>
+            </div>
+
             <!-- Switcher Tabs -->
             <div class="flex items-center gap-6 mb-6 border-b border-slate-200 pb-3">
                 <a href="{{ url_for('patient_create_account') }}" 
                    class="text-xs font-bold uppercase tracking-wider text-sky-600 border-b-2 border-sky-500 pb-3 -mb-3.5 transition-colors">
-                    Create Account
+                    Register / Create Account
                 </a>
                 <a href="{{ url_for('patient_login') }}" 
                    class="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-black transition-colors">
@@ -88,17 +223,17 @@
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-600 text-white text-[11px] font-extrabold" x-text="currentStep"></span>
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-900" 
-                              x-text="currentStep === 1 ? '1. Personal Profile & Bio' : (currentStep === 2 ? '2. Contact & Address' : '3. Security & Credentials')"></span>
+                        <span id="patStepBadge" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-600 text-white text-[11px] font-extrabold" x-text="currentStep">1</span>
+                        <span id="patStepTitle" class="text-xs font-bold uppercase tracking-wider text-slate-900" 
+                              x-text="currentStep === 1 ? '1. Personal Profile & Bio' : (currentStep === 2 ? '2. Contact & Address' : '3. Security & Credentials')">1. Personal Profile &amp; Bio</span>
                     </div>
-                    <span class="text-xs font-bold text-slate-500" x-text="`Step ${currentStep} of ${totalSteps}`"></span>
+                    <span id="patStepIndicator" class="text-xs font-bold text-slate-500" x-text="`Step ${currentStep} of ${totalSteps}`">Step 1 of 3</span>
                 </div>
                 <!-- 3 Segment Progress Track -->
                 <div class="grid grid-cols-3 gap-2">
-                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 1 ? 'bg-sky-500' : 'bg-slate-200'"></div>
-                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 2 ? 'bg-sky-500' : 'bg-slate-200'"></div>
-                    <div class="h-1.5 rounded-full transition-all duration-300" :class="currentStep >= 3 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div id="patTrack1" class="h-1.5 rounded-full transition-all duration-300 bg-sky-500" :class="currentStep >= 1 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div id="patTrack2" class="h-1.5 rounded-full transition-all duration-300 bg-slate-200" :class="currentStep >= 2 ? 'bg-sky-500' : 'bg-slate-200'"></div>
+                    <div id="patTrack3" class="h-1.5 rounded-full transition-all duration-300 bg-slate-200" :class="currentStep >= 3 ? 'bg-sky-500' : 'bg-slate-200'"></div>
                 </div>
             </div>
 
@@ -107,19 +242,19 @@
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-xs font-bold mb-2 border border-sky-200">
                     <i class="fas fa-heart-pulse text-sky-600"></i> Personal Health Network
                 </div>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 1">
+                <h1 id="patHeading1" class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 1">
                     Start your digital <br><span class="text-sky-500">health journey today.</span>
                 </h1>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 2" style="display: none;">
+                <h1 id="patHeading2" class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 2" style="display: none;">
                     How can our <br><span class="text-sky-500">care team reach you?</span>
                 </h1>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 3" style="display: none;">
+                <h1 id="patHeading3" class="text-2xl sm:text-3xl font-extrabold text-black tracking-tight leading-tight" x-show="currentStep === 3" style="display: none;">
                     Protect your <br><span class="text-sky-500">medical records.</span>
                 </h1>
                 <p class="text-slate-600 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
-                    <span x-show="currentStep === 1">Create a secure personal health account to consult world-class specialists and manage tests.</span>
-                    <span x-show="currentStep === 2" style="display: none;">Provide your contact details for appointment reminders, lab reports, and doctor alerts.</span>
-                    <span x-show="currentStep === 3" style="display: none;">Set an encrypted password to lock your medical history and prescription records.</span>
+                    <span id="patDesc1" x-show="currentStep === 1">Create a secure personal health account to consult world-class specialists and manage tests.</span>
+                    <span id="patDesc2" x-show="currentStep === 2" style="display: none;">Provide your contact details for appointment reminders, lab reports, and doctor alerts.</span>
+                    <span id="patDesc3" x-show="currentStep === 3" style="display: none;">Set an encrypted password to lock your medical history and prescription records.</span>
                 </p>
             </div>
 
@@ -145,10 +280,11 @@
 
             <!-- Form (3 Slides) -->
             <form method="POST" action="{{ url_for('patient_create_account') }}" novalidate class="space-y-5" id="patientRegisterForm" @submit="handleFormSubmit($event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="role" value="patient">
 
                 <!-- ================= SLIDE 1: Personal Profile & Bio ================= -->
-                <div x-show="currentStep === 1" class="step-fade-slide space-y-4">
+                <div x-show="currentStep === 1" id="patStep1" class="step-fade-slide space-y-4">
                     <!-- Social Sign Up Options (Google, Microsoft & Apple) -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2">
                         <a href="{{ url_for('google_login', role='patient') }}" 
@@ -189,7 +325,7 @@
                         <label for="patientName" class="minimal-label block">Full Legal Name *</label>
                         <input type="text" name="name" id="patientName" required 
                                x-model="formData.name"
-                               placeholder="Alex Rivera"
+                               placeholder="Full legal name"
                                class="minimal-input placeholder:text-slate-400"
                                @keydown.enter.prevent="goToNextStep()">
                     </div>
@@ -200,7 +336,7 @@
                             <label for="patientAge" class="minimal-label block">Age *</label>
                             <input type="number" name="age" id="patientAge" min="1" max="120" required 
                                    x-model="formData.age"
-                                   placeholder="28"
+                                   placeholder="Age"
                                    class="minimal-input placeholder:text-slate-400"
                                    @keydown.enter.prevent="goToNextStep()">
                         </div>
@@ -230,7 +366,7 @@
 
                     <!-- Step 1 Actions -->
                     <div class="pt-4">
-                        <button type="button" @click="goToNextStep()"
+                        <button type="button" @click="goToNextStep()" data-step-next="1" id="btnPatStep1Continue"
                                 class="btn-pill-soft w-full py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
                             <span>Continue to Contact Details</span>
                             <i class="fas fa-arrow-right text-xs"></i>
@@ -239,14 +375,14 @@
                 </div>
 
                 <!-- ================= SLIDE 2: Contact & Address ================= -->
-                <div x-show="currentStep === 2" class="step-fade-slide space-y-4" style="display: none;">
+                <div x-show="currentStep === 2" id="patStep2" class="step-fade-slide space-y-4" style="display: none;">
                     <!-- Email & Phone Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="minimal-input-wrap">
                             <label for="patientEmail" class="minimal-label block">Email Address *</label>
                             <input type="email" name="email" id="patientEmail" required 
                                    x-model="formData.email"
-                                   placeholder="alex.rivera@example.com"
+                                   placeholder="Email address"
                                    class="minimal-input placeholder:text-slate-400"
                                    @keydown.enter.prevent="goToNextStep()">
                         </div>
@@ -254,7 +390,7 @@
                             <label for="patientPhone" class="minimal-label block">Contact Phone *</label>
                             <input type="tel" name="phone" id="patientPhone" required 
                                    x-model="formData.phone"
-                                   placeholder="+1 (555) 019-2834"
+                                   placeholder="Phone number"
                                    class="minimal-input placeholder:text-slate-400"
                                    @keydown.enter.prevent="goToNextStep()">
                         </div>
@@ -265,19 +401,19 @@
                         <label for="patientAddress" class="minimal-label block">Residential Address / City *</label>
                         <input type="text" name="address" id="patientAddress" required 
                                x-model="formData.address"
-                               placeholder="742 Evergreen Terrace, San Francisco, CA"
+                               placeholder="Residential address and city"
                                class="minimal-input placeholder:text-slate-400"
                                @keydown.enter.prevent="goToNextStep()">
                     </div>
 
                     <!-- Step 2 Navigation Actions -->
                     <div class="pt-4 flex items-center gap-3">
-                        <button type="button" @click="goToPrevStep()"
+                        <button type="button" @click="goToPrevStep()" data-step-prev="2" id="btnPatStep2Back"
                                 class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
                             <i class="fas fa-arrow-left text-xs"></i>
                             <span>Back</span>
                         </button>
-                        <button type="button" @click="goToNextStep()"
+                        <button type="button" @click="goToNextStep()" data-step-next="2" id="btnPatStep2Continue"
                                 class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
                             <span>Account Security</span>
                             <i class="fas fa-arrow-right text-xs"></i>
@@ -286,7 +422,7 @@
                 </div>
 
                 <!-- ================= SLIDE 3: Security & Credentials ================= -->
-                <div x-show="currentStep === 3" class="step-fade-slide space-y-4" style="display: none;">
+                <div x-show="currentStep === 3" id="patStep3" class="step-fade-slide space-y-4" style="display: none;">
                     <!-- Password & Confirm Password Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="minimal-input-wrap">
@@ -296,7 +432,7 @@
                                        x-model="formData.password"
                                        placeholder="••••••••••••"
                                        class="minimal-input pr-8 placeholder:text-slate-400">
-                                <button type="button" @click="showPass = !showPass" 
+                                <button type="button" @click="showPass = !showPass" id="patTogglePass"
                                         class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
                                     <i class="fas text-xs" :class="showPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
                                 </button>
@@ -310,7 +446,7 @@
                                        x-model="formData.confirm_password"
                                        placeholder="••••••••••••"
                                        class="minimal-input pr-8 placeholder:text-slate-400">
-                                <button type="button" @click="showConfirmPass = !showConfirmPass" 
+                                <button type="button" @click="showConfirmPass = !showConfirmPass" id="patToggleConfirmPass"
                                         class="absolute right-0 bottom-2 text-slate-600 hover:text-black p-1 cursor-pointer">
                                     <i class="fas text-xs" :class="showConfirmPass ? 'fa-eye-slash text-sky-600' : 'fa-eye'"></i>
                                 </button>
@@ -320,7 +456,7 @@
 
                     <!-- Terms Checkbox -->
                     <div class="flex items-start gap-3 pt-2">
-                        <input id="terms" name="terms" type="checkbox" required x-model="formData.terms"
+                        <input id="terms" name="terms" type="checkbox" required x-model="formData.terms" checked
                                class="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer">
                         <label for="terms" class="text-xs text-slate-800 font-medium select-none cursor-pointer leading-relaxed">
                             I agree to the <a href="/legal/terms" target="_blank" class="text-sky-600 hover:underline font-bold">Terms & Conditions</a> and <a href="/legal/privacy" target="_blank" class="text-sky-600 hover:underline font-bold">Patient Privacy Policy</a>.
@@ -329,12 +465,12 @@
 
                     <!-- Step 3 Navigation Actions / Submit -->
                     <div class="pt-4 flex items-center gap-3">
-                        <button type="button" @click="goToPrevStep()"
+                        <button type="button" @click="goToPrevStep()" data-step-prev="3" id="btnPatStep3Back"
                                 class="w-1/3 py-3.5 rounded-lg border border-slate-300 text-slate-700 hover:text-black hover:bg-slate-50 font-bold text-sm tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2">
                             <i class="fas fa-arrow-left text-xs"></i>
                             <span>Back</span>
                         </button>
-                        <button type="submit" :disabled="isSubmitting"
+                        <button type="submit" :disabled="isSubmitting" id="btnPatientSubmit"
                                 class="btn-pill-soft w-2/3 py-3.5 rounded-lg text-white font-bold text-sm tracking-wide transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                             <span x-show="!isSubmitting">Create Account</span>
                             <span x-show="isSubmitting" style="display: none;" class="flex items-center gap-2">
@@ -367,107 +503,97 @@
 
 </div>
 
-<!-- Alpine Component Logic in dedicated script -->
+<!-- Universal Resilient Fallback Engine for Multi-Step Patient Registration -->
 <script>
-    function patientRegisterApp() {
-        return {
-            currentStep: 1,
-            totalSteps: 3,
-            showPass: false,
-            showConfirmPass: false,
-            isSubmitting: false,
-            stepError: '',
-            formData: {
-                name: '',
-                age: '',
-                gender: 'Male',
-                blood_group: 'Unknown',
-                email: '',
-                phone: '',
-                address: '',
-                password: '',
-                confirm_password: '',
-                terms: true
-            },
-            validateCurrentStep() {
-                this.stepError = '';
-                if (this.currentStep === 1) {
-                    if (!this.formData.name.trim()) {
-                        this.stepError = 'Please enter your full legal name.';
-                        return false;
-                    }
-                    if (!this.formData.age || parseInt(this.formData.age) < 1 || parseInt(this.formData.age) > 120) {
-                        this.stepError = 'Please enter a valid age between 1 and 120.';
-                        return false;
-                    }
-                    if (!this.formData.gender) {
-                        this.stepError = 'Please select your gender.';
-                        return false;
-                    }
-                    return true;
-                } else if (this.currentStep === 2) {
-                    if (!this.formData.email.trim() || !this.formData.email.includes('@')) {
-                        this.stepError = 'Please enter a valid email address.';
-                        return false;
-                    }
-                    if (!this.formData.phone.trim()) {
-                        this.stepError = 'Please enter your contact phone number.';
-                        return false;
-                    }
-                    if (!this.formData.address.trim()) {
-                        this.stepError = 'Please enter your residential address or city.';
-                        return false;
-                    }
-                    return true;
-                } else if (this.currentStep === 3) {
-                    if (!this.formData.password || this.formData.password.length < 6) {
-                        this.stepError = 'Password must be at least 6 characters long.';
-                        return false;
-                    }
-                    if (this.formData.password !== this.formData.confirm_password) {
-                        this.stepError = 'Passwords do not match.';
-                        return false;
-                    }
-                    if (!this.formData.terms) {
-                        this.stepError = 'You must agree to the Terms & Privacy Policy.';
-                        return false;
-                    }
-                    return true;
-                }
-                return true;
-            },
-            goToNextStep() {
-                if (this.validateCurrentStep()) {
-                    if (this.currentStep < this.totalSteps) {
-                        this.currentStep++;
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+    (function() {
+        // Toggle password visibility handlers for Vanilla JS
+        document.addEventListener('click', function(e) {
+            const togglePass = e.target.closest('#patTogglePass');
+            if (togglePass) {
+                const input = document.getElementById('patientPassword');
+                if (input) {
+                    const isPwd = input.type === 'password';
+                    input.type = isPwd ? 'text' : 'password';
+                    const icon = togglePass.querySelector('i');
+                    if (icon) {
+                        icon.className = isPwd ? 'fas text-xs fa-eye-slash text-sky-600' : 'fas text-xs fa-eye';
                     }
                 }
-            },
-            goToPrevStep() {
-                this.stepError = '';
-                if (this.currentStep > 1) {
-                    this.currentStep--;
+            }
+
+            const toggleConfirmPass = e.target.closest('#patToggleConfirmPass');
+            if (toggleConfirmPass) {
+                const input = document.getElementById('patientConfirmPassword');
+                if (input) {
+                    const isPwd = input.type === 'password';
+                    input.type = isPwd ? 'text' : 'password';
+                    const icon = toggleConfirmPass.querySelector('i');
+                    if (icon) {
+                        icon.className = isPwd ? 'fas text-xs fa-eye-slash text-sky-600' : 'fas text-xs fa-eye';
+                    }
+                }
+            }
+        });
+
+        // Fail-safe Click Handler: if Alpine has not bound the event, advance step natively
+        function syncVanillaPatientStep(step) {
+            const total = 3;
+            for (let i = 1; i <= total; i++) {
+                const stepEl = document.getElementById('patStep' + i);
+                if (stepEl) {
+                    stepEl.style.display = (i === step) ? 'block' : 'none';
+                }
+                const headEl = document.getElementById('patHeading' + i);
+                if (headEl) {
+                    headEl.style.display = (i === step) ? 'block' : 'none';
+                }
+                const descEl = document.getElementById('patDesc' + i);
+                if (descEl) {
+                    descEl.style.display = (i === step) ? 'inline' : 'none';
+                }
+                const trackEl = document.getElementById('patTrack' + i);
+                if (trackEl) {
+                    trackEl.className = 'h-1.5 rounded-full transition-all duration-300 ' + (step >= i ? 'bg-sky-500' : 'bg-slate-200');
+                }
+            }
+            const badge = document.getElementById('patStepBadge');
+            if (badge) badge.textContent = step;
+            const ind = document.getElementById('patStepIndicator');
+            if (ind) ind.textContent = 'Step ' + step + ' of ' + total;
+            const titles = ['1. Personal Profile & Bio', '2. Contact & Address', '3. Security & Credentials'];
+            const titleEl = document.getElementById('patStepTitle');
+            if (titleEl) titleEl.textContent = titles[step - 1];
+        }
+
+        document.addEventListener('click', function(e) {
+            const nextBtn = e.target.closest('[data-step-next]');
+            if (nextBtn) {
+                const appRoot = document.querySelector('[x-data]');
+                if (appRoot && appRoot._x_dataStack && appRoot._x_dataStack[0]) {
+                    return;
+                }
+                e.preventDefault();
+                const cur = parseInt(nextBtn.getAttribute('data-step-next'), 10);
+                if (cur < 3) {
+                    syncVanillaPatientStep(cur + 1);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-            },
-            handleFormSubmit(e) {
-                if (this.currentStep < this.totalSteps) {
-                    e.preventDefault();
-                    this.goToNextStep();
-                    return false;
-                }
-                if (!this.validateCurrentStep()) {
-                    e.preventDefault();
-                    return false;
-                }
-                this.isSubmitting = true;
             }
-        };
-    }
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('patientRegisterApp', patientRegisterApp);
-    });
+            const prevBtn = e.target.closest('[data-step-prev]');
+            if (prevBtn) {
+                const appRoot = document.querySelector('[x-data]');
+                if (appRoot && appRoot._x_dataStack && appRoot._x_dataStack[0]) {
+                    return;
+                }
+                e.preventDefault();
+                const cur = parseInt(prevBtn.getAttribute('data-step-prev'), 10);
+                if (cur > 1) {
+                    syncVanillaPatientStep(cur - 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        });
+    })();
 </script>
 {% endblock %}

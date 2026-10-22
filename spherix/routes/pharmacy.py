@@ -1261,7 +1261,7 @@ def order_payment(order_id):
                     description=f"Tata 1mg Medicines #{order_id} - Spherix Clinic",
                     customer_name=cust_name,
                     customer_email=cust_email,
-                    customer_contact=cust_phone,
+                    customer_phone=cust_phone,
                     callback_url=callback_url,
                     reference_id=f"order_{order_id}_{int(time_module.time())}"
                 )

@@ -66,12 +66,13 @@ def create_razorpay_order(amount_inr, receipt=None, notes=None):
         print(f"⚠️ Razorpay order creation failed: {e}")
         return None
 
-def create_razorpay_payment_link(amount_inr, reference_id, description, customer_name, customer_email, customer_phone=None, callback_url=None):
+def create_razorpay_payment_link(amount_inr, reference_id, description, customer_name, customer_email, customer_phone=None, callback_url=None, customer_contact=None):
     """Creates a Razorpay hosted payment link for web/mobile checkout."""
     client = get_razorpay_client()
     if not client:
         return None
     try:
+        customer_phone = customer_phone or customer_contact
         amount_paise = int(round(float(amount_inr) * 100))
         customer = {
             "name": customer_name or "Valued Patient",

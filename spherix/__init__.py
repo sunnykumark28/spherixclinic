@@ -14,7 +14,7 @@ from spherix.config import (
 from spherix.models import Notification
 from spherix.services.database import TEMP_DATA, load_data, get_db_connection, save_data, setup_admin_user
 from spherix.extensions import (
-    login_manager, csrf, limiter, talisman, cors, jwt, oauth, socketio
+    login_manager, csrf, limiter, talisman, cors, jwt, oauth, socketio, compress
 )
 from spherix.routes import ALL_BLUEPRINTS
 
@@ -30,7 +30,8 @@ def create_app(config_object=None):
     app.secret_key = SECRET_KEY
     app.config['SECRET_KEY'] = SECRET_KEY
     app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 2592000  # 30 days browser caching for static assets
+
     app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200 MB
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
     app.config['JWT_DECODE_AUDIENCE'] = None
@@ -76,6 +77,16 @@ def create_app(config_object=None):
     # SocketIO
     if socketio:
         socketio.init_app(app)
+
+    # HTTP Compression (Gzip / Brotli)
+    if compress:
+        app.config['COMPRESS_MIMETYPES'] = [
+            'text/html', 'text/css', 'text/xml', 'application/json',
+            'application/javascript', 'text/javascript', 'image/svg+xml'
+        ]
+        app.config['COMPRESS_LEVEL'] = 6
+        app.config['COMPRESS_MIN_SIZE'] = 500
+        compress.init_app(app)
 
     # OAuth Setup
     if oauth:
@@ -196,22 +207,118 @@ def create_app(config_object=None):
         if current_user and current_user.is_authenticated:
             auth_session_id = session.get('auth_session_id')
             if auth_session_id in TEMP_DATA.get('terminated_auth_sessions', {}):
+                role = (session.get('user_role') or '').lower()
+                is_doc = getattr(current_user, 'is_doctor', False) or role == 'doctor'
+                is_pat = getattr(current_user, 'is_patient', False) or role == 'patient'
+                is_hosp = getattr(current_user, 'is_hospital', False) or role == 'hospital'
+                is_stf = getattr(current_user, 'is_staff', False) or role == 'staff'
+                is_adm = session.get('is_admin') or role == 'admin' or getattr(current_user, 'email', '') == 'admin@spherixclinic.com'
+                is_bd = getattr(current_user, 'is_blood_donor', False) or role == 'blood_donor'
+                is_od = getattr(current_user, 'is_organ_donor', False) or role == 'organ_donor'
+
                 logout_user()
                 session.pop('auth_session_id', None)
                 flash('This session was terminated by an administrator.', 'error')
+                if is_doc:
+                    return redirect(url_for('doctor_login'))
+                elif is_pat:
+                    return redirect(url_for('patient_login'))
+                elif is_hosp:
+                    return redirect(url_for('hospital_login'))
+                elif is_stf:
+                    return redirect(url_for('staff_login'))
+                elif is_adm:
+                    return redirect(url_for('admin.admin_login'))
+                elif is_bd:
+                    return redirect(url_for('blood_donor_login'))
+                elif is_od:
+                    return redirect(url_for('organ_donor_login'))
                 return redirect(url_for('auth.login_landing'))
+
             if getattr(current_user, 'is_blocked', False):
-                excluded_endpoints = ['static', 'auth.login_landing', 'auth.logout', 'login_landing', 'logout']
+                excluded_endpoints = ['static', 'auth.login_landing', 'auth.logout', 'login_landing', 'logout', 'doctor_login', 'patient_login', 'hospital_login', 'staff_login', 'blood_donor_login', 'organ_donor_login', 'admin.admin_login']
                 if request.endpoint and request.endpoint not in excluded_endpoints:
+                    role = (session.get('user_role') or '').lower()
+                    is_doc = getattr(current_user, 'is_doctor', False) or role == 'doctor'
+                    is_pat = getattr(current_user, 'is_patient', False) or role == 'patient'
+                    is_hosp = getattr(current_user, 'is_hospital', False) or role == 'hospital'
+                    is_stf = getattr(current_user, 'is_staff', False) or role == 'staff'
+                    is_adm = session.get('is_admin') or role == 'admin'
+                    is_bd = getattr(current_user, 'is_blood_donor', False) or role == 'blood_donor'
+                    is_od = getattr(current_user, 'is_organ_donor', False) or role == 'organ_donor'
+
                     logout_user()
                     flash("Your account has been blocked by the administrator.", "error")
+                    if is_doc:
+                        return redirect(url_for('doctor_login'))
+                    elif is_pat:
+                        return redirect(url_for('patient_login'))
+                    elif is_hosp:
+                        return redirect(url_for('hospital_login'))
+                    elif is_stf:
+                        return redirect(url_for('staff_login'))
+                    elif is_adm:
+                        return redirect(url_for('admin.admin_login'))
+                    elif is_bd:
+                        return redirect(url_for('blood_donor_login'))
+                    elif is_od:
+                        return redirect(url_for('organ_donor_login'))
                     return redirect(url_for('auth.login_landing'))
+
+    # Dynamic Unauthorized Handler: Route unauthenticated access directly to the specific portal login
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+            return jsonify({'error': 'Unauthorized', 'message': 'Authentication required'}), 401
+
+        path = request.path.lower()
+        next_url = request.full_path.rstrip('?') if request.query_string else request.path
+
+        if path.startswith('/doctor') or path.startswith('/doctor-'):
+            flash('Please log in to access the Doctor Portal.', 'info')
+            return redirect(url_for('doctor_login', next=next_url))
+        elif path.startswith('/patient') or path.startswith('/patient-'):
+            flash('Please log in to access your Patient Portal.', 'info')
+            return redirect(url_for('patient_login', next=next_url))
+        elif path.startswith('/hospital') or path.startswith('/hospital-'):
+            flash('Please log in to access the Hospital Portal.', 'info')
+            return redirect(url_for('hospital_login', next=next_url))
+        elif path.startswith('/admin') or path.startswith('/admin-'):
+            flash('Please log in to access the Administrator Portal.', 'info')
+            return redirect(url_for('admin.admin_login', next=next_url))
+        elif path.startswith('/staff') or path.startswith('/staff-'):
+            flash('Please log in to access the Hospital Staff Portal.', 'info')
+            return redirect(url_for('staff_login', next=next_url))
+        elif path.startswith('/blood-donor') or path.startswith('/blood_donor'):
+            flash('Please log in to access the Blood Donor Portal.', 'info')
+            return redirect(url_for('blood_donor_login', next=next_url))
+        elif path.startswith('/organ-donor') or path.startswith('/organ_donor'):
+            flash('Please log in to access the Organ Donor Portal.', 'info')
+            return redirect(url_for('organ_donor_login', next=next_url))
+        elif path.startswith('/pathology'):
+            flash('Please log in to access the Pathology Portal.', 'info')
+            return redirect(url_for('pathology.pathology_login', next=next_url))
+        else:
+            flash('Please log in to access this page.', 'info')
+            return redirect(url_for('auth.login_landing', next=next_url))
 
     @app.after_request
     def add_security_and_cache_headers(response):
-        # Prevent browser caching on admin, dashboards, and auth endpoints to ensure immediate logout enforcement
         path = request.path.lower()
-        if any(prefix in path for prefix in ['/admin', '/doctor', '/patient', '/staff', '/hospital', '/blood-donor', '/organ-donor', '/dashboard', '/logout']):
+        if path.startswith('/static/'):
+            # Allow browser caching for static assets (images, CSS, JS, fonts)
+            # Only retain no-store if explicitly set by a specialized generator
+            if "no-store" not in response.headers.get("Cache-Control", ""):
+                response.headers["Cache-Control"] = "public, max-age=604800"
+            return response
+
+        # Dynamic authentication & dashboard routes: enforce no-cache for security
+        auth_prefixes = (
+            '/admin', '/doctor', '/patient', '/staff', '/hospital',
+            '/blood-donor', '/blood_donor', '/organ-donor', '/organ_donor',
+            '/pathology', '/dashboard', '/logout'
+        )
+        if any(path.startswith(prefix) for prefix in auth_prefixes):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"

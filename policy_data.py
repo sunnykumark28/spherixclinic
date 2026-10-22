@@ -7,61 +7,78 @@ POLICY_DATA = {
         "icon": "fa-shield-halved",
         "content": """
 ### 1. General Policy & Global Privacy Commitment
-Welcome to Spherix Clinic ("Company", "we", "our", "us"). We are committed to protecting your personal health information and your fundamental right to privacy. This comprehensive Privacy Policy explains how we collect, process, encrypt, disclose, and safeguard your data when you access our web applications, AI diagnostic engines, telemedicine infrastructure, and clinical networks.
+
+Welcome to Spherix Clinic ("Company", "we", "our", "us"). We are committed to protecting your personal health information and your fundamental right to privacy.
+
+This comprehensive Privacy Policy explains how we collect, process, encrypt, disclose, and safeguard your data when you access our web applications, AI diagnostic engines, telemedicine infrastructure, and clinical networks.
 
 ### 2. Information We Collect
 
-**A. Personal Identity & Contact Data**
+#### A. Personal Identity & Contact Data
+
 *   **Identity Data:** Full names, usernames, biological sex, age, date of birth, and identity credentials.
 *   **Contact Information:** Email addresses, phone numbers, and physical residential/billing addresses.
 *   **Authentication Data:** Passwords, cryptographic hashes, security questions, and multi-factor authentication tokens.
 
-**B. Protected Health Information (PHI) & Clinical Intake**
+#### B. Protected Health Information (PHI) & Clinical Intake
+
 *   **Symptom & Diagnostic Intake:** Descriptions of current physical symptoms, duration, severity, anatomical location, and clinical notes.
 *   **Medical & Family History:** Previous diagnoses, surgical histories, chronic illnesses, familial oncology histories, and lifestyle risk factors (tobacco, alcohol, occupational exposures).
 *   **Diagnostic & Laboratory Reports:** Uploaded medical imaging notes (e.g. Mammograms, CT/MRI scans, Ultrasound), pathology biopsies, blood panels, and PSA/tumor marker values.
 
-**C. Precision Genomic & Biomarker Queries**
-*   Inquiries regarding genetic mutations (e.g. *BRCA1/2, EGFR, HER2, KRAS, BRAF, MSI-H/dMMR*) are processed in isolated ephemeral sessions and are strictly protected under the Genetic Information Nondiscrimination Act (GINA).
+#### C. Precision Genomic & Biomarker Queries
 
-**D. Technical & Telemetry Data**
-*   Device identifiers, browser types, operating systems, encrypted session cookies, and anonymized access logs to prevent malicious automated access.
+Inquiries regarding genetic mutations (e.g. *BRCA1/2, EGFR, HER2, KRAS, BRAF, MSI-H/dMMR*) are processed in isolated ephemeral sessions and are strictly protected under the Genetic Information Nondiscrimination Act (GINA).
+
+#### D. Technical & Telemetry Data
+
+Device identifiers, browser types, operating systems, encrypted session cookies, and anonymized access logs to prevent malicious automated access.
 
 ### 3. Role-Specific Data Processing & Protections
 
-**A. For Patients**
+#### A. For Patients
+
 *   **Clinical Consultation:** Your health data is processed solely to provide AI diagnostic triage insights and facilitate specialist appointment bookings.
 *   **Doctor Access:** Your health profile is only accessible to a licensed medical provider when you explicitly confirm an appointment or virtual consultation.
 *   **Zero Sale of Data:** We never sell, monetize, or license your personal health data to insurance brokers or third-party advertisers.
 
-**B. For Doctors & Healthcare Providers**
+#### B. For Doctors & Healthcare Providers
+
 *   **Verification:** Professional medical registration numbers, board certifications, affiliations, and specialties are verified before public listing.
 *   **Clinical Confidentiality:** Doctors agree to uphold standard medical ethics, HIPAA standards, and patient confidentiality for all records accessed.
 
-**C. For Hospitals & Medical Centers**
+#### C. For Hospitals & Medical Centers
+
 *   **Operational Management:** Facility capacities, department staff rosters, and bed availability are managed under strict institutional access control.
 *   **Data Processing Agreement (DPA):** Hospitals act as institutional data controllers and agree to uphold all statutory health data obligations.
 
-**D. For Blood & Organ Donors**
+#### D. For Blood & Organ Donors
+
 *   **Registry Privacy:** Donor blood groups, organ pledges, and geographic locations are protected. Contact details are never publicly exposed and are only shared with verified transplant centers when an active match occurs.
 
-**E. For Hospital & Department Staff**
+#### E. For Hospital & Department Staff
+
 *   **Access Control:** Staff access is restricted strictly to authorized administrative workflows with immutable audit logging.
 
 ### 4. Encryption & Security Standards
+
 *   **In-Transit:** 256-bit TLS 1.3 encryption across all web application routes, API endpoints, and real-time streaming sockets.
 *   **At-Rest:** AES-256 database-level encryption for all sensitive health records and credentials.
 *   **Role-Based Access Control (RBAC):** Least-privilege access enforcement across all administrative and staff tiers.
 
 ### 5. Patient Rights under HIPAA, GDPR & CCPA
+
 Depending on your applicable legal jurisdiction, you retain the following unconditional rights:
+
 *   **Right to Access:** Obtain a complete digital copy of your health records and session logs.
 *   **Right to Rectification:** Request immediate correction of erroneous or outdated clinical data.
 *   **Right to Erasure ("Right to Be Forgotten"):** Request permanent deletion of your account and personal identifiers from our databases.
 *   **Right to Restrict Processing:** Limit or withdraw consent for automated AI symptom analysis.
 
 ### 6. Contact Our Data Protection Officer (DPO)
+
 For inquiries regarding our privacy standards or to exercise your data rights:
+
 *   **Email:** privacy@spherixclinic.com / dpo@spherixclinic.com
 *   **Mailing Address:** Spherix Clinic Global Compliance Office, Medical Technology Park.
 """
@@ -85,18 +102,22 @@ By using our services, you warrant and represent that:
 
 ### 4. Role-Specific Terms & Conditions
 
-**A. Patients**
+#### A. Patients
+
 *   You acknowledge that AI symptom outputs and oncology assessments represent educational decision-support tools and do not establish a formal doctor-patient relationship until an appointment is conducted.
 *   You agree to arrive on time or provide at least 24 hours cancellation notice for confirmed specialist bookings.
 
-**B. Physicians & Medical Specialists**
+#### B. Physicians & Medical Specialists
+
 *   You warrant that you maintain an active, unencumbered medical license in good standing in your jurisdiction.
 *   You retain full, independent clinical responsibility for all medical diagnoses, prescription orders, and patient care decisions.
 
-**C. Hospitals & Facilities**
+#### C. Hospitals & Facilities
+
 *   You agree to maintain accurate reporting of bed availability, critical care capacity, and specialist schedules.
 
-**D. Donors**
+#### D. Donors
+
 *   Registration as a blood or organ donor represents a voluntary expression of compassionate intent. Final donation eligibility is determined through institutional clinical evaluation.
 
 ### 5. Intellectual Property Rights

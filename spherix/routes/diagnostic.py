@@ -477,7 +477,8 @@ def center_detail(center_id):
 @diagnostic_bp.route('/diagnostic/book', methods=['GET', 'POST'])
 def book_diagnostic_test():
     """Multi-service booking flow: Doorstep Home Collection vs Walk-in Lab Visit."""
-    if not current_user.is_authenticated:
+    is_authed = current_user.is_authenticated or bool(session.get('user_id'))
+    if not is_authed:
         flash("Please sign in to your patient account before booking medical tests.", "warning")
         next_url = request.url if request.method == 'GET' else url_for('diagnostic.diagnostic_home')
         return redirect(url_for('patient_login', next=next_url))
@@ -531,12 +532,16 @@ def book_diagnostic_test():
             flash("Please select at least one test or health package to book.", "error")
             return redirect(url_for('diagnostic.diagnostic_home'))
 
-        patient_id = current_user.id if current_user.is_authenticated and getattr(current_user, 'is_patient', False) else None
-        if not patient_name and current_user.is_authenticated:
-            patient_name = getattr(current_user, 'name', 'Registered Patient')
-            patient_email = getattr(current_user, 'email', '')
-            patient_phone = getattr(current_user, 'phone', '')
-            patient_address = getattr(current_user, 'address', '')
+        patient_id = current_user.id if (current_user.is_authenticated and getattr(current_user, 'is_patient', False)) else session.get('user_id')
+        if not patient_name:
+            if current_user.is_authenticated:
+                patient_name = getattr(current_user, 'name', 'Registered Patient')
+                patient_email = patient_email or getattr(current_user, 'email', '')
+                patient_phone = patient_phone or getattr(current_user, 'phone', '')
+                patient_address = patient_address or getattr(current_user, 'address', '')
+            elif session.get('user_name'):
+                patient_name = session.get('user_name')
+                patient_email = patient_email or session.get('user_email', '')
 
         patient_data = {
             "id": patient_id,
@@ -591,7 +596,7 @@ def patient_orders():
     """List diagnostic orders for logged in patient."""
     if not current_user.is_authenticated:
         flash("Please log in to view your diagnostic orders.", "info")
-        return redirect(url_for('auth.login_landing'))
+        return redirect(url_for('patient_login', next=request.path))
 
     conn = get_diagnostic_db()
     cursor = conn.cursor()

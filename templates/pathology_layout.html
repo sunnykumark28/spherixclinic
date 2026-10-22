@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Ballet:opsz@16..72&family=Roboto+Slab:wght@400;500;600;700;800;900&family=Iceland&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
 
   <!-- Tailwind CSS with Dr Lal PathLabs Brand Palette -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -65,6 +67,37 @@
     }
     .lpl-gold-btn:hover {
       background: linear-gradient(180deg, #ffc20e 0%, #d89e00 100%);
+    }
+
+    /* Spherix Lab Brand Fonts - Spherix in Roboto Slab, Lab in Ballet */
+    .brand-font-spherix,
+    .font-iceland,
+    .font-roboto-slab {
+      font-family: 'Roboto Slab', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, serif !important;
+      letter-spacing: 0.01em;
+    }
+
+    .font-ballet {
+      font-family: 'Ballet', cursive !important;
+      font-weight: 500 !important;
+      font-style: normal;
+      font-optical-sizing: auto;
+      letter-spacing: 0.01em;
+      display: inline-block;
+      line-height: normal;
+      vertical-align: baseline;
+    }
+
+    .brand-font-lab {
+      font-family: 'Ballet', cursive !important;
+      font-weight: 500 !important;
+      font-style: normal;
+      font-optical-sizing: auto;
+      letter-spacing: 0.01em;
+      display: inline-block;
+      line-height: normal;
+      vertical-align: baseline;
+      color: #d97706 !important;
     }
   </style>
 
@@ -128,11 +161,14 @@
           <a href="{{ url_for('diagnostic.diagnostic_home') }}" class="flex items-center gap-3 group text-decoration-none">
             <img src="{{ url_for('static', filename='images/spherix_lab_logo.png') }}" 
                  alt="Spherix Lab" 
-                 class="w-12 h-12 rounded-lg object-cover shadow-md shadow-blue-900/15 group-hover:scale-105 transition-transform">
+                 class="w-14 h-14 sm:w-16 sm:h-16 lg:w-[4.25rem] lg:h-[4.25rem] object-contain group-hover:scale-105 transition-transform">
             <div>
-              <div class="flex items-center gap-2">
-                <span class="font-extrabold text-[#002f5e] text-xl tracking-tight leading-none group-hover:text-[#004b87] transition-colors">SPHERIX</span>
-                <span class="text-[10px] font-black px-2 py-0.5 rounded bg-[#fdb813] text-[#002244] uppercase tracking-wider font-sans shadow-xs">LAB</span>
+              <div class="flex items-baseline gap-1.5 leading-none">
+                <div class="flex items-baseline gap-1">
+                  <span class="brand-font-spherix font-iceland font-bold text-2xl sm:text-3xl text-[#002f5e] tracking-wide group-hover:text-[#004b87] transition-colors">Spherix</span>
+                  <span class="brand-font-lab font-ballet text-2xl sm:text-3xl text-[#d97706]">Lab</span>
+                </div>
+                <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 uppercase tracking-wider font-sans hidden sm:inline-block">DIAGNOSTICS</span>
               </div>
               <p class="text-[10px] text-slate-500 font-bold tracking-wider uppercase mt-1">SPHERIX DIAGNOSTICS &amp; PATHOLOGY</p>
             </div>
@@ -228,9 +264,24 @@
           </div>
 
           {% elif current_user.is_authenticated %}
-          <div class="flex items-center gap-2">
-            <a href="{{ url_for('diagnostic.patient_orders') }}" class="px-3.5 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-[#004b87] hover:bg-blue-100 transition-colors flex items-center gap-1.5">
-              <i class="fas fa-clock-rotate-left"></i> My Reports
+          <div class="flex items-center gap-2.5">
+            <a href="{{ url_for('diagnostic.patient_orders') }}" class="hidden sm:inline-flex px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-[#004b87] hover:bg-blue-100 transition-colors items-center gap-1.5 text-decoration-none">
+              <i class="fas fa-file-waveform"></i> My Reports
+            </a>
+            <!-- Patient Profile & Back to Dashboard Button -->
+            <a href="{{ url_for('patient_dashboard') }}" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:border-[#004b87] text-slate-800 hover:text-[#004b87] shadow-xs transition-all text-decoration-none group" title="Return to Patient Dashboard">
+              {% if current_user.profile_picture_url %}
+              <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" class="w-7 h-7 rounded-full object-cover border border-slate-200" alt="{{ current_user.name }}">
+              {% else %}
+              <div class="w-7 h-7 rounded-full bg-[#004b87] text-white flex items-center justify-center font-bold text-xs">
+                {{ current_user.name[0]|upper if current_user.name else 'P' }}
+              </div>
+              {% endif %}
+              <div class="text-left leading-tight hidden md:block">
+                <span class="text-xs font-bold block text-slate-900 group-hover:text-[#004b87]">{{ current_user.name }}</span>
+                <span class="text-[10px] text-slate-500 font-medium">← Patient Dashboard</span>
+              </div>
+              <span class="md:hidden text-xs font-bold">Dashboard</span>
             </a>
           </div>
 
@@ -247,9 +298,9 @@
     </div>
 
     <!-- ================= SECONDARY NAVIGATION TAB BAR (FULL SCREEN) ================= -->
-    <div class="bg-[#002f5e] text-white border-t border-[#003870] shadow-md w-full">
+    <div class="bg-black text-white border-t border-zinc-800 shadow-md w-full">
       <div class="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
-        <div class="flex items-center justify-between overflow-x-auto py-2.5 gap-2 sm:gap-3 custom-scrollbar">
+        <div class="flex items-center justify-between overflow-x-auto py-1 sm:py-1.5 gap-2 sm:gap-3 custom-scrollbar">
           
           <!-- Left Navigation Tabs -->
           <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -261,39 +312,39 @@
 
             <!-- Book Home Collect Tab -->
             {% if current_user.is_authenticated or session.get('user_id') or session.get('patient_id') %}
-            <button type="button" onclick="if(typeof openDiagnosticBookingModal === 'function') openDiagnosticBookingModal('PKG-EXEC-FULL', 'package', 'SwasthFit Complete Body Profile', 1499); else window.location.href='/diagnostic';" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-amber-300 hover:bg-white/10 transition-all cursor-pointer">
-              <i class="fas fa-house-medical text-amber-400 text-xs"></i>
+            <button type="button" onclick="if(typeof openDiagnosticBookingModal === 'function') openDiagnosticBookingModal('PKG-EXEC-FULL', 'package', 'SwasthFit Complete Body Profile', 1499); else window.location.href='/diagnostic';" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-white/90 hover:bg-white/10 transition-all cursor-pointer">
+              <i class="fas fa-house-medical text-white text-xs"></i>
               <span>Book Home Collect</span>
             </button>
             {% else %}
-            <a href="{{ url_for('patient_login', next=url_for('diagnostic.diagnostic_home')) }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-amber-300 hover:bg-white/10 transition-all">
-              <i class="fas fa-house-medical text-amber-400 text-xs"></i>
+            <a href="{{ url_for('patient_login', next=url_for('diagnostic.diagnostic_home')) }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-white/90 hover:bg-white/10 transition-all">
+              <i class="fas fa-house-medical text-white text-xs"></i>
               <span>Book Home Collect</span>
             </a>
             {% endif %}
 
             <!-- Book Radiology / Scan Tab -->
             {% if current_user.is_authenticated or session.get('user_id') or session.get('patient_id') %}
-            <button type="button" onclick="openRadiologyModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-amber-300 hover:bg-white/10 transition-all cursor-pointer">
-              <i class="fas fa-x-ray text-teal-400 text-xs"></i>
+            <button type="button" onclick="openRadiologyModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-white/90 hover:bg-white/10 transition-all cursor-pointer">
+              <i class="fas fa-x-ray text-white text-xs"></i>
               <span>Book Radiology/Scan</span>
             </button>
             {% else %}
-            <a href="{{ url_for('patient_login', next=url_for('diagnostic.diagnostic_home')) }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-amber-300 hover:bg-white/10 transition-all">
-              <i class="fas fa-x-ray text-teal-400 text-xs"></i>
+            <a href="{{ url_for('patient_login', next=url_for('diagnostic.diagnostic_home')) }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-white/90 hover:bg-white/10 transition-all">
+              <i class="fas fa-x-ray text-white text-xs"></i>
               <span>Book Radiology/Scan</span>
             </a>
             {% endif %}
 
             <!-- Doctors Tab (Direct to doctor.html) -->
-            <a href="{{ url_for('doctor.doctors_list') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-amber-300 hover:bg-white/10 transition-all">
-              <i class="fas fa-user-doctor text-sky-400 text-xs"></i>
+            <a href="{{ url_for('doctor.doctors_list') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-white/90 hover:bg-white/10 transition-all">
+              <i class="fas fa-user-doctor text-white text-xs"></i>
               <span>Doctors</span>
             </a>
 
             <!-- About Us Tab (Direct to about.html) -->
-            <a href="{{ url_for('main.about') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-amber-300 hover:bg-white/10 transition-all">
-              <i class="fas fa-circle-info text-blue-300 text-xs"></i>
+            <a href="{{ url_for('main.about') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:text-white/90 hover:bg-white/10 transition-all">
+              <i class="fas fa-circle-info text-white text-xs"></i>
               <span>About Us</span>
             </a>
           </div>
@@ -302,7 +353,7 @@
           <div class="flex items-center gap-2 sm:gap-3 shrink-0">
             <!-- Nearest Center Quick Button -->
             <button type="button" onclick="openNearestCenterModal()" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-200 hover:text-white hover:bg-white/10 transition-all cursor-pointer">
-              <i class="fas fa-location-dot text-amber-400 text-xs"></i>
+              <i class="fas fa-location-dot text-white text-xs"></i>
               <span>Nearest Center</span>
             </button>
 
@@ -401,10 +452,14 @@
           <div class="flex items-center gap-3">
             <img src="{{ url_for('static', filename='images/spherix_lab_logo.png') }}" 
                  alt="Spherix Diagnostics" 
-                 class="w-11 h-11 rounded-lg object-cover shadow-md shadow-black/30">
+                 class="w-14 h-14 sm:w-16 sm:h-16 object-contain">
             <div>
-              <span class="font-extrabold text-white text-lg tracking-tight">SPHERIX LAB</span>
-              <span class="block text-[10px] text-amber-300 font-bold uppercase tracking-widest">Global Pathology &amp; Diagnostic Network</span>
+              <div class="flex items-baseline gap-1 text-white">
+                <span class="brand-font-spherix font-iceland font-bold text-2xl text-white tracking-wide">Spherix</span>
+                <span class="brand-font-lab font-ballet text-2xl sm:text-3xl text-amber-400">Lab</span>
+                <span class="text-xs text-slate-400 font-bold ml-1.5 uppercase tracking-wider">| Network</span>
+              </div>
+              <span class="block text-[10px] text-amber-300 font-bold uppercase tracking-widest mt-0.5">Global Pathology &amp; Diagnostic Network</span>
             </div>
           </div>
           <p class="text-xs text-slate-300 leading-relaxed pr-6">
@@ -492,11 +547,14 @@
           <div class="flex items-center gap-3">
             <img src="{{ url_for('static', filename='images/spherix_lab_logo.png') }}" 
                  alt="Spherix Labs" 
-                 class="w-10 h-10 rounded-lg object-cover shadow-xs">
+                 class="w-12 h-12 object-contain">
             <div>
-              <div class="flex items-center gap-2">
-                <span class="font-black text-white text-base tracking-tight font-heading">SPHERIX LABS</span>
-                <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 uppercase">MENU</span>
+              <div class="flex items-baseline gap-1.5 leading-none">
+                <div class="flex items-baseline gap-1 text-white">
+                  <span class="brand-font-spherix font-iceland font-bold text-2xl text-white tracking-wide">Spherix</span>
+                  <span class="brand-font-lab font-ballet text-2xl text-amber-300">Lab</span>
+                </div>
+                <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 uppercase font-sans">MENU</span>
               </div>
               <p class="text-[10px] text-blue-200 font-semibold mt-0.5">Modeled on Dr Lal PathLabs Quality Standard</p>
             </div>

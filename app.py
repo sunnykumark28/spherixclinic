@@ -22,10 +22,9 @@ from spherix.config import (
     convert_currency, get_currency_symbol, generate_user_license_id, BLOG_POSTS
 )
 
-# Instantiate Application
+# Instantiate Application (WSGI compatible)
 app = create_app()
 application = app
-handler = app
 
 if __name__ == '__main__':
     # SSL/HTTPS Configuration

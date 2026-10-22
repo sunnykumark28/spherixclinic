@@ -18,9 +18,10 @@ from spherix.config import (
 from spherix.models import (
     Doctor, Patient, Staff, HospitalStaff, Hospital, BloodDonor, OrganDonor,
     Appointment, PatientVital, LabRequest, OrganRequest, BedBooking, PatientMedicalRecord,
-    Job, JobApplication,
+    Job, JobApplication, _clean_list_field,
     Order, Review, Feedback, Message, ActivityLog, Referral, Notification
 )
+from spherix.services.upload_service import UPLOAD_CACHE, _write_bytes_safely
 
 # PyODBC handling
 try:
@@ -228,7 +229,7 @@ def get_db_connection(database_name=None):
         import sqlite3
         import shutil
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+        is_serverless = bool(os.getenv('SERVERLESS') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
         
         if is_serverless:
             tmp_db_path = '/tmp/spherixclinic.db'
@@ -349,6 +350,7 @@ def ensure_sqlite_columns(cursor):
     for col, col_def in [
         ('license_number', 'TEXT'), ('profile_picture_url', 'TEXT'),
         ('is_blocked', 'INTEGER DEFAULT 0'), ('is_hidden', 'INTEGER DEFAULT 0'),
+        ('is_verified', 'INTEGER DEFAULT 0'),
         ('clinical_record', 'TEXT'), ('emergency_contact', 'TEXT'), ('blood_group', 'TEXT'),
         ('city', 'TEXT'), ('state', 'TEXT'), ('district', 'TEXT'), ('pincode', 'TEXT'),
         ('country', 'TEXT DEFAULT "India"')
@@ -357,6 +359,12 @@ def ensure_sqlite_columns(cursor):
             cursor.execute(f"ALTER TABLE patients ADD COLUMN {col} {col_def}")
         except Exception:
             pass
+
+    # Hospital table columns
+    try:
+        cursor.execute("ALTER TABLE hospitals ADD COLUMN license_number TEXT")
+    except Exception:
+        pass
 
     # Staff table columns
     try:
@@ -400,7 +408,11 @@ def ensure_sqlite_columns(cursor):
 
     # Jobs and Job Applications tables
     try:
-        cursor.execute("CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, req_id TEXT, title TEXT, dept TEXT, location TEXT, salary TEXT, summary TEXT, full_desc TEXT, responsibilities TEXT, requirements TEXT, tech_stack TEXT, apply_deadline TEXT, is_active INTEGER DEFAULT 1, is_hot INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, req_id TEXT, title TEXT, dept TEXT, location TEXT, salary TEXT, summary TEXT, full_desc TEXT, responsibilities TEXT, requirements TEXT, benefits TEXT, tech_stack TEXT, apply_deadline TEXT, is_active INTEGER DEFAULT 1, is_hot INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN benefits TEXT")
     except Exception:
         pass
     try:
@@ -430,6 +442,17 @@ def ensure_sqlite_columns(cursor):
             cursor.execute(f"ALTER TABLE medicines ADD COLUMN {col} {col_def}")
         except Exception:
             pass
+
+    # Messages table columns
+    for col, col_def in [
+        ('attachment_url', 'TEXT'),
+        ('is_read', 'BOOLEAN DEFAULT 0')
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE messages ADD COLUMN {col} {col_def}")
+        except Exception:
+            pass
+
 
 
 def migrate_legacy_schema(cursor):
@@ -913,14 +936,25 @@ def save_data():
             db_img_ids = {str(row[0]) for row in cursor.fetchall()}
             
             for doc_id, doc in TEMP_DATA['doctors'].items():
-                if hasattr(doc, 'profile_picture_data') and doc.profile_picture_data:
+                doc_img_data = getattr(doc, 'profile_picture_data', None)
+                doc_mime = getattr(doc, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
+                if not doc_img_data and getattr(doc, 'profile_picture_url', None):
+                    p_url = str(doc.profile_picture_url).strip()
+                    if p_url in UPLOAD_CACHE:
+                        doc_img_data, doc_mime = UPLOAD_CACHE[p_url]
+                    elif os.path.basename(p_url) in UPLOAD_CACHE:
+                        doc_img_data, doc_mime = UPLOAD_CACHE[os.path.basename(p_url)]
+
+                if doc_img_data:
+                    doc.profile_picture_data = doc_img_data
+                    doc.profile_picture_content_type = doc_mime
                     doc_img_id_str = str(doc_id)
                     if doc_img_id_str in db_img_ids:
                         cursor.execute("UPDATE doctor_images SET image_data = ?, content_type = ? WHERE doctor_id = ?", 
-                                       (doc.profile_picture_data, doc.profile_picture_content_type, doc_img_id_str))
+                                       (doc_img_data, doc_mime, doc_img_id_str))
                     else:
                         cursor.execute("INSERT INTO doctor_images (doctor_id, image_data, content_type) VALUES (?, ?, ?)", 
-                                       (doc_img_id_str, doc.profile_picture_data, doc.profile_picture_content_type))
+                                       (doc_img_id_str, doc_img_data, doc_mime))
         except Exception as img_err:
             print(f"⚠️  Could not sync doctor_images table: {img_err}")
 
@@ -943,7 +977,7 @@ def save_data():
                     WHERE id=?"""
                 values = (
                     doc.first_name, doc.last_name, doc.email, doc.password, doc.department, doc.phone, doc.specialization,
-                    doc.address, doc.profile_picture_url, doc.bio, doc.hospital_name, doc.hospital_address, getattr(doc, 'city', None), doc.state,
+                    getattr(doc, 'address', None), doc.profile_picture_url, doc.bio, doc.hospital_name, doc.hospital_address, getattr(doc, 'city', None), doc.state,
                     doc.district, doc.pincode, getattr(doc, 'country', 'India'), doc.qualification, doc.license_number, doc.experience, doc.consultation_type,
                     doc.consultation_fee, doc.working_hours, json_safe(getattr(doc, 'languages_spoken', None)), json_safe(getattr(doc, 'social_links', {})), getattr(doc, 'is_verified', False),
                     getattr(doc, 'availability_status', 'available'),
@@ -962,7 +996,7 @@ def save_data():
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
                 values = (
                     doc_id_str, doc.first_name, doc.last_name, doc.email, doc.password, doc.department, doc.phone, doc.specialization,
-                    doc.address, doc.profile_picture_url, doc.bio, doc.hospital_name, doc.hospital_address, getattr(doc, 'city', None), doc.state,
+                    getattr(doc, 'address', None), doc.profile_picture_url, doc.bio, doc.hospital_name, doc.hospital_address, getattr(doc, 'city', None), doc.state,
                     doc.district, doc.pincode, getattr(doc, 'country', 'India'), doc.qualification, doc.license_number, doc.experience, doc.consultation_type,
                     doc.consultation_fee, doc.working_hours, json_safe(getattr(doc, 'languages_spoken', None)), json_safe(getattr(doc, 'social_links', {})), getattr(doc, 'is_verified', False),
                     getattr(doc, 'availability_status', 'available'),
@@ -1008,6 +1042,18 @@ def save_data():
             p_alcohol = getattr(p, 'alcohol_status', cr.get('alcohol_status'))
             p_lic = getattr(p, 'license_number', getattr(p, 'license_no', getattr(p, 'health_id', None)))
 
+            p_img_data = getattr(p, 'profile_picture_data', None)
+            p_mime = getattr(p, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
+            if not p_img_data and getattr(p, 'profile_picture_url', None):
+                p_url = str(p.profile_picture_url).strip()
+                if p_url in UPLOAD_CACHE:
+                    p_img_data, p_mime = UPLOAD_CACHE[p_url]
+                elif os.path.basename(p_url) in UPLOAD_CACHE:
+                    p_img_data, p_mime = UPLOAD_CACHE[os.path.basename(p_url)]
+            if p_img_data:
+                p.profile_picture_data = p_img_data
+                p.profile_picture_content_type = p_mime
+
             if p_id in db_ids:
                 try:
                     cursor.execute("""
@@ -1018,19 +1064,24 @@ def save_data():
                             insurance_policy_no=?, date_of_birth=?, occupation=?, diet_preference=?, smoker_status=?, alcohol_status=?
                         WHERE id=?
                     """, (
-                        p.name, p.email, p.password, p.age, p.gender, getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr),
+                        p.name, p.email, p.password, p.age, getattr(p, 'gender', None), getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr),
                         p_lic, p_blood, p_height, p_weight, p_allergies, p_existing, p_meds,
                         p_ec_name, p_ec_phone, p_ec_rel, p_ins_prov,
                         p_ins_pol, p_dob, p_occ, p_diet, p_smoker, p_alcohol,
                         p_id
                     ))
-                except pyodbc.Error:
+                except Exception:
                     try:
                         cursor.execute("UPDATE patients SET name=?, email=?, password=?, age=?, gender=?, profile_picture_url=?, phone=?, address=?, clinical_record=? WHERE id=?",
-                                       (p.name, p.email, p.password, p.age, p.gender, getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr), p_id))
-                    except pyodbc.Error:
+                                       (p.name, p.email, p.password, p.age, getattr(p, 'gender', None), getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr), p_id))
+                    except Exception:
                         cursor.execute("UPDATE patients SET name=?, email=?, password=?, age=?, gender=?, profile_picture_url=? WHERE id=?",
-                                       (p.name, p.email, p.password, p.age, p.gender, getattr(p, 'profile_picture_url', None), p_id))
+                                       (p.name, p.email, p.password, p.age, getattr(p, 'gender', None), getattr(p, 'profile_picture_url', None), p_id))
+                if p_img_data:
+                    try:
+                        cursor.execute("UPDATE patients SET profile_picture_data=?, profile_picture_content_type=? WHERE id=?", (p_img_data, p_mime, p_id))
+                    except Exception:
+                        pass
             else:
                 try:
                     cursor.execute("""
@@ -1041,22 +1092,30 @@ def save_data():
                             insurance_policy_no, date_of_birth, occupation, diet_preference, smoker_status, alcohol_status
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
-                        p_id, p.name, p.email, p.password, p.age, p.gender, getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr),
+                        p_id, p.name, p.email, p.password, p.age, getattr(p, 'gender', None), getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr),
                         p_lic, p_blood, p_height, p_weight, p_allergies, p_existing, p_meds,
                         p_ec_name, p_ec_phone, p_ec_rel, p_ins_prov,
                         p_ins_pol, p_dob, p_occ, p_diet, p_smoker, p_alcohol
                     ))
-                except pyodbc.Error:
+                except Exception:
                     try:
                         cursor.execute("INSERT INTO patients (id, name, email, password, age, gender, profile_picture_url, phone, address, clinical_record) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                       (p_id, p.name, p.email, p.password, p.age, p.gender, getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr)))
-                    except pyodbc.Error:
+                                       (p_id, p.name, p.email, p.password, p.age, getattr(p, 'gender', None), getattr(p, 'profile_picture_url', None), getattr(p, 'phone', None), getattr(p, 'address', None), json.dumps(cr)))
+                    except Exception:
                         cursor.execute("INSERT INTO patients (id, name, email, password, age, gender, profile_picture_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                                       (p_id, p.name, p.email, p.password, p.age, p.gender, getattr(p, 'profile_picture_url', None)))
+                                       (p_id, p.name, p.email, p.password, p.age, getattr(p, 'gender', None), getattr(p, 'profile_picture_url', None)))
+                if p_img_data:
+                    try:
+                        cursor.execute("UPDATE patients SET profile_picture_data=?, profile_picture_content_type=? WHERE id=?", (p_img_data, p_mime, p_id))
+                    except Exception:
+                        pass
             try:
-                cursor.execute("UPDATE patients SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(p, 'is_blocked', False), getattr(p, 'is_hidden', False), p_id))
-            except pyodbc.Error:
-                pass
+                cursor.execute("UPDATE patients SET is_blocked=?, is_hidden=?, is_verified=? WHERE id=?", (getattr(p, 'is_blocked', False), getattr(p, 'is_hidden', False), 1 if getattr(p, 'is_verified', False) else 0, p_id))
+            except Exception:
+                try:
+                    cursor.execute("UPDATE patients SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(p, 'is_blocked', False), getattr(p, 'is_hidden', False), p_id))
+                except Exception:
+                    pass
 
         # 3. Hospitals
         cursor.execute("SELECT id FROM hospitals")
@@ -1183,6 +1242,12 @@ def save_data():
                 cursor.execute("UPDATE hospitals SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(h, 'is_blocked', False), getattr(h, 'is_hidden', False), h_id_str))
             except Exception:
                 pass
+            try:
+                h_lic = getattr(h, 'license_number', None) or getattr(h, 'license_no', None)
+                if h_lic:
+                    cursor.execute("UPDATE hospitals SET license_number=? WHERE id=?", (h_lic, h_id_str))
+            except Exception:
+                pass
 
         # 3b. Sync Hospital Types
         try:
@@ -1251,6 +1316,18 @@ def save_data():
                     h_id = h_match.id
                     s.hospital_id = h_id
 
+            s_img_data = getattr(s, 'profile_picture_data', None)
+            s_mime = getattr(s, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
+            if not s_img_data and getattr(s, 'profile_picture_url', None):
+                s_url = str(s.profile_picture_url).strip()
+                if s_url in UPLOAD_CACHE:
+                    s_img_data, s_mime = UPLOAD_CACHE[s_url]
+                elif os.path.basename(s_url) in UPLOAD_CACHE:
+                    s_img_data, s_mime = UPLOAD_CACHE[os.path.basename(s_url)]
+            if s_img_data:
+                s.profile_picture_data = s_img_data
+                s.profile_picture_content_type = s_mime
+
             target_id = s_id if s_id in db_raw_ids else (s_id_str if s_id_str in db_ids_str else None)
             if target_id is not None:
                 try:
@@ -1266,6 +1343,11 @@ def save_data():
                 except Exception:
                     cursor.execute("INSERT INTO staff (id, name, email, password, role, phone, hospital_name, last_login, created_at, profile_picture_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                    (s_id, s.name, s.email, s.password, s.role, s.phone, s.hospital_name, getattr(s, 'last_login', None), getattr(s, 'created_at', utcnow()), getattr(s, 'profile_picture_url', None)))
+            if s_img_data:
+                try:
+                    cursor.execute("UPDATE staff SET profile_picture_data=?, profile_picture_content_type=? WHERE id=?", (s_img_data, s_mime, target_id or s_id))
+                except Exception:
+                    pass
             try:
                 cursor.execute("UPDATE staff SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(s, 'is_blocked', False), getattr(s, 'is_hidden', False), s_id))
             except Exception:
@@ -1332,20 +1414,29 @@ def save_data():
         for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM messages WHERE id = ?", (del_id,))
         
         for m_id, m in TEMP_DATA['messages'].items():
+            is_read_val = 1 if getattr(m, 'is_read', False) else 0
             if m_id in db_ids:
                 try:
-                    cursor.execute("UPDATE messages SET doctor_id=?, patient_id=?, sender=?, content=?, created_at=?, attachment_url=? WHERE id=?",
-                                   (m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, getattr(m, 'attachment_url', None), m_id))
-                except pyodbc.Error:
-                    cursor.execute("UPDATE messages SET doctor_id=?, patient_id=?, sender=?, content=?, created_at=? WHERE id=?",
-                                   (m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, m_id))
+                    cursor.execute("UPDATE messages SET doctor_id=?, patient_id=?, sender=?, content=?, created_at=?, attachment_url=?, is_read=? WHERE id=?",
+                                   (m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, getattr(m, 'attachment_url', None), is_read_val, m_id))
+                except Exception:
+                    try:
+                        cursor.execute("UPDATE messages SET doctor_id=?, patient_id=?, sender=?, content=?, created_at=?, attachment_url=? WHERE id=?",
+                                       (m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, getattr(m, 'attachment_url', None), m_id))
+                    except Exception:
+                        cursor.execute("UPDATE messages SET doctor_id=?, patient_id=?, sender=?, content=?, created_at=? WHERE id=?",
+                                       (m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, m_id))
             else:
                 try:
-                    cursor.execute("INSERT INTO messages (id, doctor_id, patient_id, sender, content, created_at, attachment_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                                   (m_id, m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, getattr(m, 'attachment_url', None)))
-                except pyodbc.Error:
-                    cursor.execute("INSERT INTO messages (id, doctor_id, patient_id, sender, content, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                                   (m_id, m.doctor_id, m.patient_id, m.sender, m.content, m.created_at))
+                    cursor.execute("INSERT INTO messages (id, doctor_id, patient_id, sender, content, created_at, attachment_url, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                   (m_id, m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, getattr(m, 'attachment_url', None), is_read_val))
+                except Exception:
+                    try:
+                        cursor.execute("INSERT INTO messages (id, doctor_id, patient_id, sender, content, created_at, attachment_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                       (m_id, m.doctor_id, m.patient_id, m.sender, m.content, m.created_at, getattr(m, 'attachment_url', None)))
+                    except Exception:
+                        cursor.execute("INSERT INTO messages (id, doctor_id, patient_id, sender, content, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                                       (m_id, m.doctor_id, m.patient_id, m.sender, m.content, m.created_at))
 
         # 8. Orders
         cursor.execute("SELECT id FROM orders")
@@ -1368,31 +1459,48 @@ def save_data():
         for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM blood_donors WHERE id = ?", (del_id,))
         
         for b_id, b in TEMP_DATA['blood_donors'].items():
+            b_img_data = getattr(b, 'profile_picture_data', None)
+            b_mime = getattr(b, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
+            if not b_img_data and getattr(b, 'profile_picture_url', None):
+                b_url = str(b.profile_picture_url).strip()
+                if b_url in UPLOAD_CACHE:
+                    b_img_data, b_mime = UPLOAD_CACHE[b_url]
+                elif os.path.basename(b_url) in UPLOAD_CACHE:
+                    b_img_data, b_mime = UPLOAD_CACHE[os.path.basename(b_url)]
+            if b_img_data:
+                b.profile_picture_data = b_img_data
+                b.profile_picture_content_type = b_mime
+
             if b_id in db_ids:
                 try:
                     cursor.execute("UPDATE blood_donors SET name=?, email=?, phone=?, blood_group=?, age=?, city=?, password=?, last_donation=?, profile_picture_url=?, created_at=?, status=?, hospital_id=? WHERE id=?",
                                    (b.name, b.email, b.phone, b.blood_group, b.age, b.city, b.password, b.last_donation, getattr(b, 'profile_picture_url', None), b.created_at, getattr(b, 'status', 'pending'), getattr(b, 'hospital_id', None), b_id))
-                except pyodbc.Error:
+                except Exception:
                     try:
                         cursor.execute("UPDATE blood_donors SET name=?, email=?, phone=?, blood_group=?, age=?, city=?, password=?, last_donation=?, profile_picture_url=?, created_at=?, status=? WHERE id=?",
                                        (b.name, b.email, b.phone, b.blood_group, b.age, b.city, b.password, b.last_donation, getattr(b, 'profile_picture_url', None), b.created_at, getattr(b, 'status', 'pending'), b_id))
-                    except pyodbc.Error:
+                    except Exception:
                         cursor.execute("UPDATE blood_donors SET name=?, email=?, phone=?, blood_group=?, age=?, city=?, password=?, last_donation=?, profile_picture_url=?, created_at=? WHERE id=?",
                                        (b.name, b.email, b.phone, b.blood_group, b.age, b.city, b.password, b.last_donation, getattr(b, 'profile_picture_url', None), b.created_at, b_id))
             else:
                 try:
                     cursor.execute("INSERT INTO blood_donors (id, name, email, phone, blood_group, age, city, password, last_donation, profile_picture_url, created_at, status, hospital_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                    (b_id, b.name, b.email, b.phone, b.blood_group, b.age, b.city, b.password, b.last_donation, getattr(b, 'profile_picture_url', None), b.created_at, getattr(b, 'status', 'pending'), getattr(b, 'hospital_id', None)))
-                except pyodbc.Error:
+                except Exception:
                     try:
                         cursor.execute("INSERT INTO blood_donors (id, name, email, phone, blood_group, age, city, password, last_donation, profile_picture_url, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                        (b_id, b.name, b.email, b.phone, b.blood_group, b.age, b.city, b.password, b.last_donation, getattr(b, 'profile_picture_url', None), b.created_at))
-                    except pyodbc.Error:
+                    except Exception:
                         cursor.execute("INSERT INTO blood_donors (id, name, email, phone, blood_group, age, city, password, last_donation, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                        (b_id, b.name, b.email, b.phone, b.blood_group, b.age, b.city, b.password, b.last_donation, b.created_at))
+            if b_img_data:
+                try:
+                    cursor.execute("UPDATE blood_donors SET profile_picture_data=?, profile_picture_content_type=? WHERE id=?", (b_img_data, b_mime, b_id))
+                except Exception:
+                    pass
             try:
                 cursor.execute("UPDATE blood_donors SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(b, 'is_blocked', False), getattr(b, 'is_hidden', False), b_id))
-            except pyodbc.Error:
+            except Exception:
                 pass
 
         # Organ Donors
@@ -1402,34 +1510,51 @@ def save_data():
         for del_id in db_ids - mem_ids: cursor.execute("DELETE FROM organ_donors WHERE id = ?", (del_id,))
         
         for od_id, od in TEMP_DATA['organ_donors'].items():
+            od_img_data = getattr(od, 'profile_picture_data', None)
+            od_mime = getattr(od, 'profile_picture_content_type', 'image/jpeg') or 'image/jpeg'
+            if not od_img_data and getattr(od, 'profile_picture_url', None):
+                od_url = str(od.profile_picture_url).strip()
+                if od_url in UPLOAD_CACHE:
+                    od_img_data, od_mime = UPLOAD_CACHE[od_url]
+                elif os.path.basename(od_url) in UPLOAD_CACHE:
+                    od_img_data, od_mime = UPLOAD_CACHE[os.path.basename(od_url)]
+            if od_img_data:
+                od.profile_picture_data = od_img_data
+                od.profile_picture_content_type = od_mime
+
             if od_id in db_ids:
                 try:
                     cursor.execute("UPDATE organ_donors SET name=?, email=?, phone=?, organs=?, blood_group=?, age=?, city=?, password=?, profile_picture_url=?, created_at=?, status=?, hospital_id=? WHERE id=?",
                                    (od.name, od.email, od.phone, json_safe(od.organs), od.blood_group, od.age, od.city, od.password, getattr(od, 'profile_picture_url', None), od.created_at, getattr(od, 'status', 'pending'), getattr(od, 'hospital_id', None), od_id))
-                except pyodbc.Error:
+                except Exception:
                     cursor.execute("UPDATE organ_donors SET name=?, email=?, phone=?, organs=?, blood_group=?, age=?, city=?, password=?, profile_picture_url=?, created_at=? WHERE id=?",
                                    (od.name, od.email, od.phone, json_safe(od.organs), od.blood_group, od.age, od.city, od.password, getattr(od, 'profile_picture_url', None), od.created_at, od_id))
             else:
                 try:
                     cursor.execute("DELETE FROM organ_donors WHERE email = ?", (od.email,))
-                except pyodbc.Error:
+                except Exception:
                     pass
                 try:
                     cursor.execute("INSERT INTO organ_donors (id, name, email, phone, organs, blood_group, age, city, password, profile_picture_url, created_at, status, hospital_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                    (od_id, od.name, od.email, od.phone, json_safe(od.organs), od.blood_group, od.age, od.city, od.password, getattr(od, 'profile_picture_url', None), od.created_at, getattr(od, 'status', 'pending'), getattr(od, 'hospital_id', None)))
-                except pyodbc.Error:
+                except Exception:
                     try:
                         cursor.execute("INSERT INTO organ_donors (id, name, email, phone, organs, blood_group, age, city, password, profile_picture_url, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                        (od_id, od.name, od.email, od.phone, json_safe(od.organs), od.blood_group, od.age, od.city, od.password, getattr(od, 'profile_picture_url', None), od.created_at, getattr(od, 'status', 'pending')))
-                    except pyodbc.Error:
+                    except Exception:
                         try:
                             cursor.execute("INSERT INTO organ_donors (id, name, email, phone, organs, blood_group, age, city, password, profile_picture_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                            (od_id, od.name, od.email, od.phone, json_safe(od.organs), od.blood_group, od.age, od.city, od.password, getattr(od, 'profile_picture_url', None), od.created_at))
-                        except pyodbc.Error:
+                        except Exception:
                             pass
+            if od_img_data:
+                try:
+                    cursor.execute("UPDATE organ_donors SET profile_picture_data=?, profile_picture_content_type=? WHERE id=?", (od_img_data, od_mime, od_id))
+                except Exception:
+                    pass
             try:
                 cursor.execute("UPDATE organ_donors SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(od, 'is_blocked', False), getattr(od, 'is_hidden', False), od_id))
-            except pyodbc.Error:
+            except Exception:
                 pass
                 
         # Organ Requests
@@ -1847,45 +1972,86 @@ def save_data():
             print(f"⚠️ Skipping referrals sync: {e}")
         # Sync Doctor Symptom Reviews
         try:
-            if check_table_exists(cursor, 'doctor_symptom_reviews'):
-                cursor.execute("SELECT id FROM doctor_symptom_reviews")
-                db_rev_ids = {row[0] for row in cursor.fetchall()}
+            ensure_table_schema(
+                cursor, 'doctor_symptom_reviews',
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, symptom_query TEXT, doctor_id TEXT, doctor_name TEXT, status TEXT, clinical_remarks TEXT, prescribed_treatment TEXT, recommended_tests TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "id INT IDENTITY(1,1) PRIMARY KEY, symptom_query NVARCHAR(MAX), doctor_id VARCHAR(255), doctor_name NVARCHAR(255), status VARCHAR(50), clinical_remarks NVARCHAR(MAX), prescribed_treatment NVARCHAR(MAX), recommended_tests NVARCHAR(MAX), created_at DATETIME DEFAULT GETDATE()"
+            )
+            cursor.execute("SELECT id FROM doctor_symptom_reviews")
+            db_rev_ids = {row[0] for row in cursor.fetchall()}
+            
+            mem_revs = TEMP_DATA.get('symptom_reviews', [])
+            mem_rev_ids = {r['id'] for r in mem_revs if 'id' in r}
+            
+            for del_id in db_rev_ids - mem_rev_ids:
+                cursor.execute("DELETE FROM doctor_symptom_reviews WHERE id = ?", (del_id,))
                 
-                mem_revs = TEMP_DATA.get('symptom_reviews', [])
-                mem_rev_ids = {r['id'] for r in mem_revs if 'id' in r}
-                
-                for del_id in db_rev_ids - mem_rev_ids:
-                    cursor.execute("DELETE FROM doctor_symptom_reviews WHERE id = ?", (del_id,))
+            for r in mem_revs:
+                created_at_val = r.get('created_at')
+                if isinstance(created_at_val, str):
+                    try: created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
+                    except ValueError: created_at_val = utcnow()
+                else:
+                    created_at_val = created_at_val or utcnow()
                     
-                for r in mem_revs:
-                    created_at_val = r.get('created_at')
-                    if isinstance(created_at_val, str):
-                        try: created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
-                        except ValueError: created_at_val = utcnow()
-                    else:
-                        created_at_val = created_at_val or utcnow()
-                        
-                    if r.get('id') in db_rev_ids:
-                        cursor.execute("""
-                            UPDATE doctor_symptom_reviews 
-                            SET symptom_query=?, doctor_id=?, doctor_name=?, status=?, clinical_remarks=?, prescribed_treatment=?, recommended_tests=? 
-                            WHERE id=?
-                        """, (
-                            r['symptom_query'], r['doctor_id'], r['doctor_name'], r['status'], 
-                            r.get('clinical_remarks'), r.get('prescribed_treatment'), r.get('recommended_tests'), 
-                            r['id']
-                        ))
-                    else:
-                        cursor.execute("""
-                            INSERT INTO doctor_symptom_reviews (symptom_query, doctor_id, doctor_name, status, clinical_remarks, prescribed_treatment, recommended_tests, created_at) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (
-                            r['symptom_query'], r['doctor_id'], r['doctor_name'], r['status'], 
-                            r.get('clinical_remarks'), r.get('prescribed_treatment'), r.get('recommended_tests'), 
-                            created_at_val
-                        ))
+                if r.get('id') in db_rev_ids:
+                    cursor.execute("""
+                        UPDATE doctor_symptom_reviews 
+                        SET symptom_query=?, doctor_id=?, doctor_name=?, status=?, clinical_remarks=?, prescribed_treatment=?, recommended_tests=? 
+                        WHERE id=?
+                    """, (
+                        r['symptom_query'], r['doctor_id'], r['doctor_name'], r['status'], 
+                        r.get('clinical_remarks'), r.get('prescribed_treatment'), r.get('recommended_tests'), 
+                        r['id']
+                    ))
+                else:
+                    cursor.execute("""
+                        INSERT INTO doctor_symptom_reviews (symptom_query, doctor_id, doctor_name, status, clinical_remarks, prescribed_treatment, recommended_tests, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        r['symptom_query'], r['doctor_id'], r['doctor_name'], r['status'], 
+                        r.get('clinical_remarks'), r.get('prescribed_treatment'), r.get('recommended_tests'), 
+                        created_at_val
+                    ))
         except Exception as e:
             print(f"⚠️ Skipping doctor_symptom_reviews sync: {e}")
+
+        # Sync Lab Requests
+        try:
+            ensure_table_schema(
+                cursor, 'lab_requests',
+                "id INTEGER PRIMARY KEY, doctor_id TEXT, patient_id TEXT, patient_name TEXT, test_name TEXT, status TEXT DEFAULT 'pending', notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "id INT PRIMARY KEY, doctor_id VARCHAR(255), patient_id VARCHAR(255), patient_name NVARCHAR(255), test_name NVARCHAR(255), status VARCHAR(50), notes NVARCHAR(MAX), created_at DATETIME DEFAULT GETDATE()"
+            )
+            cursor.execute("SELECT id FROM lab_requests")
+            db_lr_ids = {int(row[0]) for row in cursor.fetchall() if row[0] is not None}
+            mem_lr = TEMP_DATA.get('lab_requests', {})
+            mem_lr_ids = {int(k) for k in mem_lr.keys() if str(k).isdigit()}
+            
+            for del_id in db_lr_ids - mem_lr_ids:
+                cursor.execute("DELETE FROM lab_requests WHERE id = ?", (del_id,))
+                
+            for lr_id, lr in mem_lr.items():
+                int_id = int(lr_id) if str(lr_id).isdigit() else getattr(lr, 'id', None)
+                if not int_id: continue
+                c_date = getattr(lr, 'created_at', None)
+                if isinstance(c_date, datetime):
+                    c_date = c_date.strftime('%Y-%m-%d %H:%M:%S')
+                elif c_date is None:
+                    c_date = utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
+                if int_id in db_lr_ids:
+                    cursor.execute("""
+                        UPDATE lab_requests SET doctor_id=?, patient_id=?, patient_name=?, test_name=?, status=?, notes=?, created_at=?
+                        WHERE id=?
+                    """, (getattr(lr, 'doctor_id', None), getattr(lr, 'patient_id', None), getattr(lr, 'patient_name', None), getattr(lr, 'test_name', None), getattr(lr, 'status', 'pending'), getattr(lr, 'notes', None), c_date, int_id))
+                else:
+                    cursor.execute("""
+                        INSERT INTO lab_requests (id, doctor_id, patient_id, patient_name, test_name, status, notes, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (int_id, getattr(lr, 'doctor_id', None), getattr(lr, 'patient_id', None), getattr(lr, 'patient_name', None), getattr(lr, 'test_name', None), getattr(lr, 'status', 'pending'), getattr(lr, 'notes', None), c_date))
+        except Exception as lr_err:
+            print(f"⚠️ Lab requests sync note: {lr_err}")
 
         # 22. Visitor Passes
         try:
@@ -1941,22 +2107,33 @@ def save_data():
                 cursor.execute("DELETE FROM jobs WHERE id = ?", (del_id,))
 
             for j_id, j in TEMP_DATA.get('jobs', {}).items():
-                resp_json = json.dumps(j.responsibilities) if isinstance(j.responsibilities, list) else str(j.responsibilities or '')
-                reqs_json = json.dumps(j.requirements) if isinstance(j.requirements, list) else str(j.requirements or '')
-                tech_json = json.dumps(j.tech_stack) if isinstance(j.tech_stack, list) else str(j.tech_stack or '')
+                resp_list = _clean_list_field(getattr(j, 'responsibilities', []))
+                reqs_list = _clean_list_field(getattr(j, 'requirements', []))
+                bens_list = _clean_list_field(getattr(j, 'benefits', []))
+                tech_list = _clean_list_field(getattr(j, 'tech_stack', []))
+                # Ensure in-memory object maintains clean lists
+                j.responsibilities = resp_list
+                j.requirements = reqs_list
+                j.benefits = bens_list
+                j.tech_stack = tech_list
+
+                resp_json = json.dumps(resp_list)
+                reqs_json = json.dumps(reqs_list)
+                bens_json = json.dumps(bens_list)
+                tech_json = json.dumps(tech_list)
                 dl_str = j.apply_deadline.strftime('%Y-%m-%d') if hasattr(j.apply_deadline, 'strftime') else str(j.apply_deadline or '')
                 c_at = getattr(j, 'created_at', utcnow())
 
                 if j_id in db_job_ids:
                     cursor.execute("""
-                        UPDATE jobs SET req_id=?, title=?, dept=?, location=?, salary=?, summary=?, full_desc=?, responsibilities=?, requirements=?, tech_stack=?, apply_deadline=?, is_active=?, is_hot=?, created_at=?
+                        UPDATE jobs SET req_id=?, title=?, dept=?, location=?, salary=?, summary=?, full_desc=?, responsibilities=?, requirements=?, benefits=?, tech_stack=?, apply_deadline=?, is_active=?, is_hot=?, created_at=?
                         WHERE id=?
-                    """, (j.req_id, j.title, j.dept, j.location, j.salary, j.summary, j.full_desc, resp_json, reqs_json, tech_json, dl_str, 1 if j.is_active else 0, 1 if j.is_hot else 0, c_at, j_id))
+                    """, (j.req_id, j.title, j.dept, j.location, j.salary, j.summary, j.full_desc, resp_json, reqs_json, bens_json, tech_json, dl_str, 1 if j.is_active else 0, 1 if j.is_hot else 0, c_at, j_id))
                 else:
                     cursor.execute("""
-                        INSERT INTO jobs (id, req_id, title, dept, location, salary, summary, full_desc, responsibilities, requirements, tech_stack, apply_deadline, is_active, is_hot, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (j_id, j.req_id, j.title, j.dept, j.location, j.salary, j.summary, j.full_desc, resp_json, reqs_json, tech_json, dl_str, 1 if j.is_active else 0, 1 if j.is_hot else 0, c_at))
+                        INSERT INTO jobs (id, req_id, title, dept, location, salary, summary, full_desc, responsibilities, requirements, benefits, tech_stack, apply_deadline, is_active, is_hot, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (j_id, j.req_id, j.title, j.dept, j.location, j.salary, j.summary, j.full_desc, resp_json, reqs_json, bens_json, tech_json, dl_str, 1 if j.is_active else 0, 1 if j.is_hot else 0, c_at))
 
             cursor.execute("SELECT id FROM job_applications")
             db_app_ids = {row[0] for row in cursor.fetchall()}
@@ -2272,9 +2449,38 @@ def load_data():
         docs = fetch_dict("SELECT * FROM doctors")
         TEMP_DATA['doctors'] = {d['id']: Doctor(**d) for d in docs}
 
+        # Rehydrate doctor profile pictures from doctor_images and files
+        try:
+            doc_imgs = fetch_dict("SELECT doctor_id, image_data, content_type FROM doctor_images")
+            for di in doc_imgs:
+                d_id = di.get('doctor_id')
+                img_data = di.get('image_data')
+                c_type = di.get('content_type') or 'image/jpeg'
+                if d_id and img_data and d_id in TEMP_DATA['doctors']:
+                    TEMP_DATA['doctors'][d_id].profile_picture_data = img_data
+                    TEMP_DATA['doctors'][d_id].profile_picture_content_type = c_type
+                    pic_url = TEMP_DATA['doctors'][d_id].profile_picture_url or f"doctor_{d_id}.jpg"
+                    fname = os.path.basename(pic_url)
+                    UPLOAD_CACHE[fname] = (img_data, c_type)
+                    UPLOAD_CACHE[d_id] = (img_data, c_type)
+                    _write_bytes_safely(fname, img_data)
+        except Exception as di_err:
+            print(f"⚠️ Doctor images load note: {di_err}")
+
         # 2. Patients
         pats = fetch_dict("SELECT * FROM patients")
         TEMP_DATA['patients'] = {p['id']: Patient(**p) for p in pats}
+        for p in pats:
+            p_id = p.get('id')
+            img_data = p.get('profile_picture_data')
+            c_type = p.get('profile_picture_content_type') or 'image/jpeg'
+            pic_url = p.get('profile_picture_url')
+            if p_id and img_data:
+                if pic_url:
+                    fname = os.path.basename(pic_url)
+                    UPLOAD_CACHE[fname] = (img_data, c_type)
+                    _write_bytes_safely(fname, img_data)
+                UPLOAD_CACHE[p_id] = (img_data, c_type)
 
         # 3a. Hospital Types Master
         from spherix.hospital_types import HospitalType, HOSPITAL_TYPE_MASTER_DATA, get_hospital_types_master_dict
@@ -2333,6 +2539,16 @@ def load_data():
                 h_match = next((h for h in TEMP_DATA['hospitals'].values() if (getattr(h, 'name', '') or '').lower().strip() == s['hospital_name'].lower().strip()), None)
                 if h_match:
                     s['hospital_id'] = h_match.id
+            s_id = s.get('id')
+            img_data = s.get('profile_picture_data')
+            c_type = s.get('profile_picture_content_type') or 'image/jpeg'
+            pic_url = s.get('profile_picture_url')
+            if s_id and img_data:
+                if pic_url:
+                    fname = os.path.basename(pic_url)
+                    UPLOAD_CACHE[fname] = (img_data, c_type)
+                    _write_bytes_safely(fname, img_data)
+                UPLOAD_CACHE[s_id] = (img_data, c_type)
         TEMP_DATA['staff'] = {s['id']: Staff(**s) for s in stf}
 
         # 5. Appointments
@@ -2366,6 +2582,17 @@ def load_data():
 
         # 9. Blood Donors
         bd = fetch_dict("SELECT * FROM blood_donors")
+        for b in bd:
+            b_id = b.get('id')
+            img_data = b.get('profile_picture_data')
+            c_type = b.get('profile_picture_content_type') or 'image/jpeg'
+            pic_url = b.get('profile_picture_url')
+            if b_id and img_data:
+                if pic_url:
+                    fname = os.path.basename(pic_url)
+                    UPLOAD_CACHE[fname] = (img_data, c_type)
+                    _write_bytes_safely(fname, img_data)
+                UPLOAD_CACHE[b_id] = (img_data, c_type)
         TEMP_DATA['blood_donors'] = {b['id']: BloodDonor(**b) for b in bd}
 
         # Organ Donors
@@ -2374,6 +2601,16 @@ def load_data():
             if isinstance(od.get('organs'), str):
                 try: od['organs'] = json.loads(od['organs'].replace("'", '"'))
                 except: od['organs'] = []
+            od_id = od.get('id')
+            img_data = od.get('profile_picture_data')
+            c_type = od.get('profile_picture_content_type') or 'image/jpeg'
+            pic_url = od.get('profile_picture_url')
+            if od_id and img_data:
+                if pic_url:
+                    fname = os.path.basename(pic_url)
+                    UPLOAD_CACHE[fname] = (img_data, c_type)
+                    _write_bytes_safely(fname, img_data)
+                UPLOAD_CACHE[od_id] = (img_data, c_type)
         TEMP_DATA['organ_donors'] = {od['id']: OrganDonor(**od) for od in ods}
 
         # Organ Requests
@@ -2803,7 +3040,7 @@ def load_data():
             print(f"⚠️ Skipping patient_medical_records load: {e}")
             TEMP_DATA['medical_records'] = {}
 
-        seed_initial_patient_medical_records()
+        # Medical records loaded cleanly without fabricated mock data
 
 
         # Referrals
@@ -2872,6 +3109,30 @@ def load_data():
             print(f"⚠️ Skipping visitor_passes load: {e}")
             if 'visitor_passes' not in TEMP_DATA: TEMP_DATA['visitor_passes'] = {}
 
+        # 22b. Lab Requests
+        try:
+            ensure_table_schema(
+                cursor, 'lab_requests',
+                "id TEXT PRIMARY KEY, doctor_id TEXT, patient_id TEXT, patient_name TEXT, test_name TEXT, status TEXT, notes TEXT, created_at TIMESTAMP",
+                "id VARCHAR(255) PRIMARY KEY, doctor_id VARCHAR(255), patient_id VARCHAR(255), patient_name NVARCHAR(255), test_name NVARCHAR(255), status VARCHAR(50), notes NVARCHAR(MAX), created_at DATETIME"
+            )
+            lreqs = fetch_dict("SELECT * FROM lab_requests")
+            if 'lab_requests' not in TEMP_DATA: TEMP_DATA['lab_requests'] = {}
+            for lr in lreqs:
+                TEMP_DATA['lab_requests'][lr['id']] = {
+                    'id': lr['id'],
+                    'doctor_id': lr.get('doctor_id'),
+                    'patient_id': lr.get('patient_id'),
+                    'patient_name': lr.get('patient_name', ''),
+                    'test_name': lr.get('test_name', ''),
+                    'status': lr.get('status', 'Pending'),
+                    'notes': lr.get('notes', ''),
+                    'created_at': lr.get('created_at')
+                }
+        except Exception as e:
+            print(f"⚠️ Skipping lab_requests load: {e}")
+            if 'lab_requests' not in TEMP_DATA: TEMP_DATA['lab_requests'] = {}
+
         # 23. Jobs
         try:
             ensure_table_schema(
@@ -2895,6 +3156,7 @@ def load_data():
                     responsibilities=j.get('responsibilities') or '',
                     requirements=j.get('requirements') or '',
                     benefits=j.get('benefits') or '',
+                    tech_stack=j.get('tech_stack') or '',
                     apply_deadline=j.get('apply_deadline') or '',
                     is_active=bool(j.get('is_active', 1)),
                     created_at=j.get('created_at')
@@ -2981,90 +3243,9 @@ def load_data():
         print(f"❌ Error loading data from SQL: {e}")
 
 def seed_initial_patient_medical_records():
-    """Seeds realistic initial medical records for registered patients if empty."""
-    global TEMP_DATA
-    if 'medical_records' not in TEMP_DATA:
-        TEMP_DATA['medical_records'] = {}
-    if len(TEMP_DATA['medical_records']) > 0:
-        return
-    
-    patients = TEMP_DATA.get('patients', {})
-    if not patients:
-        return
-    
-    first_patient_id = list(patients.keys())[0]
-    patient_obj = patients[first_patient_id]
-    patient_name = getattr(patient_obj, 'name', '') or f"{getattr(patient_obj, 'first_name', '')} {getattr(patient_obj, 'last_name', '')}".strip() or "Registered Patient"
-    
-    # Pick a registered doctor ID if available (e.g. DOC/2026/001)
-    doctors = TEMP_DATA.get('doctors', {})
-    doc_id = list(doctors.keys())[0] if doctors else 'DOC/2026/001'
-    doc_name = getattr(doctors.get(doc_id), 'name', 'Dr. Sunny Kushwaha') if doctors.get(doc_id) else 'Dr. Sunny Kushwaha'
+    """No-op: Prevents auto-generating fabricated mock medical records."""
+    return False
 
-    now_dt = datetime.now()
-    records = [
-        PatientMedicalRecord(
-            id="REC-2026-001",
-            patient_id=first_patient_id,
-            patient_name=patient_name,
-            title="Complete Diagnostic Blood & Lipid Panel",
-            record_type="Lab Report",
-            record_date=(now_dt - timedelta(days=5)).strftime('%Y-%m-%d'),
-            doctor_name=doc_name,
-            facility_name="Spherix Central Pathology Laboratory",
-            description="Fasting blood glucose 94 mg/dL, HbA1c 5.4%, Total Cholesterol 178 mg/dL, HDL 52 mg/dL, LDL 102 mg/dL. All metabolic parameters within standard clinical reference ranges.",
-            file_path="uploads/medical_records/sample_blood_report.pdf",
-            file_name="CBC_Lipid_Panel_Report_2026.pdf",
-            file_type="pdf",
-            file_size="1.8 MB",
-            shared_with=[str(doc_id)],
-            doctor_notes={
-                str(doc_id): {
-                    "doctor_id": str(doc_id),
-                    "doctor_name": doc_name,
-                    "note": "Lipid profile and HbA1c are optimal. Continue balanced Mediterranean dietary routine.",
-                    "created_at": (now_dt - timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S')
-                }
-            }
-        ),
-        PatientMedicalRecord(
-            id="REC-2026-002",
-            patient_id=first_patient_id,
-            patient_name=patient_name,
-            title="Digital Chest Radiography (X-Ray PA View)",
-            record_type="Radiology & Scan",
-            record_date=(now_dt - timedelta(days=12)).strftime('%Y-%m-%d'),
-            doctor_name=doc_name,
-            facility_name="SMCH Imaging & Radiology Center",
-            description="Bilateral lung fields clear. No focal consolidation, pneumothorax, or pleural effusion. Normal cardiac silhouette and mediastinal contours.",
-            file_path="uploads/medical_records/sample_chest_xray.jpg",
-            file_name="Chest_XRay_Digital_Scan.jpg",
-            file_type="image",
-            file_size="2.4 MB",
-            shared_with=[str(doc_id)],
-            doctor_notes={}
-        ),
-        PatientMedicalRecord(
-            id="REC-2026-003",
-            patient_id=first_patient_id,
-            patient_name=patient_name,
-            title="Post-Consultation Clinical Prescription",
-            record_type="Prescription",
-            record_date=(now_dt - timedelta(days=20)).strftime('%Y-%m-%d'),
-            doctor_name=doc_name,
-            facility_name="Spherix Outpatient Specialty Clinic",
-            description="1. Tab. Paracetamol 650mg SOS for pyrexia\n2. Tab. Vitamin D3 60,000 IU once weekly x 8 weeks\n3. Daily hydration (3L) & adequate rest.",
-            file_path="uploads/medical_records/sample_prescription.pdf",
-            file_name="Official_Clinical_Prescription.pdf",
-            file_type="pdf",
-            file_size="640 KB",
-            shared_with=[],
-            doctor_notes={}
-        )
-    ]
-
-    for rec in records:
-        TEMP_DATA['medical_records'][rec.id] = rec
 
 
 def seed_initial_jobs():
@@ -3187,7 +3368,7 @@ def setup_admin_user():
     Returns True if data was changed, False otherwise.
     """
     admin_email = 'admin@spherixclinic.com'
-    admin_password = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip() or 'Admin@123'
+    admin_password = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip() or 'spherixclinicadmin'
     data_changed = False
 
     admin_user = next((doc for doc in TEMP_DATA['doctors'].values() if doc.email == admin_email), None)
@@ -3200,14 +3381,38 @@ def setup_admin_user():
                 admin_user.first_name = "Sunny"
                 admin_user.last_name = "Kushwaha"
                 data_changed = True
-            if getattr(admin_user, 'profile_picture_url', None) != 'images/sunnykk.jpg':
+            if not getattr(admin_user, 'profile_picture_url', None):
                 admin_user.profile_picture_url = 'images/sunnykk.jpg'
                 data_changed = True
             admin_user.is_verified = True
+            if getattr(admin_user, 'is_hidden', False):
+                admin_user.is_hidden = False
+                data_changed = True
+            if getattr(admin_user, 'is_blocked', False):
+                admin_user.is_blocked = False
+                data_changed = True
+            if getattr(admin_user, 'is_deactivated', False):
+                admin_user.is_deactivated = False
+                data_changed = True
+            if getattr(admin_user, 'availability_status', '') in ['deactivated', 'unavailable', None, '']:
+                admin_user.availability_status = 'available'
+                data_changed = True
         elif hasattr(admin_user, 'name') and admin_user.name in ["Admin User", "Admin"]:
             admin_user.name = "Sunny Kushwaha"
-            if getattr(admin_user, 'profile_picture_url', None) != 'images/sunnykk.jpg':
+            if not getattr(admin_user, 'profile_picture_url', None):
                 admin_user.profile_picture_url = 'images/sunnykk.jpg'
+                data_changed = True
+            if getattr(admin_user, 'is_hidden', False):
+                admin_user.is_hidden = False
+                data_changed = True
+        # Ensure admin password hash is valid against bootstrap password
+        is_pass_valid = False
+        try:
+            is_pass_valid = check_password_hash(admin_user.password, admin_password)
+        except Exception:
+            is_pass_valid = False
+        if not is_pass_valid and not os.getenv('ADMIN_BOOTSTRAP_PASSWORD'):
+            admin_user.password = generate_password_hash(admin_password, method='pbkdf2:sha256:260000')
             data_changed = True
     else:
         year = datetime.now().year
@@ -3270,6 +3475,63 @@ def create_notification(user_id, user_type, message, link=None):
     TEMP_DATA['next_ids']['notification'] += 1
     save_data()
     return new_notif
+
+
+def get_paid_appointment_doctor_ids_for_patient(patient_or_id):
+    """
+    Returns a set of string doctor IDs with whom the given patient has
+    booked an appointment AND completed payment.
+    """
+    if not patient_or_id:
+        return set()
+
+    if hasattr(patient_or_id, 'id'):
+        patient_id = patient_or_id.id
+        pat_obj = patient_or_id
+    else:
+        patient_id = patient_or_id
+        pat_obj = TEMP_DATA.get('patients', {}).get(patient_id)
+
+    pid_str = str(patient_id).strip()
+    pat_license = str(getattr(pat_obj, 'license_no', '') or '').strip() if pat_obj else ''
+    pat_phone = str(getattr(pat_obj, 'phone', '') or '').strip() if pat_obj else ''
+
+    paid_doctor_ids = set()
+    for appt in TEMP_DATA.get('appointments', {}).values():
+        appt_pid = str(getattr(appt, 'patient_id', '') or '').strip()
+        appt_license = str(getattr(appt, 'patient_id_number', '') or '').strip()
+        appt_phone = str(getattr(appt, 'patient_phone', '') or '').strip()
+
+        # Check if appointment belongs to current patient
+        matches = (
+            (appt_pid and appt_pid == pid_str) or
+            (pat_license and appt_license and appt_license == pat_license) or
+            (pat_phone and appt_phone and appt_phone == pat_phone)
+        )
+        if not matches:
+            continue
+
+        # Check status: must not be cancelled, rejected, or awaiting_payment
+        status = str(getattr(appt, 'status', '') or '').lower().strip()
+        if status in ('cancelled', 'rejected', 'awaiting_payment'):
+            continue
+
+        # Check if payment was made:
+        payment_status = str(getattr(appt, 'payment_status', '') or '').lower().strip()
+        payment_id = getattr(appt, 'payment_id', None)
+        payment_method = str(getattr(appt, 'payment_method', '') or '').lower().strip()
+
+        is_paid = (
+            payment_status == 'paid' or
+            (payment_id and str(payment_id).strip() != '') or
+            (payment_method in ('razorpay online', 'confirmed', 'online', 'card', 'upi', 'netbanking')) or
+            (status in ('confirmed', 'completed'))
+        )
+
+        if is_paid and getattr(appt, 'doctor_id', None):
+            paid_doctor_ids.add(str(appt.doctor_id).strip())
+
+    return paid_doctor_ids
 
 
 sync_data_to_sql = save_data

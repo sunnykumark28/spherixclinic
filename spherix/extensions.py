@@ -14,10 +14,11 @@ from flask_jwt_extended import JWTManager
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
+rate_limit_storage = os.getenv('RATELIMIT_STORAGE_URI') or os.getenv('REDIS_URL') or 'memory://'
 limiter = Limiter(
     get_remote_address,
     default_limits=["1000 per day", "500 per hour"],
-    storage_uri="memory://"
+    storage_uri=rate_limit_storage
 )
 talisman = Talisman()
 cors = CORS()
@@ -47,3 +48,10 @@ try:
         razorpay_client = None
 except ImportError:
     razorpay_client = None
+
+try:
+    from flask_compress import Compress
+    compress = Compress()
+except ImportError:
+    compress = None
+

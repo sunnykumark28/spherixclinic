@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,600..72,600;1,6..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
     :root {
@@ -36,23 +37,100 @@
     .prose-legal {
         font-family: var(--font-legal);
         font-size: 1.125rem; /* 18px */
-        line-height: 1.7;
-        color: #374151;
+        line-height: 1.85;
+        color: #334155;
         max-width: none;
     }
     
-    .prose-legal h1, .prose-legal h2, .prose-legal h3 {
+    .prose-legal h1, .prose-legal h2, .prose-legal h3, .prose-legal h4 {
         font-family: var(--font-ui);
-        color: #111827;
-        font-weight: 600;
-        letter-spacing: -0.02em;
+        color: #0f172a;
+        font-weight: 700;
+        letter-spacing: -0.015em;
     }
     
-    .prose-legal h2 { margin-top: 2.5em; border-bottom: 1px solid #E5E7EB; padding-bottom: 0.5em; }
-    .prose-legal a { color: var(--color-accent); text-decoration-color: rgba(37, 99, 235, 0.3); text-underline-offset: 3px; }
+    .prose-legal h2 { 
+        margin-top: 3.5rem; 
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #E2E8F0; 
+        padding-bottom: 0.75rem; 
+        font-size: 1.5rem;
+    }
+
+    .prose-legal h3 { 
+        margin-top: 3rem; 
+        margin-bottom: 1.25rem; 
+        padding-top: 1.5rem;
+        border-top: 1px solid #E2E8F0;
+        font-size: 1.3rem;
+        color: #0f172a;
+    }
+
+    .prose-legal h3:first-of-type {
+        margin-top: 1rem;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    .prose-legal h4 {
+        margin-top: 2.25rem;
+        margin-bottom: 0.95rem;
+        font-size: 1.1rem;
+        color: #1e293b;
+        font-weight: 600;
+    }
+
+    .prose-legal p {
+        margin-top: 0;
+        margin-bottom: 1.6rem;
+        line-height: 1.85;
+    }
+
+    .prose-legal p:last-child {
+        margin-bottom: 0;
+    }
+
+    .prose-legal a { 
+        color: var(--color-accent); 
+        text-decoration-color: rgba(37, 99, 235, 0.3); 
+        text-underline-offset: 3px; 
+    }
     .prose-legal a:hover { text-decoration-color: var(--color-accent); }
-    .prose-legal ul { list-style-type: disc; padding-left: 1.5em; }
-    .prose-legal li::marker { color: #9CA3AF; }
+
+    .prose-legal ul, .prose-legal ol { 
+        list-style-type: disc; 
+        padding-left: 1.75rem; 
+        margin-top: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .prose-legal li {
+        margin-bottom: 0.95rem;
+        line-height: 1.8;
+        padding-left: 0.35rem;
+        color: #334155;
+    }
+
+    .prose-legal li:last-child {
+        margin-bottom: 0;
+    }
+
+    .prose-legal li::marker { 
+        color: #3b82f6; 
+    }
+
+    .prose-legal strong {
+        font-family: var(--font-ui);
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    /* Spacing between sentences and br elements */
+    .prose-legal br {
+        content: "";
+        display: block;
+        margin-top: 0.75rem;
+    }
 
     /* Custom Scrollbar for Sidebar */
     .custom-scroll::-webkit-scrollbar { width: 4px; }
@@ -179,14 +257,15 @@
                         <button onclick="copyLink()" class="text-gray-400 hover:text-gray-900 transition-colors" title="Copy Link">
                             <i class="fas fa-link"></i>
                         </button>
-                        <a href="#" class="px-4 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-black transition-colors shadow-lg shadow-gray-900/10">
-                            Download PDF
-                        </a>
+                        <button type="button" id="downloadPdfBtn" onclick="downloadPolicyPdf()" class="px-4 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-black transition-all shadow-lg shadow-gray-900/10 flex items-center gap-2 cursor-pointer active:scale-95" title="Download Official PDF">
+                            <i class="fas fa-file-pdf text-rose-400"></i>
+                            <span id="downloadBtnText">Download PDF</span>
+                        </button>
                     </div>
                 </div>
 
                 <!-- Paper Container -->
-                <article class="legal-paper rounded-lg overflow-hidden">
+                <article id="policyPaper" class="legal-paper rounded-lg overflow-hidden">
                     
                     <!-- Decorative Status Bar -->
                     <div class="h-1 w-full bg-blue-600"></div>
@@ -218,11 +297,11 @@
                         <div class="mt-16 pt-10 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-8 items-end">
                             <div>
                                 <!-- Stamp & Handwritten Signature Layered Above the Line -->
-                                <div class="relative h-24 mb-1 flex items-end">
+                                <div class="relative h-36 sm:h-36 mb-1 flex items-end">
                                     <!-- Official Corporate Seal / Stamp (Background Layer) -->
-                                    <div class="absolute left-10 bottom-0 pointer-events-none select-none">
+                                    <div class="absolute left-4 sm:left-8 -bottom-3 pointer-events-none select-none">
                                         <img src="{{ url_for('static', filename='images/stamp.png') }}" 
-                                             class="w-24 h-24 object-contain opacity-95 -rotate-6 filter drop-shadow-sm" 
+                                             class="w-40 h-40 sm:w-48 sm:h-48 object-contain opacity-95 -rotate-6 filter drop-shadow-md" 
                                              alt="Official Seal">
                                     </div>
                                     
@@ -231,7 +310,7 @@
                                 <!-- Signatory Underline & Credentials -->
                                 <div class="border-t-2 border-gray-800 pt-2 max-w-xs">
                                     <p class="text-sm font-bold text-gray-900 leading-tight">Chief Legal & Compliance Officer</p>
-                                    <p class="text-xs font-semibold text-gray-600">Spherix Clinic Health Systems Inc.</p>
+                                    <p class="text-xs font-semibold text-gray-600 flex items-baseline gap-1"><span class="brand-font-spherix font-iceland font-bold text-sm text-gray-900">Spherix</span> <span class="brand-font-clinic font-ballet text-sm text-sky-700">Clinic</span> Health Systems Inc.</p>
                                     <p class="text-[11px] text-gray-400 font-mono mt-0.5">Executed: Institutional Digital Seal</p>
                                 </div>
                             </div>
@@ -278,6 +357,49 @@
                 toast.classList.add('opacity-0', 'scale-95');
             }, 2000);
         });
+    }
+
+    function downloadPolicyPdf() {
+        const btn = document.getElementById('downloadPdfBtn');
+        const btnText = document.getElementById('downloadBtnText');
+        const origText = btnText ? btnText.innerText : 'Download PDF';
+
+        if (btnText) btnText.innerText = 'Generating PDF...';
+        btn.disabled = true;
+
+        const serverPdfUrl = "{{ url_for('legal_download_pdf', policy_id=current_id) }}";
+        const element = document.getElementById('policyPaper');
+
+        if (window.html2pdf && element) {
+            const opt = {
+                margin: [10, 8, 12, 8],
+                filename: 'Spherix_{{ current_id | replace("-", "_") | title }}_2026.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                if (btnText) btnText.innerText = 'Downloaded!';
+                setTimeout(() => {
+                    if (btnText) btnText.innerText = origText;
+                    btn.disabled = false;
+                }, 2200);
+            }).catch(err => {
+                console.warn("Client PDF error, redirecting to server PDF generator:", err);
+                window.location.href = serverPdfUrl;
+                setTimeout(() => {
+                    if (btnText) btnText.innerText = origText;
+                    btn.disabled = false;
+                }, 1500);
+            });
+        } else {
+            window.location.href = serverPdfUrl;
+            setTimeout(() => {
+                if (btnText) btnText.innerText = origText;
+                btn.disabled = false;
+            }, 1500);
+        }
     }
 </script>
 {% endblock %}

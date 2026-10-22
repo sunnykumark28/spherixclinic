@@ -55,35 +55,68 @@ def upload_to_cloudinary(file_bytes_or_stream, folder='spherixclinic/uploads', p
         print(f"⚠️ Cloudinary upload warning: {e}")
         return None
 
-def _write_bytes_safely(relative_dir, filename, data_bytes):
+def _write_bytes_safely(relative_dir, filename, data_bytes=None):
+    if data_bytes is None:
+        data_bytes = filename
+        filename = relative_dir
+        relative_dir = None
+    if not isinstance(data_bytes, (bytes, bytearray)):
+        return False
+    success = False
+    target_dirs = []
+
+    # 1. Project root static/uploads
+    cwd_static = os.path.join(os.getcwd(), 'static', 'uploads')
+    target_dirs.append(os.path.join(cwd_static, relative_dir) if relative_dir else cwd_static)
+
+    # 2. Flask app static_folder / uploads (if different)
     try:
-        base_dir = os.path.join(os.getcwd(), 'static', 'uploads')
-        if relative_dir:
-            target_dir = os.path.join(base_dir, relative_dir)
-        else:
-            target_dir = base_dir
-        os.makedirs(target_dir, exist_ok=True)
-        file_path = os.path.join(target_dir, filename)
-        with open(file_path, 'wb') as f:
-            f.write(data_bytes)
-        return True
+        from flask import current_app
+        if current_app and current_app.static_folder:
+            app_static = os.path.join(current_app.static_folder, 'uploads')
+            target_dirs.append(os.path.join(app_static, relative_dir) if relative_dir else app_static)
     except Exception:
         pass
 
+    # 3. Dedicated spherix root static folder
+    spherix_static = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'uploads')
+    target_dirs.append(os.path.join(spherix_static, relative_dir) if relative_dir else spherix_static)
+
+    for target_dir in target_dirs:
+        try:
+            os.makedirs(target_dir, exist_ok=True)
+            file_path = os.path.join(target_dir, filename)
+            with open(file_path, 'wb') as f:
+                f.write(data_bytes)
+            success = True
+        except Exception:
+            pass
+
+    # Fallback to /tmp for serverless / lambda environments
     try:
-        if relative_dir:
-            tmp_dir = os.path.join('/tmp', 'uploads', relative_dir)
-        else:
-            tmp_dir = os.path.join('/tmp', 'uploads')
+        tmp_dir = os.path.join('/tmp', 'uploads', relative_dir) if relative_dir else os.path.join('/tmp', 'uploads')
         os.makedirs(tmp_dir, exist_ok=True)
         tmp_file_path = os.path.join(tmp_dir, filename)
         with open(tmp_file_path, 'wb') as f:
             f.write(data_bytes)
-        return True
+        success = True
     except Exception:
         pass
 
-    return False
+    return success
+
+def get_upload_bytes(key_or_filename):
+    """Retrieves cached image bytes and MIME type from UPLOAD_CACHE."""
+    if not key_or_filename:
+        return None, None
+    clean = str(key_or_filename).strip()
+    base = os.path.basename(clean)
+    if clean in UPLOAD_CACHE:
+        return UPLOAD_CACHE[clean]
+    if base in UPLOAD_CACHE:
+        return UPLOAD_CACHE[base]
+    return None, None
+
 
 def save_user_profile_image(input_source, target_size=(500, 500), filename_prefix='user_profile', subfolder=None):
     """
@@ -92,7 +125,7 @@ def save_user_profile_image(input_source, target_size=(500, 500), filename_prefi
     - Auto-corrects EXIF orientation.
     - Crops/resizes with Lanczos filter to the fixed target_size (default 500x500 px).
     - Converts RGBA/P to RGB over white background (or preserves PNG if desired).
-    - Caches in memory (UPLOAD_CACHE) for instant serving across Vercel / serverless instances.
+    - Caches in memory (UPLOAD_CACHE) for instant serving across ephemeral / serverless instances.
     - Safely writes to static/uploads or /tmp/uploads without crashing on read-only filesystems.
     - Returns saved filename.
     """

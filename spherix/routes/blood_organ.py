@@ -719,12 +719,21 @@ def staff_organ_live_stats():
 
 
 
+@blood_organ_bp.route('/blood-donor', endpoint='blood_donor_portal')
+@blood_organ_bp.route('/blood-donor/', endpoint='blood_donor_portal_slash')
+def blood_donor_portal():
+    if current_user and current_user.is_authenticated and isinstance(current_user, BloodDonor):
+        return redirect(url_for('blood_donor_dashboard'))
+    return redirect(url_for('blood_donor_login'))
+
+
+
 @blood_organ_bp.route('/blood-donor/dashboard', methods=['GET', 'POST'])
 @login_required
 def blood_donor_dashboard():
     if not isinstance(current_user, BloodDonor):
-        flash("Access denied.", "error")
-        return redirect(url_for('home'))
+        flash("Access denied. Please log in with your blood donor account.", "error")
+        return redirect(url_for('blood_donor_login'))
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -783,6 +792,24 @@ def blood_donor_dashboard():
                 )
                 if saved_filename:
                     current_user.profile_picture_url = saved_filename
+                    img_bytes, mime = UPLOAD_CACHE.get(saved_filename, (None, None))
+                    if not img_bytes and os.path.basename(saved_filename) in UPLOAD_CACHE:
+                        img_bytes, mime = UPLOAD_CACHE[os.path.basename(saved_filename)]
+                    if img_bytes:
+                        current_user.profile_picture_data = img_bytes
+                        current_user.profile_picture_content_type = mime
+                        try:
+                            conn = get_db_connection()
+                            if conn:
+                                cursor = conn.cursor()
+                                cursor.execute(
+                                    "UPDATE blood_donors SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                                    (saved_filename, img_bytes, mime, str(current_user.id))
+                                )
+                                conn.commit()
+                                conn.close()
+                        except Exception as e:
+                            print(f"Blood donor DB photo sync note: {e}")
         
             save_data()
             flash("Profile updated successfully!", "success")
@@ -876,12 +903,21 @@ def blood_donors_list():
 
 
 
+@blood_organ_bp.route('/organ-donor', endpoint='organ_donor_portal')
+@blood_organ_bp.route('/organ-donor/', endpoint='organ_donor_portal_slash')
+def organ_donor_portal():
+    if current_user and current_user.is_authenticated and isinstance(current_user, OrganDonor):
+        return redirect(url_for('organ_donor_dashboard'))
+    return redirect(url_for('organ_donor_login'))
+
+
+
 @blood_organ_bp.route('/organ-donor/dashboard', methods=['GET', 'POST'])
 @login_required
 def organ_donor_dashboard():
     if not isinstance(current_user, OrganDonor):
-        flash("Access denied.", "error")
-        return redirect(url_for('home'))
+        flash("Access denied. Please log in with your organ donor account.", "error")
+        return redirect(url_for('organ_donor_login'))
 
     if request.method == 'POST':
         if 'update_profile' in request.form:
@@ -919,6 +955,24 @@ def organ_donor_dashboard():
                 )
                 if saved_filename:
                     current_user.profile_picture_url = saved_filename
+                    img_bytes, mime = UPLOAD_CACHE.get(saved_filename, (None, None))
+                    if not img_bytes and os.path.basename(saved_filename) in UPLOAD_CACHE:
+                        img_bytes, mime = UPLOAD_CACHE[os.path.basename(saved_filename)]
+                    if img_bytes:
+                        current_user.profile_picture_data = img_bytes
+                        current_user.profile_picture_content_type = mime
+                        try:
+                            conn = get_db_connection()
+                            if conn:
+                                cursor = conn.cursor()
+                                cursor.execute(
+                                    "UPDATE organ_donors SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                                    (saved_filename, img_bytes, mime, str(current_user.id))
+                                )
+                                conn.commit()
+                                conn.close()
+                        except Exception as e:
+                            print(f"Organ donor DB photo sync note: {e}")
 
             save_data()
             flash("Profile updated successfully!", "success")

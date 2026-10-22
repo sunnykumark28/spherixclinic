@@ -46,7 +46,7 @@ from spherix.models import (
 from spherix.services.database import (
     TEMP_DATA, get_db_connection, save_data, load_data,
     sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item,
-    deduplicate_entities
+    deduplicate_entities, get_paid_appointment_doctor_ids_for_patient
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html
@@ -197,9 +197,9 @@ def doctors_list():
             
     display_depts = sorted(display_depts, key=lambda x: x['name'])
     
-    # Pagination
+    # Pagination (4 columns x 6 rows = 24 items per page)
     page = request.args.get('page', 1, type=int)
-    per_page = 9
+    per_page = 24
     total_filtered = len(filtered_doctors)
     total_pages = (total_filtered + per_page - 1) // per_page
     page = max(1, min(page, total_pages)) if total_pages > 0 else 1
@@ -218,9 +218,27 @@ def doctors_list():
         available_countries=available_countries,
         country_flags=GLOBAL_COUNTRY_FLAGS,
         total_doctors_count=len(all_db_doctors),
+        total_filtered=total_filtered,
+        per_page=per_page,
         page=page,
         total_pages=total_pages
     )
+
+
+
+@doctor_bp.route('/doctor/logout', endpoint='doctor_logout')
+@doctor_bp.route('/doctor-logout')
+def doctor_logout():
+    return redirect(url_for('logout'))
+
+
+
+@doctor_bp.route('/doctor', endpoint='doctor_portal')
+@doctor_bp.route('/doctor/', endpoint='doctor_portal_slash')
+def doctor_portal():
+    if current_user and current_user.is_authenticated and getattr(current_user, 'is_doctor', False):
+        return redirect(url_for('doctor_dashboard'))
+    return redirect(url_for('doctor_login'))
 
 
 
@@ -357,6 +375,8 @@ def doctor_dashboard():
         for field in fields_to_update:
             if field in request.form:
                 setattr(doctor, field, request.form.get(field))
+        if getattr(doctor, 'license_number', None):
+            doctor.license_no = doctor.license_number
         
         # Handle Profile Picture Upload (Cropped Base64 or Raw File)
         profile_input = request.form.get('cropped_profile_image') or request.form.get('profile_image_base64')
@@ -374,11 +394,13 @@ def doctor_dashboard():
             if saved_filename:
                 doctor.profile_picture_url = saved_filename
                 if saved_filename in UPLOAD_CACHE:
+                    img_bytes, mime = UPLOAD_CACHE[saved_filename]
+                    doctor.profile_picture_data = img_bytes
+                    doctor.profile_picture_content_type = mime
                     try:
                         conn = get_db_connection()
                         if conn:
                             cursor = conn.cursor()
-                            img_bytes, mime = UPLOAD_CACHE[saved_filename]
                             cursor.execute("SELECT doctor_id FROM doctor_images WHERE doctor_id = ?", (str(doctor.id),))
                             if cursor.fetchone():
                                 cursor.execute("UPDATE doctor_images SET image_data = ?, content_type = ? WHERE doctor_id = ?", (img_bytes, mime, str(doctor.id)))
@@ -547,38 +569,220 @@ def doctor_dashboard():
             fee = 0.0
         analytics_earnings.append(len(month_appts) * fee)
 
-    # Filter patients: only show those who have booked an appointment or sent a message to this doctor
+    # Fetch lab requests made by this doctor
+    lab_requests = [
+        req for req in TEMP_DATA.get('lab_requests', {}).values()
+        if req.doctor_id == doctor.id
+    ]
+    lab_requests.sort(key=lambda x: getattr(x, 'created_at', utcnow()) or utcnow(), reverse=True)
+
+    def _get_appt_procedures(appt, pat=None):
+        procs = []
+        ctype = str(getattr(appt, 'consultation_type', '') or '').strip()
+        if 'video' in ctype.lower() or 'telemedicine' in ctype.lower():
+            procs.append('Telemedicine Video Consultation')
+        elif ctype and ctype.lower() not in ['consultation', 'routine', 'in-person clinic visit']:
+            procs.append(ctype)
+        else:
+            procs.append('In-Person Clinical Consultation')
+
+        reason = str(getattr(appt, 'reason', '') or '').strip()
+        if reason:
+            r_lower = reason.lower()
+            if 'ecg' in r_lower:
+                procs.append('12-Lead Electrocardiogram (ECG)')
+            if 'sugar' in r_lower or 'glucose' in r_lower or 'diabetes' in r_lower:
+                procs.append('Blood Glucose / Metabolic Screening')
+            if 'bp' in r_lower or 'pressure' in r_lower or 'hypertension' in r_lower:
+                procs.append('Blood Pressure & Hemodynamic Telemetry')
+            if 'x-ray' in r_lower or 'xray' in r_lower:
+                procs.append('Diagnostic Radiography (X-Ray)')
+            if 'echo' in r_lower or 'usg' in r_lower or 'ultrasound' in r_lower:
+                procs.append('Ultrasound / Echocardiography')
+            if 'dressing' in r_lower or 'wound' in r_lower or 'suture' in r_lower:
+                procs.append('Wound Debridement & Sterile Dressing')
+            if 'cardio' in r_lower or 'cardiac' in r_lower or 'chest' in r_lower:
+                procs.append('Cardiovascular Risk Assessment')
+            if not any(k in r_lower for k in ['ecg', 'sugar', 'glucose', 'diabetes', 'bp', 'pressure', 'hypertension', 'x-ray', 'xray', 'echo', 'usg', 'ultrasound', 'dressing', 'wound', 'suture', 'cardio', 'cardiac', 'chest']):
+                procs.append(f'Clinical Evaluation: {reason}')
+
+        if getattr(appt, 'prescription_path', None):
+            procs.append('Prescription Protocol Issued')
+
+        pat_id_str = str(getattr(appt, 'patient_id', '') or '')
+        for req in lab_requests:
+            if str(getattr(req, 'patient_id', '')) == pat_id_str:
+                t_name = getattr(req, 'test_name', '')
+                if t_name and f"Diagnostic Lab: {t_name}" not in procs:
+                    procs.append(f"Diagnostic Lab: {t_name}")
+
+        if 'Vitals Telemetry & Physical Exam' not in procs:
+            procs.append('Vitals Telemetry & Physical Exam')
+
+        deduped = []
+        for p in procs:
+            if p not in deduped:
+                deduped.append(p)
+        return deduped
+
+    # Filter patients: collect IDs from appointments, messages, shared records
     contacted_patient_ids = set()
-    for appt in TEMP_DATA.get('appointments', {}).values():
-        if appt.doctor_id == doctor.id:
-            contacted_patient_ids.add(appt.patient_id)
+    for appt in all_doctor_appointments:
+        if appt.patient_id:
+            contacted_patient_ids.add(str(appt.patient_id))
     for msg in TEMP_DATA.get('messages', {}).values():
-        if msg.doctor_id == doctor.id:
-            contacted_patient_ids.add(msg.patient_id)
+        if msg.doctor_id == doctor.id and msg.patient_id:
+            contacted_patient_ids.add(str(msg.patient_id))
     for rec in TEMP_DATA.get('medical_records', {}).values():
         if rec.is_shared_with(doctor.id) or rec.is_shared_with(current_user.id):
             if rec.patient_id:
-                contacted_patient_ids.add(rec.patient_id)
+                contacted_patient_ids.add(str(rec.patient_id))
 
-    patients_list = [
+    candidate_patients = [
         pat for pat in TEMP_DATA.get('patients', {}).values()
-        if pat.id in contacted_patient_ids
+        if str(pat.id) in contacted_patient_ids
     ]
-    if not patients_list:
-        patients_list = list(TEMP_DATA.get('patients', {}).values())
+    if not candidate_patients:
+        candidate_patients = list(TEMP_DATA.get('patients', {}).values())
 
-    patients_json = [{
-        'id': pat.id,
-        'name': pat.name,
-        'email': pat.email,
-        'age': pat.age,
-        'gender': pat.gender,
-        'profile_picture_url': pat.profile_picture_url,
-        'phone': pat.phone,
-        'address': pat.address,
-        'blood_group': getattr(pat, 'blood_group', None) or 'O+',
-        'clinical_record': get_patient_clinical_record(pat)
-    } for pat in patients_list]
+    # Ensure all appointments have an associated patient entity (even if created as guest/walk-in)
+    known_ids = {str(p.id) for p in candidate_patients}
+    for appt in all_doctor_appointments:
+        appt_pid = str(appt.patient_id) if appt.patient_id else ''
+        if appt_pid and appt_pid not in known_ids:
+            found_p = TEMP_DATA.get('patients', {}).get(appt.patient_id)
+            if found_p:
+                candidate_patients.append(found_p)
+                known_ids.add(str(found_p.id))
+
+    # STRICT DEDUPLICATION: Ensure NO DOUBLE PATIENT is ever displayed
+    # Group by canonical ID, normalized email, and phone
+    deduped_patients = []
+    seen_ids = set()
+    seen_emails = {}
+    seen_phones = {}
+    patient_id_aliases = {}
+
+    for pat in candidate_patients:
+        p_id = str(pat.id).strip()
+        p_email = (getattr(pat, 'email', '') or '').strip().lower()
+        raw_phone = str(getattr(pat, 'phone', '') or '')
+        p_phone = ''.join(c for c in raw_phone if c.isdigit())
+        p_phone_key = p_phone[-10:] if len(p_phone) >= 10 else p_phone
+
+        is_dup = False
+        primary_id = None
+        if p_id in seen_ids:
+            is_dup = True
+            primary_id = p_id
+        elif p_email and p_email in seen_emails:
+            is_dup = True
+            primary_id = seen_emails[p_email]
+        elif p_phone_key and len(p_phone_key) >= 7 and p_phone_key in seen_phones:
+            is_dup = True
+            primary_id = seen_phones[p_phone_key]
+
+        if is_dup:
+            if primary_id and p_id:
+                patient_id_aliases[p_id] = primary_id
+            continue
+
+        seen_ids.add(p_id)
+        if p_email:
+            seen_emails[p_email] = p_id
+        if p_phone_key and len(p_phone_key) >= 7:
+            seen_phones[p_phone_key] = p_id
+
+        deduped_patients.append(pat)
+
+    # For each unique patient, compile appointments, procedures, and frequency
+    patients_list = []
+    for pat in deduped_patients:
+        p_id_str = str(pat.id).strip()
+        p_email = (getattr(pat, 'email', '') or '').strip().lower()
+        raw_phone = str(getattr(pat, 'phone', '') or '')
+        p_phone = ''.join(c for c in raw_phone if c.isdigit())
+        p_phone_key = p_phone[-10:] if len(p_phone) >= 10 else p_phone
+
+        pat_appts = []
+        for appt in all_doctor_appointments:
+            appt_pid = str(getattr(appt, 'patient_id', '') or '').strip()
+            if appt_pid == p_id_str or patient_id_aliases.get(appt_pid) == p_id_str:
+                pat_appts.append(appt)
+                continue
+            appt_email = (getattr(appt, 'patient_email', '') or '').strip().lower()
+            if p_email and appt_email and appt_email == p_email:
+                pat_appts.append(appt)
+                continue
+            appt_phone = ''.join(c for c in str(getattr(appt, 'patient_phone', '') or '') if c.isdigit())
+            appt_phone_key = appt_phone[-10:] if len(appt_phone) >= 10 else appt_phone
+            if p_phone_key and appt_phone_key and appt_phone_key == p_phone_key:
+                pat_appts.append(appt)
+                continue
+
+        pat_appts.sort(key=lambda a: (a.appointment_date, getattr(a, 'appointment_time', None) or time(0, 0)), reverse=True)
+
+        pat.appointment_count = len(pat_appts)
+        pat.appointments_history = pat_appts
+        pat.last_visit_date = pat_appts[0].appointment_date.strftime('%d %b %Y') if pat_appts else None
+        pat.latest_reason = pat_appts[0].reason if (pat_appts and pat_appts[0].reason) else 'General Consultation'
+
+        procs_summary = []
+        for a in pat_appts:
+            a_procs = _get_appt_procedures(a, pat)
+            setattr(a, 'procedures_list', a_procs)
+            for p in a_procs:
+                if p not in procs_summary:
+                    procs_summary.append(p)
+
+        pat.procedures_summary = procs_summary
+        patients_list.append(pat)
+
+    # Sort patients: patients with visits first (most recent / highest visits first)
+    patients_list.sort(key=lambda p: (getattr(p, 'appointment_count', 0), getattr(p, 'last_visit_date', '') or ''), reverse=True)
+
+    patients_json = []
+    for pat in patients_list:
+        appts_data = []
+        for a in getattr(pat, 'appointments_history', []):
+            p_path = getattr(a, 'prescription_path', None)
+            v_url = f"/doctor/prescription/view/{p_path.split('/')[-1]}" if p_path else ""
+            d_url = f"/doctor/prescription/download/{p_path.split('/')[-1]}" if p_path else ""
+            t_str = a.appointment_time.strftime('%I:%M %p') if getattr(a, 'appointment_time', None) else 'Scheduled'
+            appts_data.append({
+                'id': a.id,
+                'date': a.appointment_date.strftime('%d %b %Y'),
+                'date_iso': a.appointment_date.strftime('%Y-%m-%d'),
+                'time': t_str,
+                'reason': a.reason or 'Clinical Consultation',
+                'consultation_type': getattr(a, 'consultation_type', 'In-Person Clinical Visit'),
+                'status': a.status,
+                'prescription_path': p_path,
+                'prescription_view_url': v_url,
+                'prescription_download_url': d_url,
+                'notes': getattr(a, 'international_medical_notes', '') or '',
+                'procedures': getattr(a, 'procedures_list', []),
+                'fee': getattr(a, 'fee_amount', fee)
+            })
+
+        patients_json.append({
+            'id': pat.id,
+            'name': pat.name,
+            'email': pat.email,
+            'age': pat.age,
+            'gender': pat.gender,
+            'profile_picture_url': pat.profile_picture_url,
+            'phone': pat.phone,
+            'address': pat.address,
+            'blood_group': getattr(pat, 'blood_group', None) or 'O+',
+            'appointment_count': pat.appointment_count,
+            'last_visit': pat.last_visit_date or 'No visits yet',
+            'latest_reason': getattr(pat, 'latest_reason', 'General Consultation'),
+            'procedures_summary': getattr(pat, 'procedures_summary', []),
+            'appointments': appts_data,
+            'clinical_record': get_patient_clinical_record(pat)
+        })
+
     pharmacy_meds = TEMP_DATA.get('medicines', [])
     
     # Serialize all doctor appointments to JSON for client EHR auditing
@@ -589,16 +793,12 @@ def doctor_dashboard():
         'appointment_date': appt.appointment_date.strftime('%Y-%m-%d'),
         'appointment_time': appt.appointment_time.strftime('%I:%M %p') if appt.appointment_time else '',
         'reason': appt.reason or 'Consultation',
+        'consultation_type': getattr(appt, 'consultation_type', 'Clinical Visit'),
         'status': appt.status,
-        'prescription_path': appt.prescription_path
+        'prescription_path': appt.prescription_path,
+        'procedures': getattr(appt, 'procedures_list', _get_appt_procedures(appt)),
+        'notes': getattr(appt, 'international_medical_notes', '') or ''
     } for appt in all_doctor_appointments]
-
-    # Fetch lab requests made by this doctor
-    lab_requests = [
-        req for req in TEMP_DATA.get('lab_requests', {}).values()
-        if req.doctor_id == doctor.id
-    ]
-    lab_requests.sort(key=lambda x: x.created_at, reverse=True)
 
     # Fetch telemedicine appointments (fallback to all confirmed/pending if none are labeled telemedicine)
     telemedicine_appointments = [
@@ -699,6 +899,7 @@ def doctor_dashboard():
         'doctor_dashboard.html',
         doctor=doctor,
         upcoming_appointments=paginated_appointments, # Now this is the paginated list
+        all_doctor_appointments=all_doctor_appointments,
         search_query=search_query,
         filter_status=filter_status,
         start_date=start_date_str,
@@ -735,6 +936,449 @@ def doctor_dashboard():
         calendar_month=cal_month,
         calendar_days=calendar_days
     )
+
+
+# ==============================================================
+# DOCTOR DASHBOARD - PATIENT ENCOUNTER & PROCEDURE HISTORY API
+# ==============================================================
+
+@doctor_bp.route('/doctor/api/patient/<path:patient_id>/encounter-history', methods=['GET'])
+@doctor_required
+def doctor_api_patient_encounter_history(patient_id):
+    """Returns chronological encounter history, procedures taken, prescriptions, and notes for a patient."""
+    doctor = TEMP_DATA['doctors'].get(current_user.id)
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor session not found.'}), 401
+
+    clean_pid = str(patient_id).strip()
+    pat = TEMP_DATA.get('patients', {}).get(clean_pid)
+    if not pat:
+        for p in TEMP_DATA.get('patients', {}).values():
+            if str(p.id).strip() == clean_pid:
+                pat = p
+                break
+
+    all_doctor_appointments = [
+        appt for appt in TEMP_DATA.get('appointments', {}).values()
+        if appt.doctor_id == doctor.id and appt.status != 'cancelled'
+    ]
+
+    pat_email = (getattr(pat, 'email', '') or '').strip().lower() if pat else ''
+    raw_phone = str(getattr(pat, 'phone', '') or '') if pat else ''
+    p_phone = ''.join(c for c in raw_phone if c.isdigit())
+    p_phone_key = p_phone[-10:] if len(p_phone) >= 10 else p_phone
+
+    pat_appts = []
+    for a in all_doctor_appointments:
+        a_pid = str(getattr(a, 'patient_id', '') or '').strip()
+        if a_pid == clean_pid:
+            pat_appts.append(a)
+            continue
+        if pat_email and (getattr(a, 'patient_email', '') or '').strip().lower() == pat_email:
+            pat_appts.append(a)
+            continue
+        a_phone = ''.join(c for c in str(getattr(a, 'patient_phone', '') or '') if c.isdigit())
+        a_phone_key = a_phone[-10:] if len(a_phone) >= 10 else a_phone
+        if p_phone_key and a_phone_key and a_phone_key == p_phone_key:
+            pat_appts.append(a)
+            continue
+
+    pat_appts.sort(key=lambda a: (a.appointment_date, getattr(a, 'appointment_time', None) or time(0, 0)), reverse=True)
+
+    encounters = []
+    all_procedures = []
+    for a in pat_appts:
+        procs = []
+        ctype = str(getattr(a, 'consultation_type', '') or '').strip()
+        if 'video' in ctype.lower() or 'telemedicine' in ctype.lower():
+            procs.append('Telemedicine Video Consultation')
+        elif ctype and ctype.lower() not in ['consultation', 'routine', 'in-person clinic visit']:
+            procs.append(ctype)
+        else:
+            procs.append('In-Person Clinical Consultation')
+
+        reason = str(getattr(a, 'reason', '') or '').strip()
+        if reason:
+            r_lower = reason.lower()
+            if 'ecg' in r_lower: procs.append('12-Lead Electrocardiogram (ECG)')
+            if 'sugar' in r_lower or 'glucose' in r_lower or 'diabetes' in r_lower: procs.append('Blood Glucose / Metabolic Screening')
+            if 'bp' in r_lower or 'pressure' in r_lower or 'hypertension' in r_lower: procs.append('Blood Pressure & Hemodynamic Telemetry')
+            if 'x-ray' in r_lower or 'xray' in r_lower: procs.append('Diagnostic Radiography (X-Ray)')
+            if 'echo' in r_lower or 'usg' in r_lower or 'ultrasound' in r_lower: procs.append('Ultrasound / Echocardiography')
+            if 'dressing' in r_lower or 'wound' in r_lower or 'suture' in r_lower: procs.append('Wound Debridement & Sterile Dressing')
+            if 'cardio' in r_lower or 'cardiac' in r_lower or 'chest' in r_lower: procs.append('Cardiovascular Risk Assessment')
+            if not any(k in r_lower for k in ['ecg', 'sugar', 'glucose', 'diabetes', 'bp', 'pressure', 'hypertension', 'x-ray', 'xray', 'echo', 'usg', 'ultrasound', 'dressing', 'wound', 'suture', 'cardio', 'cardiac', 'chest']):
+                procs.append(f'Clinical Evaluation: {reason}')
+
+        if getattr(a, 'prescription_path', None):
+            procs.append('Prescription Protocol Issued')
+
+        for req in TEMP_DATA.get('lab_requests', {}).values():
+            if str(getattr(req, 'patient_id', '')) == clean_pid and getattr(req, 'doctor_id', None) == doctor.id:
+                t_name = getattr(req, 'test_name', '')
+                if t_name and f"Diagnostic Lab: {t_name}" not in procs:
+                    procs.append(f"Diagnostic Lab: {t_name}")
+
+        if 'Vitals Telemetry & Physical Exam' not in procs:
+            procs.append('Vitals Telemetry & Physical Exam')
+
+        deduped_p = []
+        for p in procs:
+            if p not in deduped_p:
+                deduped_p.append(p)
+                if p not in all_procedures:
+                    all_procedures.append(p)
+
+        p_path = getattr(a, 'prescription_path', None)
+        fee_val = getattr(a, 'fee_amount', None)
+        try:
+            consult_fee = float(fee_val) if fee_val is not None else float(doctor.consultation_fee or 500.0)
+        except Exception:
+            consult_fee = 500.0
+
+        encounters.append({
+            'id': a.id,
+            'date': a.appointment_date.strftime('%d %b %Y'),
+            'date_iso': a.appointment_date.strftime('%Y-%m-%d'),
+            'time': a.appointment_time.strftime('%I:%M %p') if getattr(a, 'appointment_time', None) else 'Scheduled',
+            'reason': a.reason or 'Clinical Consultation',
+            'consultation_type': getattr(a, 'consultation_type', 'In-Person Clinical Visit'),
+            'status': a.status,
+            'prescription_path': p_path,
+            'prescription_view_url': f"/doctor/prescription/view/{p_path.split('/')[-1]}" if p_path else "",
+            'prescription_download_url': f"/doctor/prescription/download/{p_path.split('/')[-1]}" if p_path else "",
+            'notes': getattr(a, 'international_medical_notes', '') or '',
+            'procedures': deduped_p,
+            'fee': consult_fee
+        })
+
+    patient_payload = {
+        'id': pat.id if pat else clean_pid,
+        'name': pat.name if pat else (pat_appts[0].patient_name if pat_appts else 'Patient'),
+        'email': getattr(pat, 'email', '') if pat else '',
+        'phone': getattr(pat, 'phone', '') if pat else '',
+        'age': getattr(pat, 'age', 'N/A') if pat else 'N/A',
+        'gender': getattr(pat, 'gender', 'Unspecified') if pat else 'Unspecified',
+        'blood_group': getattr(pat, 'blood_group', 'O+') if pat else 'O+',
+        'appointment_count': len(pat_appts),
+        'last_visit': pat_appts[0].appointment_date.strftime('%d %b %Y') if pat_appts else 'No visits yet',
+        'procedures_summary': all_procedures
+    }
+
+    return jsonify({
+        'success': True,
+        'patient': patient_payload,
+        'encounters': encounters
+    })
+
+
+# ==============================================================
+# DOCTOR DASHBOARD - FORGOT PASSWORD SIDEBAR API ENDPOINTS
+# ==============================================================
+
+@doctor_bp.route('/doctor/api/forgot-password/send-otp', methods=['POST'])
+@doctor_required
+def doctor_api_forgot_password_send_otp():
+    """Generates and dispatches a 6-digit OTP to the doctor's verified email address."""
+    doctor = TEMP_DATA['doctors'].get(current_user.id)
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor session not found. Please log in again.'}), 401
+
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
+    email = (payload.get('email') or doctor.email or '').strip()
+
+    if not email:
+        return jsonify({'success': False, 'message': 'Doctor email address is required.'}), 400
+
+    # Ensure the requested email matches the logged-in doctor's email or registered account
+    if email.lower() != (doctor.email or '').lower():
+        matching_doc = next((d for d in TEMP_DATA['doctors'].values() if (d.email or '').lower() == email.lower()), None)
+        if not matching_doc or str(matching_doc.id) != str(doctor.id):
+            return jsonify({'success': False, 'message': 'The entered email does not match your registered doctor account.'}), 400
+
+    otp = str(random.randint(100000, 999999))
+    session['doctor_dfp_reset'] = {
+        'doctor_id': str(doctor.id),
+        'email': email,
+        'otp': otp,
+        'timestamp': time_module.time(),
+        'verified': False
+    }
+
+    doc_name = getattr(doctor, 'name', '') or f"{getattr(doctor, 'first_name', '')} {getattr(doctor, 'last_name', '')}".strip() or 'Doctor'
+    subject = "Security Password Reset OTP - Spherix Clinic Doctor Portal"
+    body = get_premium_otp_email_html(
+        title="Password Reset Verification",
+        user_name=f"Dr. {doc_name}",
+        subject_label="Doctor Dashboard Password Reset",
+        message="A password reset request was initiated from your Spherix Clinic Doctor Dashboard. Please use the following 6-digit One-Time Password (OTP) to verify your clinician identity:",
+        otp=otp,
+        role_color="#0284c7",
+        accent_bg="#f0f9ff"
+    )
+
+    email_sent = False
+    try:
+        email_sent = bool(send_notification_email(email, subject, body, is_html=True))
+    except Exception as e:
+        print(f"Error sending doctor reset OTP email: {e}")
+
+    print(f"🔑 [DOCTOR DASHBOARD FORGOT PASSWORD] Generated OTP for Dr. {doc_name} ({email}): {otp}")
+
+    # Helper to mask email
+    masked = email
+    if '@' in email:
+        u, dom = email.split('@', 1)
+        masked_u = u[0] + ('*' * max(1, len(u) - 2)) + (u[-1] if len(u) > 1 else '')
+        masked = f"{masked_u}@{dom}"
+
+    return jsonify({
+        'success': True,
+        'message': f"A 6-digit OTP verification code has been dispatched to {masked}.",
+        'masked_email': masked,
+        'email_sent': email_sent,
+        'dev_otp': otp
+    })
+
+
+@doctor_bp.route('/doctor/api/forgot-password/verify-otp', methods=['POST'])
+@doctor_required
+def doctor_api_forgot_password_verify_otp():
+    """Validates the 6-digit OTP entered by the doctor."""
+    doctor = TEMP_DATA['doctors'].get(current_user.id)
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor session not found.'}), 401
+
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
+    otp = str(payload.get('otp') or '').strip()
+
+    reset_data = session.get('doctor_dfp_reset')
+    if not reset_data:
+        return jsonify({'success': False, 'message': 'Verification session has expired. Please request a new OTP.'}), 400
+
+    # Expiration: 15 minutes (900 seconds)
+    if time_module.time() - reset_data.get('timestamp', 0) > 900:
+        return jsonify({'success': False, 'message': 'This OTP code has expired. Please request a new one.'}), 400
+
+    if str(reset_data.get('otp')) != otp:
+        return jsonify({'success': False, 'message': 'Invalid verification code. Please check your email and try again.'}), 400
+
+    reset_data['verified'] = True
+    session['doctor_dfp_reset'] = reset_data
+
+    return jsonify({
+        'success': True,
+        'message': 'OTP verification successful! You can now choose a new password.'
+    })
+
+
+@doctor_bp.route('/doctor/api/forgot-password/reset', methods=['POST'])
+@doctor_required
+def doctor_api_forgot_password_reset():
+    """Sets the new password for the doctor once OTP is successfully verified."""
+    doctor = TEMP_DATA['doctors'].get(current_user.id)
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor session not found.'}), 401
+
+    reset_data = session.get('doctor_dfp_reset')
+    if not reset_data or not reset_data.get('verified'):
+        return jsonify({'success': False, 'message': 'Unauthorized request. Please complete OTP verification first.'}), 403
+
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
+    new_password = str(payload.get('new_password') or '').strip()
+    confirm_password = str(payload.get('confirm_password') or '').strip()
+
+    if not new_password or len(new_password) < 6:
+        return jsonify({'success': False, 'message': 'New password must contain at least 6 characters.'}), 400
+
+    if new_password != confirm_password:
+        return jsonify({'success': False, 'message': 'New password and confirmation password do not match.'}), 400
+
+    # Update doctor password
+    doctor.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
+    save_data()
+    session.pop('doctor_dfp_reset', None)
+
+    # Log activity
+    try:
+        act = ActivityLog(
+            user_id=doctor.id,
+            user_type='doctor',
+            action='password_reset_via_otp',
+            description='Clinician successfully reset security password via email OTP verification.'
+        )
+        TEMP_DATA.setdefault('activity_logs', {})[act.id] = act
+    except Exception:
+        pass
+
+    return jsonify({
+        'success': True,
+        'message': 'Password has been successfully updated!'
+    })
+
+
+# ==============================================================
+# DOCTOR DASHBOARD - ACCOUNT DEACTIVATION & DELETION ENDPOINTS
+# ==============================================================
+
+@doctor_bp.route('/doctor/api/account/send-otp', methods=['POST'])
+@doctor_required
+def doctor_api_account_send_otp():
+    """Verifies account password and dispatches a high-security OTP for deactivation or deletion."""
+    doctor = TEMP_DATA['doctors'].get(current_user.id)
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor session not found. Please log in again.'}), 401
+
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
+    password = str(payload.get('password') or '').strip()
+    action_type = str(payload.get('action_type') or 'deactivate').strip().lower()
+
+    if action_type not in ['deactivate', 'delete']:
+        return jsonify({'success': False, 'message': 'Invalid account action specified.'}), 400
+
+    if not password:
+        return jsonify({'success': False, 'message': 'Account password is required to authorize this security action.'}), 400
+
+    if not check_password_hash(doctor.password, password):
+        return jsonify({'success': False, 'message': 'Incorrect account password. Authentication failed.'}), 400
+
+    otp = str(random.randint(100000, 999999))
+    session['doctor_account_action'] = {
+        'doctor_id': str(doctor.id),
+        'email': doctor.email,
+        'otp': otp,
+        'action_type': action_type,
+        'password_verified': True,
+        'timestamp': time_module.time()
+    }
+
+    doc_name = getattr(doctor, 'name', '') or f"{getattr(doctor, 'first_name', '')} {getattr(doctor, 'last_name', '')}".strip() or 'Doctor'
+    action_label = 'Permanent Account Deletion' if action_type == 'delete' else 'Account Deactivation'
+    subject = f"Security OTP: {action_label} - Spherix Clinic"
+    body = get_premium_otp_email_html(
+        title=f"Authorize {action_label}",
+        user_name=f"Dr. {doc_name}",
+        subject_label=f"Doctor Account {action_type.capitalize()} Request",
+        message=f"A request was submitted to {action_type} your Spherix Clinic clinician account. To authorize this critical action, please enter the following One-Time Password (OTP):",
+        otp=otp,
+        role_color="#dc2626" if action_type == 'delete' else "#d97706",
+        accent_bg="#fef2f2" if action_type == 'delete' else "#fffbeb"
+    )
+
+    email_sent = False
+    try:
+        email_sent = bool(send_notification_email(doctor.email, subject, body, is_html=True))
+    except Exception as e:
+        print(f"Error sending account action OTP email: {e}")
+
+    print(f"🔑 [DOCTOR ACCOUNT ACTION] Generated OTP for Dr. {doc_name} ({action_type}): {otp}")
+
+    # Mask email
+    email = doctor.email or ''
+    masked = email
+    if '@' in email:
+        u, dom = email.split('@', 1)
+        masked_u = u[0] + ('*' * max(1, len(u) - 2)) + (u[-1] if len(u) > 1 else '')
+        masked = f"{masked_u}@{dom}"
+
+    return jsonify({
+        'success': True,
+        'message': f"A 6-digit authorization OTP code has been dispatched to {masked}.",
+        'masked_email': masked,
+        'email_sent': email_sent,
+        'action_type': action_type,
+        'dev_otp': otp
+    })
+
+
+@doctor_bp.route('/doctor/api/account/confirm-action', methods=['POST'])
+@doctor_required
+def doctor_api_account_confirm_action():
+    """Validates OTP and password, then permanently deletes or deactivates the doctor account."""
+    doctor = TEMP_DATA['doctors'].get(current_user.id)
+    if not doctor:
+        return jsonify({'success': False, 'message': 'Doctor session not found.'}), 401
+
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
+    password = str(payload.get('password') or '').strip()
+    otp = str(payload.get('otp') or '').strip()
+    action_type = str(payload.get('action_type') or '').strip().lower()
+
+    # Re-verify password
+    if not check_password_hash(doctor.password, password):
+        return jsonify({'success': False, 'message': 'Incorrect account password. Authentication failed.'}), 400
+
+    # Verify session and OTP
+    session_data = session.get('doctor_account_action')
+    if not session_data:
+        return jsonify({'success': False, 'message': 'Authorization session expired. Please request a new OTP.'}), 400
+
+    if time_module.time() - session_data.get('timestamp', 0) > 600:
+        return jsonify({'success': False, 'message': 'Authorization OTP has expired (10 minutes limit). Please request a new code.'}), 400
+
+    if str(session_data.get('otp')) != otp:
+        return jsonify({'success': False, 'message': 'Invalid verification OTP code. Please check your email and try again.'}), 400
+
+    doc_id = str(doctor.id)
+    doc_name = getattr(doctor, 'name', '') or f"{getattr(doctor, 'first_name', '')} {getattr(doctor, 'last_name', '')}".strip() or 'Doctor'
+
+    if action_type == 'delete':
+        # Permanently delete doctor from in-memory cache and SQL database
+        if doc_id in TEMP_DATA.get('doctors', {}):
+            del TEMP_DATA['doctors'][doc_id]
+        try:
+            conn = get_db_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM doctors WHERE id = ?", (doc_id,))
+                conn.commit()
+                conn.close()
+        except Exception as e:
+            print(f"Error removing doctor from DB: {e}")
+
+        save_data()
+        sync_data_to_sql()
+        logout_user()
+        session.pop('doctor_account_action', None)
+
+        flash('Your clinician account and medical credentials have been permanently deleted from Spherix Clinic.', 'info')
+        return jsonify({
+            'success': True,
+            'message': 'Your account has been permanently deleted.',
+            'redirect_url': url_for('doctor_login')
+        })
+
+    elif action_type == 'deactivate':
+        # Deactivate doctor account and take them offline
+        doctor.is_deactivated = True
+        doctor.is_hidden = True
+        doctor.availability_status = 'deactivated'
+
+        # Log activity
+        try:
+            act = ActivityLog(
+                user_id=doctor.id,
+                user_type='doctor',
+                action='account_deactivated',
+                description=f'Doctor {doc_name} deactivated their clinical account via password + email OTP.'
+            )
+            TEMP_DATA.setdefault('activity_logs', {})[act.id] = act
+        except Exception:
+            pass
+
+        save_data()
+        sync_data_to_sql()
+        logout_user()
+        session.pop('doctor_account_action', None)
+
+        flash('Your clinician account has been deactivated. You can contact administration or support to reactivate your credentials.', 'warning')
+        return jsonify({
+            'success': True,
+            'message': 'Your clinician account has been deactivated.',
+            'redirect_url': url_for('doctor_login')
+        })
+
+    return jsonify({'success': False, 'message': 'Invalid action requested.'}), 400
 
 
 
@@ -904,43 +1548,62 @@ def get_doctor_image(doc_id):
 
     static_dir = current_app.static_folder or os.path.join(current_app.root_path, '..', 'static')
 
-    # Check for administration user profile image
+    # 1. Check in-memory UPLOAD_CACHE
+    if doctor and getattr(doctor, 'profile_picture_url', None):
+        p_url = str(doctor.profile_picture_url).strip()
+        p_base = os.path.basename(p_url)
+        if p_url in UPLOAD_CACHE:
+            data, mime = UPLOAD_CACHE[p_url]
+            return send_file(BytesIO(data), mimetype=mime)
+        if p_base in UPLOAD_CACHE:
+            data, mime = UPLOAD_CACHE[p_base]
+            return send_file(BytesIO(data), mimetype=mime)
+
+    # 2. Check doctor_images table in SQL Database
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ? AND image_data IS NOT NULL", (str(doc_id),))
+            row = cursor.fetchone()
+            if not row and doctor:
+                cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ? AND image_data IS NOT NULL", (str(doctor.id),))
+                row = cursor.fetchone()
+            conn.close()
+            
+            if row and row[0]:
+                mime = row[1] or 'image/jpeg'
+                if doctor and getattr(doctor, 'profile_picture_url', None):
+                    UPLOAD_CACHE[str(doctor.profile_picture_url).strip()] = (row[0], mime)
+                    UPLOAD_CACHE[os.path.basename(str(doctor.profile_picture_url).strip())] = (row[0], mime)
+                return send_file(BytesIO(row[0]), mimetype=mime)
+    except Exception as e:
+        print(f"Error fetching doctor image from DB for {doc_id}: {e}")
+
+    # 3. Check static / uploads filesystem paths
+    if doctor and getattr(doctor, 'profile_picture_url', None):
+        pic_url = str(doctor.profile_picture_url).strip()
+        candidate_paths = [
+            os.path.join(static_dir, 'uploads', pic_url),
+            os.path.join(static_dir, pic_url),
+            os.path.join(static_dir, 'uploads', os.path.basename(pic_url)),
+            os.path.join(static_dir, 'images', os.path.basename(pic_url)),
+            os.path.join(os.getcwd(), 'static', 'uploads', pic_url),
+            os.path.join(os.getcwd(), 'static', 'uploads', os.path.basename(pic_url)),
+            os.path.join('/tmp', 'uploads', os.path.basename(pic_url))
+        ]
+        for cp in candidate_paths:
+            if os.path.exists(cp) and os.path.isfile(cp):
+                return send_file(cp)
+
+    # 4. Fallback for admin doctor default image if present
     if doctor and (
         getattr(doctor, 'email', '') == 'admin@spherixclinic.com' or
-        getattr(doctor, 'department', '') in ['Administration', 'System Core Administration'] or
-        getattr(doctor, 'profile_picture_url', '') in ['images/sunnykk.jpg', 'sunnykk.jpg', 'static/images/sunnykk.jpg']
+        getattr(doctor, 'department', '') in ['Administration', 'System Core Administration']
     ):
         admin_img_path = os.path.join(static_dir, 'images', 'sunnykk.jpg')
         if os.path.exists(admin_img_path):
             return send_file(admin_img_path)
-
-    if doctor and getattr(doctor, 'profile_picture_url', None):
-        pic_url = str(doctor.profile_picture_url).strip()
-        if pic_url.startswith('images/'):
-            file_path = os.path.join(static_dir, pic_url)
-        elif pic_url.startswith('uploads/'):
-            file_path = os.path.join(static_dir, pic_url)
-        else:
-            file_path = os.path.join(static_dir, 'uploads', pic_url)
-            if not os.path.exists(file_path):
-                alt_path = os.path.join(static_dir, 'images', pic_url)
-                if os.path.exists(alt_path):
-                    file_path = alt_path
-
-        if os.path.exists(file_path):
-            return send_file(file_path)
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ?", (doc_id,))
-        row = cursor.fetchone()
-        conn.close()
-        
-        if row and row[0]:
-            return send_file(BytesIO(row[0]), mimetype=row[1])
-    except Exception as e:
-        print(f"Error fetching image for {doc_id}: {e}")
 
     # Fallback neutral avatar placeholder when doctor has no uploaded profile image
     svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
@@ -972,6 +1635,17 @@ def doctor_chat(patient_id):
     if not has_appointment:
         flash("You can only chat with patients you have an appointment with.", "error")
         return redirect(url_for('doctor_dashboard'))
+
+    # Mark messages from patient as read
+    doctor_id = get_actual_user_id(current_user.id)
+    marked_read = False
+    for msg in TEMP_DATA.get('messages', {}).values():
+        if (str(msg.doctor_id) == str(doctor_id) or str(msg.doctor_id) == str(current_user.id)) and str(msg.patient_id) == str(patient_id):
+            if msg.sender == 'patient' and not getattr(msg, 'is_read', False):
+                msg.is_read = True
+                marked_read = True
+    if marked_read:
+        save_data()
 
     return render_template('doctor_chat.html', patient=patient, doctor=current_user)
 
@@ -1006,7 +1680,7 @@ def send_chat_message(patient_id):
     msg_id = TEMP_DATA['next_ids']['message']
     new_message = Message(
         id=msg_id, doctor_id=current_user.id, patient_id=patient_id,
-        sender='doctor', content=content, attachment_url=attachment_url
+        sender='doctor', content=content, attachment_url=attachment_url, is_read=False
     )
     TEMP_DATA['messages'][msg_id] = new_message
     TEMP_DATA['next_ids']['message'] += 1
@@ -1876,15 +2550,16 @@ def get_doctor_conversations():
 @doctor_bp.route('/api/patient/doctor-conversations', methods=['GET'])
 @patient_required
 def get_patient_doctor_conversations():
-    """Get list of all doctors with whom a patient has conversations."""
+    """Get list of all doctors with whom a patient has booked appointments and paid."""
     conversations = {}
     unread_by_doctor = {}
     
     patient_id = get_actual_user_id(current_user.id)
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
     
-    # Collect all messages for this patient
+    # Collect messages only with paid appointment doctors
     for msg in TEMP_DATA['messages'].values():
-        if msg.patient_id == patient_id:
+        if msg.patient_id == patient_id and str(msg.doctor_id) in paid_doctor_ids:
             doctor_id = msg.doctor_id
             
             if doctor_id not in conversations:
@@ -1960,7 +2635,7 @@ def send_message_doctor(patient_id):
     msg_id = TEMP_DATA['next_ids']['message']
     new_message = Message(
         id=msg_id, doctor_id=doctor_id, patient_id=patient_id,
-        sender='doctor', content=content, attachment_url=attachment_url
+        sender='doctor', content=content, attachment_url=attachment_url, is_read=False
     )
     TEMP_DATA['messages'][msg_id] = new_message
     TEMP_DATA['next_ids']['message'] += 1
@@ -1991,15 +2666,32 @@ def get_doctor_patient_messages(patient_id):
     
     doctor_id = get_actual_user_id(current_user.id)
     
+    # Mark messages from the patient as read by doctor
+    marked_read = False
+    for msg in TEMP_DATA.get('messages', {}).values():
+        if (str(msg.doctor_id) == str(doctor_id) or str(msg.doctor_id) == str(current_user.id)) and str(msg.patient_id) == str(patient_id):
+            if msg.sender == 'patient' and not getattr(msg, 'is_read', False):
+                msg.is_read = True
+                marked_read = True
+    if marked_read:
+        save_data()
+        try:
+            room = f"doctor_patient_{doctor_id}_{patient_id}"
+            socketio.emit('messages_read', {'reader': 'doctor', 'doctor_id': str(doctor_id), 'patient_id': str(patient_id)}, room=room)
+        except Exception:
+            pass
+
     messages = [
         {
+            "id": msg.id,
             "sender": msg.sender,
             "content": msg.content,
-            "created_at": msg.created_at.isoformat(),
-            "attachment_url": getattr(msg, 'attachment_url', None)
+            "created_at": msg.created_at.isoformat() if hasattr(msg.created_at, 'isoformat') else str(msg.created_at),
+            "attachment_url": getattr(msg, 'attachment_url', None),
+            "is_read": bool(getattr(msg, 'is_read', False))
         }
         for msg in TEMP_DATA['messages'].values()
-        if msg.doctor_id == doctor_id and msg.patient_id == patient_id
+        if (str(msg.doctor_id) == str(doctor_id) or str(msg.doctor_id) == str(current_user.id)) and str(msg.patient_id) == str(patient_id)
     ]
     messages.sort(key=lambda x: x['created_at'])
     return jsonify(messages)

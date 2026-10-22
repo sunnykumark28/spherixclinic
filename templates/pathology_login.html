@@ -44,16 +44,85 @@
         box-shadow: 0 14px 28px -4px rgba(2, 132, 199, 0.45);
         transform: translateY(-1px);
     }
+    /* Modern floating label underline input matching reference design */
+    .floating-input-wrap {
+        position: relative;
+        padding-top: 1.25rem;
+        transition: all 0.2s ease;
+    }
+    .floating-input-wrap .floating-input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        border-bottom: 1.5px solid #cbd5e1;
+        padding: 0.5rem 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #000000;
+        outline: none;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .floating-input-wrap .floating-input:focus {
+        border-bottom-color: #0284c7;
+        box-shadow: 0 1px 0 0 #0284c7;
+    }
+    .floating-input-wrap .floating-label {
+        position: absolute;
+        left: 0;
+        top: 1.75rem;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #64748b;
+        cursor: text;
+        user-select: none;
+        white-space: nowrap;
+        transform-origin: left top;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+                    color 0.22s ease, 
+                    font-weight 0.22s ease;
+        will-change: transform, color;
+    }
+    .floating-input-wrap .floating-input:focus ~ .floating-label,
+    .floating-input-wrap:focus-within .floating-label,
+    .floating-input-wrap .floating-label.is-focused {
+        transform: translateY(-1.5rem) scale(0.8);
+        color: #0284c7;
+        font-weight: 700;
+    }
+    .floating-input-wrap .floating-input:not(:placeholder-shown) ~ .floating-label,
+    .floating-input-wrap .floating-input:-webkit-autofill ~ .floating-label,
+    .floating-input-wrap .floating-label.floating-active {
+        transform: translateY(-1.5rem) scale(0.8);
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .floating-input-wrap .floating-input:not(:placeholder-shown):focus ~ .floating-label,
+    .floating-input-wrap:focus-within .floating-label.floating-active {
+        color: #0284c7;
+    }
 </style>
 
 <div class="min-h-[calc(100vh-80px)] bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 font-sans selection:bg-sky-400 selection:text-white"
-     x-data="{ showPassword: false, isRefreshing: false, captchaUrl: '{{ url_for('get_captcha_image', portal_type='pathology') }}', isSubmitting: false, email: '', password: '' }">
+     x-data="{ showPassword: false, isRefreshing: false, captchaUrl: '{{ url_for('get_captcha_image', portal_type='pathology') }}', isSubmitting: false, emailFocused: false, email: '' }">
 
     <!-- Main Clean Minimalist Card Container (Two Columns: 5/12 Form, 7/12 Large Image) -->
     <div class="w-full max-w-[1500px] bg-white rounded-lg p-6 sm:p-10 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
 
         <!-- ================= COLUMN 1: Form ================= -->
         <div class="w-full lg:col-span-5 max-w-xl mx-auto lg:mx-0 flex flex-col justify-center lg:border-r lg:border-slate-200 lg:pr-12">
+
+            <!-- Spherix Clinic Brand Identity Header (Logo & Typography) -->
+            <div class="mb-6">
+                <a href="{{ url_for('home') }}" class="inline-flex items-center gap-2.5 text-decoration-none group" title="Return to Spherix Clinic Home">
+                    <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" 
+                         alt="Spherix Clinic" 
+                            class="w-14 h-14"/>
+                         <span class="flex items-baseline gap-1">
+                        <span class="spherix-brand-gradient brand-font-spherix font-iceland text-3xl font-bold">Spherix</span>
+                        <span class="brand-font-clinic font-ballet text-3xl text-[#005eb8]">Clinic</span>
+                    </span>
+                </a>
+            </div>
 
             <!-- Switcher Tabs -->
             <div class="flex items-center gap-6 mb-8 border-b border-slate-200 pb-3">
@@ -136,12 +205,17 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <!-- Laboratory Staff Email Input -->
-                <div class="minimal-input-wrap">
-                    <label for="pathologyEmail" class="minimal-label block">Laboratory Staff or Center Email</label>
+                <div class="floating-input-wrap">
                     <input type="email" name="email" id="pathologyEmail" required 
-                           placeholder="staff@pathology.com or care@spherixclinic.com"
+                           placeholder=" " 
                            x-model="email"
-                           class="minimal-input placeholder:text-slate-400">
+                           @focus="emailFocused = true"
+                           @blur="emailFocused = false"
+                           class="floating-input peer"
+                           autocomplete="username">
+                    <label for="pathologyEmail" 
+                           :class="{ 'floating-active': email && email.trim().length > 0, 'is-focused': emailFocused }"
+                           class="floating-label">Laboratory Staff or Center Email</label>
                 </div>
 
                 <!-- Password Input -->
@@ -167,7 +241,7 @@
                 <!-- Security Verification CAPTCHA -->
                 <div class="pt-2">
                     <div class="flex items-center justify-between mb-1.5">
-                        <label class="minimal-label block">Security Verification (CAPTCHA)</label>
+                        <label for="captchaInput" class="minimal-label block">Security Verification (CAPTCHA)</label>
                         <span class="text-[10px] text-slate-600 font-bold">Case-insensitive</span>
                     </div>
 
@@ -175,21 +249,22 @@
                         <!-- Distorted Captcha Image Box -->
                         <div class="flex items-center gap-2">
                             <div class="p-0.5 rounded-lg bg-black border border-slate-300 overflow-hidden shadow-xs shrink-0">
-                                <img :src="captchaUrl" id="pathologyCaptchaImg" alt="Security CAPTCHA"
+                                <img :src="captchaUrl" id="pathologyCaptchaImg" alt="Security CAPTCHA challenge"
                                      class="h-10 w-[150px] object-cover rounded-lg select-none pointer-events-none">
                             </div>
                             <button type="button" 
                                     @click="isRefreshing = true; captchaUrl = '/api/captcha/image/pathology?refresh=1&t=' + Date.now(); setTimeout(()=>isRefreshing=false, 400);"
                                     class="w-10 h-10 rounded-lg bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-sky-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                                    title="Regenerate CAPTCHA image">
+                                    title="Regenerate CAPTCHA image"
+                                    aria-label="Refresh verification challenge">
                                 <i class="fas fa-arrows-rotate text-xs" :class="isRefreshing ? 'fa-spin text-sky-600' : ''"></i>
                             </button>
                         </div>
 
                         <!-- Underline Input for Captcha -->
                         <div class="minimal-input-wrap flex-grow">
-                            <input type="text" name="captcha" id="captchaInput" required maxlength="6"
-                                   placeholder="Enter 5-character code" autocomplete="off"
+                            <input type="text" name="captcha" id="captchaInput" required maxlength="6" minlength="6"
+                                   placeholder="Enter 6-character code" autocomplete="off" spellcheck="false"
                                    class="minimal-input uppercase font-mono font-bold tracking-wider placeholder:text-slate-400">
                         </div>
                     </div>
@@ -228,11 +303,10 @@
         <div class="w-full lg:col-span-7 lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex items-center justify-center p-0 self-start lg:pl-6">
             <div class="relative w-full h-full flex items-center justify-center">
                 <img src="{{ url_for('static', filename='images/pathology_lab_art.jpg') }}" 
-                     alt="Pathology & Diagnostic Center Portal" 
-                     class="w-full h-full max-h-[85vh] object-contain rounded-lg select-none pointer-events-none border-0 shadow-2xl">
+                     alt="Hospital Staff Operations" 
+                     class="w-full h-full max-h-[85vh] object-contain select-none pointer-events-none border-0 shadow-none">
             </div>
         </div>
-
     </div>
 
 </div>

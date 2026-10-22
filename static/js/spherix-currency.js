@@ -469,17 +469,34 @@
         }
 
         try {
-            // Attempt fast geo IP lookup
             let geoData = null;
-            try {
-                const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { cache: 'no-store' });
-                if (res.ok) geoData = await res.json();
-            } catch (e) {
-                // Fallback to backend detect
+
+            // Check session cache first to eliminate repeat network latency on page reload
+            if (!force) {
                 try {
-                    const res = await fetch('/api/currency/detect', { cache: 'no-store' });
-                    if (res.ok) geoData = await res.json();
-                } catch (e2) {}
+                    const cached = sessionStorage.getItem('spherix_geo_cached');
+                    if (cached) geoData = JSON.parse(cached);
+                } catch (ce) {}
+            }
+
+            // Attempt fast geo IP lookup if not already cached
+            if (!geoData) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 1200);
+                    const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if (res.ok) {
+                        geoData = await res.json();
+                        try { sessionStorage.setItem('spherix_geo_cached', JSON.stringify(geoData)); } catch(se) {}
+                    }
+                } catch (e) {
+                    // Fallback to backend detect
+                    try {
+                        const res = await fetch('/api/currency/detect');
+                        if (res.ok) geoData = await res.json();
+                    } catch (e2) {}
+                }
             }
 
             if (geoData) {

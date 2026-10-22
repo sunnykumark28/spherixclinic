@@ -49,6 +49,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from spherix.config import (
     utcnow, parse_route_id, get_actual_user_id, format_dual_currency,
     convert_currency, get_currency_symbol, generate_user_license_id,
+    safe_date_sort_key,
     BLOG_POSTS, allowed_file, SECRET_KEY, GLOBAL_CURRENCY_RATES,
     GLOBAL_CURRENCY_SYMBOLS, COUNTRIES_195, GLOBAL_COUNTRY_FLAGS,
     GLOBAL_COUNTRY_TIMEZONES, search_countries,
@@ -62,10 +63,12 @@ from spherix.models import (
 )
 from spherix.services.database import (
     TEMP_DATA, get_db_connection, save_data, load_data,
-    sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item
+    sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item,
+    get_paid_appointment_doctor_ids_for_patient
 )
 from spherix.services.mail_service import (
-    send_notification_email, send_notification_email_async, get_premium_otp_email_html
+    send_notification_email, send_notification_email_async, get_premium_otp_email_html,
+    get_branded_general_email_html
 )
 from spherix.services.payment_service import (
     verify_razorpay_signature, create_razorpay_order,
@@ -142,42 +145,7 @@ except ImportError:
 
 main_bp = Blueprint('main', __name__)
 
-@main_bp.route('/static/uploads/<path:filename>')
-def serve_uploaded_static_file(filename):
-    """Serves uploaded files from memory cache, local static directory, or /tmp directory."""
-    clean_path = filename.lstrip('/')
-    base_name = os.path.basename(clean_path)
 
-    # 1. Check in-memory upload cache
-    if clean_path in UPLOAD_CACHE:
-        data, mimetype = UPLOAD_CACHE[clean_path]
-        return send_file(BytesIO(data), mimetype=mimetype)
-    if base_name in UPLOAD_CACHE:
-        data, mimetype = UPLOAD_CACHE[base_name]
-        return send_file(BytesIO(data), mimetype=mimetype)
-
-    # 2. Check local disk static/uploads
-    static_upload_dir = os.path.join(current_app.root_path, 'static', 'uploads')
-    local_file_path = os.path.join(static_upload_dir, clean_path)
-    if os.path.exists(local_file_path) and os.path.isfile(local_file_path):
-        return send_from_directory(static_upload_dir, clean_path)
-
-    # 3. Check /tmp/uploads directory (Vercel serverless environment)
-    tmp_upload_dir = os.path.join('/tmp', 'uploads')
-    tmp_file_path = os.path.join(tmp_upload_dir, clean_path)
-    if os.path.exists(tmp_file_path) and os.path.isfile(tmp_file_path):
-        return send_from_directory(tmp_upload_dir, clean_path)
-
-    # 4. Check subdirectories under static/uploads or /tmp/uploads
-    for sub in ['doctor_profiles', 'hospital_logos', 'signatures', 'stamps', 'prescriptions', 'documents']:
-        sub_local = os.path.join(static_upload_dir, sub, base_name)
-        if os.path.exists(sub_local) and os.path.isfile(sub_local):
-            return send_from_directory(os.path.join(static_upload_dir, sub), base_name)
-        sub_tmp = os.path.join(tmp_upload_dir, sub, base_name)
-        if os.path.exists(sub_tmp) and os.path.isfile(sub_tmp):
-            return send_from_directory(os.path.join(tmp_upload_dir, sub), base_name)
-
-    return ("File not found", 404)
 
 
 
@@ -305,14 +273,14 @@ def home():
 
     # Fetch patient webapp feedbacks
     all_feedbacks = list(TEMP_DATA.get('feedbacks', {}).values())
-    sorted_feedbacks = sorted(all_feedbacks, key=lambda f: getattr(f, 'created_at', datetime.min), reverse=True)
+    sorted_feedbacks = sorted(all_feedbacks, key=lambda f: safe_date_sort_key(getattr(f, 'created_at', None)), reverse=True)
     
     # Fetch all verified hospitals to showcase in the loop
     all_hospitals = list(TEMP_DATA.get('hospitals', {}).values())
     verified_hospitals = deduplicate_entities([h for h in all_hospitals if getattr(h, 'is_verified', True) and not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)])
     
     all_organ_requests = [r for r in TEMP_DATA.get('organ_requests', {}).values() if r.status == 'active']
-    recent_organ_requests = sorted(all_organ_requests, key=lambda r: r.created_at, reverse=True)[:6]
+    recent_organ_requests = sorted(all_organ_requests, key=lambda r: safe_date_sort_key(getattr(r, 'created_at', None)), reverse=True)[:6]
     
     # Compile doctor opinions
     doctor_opinions_raw = TEMP_DATA.get('doctor_opinions', {})
@@ -341,7 +309,7 @@ def home():
                 'created_at_formatted': dt_val.strftime('%b %d, %Y')
             })
             
-    doctor_opinions_list.sort(key=lambda x: x['created_at'], reverse=True)
+    doctor_opinions_list.sort(key=lambda x: safe_date_sort_key(x.get('created_at')), reverse=True)
     
     # Load upcoming medical/blood donation camps
     all_camps = list(TEMP_DATA.get('camps', {}).values())
@@ -382,10 +350,10 @@ def home():
     stats['trust_percent'] = trust_percent
     stats['total_reviews_count'] = total_feedback_reviews_count
 
-    # Find the specific doctor to feature as the founder
-    founder_doctor = next((d for d in all_doctors if d.first_name == 'Sunny' and d.last_name == 'Kushwaha'), None)
+    # Find the specific administrator doctor to feature as the founder
+    founder_doctor = next((d for d in all_doctors if getattr(d, 'email', '') == 'admin@spherixclinic.com' or (d.first_name == 'Sunny' and d.last_name == 'Kushwaha')), None)
     
-    return render_template('home.html', current_year=current_year, stats=stats, featured_doctors=verified_doctors, featured_hospitals=verified_hospitals, recent_organ_requests=recent_organ_requests, feedbacks=sorted_feedbacks, doctor_opinions=doctor_opinions_list, camps=upcoming_camps, all_countries_195=COUNTRIES_195)
+    return render_template('home.html', current_year=current_year, stats=stats, featured_doctors=verified_doctors, featured_hospitals=verified_hospitals, recent_organ_requests=recent_organ_requests, feedbacks=sorted_feedbacks, doctor_opinions=doctor_opinions_list, camps=upcoming_camps, all_countries_195=COUNTRIES_195, admin_doctor=founder_doctor)
 
 
 
@@ -758,6 +726,10 @@ def get_chat_messages(patient_id):
 @patient_required
 def get_patient_chat_messages(doctor_id):
     """API endpoint for a patient to fetch chat messages with a doctor."""
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
+    if str(doctor_id) not in paid_doctor_ids:
+        return jsonify([]), 403
+
     patient_id = get_actual_user_id(current_user.id)
     messages = [
         {"sender": msg.sender, "content": msg.content, "attachment_url": getattr(msg, 'attachment_url', None), "created_at": msg.created_at.isoformat()}
@@ -773,6 +745,9 @@ def get_patient_chat_messages(doctor_id):
 @patient_required
 def send_patient_chat_message(doctor_id):
     """API endpoint for a patient to send a message to a doctor."""
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
+    if str(doctor_id) not in paid_doctor_ids:
+        return jsonify({"success": False, "message": "You can only message doctors with whom you have booked an appointment and completed payment."}), 403
     if request.is_json:
         data = request.get_json()
         content = data.get('content', '').strip()
@@ -822,6 +797,10 @@ def send_patient_chat_message(doctor_id):
 @patient_required
 def send_message_patient(doctor_id):
     """Send a message from patient to doctor."""
+    paid_doctor_ids = get_paid_appointment_doctor_ids_for_patient(current_user)
+    if str(doctor_id) not in paid_doctor_ids:
+        return jsonify({"success": False, "message": "You can only message doctors with whom you have booked an appointment and completed payment."}), 403
+
     if request.is_json:
         data = request.get_json()
         content = data.get('content', '').strip()
@@ -1449,23 +1428,59 @@ def contact():
             TEMP_DATA['contact_messages'].insert(0, new_message) # Add to top
             save_data()
             
-            # Send notification email to admin
+            # Send notification email to admin with branded template
             admin_email = 'isunny28skk@gmail.com'
             subject = f"New Contact Inquiry from {name}"
-            body = f"""
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                <h2 style="color: #0ea5e9;">New Contact Inquiry</h2>
-                <p><strong>Name:</strong> {name}</p>
-                <p><strong>Email:</strong> {email}</p>
-                <p><strong>Phone:</strong> {phone}</p>
-                <p><strong>Address:</strong> {address}</p>
-                <p><strong>Message:</strong></p>
-                <div style="background: #f8fafc; padding: 15px; border-left: 4px solid #0ea5e9; border-radius: 4px;">
-                    {message}
+            body = get_branded_general_email_html(
+                title=f"New Contact Inquiry: {name}",
+                greeting="Hello Admin,",
+                content_html=f"""
+                <p>A new visitor inquiry has been submitted via the <strong>Spherix Clinic</strong> public contact portal:</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
+                    <tr><td style="padding: 6px 0; color: #64748b; width: 30%;"><strong>Name:</strong></td><td>{name}</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b;"><strong>Email:</strong></td><td>{email}</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b;"><strong>Phone:</strong></td><td>{phone}</td></tr>
+                    <tr><td style="padding: 6px 0; color: #64748b;"><strong>Address:</strong></td><td>{address}</td></tr>
+                </table>
+                <div style="background: #f8fafc; padding: 16px; border-left: 4px solid #0ea5e9; border-radius: 8px; margin-top: 12px;">
+                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 6px;">Inquiry Message:</div>
+                    <div style="color: #334155; line-height: 1.6;">{message}</div>
                 </div>
-            </div>
-            """
+                """,
+                role_color="#0ea5e9",
+                badge_text="Public Portal Inquiry"
+            )
             send_notification_email(admin_email, subject, body, is_html=True)
+            
+            # Send branded acknowledgment receipt back to the inquirer
+            if email and '@' in email:
+                user_subject = "We Received Your Message - Spherix Clinic"
+                user_body = get_branded_general_email_html(
+                    title="Inquiry Received",
+                    greeting=f"Hello {name},",
+                    content_html=f"""
+                    <p style="font-size: 14px; line-height: 1.65; color: #334155;">
+                        Thank you for contacting <strong>Spherix Clinic</strong>. Your message has been received by our clinical communications desk.
+                    </p>
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 20px 0;">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 8px;">
+                            Summary of Your Submission
+                        </div>
+                        <p style="margin: 0; font-size: 13px; color: #334155; line-height: 1.6; font-style: italic;">
+                            &ldquo;{message}&rdquo;
+                        </p>
+                    </div>
+                    <p style="font-size: 13px; color: #475569; line-height: 1.6;">
+                        A member of our team will follow up with you at <strong>{email}</strong> or <strong>{phone or 'your contact number'}</strong> as soon as possible.
+                    </p>
+                    """,
+                    role_color="#0ea5e9",
+                    badge_text="Patient / Client Support Desk"
+                )
+                try:
+                    send_notification_email_async(email, user_subject, user_body, is_html=True)
+                except Exception:
+                    pass
             
             flash("Your message has been sent successfully!", "success")
             return redirect(url_for('contact'))
@@ -1573,7 +1588,7 @@ def submit_feedback():
         </div>
         """
         try:
-            send_notification_email(admin_email, subject, body, is_html=True)
+            send_notification_email_async(admin_email, subject, body, is_html=True)
         except Exception:
             pass
         return jsonify({'success': True, 'message': 'Feedback successfully received. Thank you!'})
@@ -1649,30 +1664,35 @@ def generate_qr():
 
 
 @main_bp.route('/api/captcha/image/<portal_type>')
+@limiter.limit("60 per minute")
 def get_captcha_image(portal_type):
-    """Returns a securely distorted visual CAPTCHA image."""
-    key = f"{portal_type}_captcha"
-    if request.args.get('refresh') == '1' or key not in session or not session.get(key):
-        session[key] = generate_captcha_text(5)
-    
-    text = session.get(key, generate_captcha_text(5))
-    image_bytes = generate_captcha_image_bytes(text)
+    """Returns a securely distorted Spherix Secure visual CAPTCHA image with atomic challenge state."""
+    from security.captcha import create_captcha_challenge
+    challenge_id, image_bytes = create_captcha_challenge(portal_type, session)
     response = make_response(image_bytes)
     response.headers['Content-Type'] = 'image/png'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Captcha-ID'] = challenge_id
     return response
 
 
 
-@main_bp.route('/api/captcha/refresh/<portal_type>')
+@main_bp.route('/api/captcha/refresh/<portal_type>', methods=['GET', 'POST'])
+@limiter.limit("60 per minute")
 def refresh_captcha(portal_type):
-    """Refreshes CAPTCHA for a specific portal type."""
-    new_captcha = generate_captcha_text(5)
-    key = f"{portal_type}_captcha"
-    session[key] = new_captcha
-    return jsonify({'success': True, 'captcha': new_captcha})
+    """Refreshes CAPTCHA challenge without ever exposing plaintext code in JSON."""
+    import time
+    from security.captcha import create_captcha_challenge
+    challenge_id, _ = create_captcha_challenge(portal_type, session)
+    return jsonify({
+        'status': 'ok',
+        'success': True,
+        'challenge_id': challenge_id,
+        'image_url': f'/api/captcha/image/{portal_type}?refresh=1&t={int(time.time()*1000)}'
+    })
 
 
 
@@ -3242,6 +3262,140 @@ def legal_hub(policy_id='terms-of-service'):
 
 
 
+@main_bp.route('/legal/<policy_id>/pdf')
+@main_bp.route('/legal/<policy_id>/download')
+@main_bp.route('/legal/download-pdf/<policy_id>')
+def legal_download_pdf(policy_id='privacy-policy'):
+    """Generates and serves a formatted official PDF of the requested legal policy."""
+    alias_map = {
+        'privacy': 'privacy-policy',
+        'terms': 'terms-of-service',
+        'doctor': 'doctor-agreement',
+        'hospital': 'hospital-agreement',
+        'donor': 'donor-policy',
+        'donors': 'donor-policy',
+        'staff': 'staff-agreement',
+        'staffs': 'staff-agreement',
+        'patient': 'patient-terms',
+        'oncology': 'oncology-policy',
+        'genomics': 'genomics-privacy',
+        'trials': 'clinical-trials-policy',
+        'telemedicine': 'telemedicine-policy',
+        'ai-ethics': 'ai-ethics-governance',
+        'cookie': 'cookie-policy'
+    }
+    canonical_id = alias_map.get(policy_id, policy_id)
+    policy = POLICY_DATA.get(canonical_id)
+    if not policy:
+        return render_template("404.html"), 404
+
+    try:
+        from fpdf import FPDF
+        from spherix.services.pdf_service import to_latin1_str
+
+        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        pdf.set_auto_page_break(auto=True, margin=20)
+        pdf.set_margins(16, 16, 16)
+        pdf.add_page()
+
+        # Official Spherix Top Banner
+        pdf.set_fill_color(15, 23, 42)  # Slate 900
+        pdf.rect(0, 0, 210, 28, 'F')
+        pdf.set_fill_color(37, 99, 235)  # Sky blue line
+        pdf.rect(0, 28, 210, 1.5, 'F')
+
+        pdf.set_xy(16, 6)
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(0, 6, "SPHERIX CLINIC - LEGAL & REGULATORY REPOSITORY", 0, 1, 'L')
+
+        pdf.set_xy(16, 13)
+        pdf.set_font('Helvetica', '', 8)
+        pdf.set_text_color(186, 230, 253)
+        pdf.cell(0, 5, "Official Governance, Compliance & Statutory PHI Protections | Rev 2026.1", 0, 1, 'L')
+
+        pdf.set_xy(16, 36)
+        pdf.set_font('Helvetica', 'B', 17)
+        pdf.set_text_color(17, 24, 39)
+        pdf.cell(0, 8, to_latin1_str(policy.get('title', 'Policy Document')), 0, 1, 'L')
+
+        pdf.set_font('Helvetica', 'I', 8.5)
+        pdf.set_text_color(107, 114, 128)
+        pdf.cell(0, 5, "Effective Date: January 1, 2026   |   Verified: Institutional Compliance Oversight", 0, 1, 'L')
+        pdf.ln(4)
+
+        # Process markdown body
+        content_text = policy.get('content', '')
+        for raw_line in content_text.strip().split('\n'):
+            line = raw_line.strip()
+            if not line:
+                pdf.ln(2.5)
+                continue
+            if line.startswith('### '):
+                pdf.ln(3.5)
+                pdf.set_font('Helvetica', 'B', 11.5)
+                pdf.set_text_color(15, 23, 42)
+                clean_h = line.replace('### ', '')
+                pdf.multi_cell(0, 5.5, to_latin1_str(clean_h))
+                pdf.ln(1)
+            elif line.startswith('#### '):
+                pdf.ln(2)
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.set_text_color(30, 41, 59)
+                clean_h = line.replace('#### ', '')
+                pdf.multi_cell(0, 5, to_latin1_str(clean_h))
+                pdf.ln(1)
+            elif line.startswith('*   '):
+                pdf.set_font('Helvetica', '', 9)
+                pdf.set_text_color(51, 65, 85)
+                bullet_text = "  * " + line.replace('*   ', '').replace('**', '')
+                pdf.multi_cell(0, 4.8, to_latin1_str(bullet_text))
+            else:
+                pdf.set_font('Helvetica', '', 9)
+                pdf.set_text_color(51, 65, 85)
+                clean_line = line.replace('**', '')
+                pdf.multi_cell(0, 4.8, to_latin1_str(clean_line))
+
+        # Stamp and Signature Execution Box
+        if pdf.get_y() > 230:
+            pdf.add_page()
+
+        pdf.ln(8)
+        curr_y = pdf.get_y()
+        stamp_path = os.path.join(current_app.root_path, 'static', 'images', 'stamp.png')
+        if os.path.exists(stamp_path):
+            try:
+                pdf.image(stamp_path, x=20, y=curr_y, w=34, h=34)
+            except Exception:
+                pass
+
+        pdf.set_xy(16, curr_y + 36)
+        pdf.set_draw_color(31, 41, 55)
+        pdf.set_line_width(0.4)
+        pdf.line(16, curr_y + 36, 110, curr_y + 36)
+
+        pdf.set_xy(16, curr_y + 38)
+        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_text_color(17, 24, 39)
+        pdf.cell(90, 4, "Chief Legal & Compliance Officer", 0, 1, 'L')
+
+        pdf.set_font('Helvetica', '', 8)
+        pdf.set_text_color(100, 116, 139)
+        pdf.cell(90, 4, "Spherix Clinic Health Systems Inc. (Executed)", 0, 1, 'L')
+
+        pdf_output = pdf.output(dest='S')
+        pdf_bytes = pdf_output.encode('latin-1', 'replace') if isinstance(pdf_output, str) else pdf_output
+        safe_name = f"Spherix_{canonical_id.replace('-', '_').title()}.pdf"
+        return send_file(BytesIO(pdf_bytes), as_attachment=True, download_name=safe_name, mimetype='application/pdf')
+
+    except Exception as e:
+        print(f"⚠️ Policy PDF export error: {e}")
+        traceback.print_exc()
+        flash("PDF export failed. Opening print view instead.", "info")
+        return redirect(url_for('legal_hub', policy_id=canonical_id))
+
+
+
 @main_bp.route('/privacy-policy')
 @main_bp.route('/privacy')
 def privacy_policy():
@@ -3314,44 +3468,139 @@ def serve_image(user_type, user_id):
 @main_bp.route('/static/uploads/<path:filename>')
 @main_bp.route('/uploads/<path:filename>')
 def serve_uploaded_file(filename):
-    """Serves uploaded files and images with in-memory cache, multi-directory search, and avatar fallback."""
-    clean_name = os.path.basename(filename)
+    """Serves uploaded files and images with in-memory cache, multi-directory search, database BLOB fallback, and avatar recovery."""
+    clean_path = filename.lstrip('/')
+    clean_name = os.path.basename(clean_path)
 
     # 1. Check in-memory UPLOAD_CACHE first
     if filename in UPLOAD_CACHE:
         data_bytes, mimetype = UPLOAD_CACHE[filename]
         return send_file(BytesIO(data_bytes), mimetype=mimetype)
+    if clean_path in UPLOAD_CACHE:
+        data_bytes, mimetype = UPLOAD_CACHE[clean_path]
+        return send_file(BytesIO(data_bytes), mimetype=mimetype)
     if clean_name in UPLOAD_CACHE:
         data_bytes, mimetype = UPLOAD_CACHE[clean_name]
         return send_file(BytesIO(data_bytes), mimetype=mimetype)
 
-    # 2. Check filesystem search paths
-    search_dirs = [
-        os.path.join(current_app.root_path, 'static', 'uploads'),
-        os.path.join(current_app.root_path, 'static', 'uploads', 'hospital_logos'),
-        os.path.join(current_app.root_path, 'static', 'uploads', 'doctor_profiles'),
-        os.path.join(current_app.root_path, 'static', 'uploads', 'signatures'),
-        os.path.join(current_app.root_path, 'static', 'uploads', 'stamps'),
-        os.path.join(current_app.root_path, 'static', 'uploads', 'prescriptions'),
-        os.path.join(current_app.root_path, 'static', 'uploads', 'documents'),
-        os.path.join(current_app.root_path, 'static', 'uploads', 'medical_records'),
-        os.path.join(current_app.root_path, 'static', 'images'),
-        os.path.join(current_app.root_path, 'static', 'img'),
+    # 2. Check filesystem search paths across all project static roots
+    candidate_roots = [
+        getattr(current_app, 'static_folder', None),
+        os.path.join(os.getcwd(), 'static'),
+        os.path.join(os.getcwd(), 'static', 'uploads'),
         os.path.join(current_app.root_path, 'static'),
-        os.path.join('/tmp', 'uploads'),
-        os.path.join('/tmp', 'uploads', 'hospital_logos')
+        os.path.join(current_app.root_path, 'static', 'uploads'),
+        os.path.join(os.path.dirname(current_app.root_path), 'static'),
+        os.path.join(os.path.dirname(current_app.root_path), 'static', 'uploads'),
+        '/tmp',
+        '/tmp/uploads'
     ]
-    for d in search_dirs:
-        target = os.path.join(d, clean_name)
-        if os.path.exists(target) and os.path.isfile(target):
-            return send_file(target)
+    subdirs = [
+        '', 'uploads', 'uploads/hospital_logos', 'uploads/doctor_profiles',
+        'uploads/signatures', 'uploads/stamps', 'uploads/prescriptions',
+        'uploads/documents', 'uploads/medical_records', 'hospital_logos',
+        'doctor_profiles', 'images', 'img'
+    ]
 
-    # Check if requested filename exists with path intact
-    direct_target = os.path.join(current_app.root_path, 'static', filename)
-    if os.path.exists(direct_target) and os.path.isfile(direct_target):
-        return send_file(direct_target)
+    for root_dir in candidate_roots:
+        if not root_dir or not os.path.exists(root_dir):
+            continue
+        # Direct clean_path check
+        direct = os.path.join(root_dir, clean_path)
+        if os.path.exists(direct) and os.path.isfile(direct):
+            return send_file(direct)
+        direct_uploads = os.path.join(root_dir, 'uploads', clean_path)
+        if os.path.exists(direct_uploads) and os.path.isfile(direct_uploads):
+            return send_file(direct_uploads)
+        # Clean basename check across subdirs
+        for s in subdirs:
+            target = os.path.join(root_dir, s, clean_name) if s else os.path.join(root_dir, clean_name)
+            if os.path.exists(target) and os.path.isfile(target):
+                return send_file(target)
 
-    # Fallback to avatar if an image filename is missing on disk
+    # 3. Fallback: Retrieve binary image directly from SQL Database BLOB!
+    try:
+        from spherix.services.database import get_db_connection
+        from spherix.services.upload_service import _write_bytes_safely
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+
+            # Check patients table
+            cursor.execute(
+                "SELECT profile_picture_data, profile_picture_content_type FROM patients WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                (f"%{clean_name}%", f"%{clean_path}%")
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                blob_data, mime = row[0], row[1] or 'image/jpeg'
+                UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                _write_bytes_safely(None, clean_name, blob_data)
+                conn.close()
+                return send_file(BytesIO(blob_data), mimetype=mime)
+
+            # Check doctor_images table
+            cursor.execute(
+                "SELECT di.image_data, di.content_type FROM doctor_images di JOIN doctors d ON d.id = di.doctor_id WHERE (d.profile_picture_url LIKE ? OR d.profile_picture_url LIKE ?) AND di.image_data IS NOT NULL",
+                (f"%{clean_name}%", f"%{clean_path}%")
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                blob_data, mime = row[0], row[1] or 'image/jpeg'
+                UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                _write_bytes_safely(None, clean_name, blob_data)
+                conn.close()
+                return send_file(BytesIO(blob_data), mimetype=mime)
+
+            # Check staff table
+            cursor.execute(
+                "SELECT profile_picture_data, profile_picture_content_type FROM staff WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                (f"%{clean_name}%", f"%{clean_path}%")
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                blob_data, mime = row[0], row[1] or 'image/jpeg'
+                UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                _write_bytes_safely(None, clean_name, blob_data)
+                conn.close()
+                return send_file(BytesIO(blob_data), mimetype=mime)
+
+            # Check blood_donors table
+            cursor.execute(
+                "SELECT profile_picture_data, profile_picture_content_type FROM blood_donors WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                (f"%{clean_name}%", f"%{clean_path}%")
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                blob_data, mime = row[0], row[1] or 'image/jpeg'
+                UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                _write_bytes_safely(None, clean_name, blob_data)
+                conn.close()
+                return send_file(BytesIO(blob_data), mimetype=mime)
+
+            # Check organ_donors table
+            cursor.execute(
+                "SELECT profile_picture_data, profile_picture_content_type FROM organ_donors WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                (f"%{clean_name}%", f"%{clean_path}%")
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                blob_data, mime = row[0], row[1] or 'image/jpeg'
+                UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                _write_bytes_safely(None, clean_name, blob_data)
+                conn.close()
+                return send_file(BytesIO(blob_data), mimetype=mime)
+
+            conn.close()
+    except Exception as db_img_err:
+        print(f"Database image lookup note for {clean_name}: {db_img_err}")
+
+    # Fallback to avatar if an image filename is missing on disk and DB
     name_clean = clean_name.rsplit('.', 1)[0].replace('_', ' ').replace('-', ' ')
     return redirect(f"https://api.dicebear.com/7.x/initials/svg?seed={name_clean}")
 
