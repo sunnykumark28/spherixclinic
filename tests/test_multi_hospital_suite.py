@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash
 from spherix import create_app
 from spherix.models import Staff, Hospital
 from spherix.services.database import TEMP_DATA, load_data, save_data
+from security.captcha import create_test_challenge
 
 @pytest.fixture
 def client():
@@ -60,14 +61,14 @@ def client():
         yield client
 
 def login_staff_helper(client, email, password='Admin@123'):
-    client.get('/staff/login')
+    cid, code = create_test_challenge(portal_type="staff")
     with client.session_transaction() as sess:
-        captcha = sess.get('staff_captcha', '')
+        sess['_captcha_challenge_staff'] = cid
     return client.post('/staff/login', data={
         'email': email,
         'password': password,
         'agree_terms': 'on',
-        'captcha': captcha
+        'captcha': code
     }, follow_redirects=True)
 
 def test_multi_hospital_dispatch_and_isolation(client):

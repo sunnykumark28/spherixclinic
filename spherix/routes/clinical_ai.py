@@ -835,18 +835,28 @@ def nutrition_fitness_planner():
     default_experience = 'intermediate'
     
     # Check if patient is logged in to pre-fill vitals
-    if session.get('user_id') and session.get('role') == 'patient':
+    pat_id = session.get('user_id') or getattr(current_user, 'id', None)
+    if pat_id and (session.get('role') == 'patient' or getattr(current_user, 'is_patient', False)):
         try:
-            from spherix.models import PatientVital
-            conn = get_db_connection()
-            if conn:
-                vital = conn.query(PatientVital).filter(
-                    PatientVital.patient_id == session.get('user_id')
-                ).order_by(PatientVital.recorded_at.desc()).first()
-                if vital:
-                    if vital.weight: default_weight = float(vital.weight)
-                    if vital.height: default_height = float(vital.height)
-                conn.close()
+            # 1. First check in-memory TEMP_DATA
+            patient_vitals = [v for v in TEMP_DATA.get('patient_vitals', {}).values() if str(getattr(v, 'patient_id', '')) == str(pat_id)]
+            if patient_vitals:
+                patient_vitals.sort(key=lambda x: str(getattr(x, 'recorded_at', '') or ''), reverse=True)
+                latest_vital = patient_vitals[0]
+                if getattr(latest_vital, 'weight', None): default_weight = float(latest_vital.weight)
+                if getattr(latest_vital, 'height', None): default_height = float(latest_vital.height)
+            else:
+                conn = get_db_connection()
+                if conn:
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT weight, height FROM patient_vitals WHERE patient_id = ? ORDER BY recorded_at DESC LIMIT 1", (str(pat_id),))
+                        row = cursor.fetchone()
+                        if row:
+                            if row[0]: default_weight = float(row[0])
+                            if row[1]: default_height = float(row[1])
+                    finally:
+                        conn.close()
         except Exception:
             pass
 

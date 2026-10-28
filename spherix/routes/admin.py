@@ -756,9 +756,10 @@ def admin_add_medicine():
                         except Exception:
                             cursor.execute("INSERT INTO medicines (name, category, price) VALUES (?, ?, ?)", (name, category, price))
                             conn.commit()
-                    conn.close()
                 except Exception as db_err:
                     print(f"⚠️ Error inserting medicine to DB: {db_err}")
+                finally:
+                    conn.close()
             
             new_med = {
                 'id': new_id,
@@ -880,9 +881,10 @@ def admin_edit_medicine(med_id):
                 except Exception:
                     cursor.execute("UPDATE medicines SET name=?, category=?, price=? WHERE id=?", (name, category, price, med_id))
             conn.commit()
-            conn.close()
         except Exception as db_err:
             print(f"⚠️ Error updating medicine in DB: {db_err}")
+        finally:
+            conn.close()
 
     if med_found:
         flash(f'✅ Medicine "{name}" updated successfully.', 'success')
@@ -922,9 +924,10 @@ def admin_stock_medicine(med_id):
             cursor = conn.cursor()
             cursor.execute("UPDATE medicines SET stock=? WHERE id=?", (new_stock, med_id))
             conn.commit()
-            conn.close()
         except Exception as db_err:
             print(f"⚠️ Error updating stock in DB: {db_err}")
+        finally:
+            conn.close()
 
     flash(f'📦 Stock for "{target_name}" updated to {new_stock} units.', 'success')
     return redirect(url_for('admin_dashboard') + '?tab=pharmacy')
@@ -940,9 +943,10 @@ def admin_delete_medicine(med_id):
             cursor = conn.cursor()
             cursor.execute("DELETE FROM medicines WHERE id = ?", (med_id,))
             conn.commit()
-            conn.close()
         except Exception as db_err:
             print(f"⚠️ Error deleting medicine from DB: {db_err}")
+        finally:
+            conn.close()
             
     TEMP_DATA['medicines'] = [m for m in TEMP_DATA.get('medicines', []) if m.get('id') != med_id]
     flash('🗑️ Medicine deleted from inventory successfully.', 'success')
@@ -1288,10 +1292,15 @@ def admin_restore():
         return redirect(url_for('admin_dashboard') + '#settings')
         
     try:
-        json.loads(file.read())
-        flash('System restored successfully from backup. (Database safely validated)', 'success')
+        raw_content = file.read().decode('utf-8', errors='ignore')
+        backup_dict = json.loads(raw_content)
+        if not isinstance(backup_dict, dict):
+            raise ValueError("Invalid format: backup content must be a JSON object.")
+        from spherix.services.database import restore_backup_data
+        restore_backup_data(backup_dict)
+        flash('System restored successfully from backup. All datasets rehydrated and synchronized with SQL.', 'success')
     except Exception as e:
-        flash(f'Failed to restore backup: Invalid JSON format.', 'error')
+        flash(f'Failed to restore backup: {e}', 'error')
         
     return redirect(url_for('admin_dashboard') + '#settings')
 
@@ -1974,7 +1983,7 @@ def admin_login():
             return redirect(url_for('admin_login'))
 
         email = (request.form.get('email') or '').strip().lower()
-        password = request.form.get('password', '')
+        password = (request.form.get('password') or '').strip()
 
         # The admin user is hardcoded for this application (accepts 'admin' or 'admin@spherixclinic.com')
         if email in ['admin', 'admin@spherixclinic.com']:
@@ -2003,17 +2012,18 @@ def admin_login():
             user.profile_picture_url = 'images/sunnykk.jpg'
             save_data()
 
-        # Standard password check with fallback to master admin keys
+        # Standard password check against hashed credentials or configured bootstrap password
         is_valid = False
         try:
             is_valid = check_password_hash(user.password, password)
         except Exception:
             is_valid = False
 
-        # Fail-safe authentication for default root administrator keys
-        if not is_valid and email == 'admin@spherixclinic.com' and password in ['spherixclinicadmin', 'Admin@123', 'admin', 'admin123', 'Admin123', 'Admin@1234']:
+        # Fail-safe authentication only if ADMIN_BOOTSTRAP_PASSWORD is explicitly defined
+        bootstrap_pwd = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip()
+        if not is_valid and email == 'admin@spherixclinic.com' and bootstrap_pwd and password == bootstrap_pwd:
             is_valid = True
-            user.password = generate_password_hash('spherixclinicadmin', method='pbkdf2:sha256:260000')
+            user.password = generate_password_hash(bootstrap_pwd, method='pbkdf2:sha256:260000')
             save_data()
 
         if is_valid:
@@ -2342,8 +2352,6 @@ def _verify_admin_master_password(entered_password):
                 return True
         except Exception:
             pass
-        if current_user.password == entered_password:
-            return True
 
     # 2. Check admin doctor in TEMP_DATA
     admin_doc = next((d for d in TEMP_DATA.get('doctors', {}).values() if getattr(d, 'email', '').strip().lower() == 'admin@spherixclinic.com'), None)
@@ -2353,8 +2361,6 @@ def _verify_admin_master_password(entered_password):
                 return True
         except Exception:
             pass
-        if admin_doc.password == entered_password:
-            return True
 
     # 3. Check ADMIN_BOOTSTRAP_PASSWORD from environment
     bootstrap_pwd = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip()
@@ -2407,12 +2413,14 @@ def admin_system_reset_request_otp():
 
     print(f"🔐 [ADMIN RESET] Dispatched OTP '{otp}' to {admin_email}")
 
-    return jsonify({
+    res_data = {
         'success': True,
         'message': f'Administrator verified. A 6-digit security code has been sent to {masked_email}.',
         'masked_email': masked_email,
-        'dev_otp': otp  # Provided for seamless local testing if SMTP offline
-    }), 200
+    }
+    if current_app.config.get('TESTING') or current_app.debug:
+        res_data['dev_otp'] = otp
+    return jsonify(res_data), 200
 
 
 @admin_bp.route('/admin/system/reset/verify-otp', methods=['POST'])
@@ -2477,12 +2485,14 @@ def admin_system_reset_resend_otp():
 
     print(f"🔐 [ADMIN RESET RESEND] Dispatched new OTP '{otp}' to {admin_email}")
 
-    return jsonify({
+    res_data = {
         'success': True,
         'message': f'A fresh authorization code has been dispatched to {masked_email}.',
         'masked_email': masked_email,
-        'dev_otp': otp
-    }), 200
+    }
+    if current_app.config.get('TESTING') or current_app.debug:
+        res_data['dev_otp'] = otp
+    return jsonify(res_data), 200
 
 
 @admin_bp.route('/admin/system/reset', methods=['POST'])

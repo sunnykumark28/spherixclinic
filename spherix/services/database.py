@@ -229,7 +229,7 @@ def get_db_connection(database_name=None):
         import sqlite3
         import shutil
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        is_serverless = bool(os.getenv('SERVERLESS') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+        is_serverless = bool(os.getenv('VERCEL') or os.getenv('SERVERLESS') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
         
         if is_serverless:
             tmp_db_path = '/tmp/spherixclinic.db'
@@ -241,6 +241,7 @@ def get_db_connection(database_name=None):
                     except Exception as cp_err:
                         print(f"⚠️ Error copying DB to /tmp: {cp_err}")
             sqlite_db_path = tmp_db_path
+            os.environ['SQLITE_DB_PATH'] = tmp_db_path
         else:
             sqlite_db_path = os.getenv('SQLITE_DB_PATH', os.path.join(project_root, 'spherixclinic.db'))
 
@@ -908,6 +909,7 @@ def migrate_legacy_schema(cursor):
 def save_data():
     """Saves the current state of TEMP_DATA to the SQL Database and local JSON backup."""
     print("💾 Syncing data to SQL Database...")
+    conn = None
     try:
         conn = get_db_connection()
         if conn is None:
@@ -2161,11 +2163,16 @@ def save_data():
             print(f"⚠️ Skipping jobs sync: {e}")
 
         conn.commit()
-        conn.close()
         print("✅ Data synced to SQL successfully.")
     except Exception as e:
         print(f"❌ Error syncing to SQL: {e}")
         traceback.print_exc()
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 def auto_migrate_local_data(cursor):
     """Automatically migrates data from local SQLite database (app.db) and data_store.json into SQL Server if they exist."""
@@ -2423,7 +2430,7 @@ def load_data():
     """Loads data from SQL Database into TEMP_DATA, rehydrating objects."""
     global TEMP_DATA
     print("🔄 Loading data from SQL Database...")
-
+    conn = None
     try:
         conn = get_db_connection()
         if conn is None:
@@ -3237,10 +3244,72 @@ def load_data():
             save_data()
 
 
-        conn.close()
         print("✅ Data loaded from SQL database successfully. All user accounts and records preserved.")
     except Exception as e:
         print(f"❌ Error loading data from SQL: {e}")
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+def restore_backup_data(backup_data: dict) -> bool:
+    """Restores full operational datasets from JSON backup into TEMP_DATA and persists to SQL."""
+    global TEMP_DATA
+    if not isinstance(backup_data, dict):
+        raise ValueError("Invalid backup data format: root must be a JSON object.")
+
+    from spherix.models import (
+        Doctor, Patient, Staff, Hospital, BloodDonor, OrganDonor,
+        Appointment, PatientVital, LabRequest, OrganRequest, BedBooking,
+        Order, Review, Feedback, Message, ActivityLog, Referral, Notification,
+        Job, JobApplication
+    )
+    from spherix.hospital_types import HospitalType
+
+    model_map = {
+        'doctors': Doctor,
+        'patients': Patient,
+        'hospitals': Hospital,
+        'staff': Staff,
+        'hospital_types': HospitalType,
+        'blood_donors': BloodDonor,
+        'organ_donors': OrganDonor,
+        'appointments': Appointment,
+        'patient_vitals': PatientVital,
+        'lab_requests': LabRequest,
+        'organ_requests': OrganRequest,
+        'bed_bookings': BedBooking,
+        'orders': Order,
+        'reviews': Review,
+        'messages': Message,
+        'referrals': Referral,
+        'notifications': Notification,
+        'jobs': Job,
+        'job_applications': JobApplication,
+    }
+
+    for key, val in backup_data.items():
+        if key in model_map and isinstance(val, dict):
+            cls = model_map[key]
+            rehydrated = {}
+            for item_id, item_data in val.items():
+                if isinstance(item_data, dict):
+                    try:
+                        k = int(item_id) if key == 'hospital_types' and str(item_id).isdigit() else item_id
+                        rehydrated[k] = cls(**item_data)
+                    except Exception as item_err:
+                        print(f"⚠️ Warning restoring {key} item {item_id}: {item_err}")
+                elif isinstance(item_data, cls):
+                    rehydrated[item_id] = item_data
+            TEMP_DATA[key] = rehydrated
+        elif isinstance(val, (dict, list)):
+            TEMP_DATA[key] = val
+
+    save_data()
+    return True
+
 
 def seed_initial_patient_medical_records():
     """No-op: Prevents auto-generating fabricated mock medical records."""
@@ -3405,13 +3474,13 @@ def setup_admin_user():
             if getattr(admin_user, 'is_hidden', False):
                 admin_user.is_hidden = False
                 data_changed = True
-        # Ensure admin password hash is valid against bootstrap password
+        # Ensure admin password hash is valid against bootstrap password or default keyphrase
         is_pass_valid = False
         try:
-            is_pass_valid = check_password_hash(admin_user.password, admin_password)
+            is_pass_valid = check_password_hash(admin_user.password, admin_password) or check_password_hash(admin_user.password, 'spherixclinicadmin')
         except Exception:
             is_pass_valid = False
-        if not is_pass_valid and not os.getenv('ADMIN_BOOTSTRAP_PASSWORD'):
+        if not is_pass_valid:
             admin_user.password = generate_password_hash(admin_password, method='pbkdf2:sha256:260000')
             data_changed = True
     else:

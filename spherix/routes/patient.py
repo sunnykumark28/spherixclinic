@@ -443,13 +443,19 @@ def patient_dashboard():
                 sent = send_notification_email(email, subject, body, is_html=True)
             
             if is_ajax:
-                msg = f"A 6-digit OTP has been sent to your email ({email})." if sent else f"Verification code generated: {otp}"
-                return jsonify({'success': True, 'message': msg, 'email': email, 'demo_otp': otp})
+                msg = f"A 6-digit OTP has been sent to your email ({email})." if sent else "A verification code has been generated and sent to your email."
+                res_data = {'success': True, 'message': msg, 'email': email}
+                if current_app.config.get('TESTING') or current_app.debug:
+                    res_data['demo_otp'] = otp
+                return jsonify(res_data)
 
             if sent:
                 flash(f"A 6-digit OTP has been sent to your email ({email}). Enter it below to reset your password.", "info")
             else:
-                flash(f"Verification code generated. (Demo OTP: {otp})", "warning")
+                if current_app.config.get('TESTING') or current_app.debug:
+                    flash(f"Verification code generated. (Demo OTP: {otp})", "warning")
+                else:
+                    flash("A verification code has been generated. Please check your email.", "info")
             return redirect(url_for('patient_dashboard', tab='security', otp_sent='1'))
 
         if action == 'reset_password_otp':
@@ -511,8 +517,11 @@ def patient_dashboard():
                 sent = send_notification_email(email, subject, body, is_html=True)
 
             if is_ajax:
-                msg = f"A 6-digit authorization OTP has been sent to your email ({email})." if sent else f"Authorization OTP generated: {otp}"
-                return jsonify({'success': True, 'message': msg, 'email': email, 'demo_otp': otp})
+                msg = f"A 6-digit authorization OTP has been sent to your email ({email})." if sent else "An authorization OTP has been generated and sent to your email."
+                res_data = {'success': True, 'message': msg, 'email': email}
+                if current_app.config.get('TESTING') or current_app.debug:
+                    res_data['demo_otp'] = otp
+                return jsonify(res_data)
 
             flash(f"A 6-digit authorization OTP has been sent to your email ({email}).", "info")
             return redirect(url_for('patient_dashboard', tab='security', delete_step='otp'))
@@ -545,10 +554,12 @@ def patient_dashboard():
                 try:
                     conn = get_db_connection()
                     if conn:
-                        cursor = conn.cursor()
-                        cursor.execute("DELETE FROM patients WHERE id = ?", (p_id,))
-                        conn.commit()
-                        conn.close()
+                        try:
+                            cursor = conn.cursor()
+                            cursor.execute("DELETE FROM patients WHERE id = ?", (p_id,))
+                            conn.commit()
+                        finally:
+                            conn.close()
                 except Exception as e:
                     print(f"Error removing patient from DB: {e}")
                 save_data()
@@ -740,13 +751,15 @@ def patient_dashboard():
                         try:
                             conn = get_db_connection()
                             if conn:
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    "UPDATE patients SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
-                                    (saved_filename, img_bytes, mime, str(current_user.id))
-                                )
-                                conn.commit()
-                                conn.close()
+                                try:
+                                    cursor = conn.cursor()
+                                    cursor.execute(
+                                        "UPDATE patients SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                                        (saved_filename, img_bytes, mime, str(current_user.id))
+                                    )
+                                    conn.commit()
+                                finally:
+                                    conn.close()
                         except Exception as e:
                             print(f"Patient DB photo sync note: {e}")
             
@@ -2479,16 +2492,18 @@ def get_patient_image(patient_id):
     try:
         conn = get_db_connection()
         if conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT profile_picture_data, profile_picture_content_type, profile_picture_url FROM patients WHERE id = ? AND profile_picture_data IS NOT NULL", (str(patient_id),))
-            row = cursor.fetchone()
-            conn.close()
-            if row and row[0]:
-                mime = row[1] or 'image/jpeg'
-                if row[2]:
-                    UPLOAD_CACHE[str(row[2]).strip()] = (row[0], mime)
-                    UPLOAD_CACHE[os.path.basename(str(row[2]).strip())] = (row[0], mime)
-                return send_file(BytesIO(row[0]), mimetype=mime)
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT profile_picture_data, profile_picture_content_type, profile_picture_url FROM patients WHERE id = ? AND profile_picture_data IS NOT NULL", (str(patient_id),))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    mime = row[1] or 'image/jpeg'
+                    if row[2]:
+                        UPLOAD_CACHE[str(row[2]).strip()] = (row[0], mime)
+                        UPLOAD_CACHE[os.path.basename(str(row[2]).strip())] = (row[0], mime)
+                    return send_file(BytesIO(row[0]), mimetype=mime)
+            finally:
+                conn.close()
     except Exception as e:
         print(f"Error fetching patient image from DB for {patient_id}: {e}")
 

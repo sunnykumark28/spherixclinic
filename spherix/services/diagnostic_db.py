@@ -33,6 +33,9 @@ from spherix.services.diagnostic_catalog import (
 
 def get_db_path() -> str:
     """Returns the configured database file path, honoring test and custom environments."""
+    is_serverless = bool(os.getenv('VERCEL') or os.getenv('SERVERLESS') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+    if is_serverless and os.path.exists('/tmp/spherixclinic.db'):
+        return '/tmp/spherixclinic.db'
     return os.getenv('DIAGNOSTIC_DB_PATH') or os.getenv('SQLITE_DB_PATH') or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'spherixclinic.db')
 
 DB_PATH = get_db_path()
@@ -928,90 +931,91 @@ def find_matching_pathology_centers(
     computing exact prices, distances, and collection eligibility.
     """
     conn = get_diagnostic_db()
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
 
-    query = """
-    SELECT c.*, o.legal_name as org_legal_name, o.tax_rate_percent
-    FROM pathology_centers c
-    JOIN pathology_organizations o ON c.organization_id = o.id
-    WHERE c.verification_status = 'VERIFIED' AND c.is_active = 1
-    """
-    params = []
+        query = """
+        SELECT c.*, o.legal_name as org_legal_name, o.tax_rate_percent
+        FROM pathology_centers c
+        JOIN pathology_organizations o ON c.organization_id = o.id
+        WHERE c.verification_status = 'VERIFIED' AND c.is_active = 1
+        """
+        params = []
 
-    if country:
-        query += " AND LOWER(c.country) = LOWER(?)"
-        params.append(country.strip())
-    if city:
-        query += " AND (LOWER(c.city) LIKE LOWER(?) OR LOWER(c.address) LIKE LOWER(?))"
-        params.extend([f"%{city.strip()}%", f"%{city.strip()}%"])
+        if country:
+            query += " AND LOWER(c.country) = LOWER(?)"
+            params.append(country.strip())
+        if city:
+            query += " AND (LOWER(c.city) LIKE LOWER(?) OR LOWER(c.address) LIKE LOWER(?))"
+            params.extend([f"%{city.strip()}%", f"%{city.strip()}%"])
 
-    if service_type == 'HOME_COLLECTION':
-        query += " AND c.home_collection_enabled = 1"
-    elif service_type == 'WALK_IN':
-        query += " AND c.walkin_enabled = 1"
+        if service_type == 'HOME_COLLECTION':
+            query += " AND c.home_collection_enabled = 1"
+        elif service_type == 'WALK_IN':
+            query += " AND c.walkin_enabled = 1"
 
-    cursor.execute(query, params)
-    centers_raw = dict_list_from_rows(cursor.fetchall())
-    matched_centers = []
+        cursor.execute(query, params)
+        centers_raw = dict_list_from_rows(cursor.fetchall())
+        matched_centers = []
 
-    for c in centers_raw:
-        c_lat = float(c.get('latitude') or 0.0)
-        c_lng = float(c.get('longitude') or 0.0)
+        for c in centers_raw:
+            c_lat = float(c.get('latitude') or 0.0)
+            c_lng = float(c.get('longitude') or 0.0)
 
-        # Distance calculation
-        dist = 5.0  # default fallback if coordinates not provided
-        if user_lat is not None and user_lng is not None and (user_lat != 0.0 or user_lng != 0.0):
-            dist = haversine_distance(user_lat, user_lng, c_lat, c_lng)
-        elif address and address.lower() in (c.get('city', '') + ' ' + c.get('address', '')).lower():
-            dist = 2.5
+            # Distance calculation
+            dist = 5.0  # default fallback if coordinates not provided
+            if user_lat is not None and user_lng is not None and (user_lat != 0.0 or user_lng != 0.0):
+                dist = haversine_distance(user_lat, user_lng, c_lat, c_lng)
+            elif address and address.lower() in (c.get('city', '') + ' ' + c.get('address', '')).lower():
+                dist = 2.5
 
-        # Check collection radius if home collection requested
-        if service_type == 'HOME_COLLECTION' and dist > float(c.get('home_collection_radius_km') or 25.0):
-            continue
+            # Check collection radius if home collection requested
+            if service_type == 'HOME_COLLECTION' and dist > float(c.get('home_collection_radius_km') or 25.0):
+                continue
 
-        if dist > max_distance_km and (user_lat or user_lng):
-            continue
+            if dist > max_distance_km and (user_lat or user_lng):
+                continue
 
-        c['distance_km'] = dist
-        c['display_name'] = f"{c['center_name']} ({c['branch_name']})"
+            c['distance_km'] = dist
+            c['display_name'] = f"{c['center_name']} ({c['branch_name']})"
 
-        # Calculate pricing for requested tests
-        total_test_price = 0.0
-        available_tests_count = 0
-        requested_count = len(test_ids) if test_ids else (len(test_codes) if test_codes else 0)
+            # Calculate pricing for requested tests
+            total_test_price = 0.0
+            available_tests_count = 0
+            requested_count = len(test_ids) if test_ids else (len(test_codes) if test_codes else 0)
 
-        if test_ids or test_codes:
-            if test_ids:
-                placeholders = ','.join(['?'] * len(test_ids))
-                cursor.execute(f"""
-                SELECT test_code, price FROM diagnostic_tests
-                WHERE center_id = ? AND (id IN ({placeholders}) OR test_code IN ({placeholders})) AND is_active = 1
-                """, [c['id']] + test_ids + test_ids)
-            else:
-                placeholders = ','.join(['?'] * len(test_codes))
-                cursor.execute(f"""
-                SELECT test_code, price FROM diagnostic_tests
-                WHERE center_id = ? AND test_code IN ({placeholders}) AND is_active = 1
-                """, [c['id']] + test_codes)
+            if test_ids or test_codes:
+                if test_ids:
+                    placeholders = ','.join(['?'] * len(test_ids))
+                    cursor.execute(f"""
+                    SELECT test_code, price FROM diagnostic_tests
+                    WHERE center_id = ? AND (id IN ({placeholders}) OR test_code IN ({placeholders})) AND is_active = 1
+                    """, [c['id']] + test_ids + test_ids)
+                else:
+                    placeholders = ','.join(['?'] * len(test_codes))
+                    cursor.execute(f"""
+                    SELECT test_code, price FROM diagnostic_tests
+                    WHERE center_id = ? AND test_code IN ({placeholders}) AND is_active = 1
+                    """, [c['id']] + test_codes)
 
-            t_rows = cursor.fetchall()
-            available_tests_count = len(t_rows)
-            for r in t_rows:
-                total_test_price += float(r['price'])
+                t_rows = cursor.fetchall()
+                available_tests_count = len(t_rows)
+                for r in t_rows:
+                    total_test_price += float(r['price'])
 
-            # If lab doesn't have custom tests, fallback to master pricing
-            if available_tests_count < requested_count:
-                missing_codes = test_codes or []
-                for mc in missing_codes:
-                    t_master = get_test_by_code(mc)
-                    if t_master:
-                        total_test_price += (t_master['base_price_usd'] if c['currency'] == 'USD' else t_master['base_price_inr'])
+                # If lab doesn't have custom tests, fallback to master pricing
+                if available_tests_count < requested_count:
+                    missing_codes = test_codes or []
+                    for mc in missing_codes:
+                        t_master = get_test_by_code(mc)
+                        if t_master:
+                            total_test_price += (t_master['base_price_usd'] if c['currency'] == 'USD' else t_master['base_price_inr'])
 
-        c['total_price'] = round(total_test_price, 2)
-        c['estimated_total'] = round(total_test_price + (float(c['home_collection_fee']) if service_type == 'HOME_COLLECTION' else 0.0), 2)
-        matched_centers.append(c)
-
-    conn.close()
+            c['total_price'] = round(total_test_price, 2)
+            c['estimated_total'] = round(total_test_price + (float(c['home_collection_fee']) if service_type == 'HOME_COLLECTION' else 0.0), 2)
+            matched_centers.append(c)
+    finally:
+        conn.close()
 
     # Sort results
     if sort_by == 'price':
@@ -1039,81 +1043,82 @@ def get_test_price_comparison(
     test_meta = get_test_by_code(code_upper)
 
     conn = get_diagnostic_db()
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
 
-    query = """
-    SELECT c.*, o.legal_name as org_legal_name, o.accreditation as org_accreditation
-    FROM pathology_centers c
-    JOIN pathology_organizations o ON c.organization_id = o.id
-    WHERE c.verification_status = 'VERIFIED' AND c.is_active = 1
-    """
-    params = []
-    if country and country != 'All':
-        query += " AND LOWER(c.country) = LOWER(?)"
-        params.append(country.strip())
-    if city:
-        query += " AND (LOWER(c.city) LIKE LOWER(?) OR LOWER(c.address) LIKE LOWER(?))"
-        params.extend([f"%{city.strip()}%", f"%{city.strip()}%"])
+        query = """
+        SELECT c.*, o.legal_name as org_legal_name, o.accreditation as org_accreditation
+        FROM pathology_centers c
+        JOIN pathology_organizations o ON c.organization_id = o.id
+        WHERE c.verification_status = 'VERIFIED' AND c.is_active = 1
+        """
+        params = []
+        if country and country != 'All':
+            query += " AND LOWER(c.country) = LOWER(?)"
+            params.append(country.strip())
+        if city:
+            query += " AND (LOWER(c.city) LIKE LOWER(?) OR LOWER(c.address) LIKE LOWER(?))"
+            params.extend([f"%{city.strip()}%", f"%{city.strip()}%"])
 
-    cursor.execute(query, params)
-    centers_raw = dict_list_from_rows(cursor.fetchall())
+        cursor.execute(query, params)
+        centers_raw = dict_list_from_rows(cursor.fetchall())
 
-    comparison_list = []
-    prices = []
+        comparison_list = []
+        prices = []
 
-    for c in centers_raw:
-        c_lat = float(c.get('latitude') or 0.0)
-        c_lng = float(c.get('longitude') or 0.0)
+        for c in centers_raw:
+            c_lat = float(c.get('latitude') or 0.0)
+            c_lng = float(c.get('longitude') or 0.0)
 
-        dist = 5.0
-        if user_lat is not None and user_lng is not None and (user_lat != 0.0 or user_lng != 0.0):
-            dist = haversine_distance(user_lat, user_lng, c_lat, c_lng)
+            dist = 5.0
+            if user_lat is not None and user_lng is not None and (user_lat != 0.0 or user_lng != 0.0):
+                dist = haversine_distance(user_lat, user_lng, c_lat, c_lng)
 
-        # Check center's specific price for this test
-        cursor.execute("""
-        SELECT price, turnaround_hours, is_active, home_collection_eligible, walkin_eligible
-        FROM diagnostic_tests
-        WHERE center_id = ? AND test_code = ? AND is_active = 1
-        """, (c['id'], code_upper))
-        custom_test = dict_from_row(cursor.fetchone())
+            # Check center's specific price for this test
+            cursor.execute("""
+            SELECT price, turnaround_hours, is_active, home_collection_eligible, walkin_eligible
+            FROM diagnostic_tests
+            WHERE center_id = ? AND test_code = ? AND is_active = 1
+            """, (c['id'], code_upper))
+            custom_test = dict_from_row(cursor.fetchone())
 
-        if custom_test:
-            price = float(custom_test['price'])
-            tat = custom_test.get('turnaround_hours') or (test_meta.get('turnaround_hours', 12) if test_meta else 12)
-            home_avail = bool(custom_test.get('home_collection_eligible', 1) and c.get('home_collection_enabled', 1))
-            walkin_avail = bool(custom_test.get('walkin_eligible', 1) and c.get('walkin_enabled', 1))
-        else:
-            base_inr = test_meta.get('base_price_inr', 500.0) if test_meta else 500.0
-            price = base_inr if c.get('currency', 'INR') == 'INR' else (test_meta.get('base_price_usd', 15.0) if test_meta else 15.0)
-            tat = test_meta.get('turnaround_hours', 12) if test_meta else 12
-            home_avail = bool(c.get('home_collection_enabled', 1))
-            walkin_avail = bool(c.get('walkin_enabled', 1))
+            if custom_test:
+                price = float(custom_test['price'])
+                tat = custom_test.get('turnaround_hours') or (test_meta.get('turnaround_hours', 12) if test_meta else 12)
+                home_avail = bool(custom_test.get('home_collection_eligible', 1) and c.get('home_collection_enabled', 1))
+                walkin_avail = bool(custom_test.get('walkin_eligible', 1) and c.get('walkin_enabled', 1))
+            else:
+                base_inr = test_meta.get('base_price_inr', 500.0) if test_meta else 500.0
+                price = base_inr if c.get('currency', 'INR') == 'INR' else (test_meta.get('base_price_usd', 15.0) if test_meta else 15.0)
+                tat = test_meta.get('turnaround_hours', 12) if test_meta else 12
+                home_avail = bool(c.get('home_collection_enabled', 1))
+                walkin_avail = bool(c.get('walkin_enabled', 1))
 
-        prices.append(price)
+            prices.append(price)
 
-        comparison_list.append({
-            "center_id": c['id'],
-            "center_name": c['center_name'],
-            "branch_name": c['branch_name'],
-            "city": c['city'],
-            "state_province": c.get('state_province', ''),
-            "country": c.get('country', 'India'),
-            "address": c['address'],
-            "rating": float(c.get('rating') or 4.8),
-            "review_count": int(c.get('review_count') or 0),
-            "distance_km": dist,
-            "test_price": price,
-            "currency": c.get('currency', 'INR'),
-            "home_collection_enabled": home_avail,
-            "home_collection_fee": float(c.get('home_collection_fee') or 0.0),
-            "walkin_enabled": walkin_avail,
-            "turnaround_hours": tat,
-            "is_nabl_accredited": bool(c.get('is_nabl_accredited', 1)),
-            "is_cap_accredited": bool(c.get('is_cap_accredited', 0)),
-            "is_iso_certified": bool(c.get('is_iso_certified', 1))
-        })
-
-    conn.close()
+            comparison_list.append({
+                "center_id": c['id'],
+                "center_name": c['center_name'],
+                "branch_name": c['branch_name'],
+                "city": c['city'],
+                "state_province": c.get('state_province', ''),
+                "country": c.get('country', 'India'),
+                "address": c['address'],
+                "rating": float(c.get('rating') or 4.8),
+                "review_count": int(c.get('review_count') or 0),
+                "distance_km": dist,
+                "test_price": price,
+                "currency": c.get('currency', 'INR'),
+                "home_collection_enabled": home_avail,
+                "home_collection_fee": float(c.get('home_collection_fee') or 0.0),
+                "walkin_enabled": walkin_avail,
+                "turnaround_hours": tat,
+                "is_nabl_accredited": bool(c.get('is_nabl_accredited', 1)),
+                "is_cap_accredited": bool(c.get('is_cap_accredited', 0)),
+                "is_iso_certified": bool(c.get('is_iso_certified', 1))
+            })
+    finally:
+        conn.close()
 
     # Sort centers by price ascending
     comparison_list.sort(key=lambda x: (x['test_price'], x['distance_km']))

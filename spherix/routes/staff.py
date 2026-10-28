@@ -180,6 +180,7 @@ def staff_dashboard():
 
 
 @staff_bp.route('/staff/profile/update', methods=['POST'])
+@staff_required
 def staff_update_profile():
     """Shared route for updating staff profile details."""
     # This route is called from multiple dashboards, so we use the generic @staff_required
@@ -213,13 +214,15 @@ def staff_update_profile():
                 try:
                     conn = get_db_connection()
                     if conn:
-                        cursor = conn.cursor()
-                        cursor.execute(
-                            "UPDATE staff SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
-                            (saved_filename, img_bytes, mime, str(current_user.id))
-                        )
-                        conn.commit()
-                        conn.close()
+                        try:
+                            cursor = conn.cursor()
+                            cursor.execute(
+                                "UPDATE staff SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                                (saved_filename, img_bytes, mime, str(current_user.id))
+                            )
+                            conn.commit()
+                        finally:
+                            conn.close()
                 except Exception as e:
                     print(f"Staff DB photo sync note: {e}")
 
@@ -257,16 +260,18 @@ def get_staff_image(staff_id):
     try:
         conn = get_db_connection()
         if conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT profile_picture_data, profile_picture_content_type, profile_picture_url FROM staff WHERE id = ? AND profile_picture_data IS NOT NULL", (str(staff_id),))
-            row = cursor.fetchone()
-            conn.close()
-            if row and row[0]:
-                mime = row[1] or 'image/jpeg'
-                if row[2]:
-                    UPLOAD_CACHE[str(row[2]).strip()] = (row[0], mime)
-                    UPLOAD_CACHE[os.path.basename(str(row[2]).strip())] = (row[0], mime)
-                return send_file(BytesIO(row[0]), mimetype=mime)
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT profile_picture_data, profile_picture_content_type, profile_picture_url FROM staff WHERE id = ? AND profile_picture_data IS NOT NULL", (str(staff_id),))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    mime = row[1] or 'image/jpeg'
+                    if row[2]:
+                        UPLOAD_CACHE[str(row[2]).strip()] = (row[0], mime)
+                        UPLOAD_CACHE[os.path.basename(str(row[2]).strip())] = (row[0], mime)
+                    return send_file(BytesIO(row[0]), mimetype=mime)
+            finally:
+                conn.close()
     except Exception as e:
         print(f"Error fetching staff image from DB for {staff_id}: {e}")
 

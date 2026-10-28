@@ -4,7 +4,7 @@ from spherix.services.database import (
     cleanup_temporary_and_duplicate_data, deduplicate_entities,
     setup_admin_user, setup_hospital_user, setup_international_network,
     create_notification, get_temp_data_item, reset_factory_database,
-    get_paid_appointment_doctor_ids_for_patient
+    get_paid_appointment_doctor_ids_for_patient, restore_backup_data
 )
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html,
@@ -30,7 +30,7 @@ __all__ = [
     'cleanup_temporary_and_duplicate_data', 'deduplicate_entities',
     'setup_admin_user', 'setup_hospital_user', 'setup_international_network',
     'create_notification', 'get_temp_data_item', 'reset_factory_database',
-    'get_paid_appointment_doctor_ids_for_patient',
+    'get_paid_appointment_doctor_ids_for_patient', 'restore_backup_data',
     'send_notification_email', 'send_notification_email_async', 'get_premium_otp_email_html',
     'send_approval_notification', 'get_account_approval_email_html',
     'verify_razorpay_signature', 'create_razorpay_order',

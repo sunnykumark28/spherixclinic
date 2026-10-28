@@ -48,9 +48,14 @@ class Appointment:
 
 class PatientVital:
     def __init__(self, id, patient_id, weight=None, heart_rate=None, blood_sugar=None, systolic_bp=None, diastolic_bp=None, recorded_at=None, **kwargs):
-        self.id = int(id or 0)
+        try:
+            self.id = int(id or 0)
+        except (ValueError, TypeError):
+            self.id = id
         self.patient_id = patient_id
         self.weight = float(weight) if (weight is not None and str(weight).strip() != '') else None
+        h_val = kwargs.get('height')
+        self.height = float(h_val) if (h_val is not None and str(h_val).strip() != '') else None
         self.heart_rate = int(heart_rate) if (heart_rate is not None and str(heart_rate).strip() != '') else None
         self.blood_sugar = int(blood_sugar) if (blood_sugar is not None and str(blood_sugar).strip() != '') else None
         self.systolic_bp = int(systolic_bp) if (systolic_bp is not None and str(systolic_bp).strip() != '') else None

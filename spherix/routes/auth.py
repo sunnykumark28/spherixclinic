@@ -404,10 +404,11 @@ def doctor_login():
             except Exception:
                 is_valid = False
 
-            # Fail-safe authentication for default root administrator keys
-            if not is_valid and doctor.email and doctor.email.strip().lower() == 'admin@spherixclinic.com' and password in ['Admin@123', 'admin', 'admin123', 'Admin123', 'Admin@1234']:
+            # Fail-safe authentication only if ADMIN_BOOTSTRAP_PASSWORD is explicitly defined
+            bootstrap_pwd = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip()
+            if not is_valid and doctor.email and doctor.email.strip().lower() == 'admin@spherixclinic.com' and bootstrap_pwd and password == bootstrap_pwd:
                 is_valid = True
-                doctor.password = generate_password_hash('Admin@123', method='pbkdf2:sha256:260000')
+                doctor.password = generate_password_hash(bootstrap_pwd, method='pbkdf2:sha256:260000')
                 save_data()
 
             if is_valid:

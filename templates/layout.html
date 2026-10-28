@@ -224,6 +224,11 @@
             transition: color 0.15s ease, opacity 0.15s ease;
         }
 
+        .spherix-nav-tab i:not(.fa-chevron-down),
+        .spherix-nav-tab svg:not(.dropdown-arrow) {
+            display: none !important;
+        }
+
         .spherix-nav-tab i,
         .spherix-nav-tab svg {
             font-size: 11px !important;
@@ -283,6 +288,12 @@
             border: 1px solid rgba(226, 232, 240, 0.85) !important;
             border-radius: 1.25rem !important;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        .mega-menu-glass i,
+        .mega-menu-glass .w-8.h-8,
+        .spherix-nav-tab i {
+            display: none !important;
         }
 
         /* Generic .nav-link tabs in dark blue with animated underline */
@@ -546,6 +557,37 @@
             transform: scale(0.96) !important;
             transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease !important;
         }
+
+        /* Smooth Expand Animation for Header Search */
+        @keyframes headerSearchExpand {
+            0% {
+                opacity: 0;
+                transform: scale(0.96) translateX(8px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateX(0);
+            }
+        }
+        .animate-search-expand {
+            animation: headerSearchExpand 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Responsive Floating Search Bar for Mobile */
+        @media (max-width: 639px) {
+            #header-search-bar-wrap.flex {
+                position: fixed !important;
+                left: 0.75rem !important;
+                right: 0.75rem !important;
+                top: 0.75rem !important;
+                width: auto !important;
+                max-width: calc(100vw - 1.5rem) !important;
+                z-index: 1070 !important;
+            }
+            #header-search-bar-wrap.flex .search-glow-container {
+                box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.35), 0 0 0 100vmax rgba(15, 23, 42, 0.45) !important;
+            }
+        }
     </style>
 </head>
 
@@ -588,84 +630,101 @@
                 </a>
             </div>
 
-            <!-- Right: Quick Clinical Actions (Command-Palette Search Bar + Emergency Ambulance Capsule + Corner Weather) -->
+            <!-- Right: Quick Clinical Actions (Click-to-Open Search Bar + Emergency Ambulance Capsule + Corner Weather) -->
             <div class="flex items-center gap-2.5 sm:gap-3.5 flex-wrap sm:flex-nowrap">
-                <!-- Inline Clinical Search Bar with Live Attached Dropdown -->
-                <div class="relative w-full sm:w-72 md:w-80 lg:w-96" id="header-search-container">
-                    <div class="search-glow-container">
-                        <div class="search-glow-inner">
-                            <div class="search-icon-pod" id="header-search-icon-pod">
-                                <i class="fas fa-search text-[11px]" id="header-search-icon"></i>
-                                <i class="fas fa-circle-notch fa-spin text-[11px] hidden"
-                                    id="header-search-spinner"></i>
+                <!-- Right-Placed Expandable Clinical Search -->
+                <div class="relative flex items-center" id="header-search-container">
+                    <!-- Icon Only Trigger (Default State) -->
+                    <button type="button" id="header-search-trigger-btn" onclick="openHeaderSearchBar();"
+                        class="group relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 hover:bg-sky-50 text-sky-600 hover:text-sky-700 border border-slate-200 hover:border-sky-300 shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer active:scale-95"
+                        title="Search doctors, meds, tests, symptoms (⌘K / Ctrl+K)">
+                        <i class="fa-solid fa-magnifying-glass fas fa-search text-base sm:text-lg text-sky-600 group-hover:text-sky-700 group-hover:scale-110 transition-transform"></i>
+                    </button>
+
+                    <!-- Expandable Search Bar Wrapper (Opens when Icon is Clicked) -->
+                    <div id="header-search-bar-wrap" class="hidden items-center relative w-72 sm:w-80 md:w-96 lg:w-[460px] animate-search-expand">
+                        <div class="search-glow-container w-full">
+                            <div class="search-glow-inner">
+                                <div class="search-icon-pod" id="header-search-icon-pod">
+                                    <i class="fas fa-search text-[11px]" id="header-search-icon"></i>
+                                    <i class="fas fa-circle-notch fa-spin text-[11px] hidden"
+                                        id="header-search-spinner"></i>
+                                </div>
+
+                                <input type="text" id="header-search-input"
+                                    class="w-full bg-transparent border-0 text-slate-800 placeholder-slate-400 text-xs font-semibold focus:outline-none focus:ring-0 p-0"
+                                    placeholder="Search doctors, meds, tests, symptoms..." autocomplete="off"
+                                    spellcheck="false">
+
+                                <button type="button" id="header-search-clear-btn" onclick="clearHeaderSearchInput();"
+                                    class="hidden text-slate-400 hover:text-slate-600 p-0.5 rounded transition-colors ml-1 cursor-pointer"
+                                    title="Clear search">
+                                    <i class="fas fa-times-circle text-xs"></i>
+                                </button>
+
+                                <kbd class="hidden sm:inline-flex search-kbd-badge ml-1.5" title="Command Palette Shortcut">⌘K</kbd>
+
+                                <!-- Close Button inside expanded bar -->
+                                <button type="button" id="header-search-close-btn" onclick="closeHeaderSearchBar();"
+                                    class="ml-2 w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-all duration-200 cursor-pointer flex-shrink-0"
+                                    title="Close search (Esc)">
+                                    <i class="fas fa-times text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Live Auto-Suggest Results Dropdown (Aligned right-0 since search bar is on the right) -->
+                        <div id="header-search-dropdown"
+                            class="search-dropdown-flyout absolute right-0 top-full mt-2.5 overflow-hidden z-[1050] hidden flex-col max-h-[78vh] w-full sm:w-[420px] md:w-[480px] lg:w-[520px]">
+
+                            <!-- Category Filter Tabs -->
+                            <div
+                                class="flex items-center gap-1.5 px-3.5 py-2.5 border-b border-slate-100 bg-slate-50/75 overflow-x-auto no-scrollbar">
+                                <button type="button" class="header-search-pill active" data-category="all"
+                                    onclick="setHeaderSearchCategory('all', this);">
+                                    All
+                                </button>
+                                <button type="button" class="header-search-pill" data-category="services"
+                                    onclick="setHeaderSearchCategory('services', this);">
+                                    <i class="fas fa-brain text-[9px]"></i> AI & Tools
+                                </button>
+                                <button type="button" class="header-search-pill" data-category="doctors"
+                                    onclick="setHeaderSearchCategory('doctors', this);">
+                                    <i class="fas fa-user-md text-[9px]"></i> Doctors
+                                </button>
+                                <button type="button" class="header-search-pill" data-category="hospitals"
+                                    onclick="setHeaderSearchCategory('hospitals', this);">
+                                    <i class="fas fa-hospital text-[9px]"></i> Hospitals
+                                </button>
+                                <button type="button" class="header-search-pill" data-category="medicines"
+                                    onclick="setHeaderSearchCategory('medicines', this);">
+                                    <i class="fas fa-pills text-[9px]"></i> Meds
+                                </button>
+                                <button type="button" class="header-search-pill" data-category="diseases"
+                                    onclick="setHeaderSearchCategory('diseases', this);">
+                                    <i class="fas fa-book-medical text-[9px]"></i> Diseases
+                                </button>
                             </div>
 
-                            <input type="text" id="header-search-input"
-                                class="w-full bg-transparent border-0 text-slate-800 placeholder-slate-400 text-xs font-semibold focus:outline-none focus:ring-0 p-0"
-                                placeholder="Search doctors, meds, tests, symptoms..." autocomplete="off"
-                                spellcheck="false">
+                            <!-- Results List -->
+                            <div id="header-search-results-list"
+                                class="flex-1 overflow-y-auto p-2.5 max-h-[52vh] space-y-1">
+                                <!-- Populated live via JS -->
+                            </div>
 
-                            <button type="button" id="header-search-clear-btn" onclick="clearHeaderSearchInput();"
-                                class="hidden text-slate-400 hover:text-slate-600 p-0.5 rounded transition-colors ml-1 cursor-pointer"
-                                title="Clear search">
-                                <i class="fas fa-times-circle text-xs"></i>
-                            </button>
-
-                            <kbd class="hidden sm:inline-flex search-kbd-badge ml-1.5">⌘K</kbd>
-                        </div>
-                    </div>
-
-                    <!-- Live Auto-Suggest Results Dropdown -->
-                    <div id="header-search-dropdown"
-                        class="search-dropdown-flyout absolute right-0 top-full mt-2 overflow-hidden z-[1050] hidden flex-col max-h-[78vh] w-full sm:w-[420px] md:w-[480px] lg:w-[520px]">
-
-                        <!-- Category Filter Tabs -->
-                        <div
-                            class="flex items-center gap-1.5 px-3.5 py-2.5 border-b border-slate-100 bg-slate-50/75 overflow-x-auto no-scrollbar">
-                            <button type="button" class="header-search-pill active" data-category="all"
-                                onclick="setHeaderSearchCategory('all', this);">
-                                All
-                            </button>
-                            <button type="button" class="header-search-pill" data-category="services"
-                                onclick="setHeaderSearchCategory('services', this);">
-                                <i class="fas fa-brain text-[9px]"></i> AI & Tools
-                            </button>
-                            <button type="button" class="header-search-pill" data-category="doctors"
-                                onclick="setHeaderSearchCategory('doctors', this);">
-                                <i class="fas fa-user-md text-[9px]"></i> Doctors
-                            </button>
-                            <button type="button" class="header-search-pill" data-category="hospitals"
-                                onclick="setHeaderSearchCategory('hospitals', this);">
-                                <i class="fas fa-hospital text-[9px]"></i> Hospitals
-                            </button>
-                            <button type="button" class="header-search-pill" data-category="medicines"
-                                onclick="setHeaderSearchCategory('medicines', this);">
-                                <i class="fas fa-pills text-[9px]"></i> Meds
-                            </button>
-                            <button type="button" class="header-search-pill" data-category="diseases"
-                                onclick="setHeaderSearchCategory('diseases', this);">
-                                <i class="fas fa-book-medical text-[9px]"></i> Diseases
-                            </button>
-                        </div>
-
-                        <!-- Results List -->
-                        <div id="header-search-results-list"
-                            class="flex-1 overflow-y-auto p-2.5 max-h-[52vh] space-y-1">
-                            <!-- Populated live via JS -->
-                        </div>
-
-                        <!-- Dropdown Footer -->
-                        <div
-                            class="px-3.5 py-2 bg-slate-50/90 backdrop-blur-md border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
-                            <span class="flex items-center gap-1">Use <kbd
-                                    class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-600">↑</kbd>
-                                <kbd
-                                    class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-600">↓</kbd>
-                                to navigate, <kbd
-                                    class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-600">↵</kbd>
-                                to open</span>
-                            <span class="text-blue-600 font-bold flex items-center gap-1"><i
-                                    class="fas fa-bolt text-[9.5px]"></i> Instant Search</span>
+                            <!-- Dropdown Footer -->
+                            <div
+                                class="px-3.5 py-2 bg-slate-50/90 backdrop-blur-md border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
+                                <span class="flex items-center gap-1">Use <kbd
+                                        class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-600">↑</kbd>
+                                    <kbd
+                                        class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-600">↓</kbd>
+                                    to navigate, <kbd
+                                        class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-600">↵</kbd>
+                                    to open</span>
+                                <span class="text-blue-600 font-bold flex items-center gap-1"><i
+                                        class="fas fa-bolt text-[9.5px]"></i> Instant Search</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -712,25 +771,6 @@
                         <i class="fas fa-truck-medical text-[10px]"></i>
                         <span>Book Ambulance</span>
                     </a>
-                </div>
-
-                <!-- Subtle Vertical Divider -->
-                <div class="hidden xl:block w-px h-6 bg-slate-200/80 shrink-0"></div>
-
-                <!-- Currency & Regional Pricing Switcher Capsule -->
-                <div class="relative flex items-center shrink-0" id="header-currency-widget-container">
-                    <button type="button" onclick="window.toggleCurrencyDropdown(event);" id="headerCurrencyBtn"
-                        class="spherix-currency-badge group flex items-center gap-1.5 py-1 px-2 rounded-lg bg-slate-100/90 hover:bg-blue-50 border border-slate-200/90 hover:border-blue-300 transition-all duration-200 cursor-pointer shadow-2xs text-left"
-                        title="Change Regional Currency & Location (Auto-Detect Available)">
-                        <span class="curr-flag text-sm">🇮🇳</span>
-                        <div class="flex flex-col justify-center leading-none select-none">
-                            <span class="text-slate-900 font-black font-mono text-xs tracking-tight group-hover:text-blue-600 transition-colors flex items-center gap-0.5">
-                                <span class="curr-code">INR</span>
-                                <span class="curr-sym text-slate-500 font-semibold">(₹)</span>
-                            </span>
-                        </div>
-                        <i class="fas fa-chevron-down text-[8px] text-slate-400 group-hover:text-blue-600 group-hover:translate-y-0.5 transition-all duration-200"></i>
-                    </button>
                 </div>
 
                 <!-- Subtle Vertical Divider -->
@@ -875,7 +915,6 @@
                     <!-- Home Link -->
                     <a href="{{ url_for('home') }}"
                         class="spherix-nav-tab group {% if request.endpoint == 'home' %}active{% endif %}">
-                        <i class="fas fa-home text-[13px]"></i>
                         <span>HOME</span>
                         <span class="tab-underline"></span>
                     </a>
@@ -883,7 +922,6 @@
                     <!-- Specialists Link -->
                     <a href="/doctors"
                         class="spherix-nav-tab group {% if request.endpoint == 'doctors' %}active{% endif %}">
-                        <i class="fas fa-user-md text-[13px]"></i>
                         <span>SPECIALISTS</span>
                         <span class="tab-underline"></span>
                     </a>
@@ -891,7 +929,6 @@
                     <!-- Hospitals Link -->
                     <a href="{{ url_for('hospitals_list') }}"
                         class="spherix-nav-tab group {% if request.endpoint == 'hospitals_list' %}active{% endif %}">
-                        <i class="fas fa-hospital text-[13px]"></i>
                         <span>HOSPITALS</span>
                         <span class="tab-underline"></span>
                     </a>
@@ -899,7 +936,6 @@
                     <!-- Pharmacy Link -->
                     <a href="{{ url_for('medical_shop') }}" target="_blank" rel="noopener noreferrer"
                         class="spherix-nav-tab group {% if request.endpoint == 'medical_shop' %}active{% endif %}">
-                        <i class="fas fa-pills text-[13px]"></i>
                         <span>SPHERIX MEDS</span>
                         <span class="tab-underline"></span>
                     </a>
@@ -907,7 +943,6 @@
                     <!-- Cancer Care -->
                     <a href="{{ url_for('cancer_care') }}" target="_blank" rel="noopener noreferrer"
                         class="spherix-nav-tab group {% if request.endpoint == 'cancer_care' %}active{% endif %}">
-                        <i class="fas fa-ribbon text-[13px]"></i>
                         <span>CANCER CARE</span>
                         <span class="tab-underline"></span>
                     </a>
@@ -915,23 +950,21 @@
                     <!-- Diagnostics & Pathology Network -->
                     <a href="{{ url_for('diagnostic.diagnostic_home') }}" target="_blank" rel="noopener noreferrer"
                         class="spherix-nav-tab group {% if request.blueprint == 'diagnostic' %}active{% endif %}">
-                        <i class="fas fa-vial text-[13px]"></i>
                         <span>DIAGNOSTICS</span>
                         <span class="tab-underline"></span>
                     </a>
 
                     <!-- Services Dropdown -->
-                    <div x-data="{ open: false }" class="relative">
+                    <div x-data="{ open: false, timeout: null }" class="relative"
+                        @mouseenter="clearTimeout(timeout); open = true"
+                        @mouseleave="timeout = setTimeout(() => open = false, 150)">
                         <button @click="open = !open" @click.away="open = false"
                             class="spherix-nav-tab group {% if request.endpoint in ['drug_checker', 'lab_analyzer', 'radiology_ai', 'symptoms', 'first_aid', 'ayurveda', 'yoga', 'conditions', 'health_calculators', 'clinical_ai.nutrition_fitness_planner', 'nutrition_fitness_planner'] %}active{% endif %}">
-                            <i class="fas fa-hand-holding-heart text-[12px]"></i>
                             <span>SERVICES</span>
-                            <i class="fas fa-chevron-down text-[9px] transition-transform duration-200"
-                                :class="open ? 'rotate-180' : ''"></i>
                             <span class="tab-underline"></span>
                         </button>
                         <div x-show="open" x-cloak x-transition.opacity.scale.origin.top.right
-                            class="mega-menu-glass absolute top-full right-0 mt-3 w-full md:w-[34rem] lg:w-[38rem] p-3.5 z-50 origin-top-right max-h-[85vh] overflow-y-auto">
+                            class="mega-menu-glass absolute top-full right-0 mt-3 w-full md:w-[34rem] lg:w-[38rem] p-3.5 z-50 origin-top-right max-h-[85vh] overflow-y-auto before:content-[''] before:absolute before:-top-3 before:left-0 before:right-0 before:h-3">
                             <!-- 2 Categorized Columns -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
@@ -940,15 +973,11 @@
                                     <div
                                         class="px-2 py-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                                         <span>AI Diagnostics &amp; Clinical</span>
-                                        <i class="fas fa-brain text-slate-300"></i>
+                                        
                                     </div>
 
                                     <a href="{{ url_for('drug_checker') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-purple-50/80 border border-transparent hover:border-purple-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-pills text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-purple-700">Drug
@@ -960,10 +989,6 @@
 
                                     <a href="{{ url_for('lab_analyzer') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-emerald-50/80 border border-transparent hover:border-emerald-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-microscope text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-emerald-700">Lab
@@ -975,10 +1000,6 @@
 
                                     <a href="{{ url_for('radiology_ai') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-sky-50/80 border border-transparent hover:border-sky-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-x-ray text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span class="text-xs font-bold text-slate-800 group-hover:text-sky-700">AI
                                                 Radiology Suite</span>
@@ -989,10 +1010,6 @@
 
                                     <a href="{{ url_for('symptoms') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-indigo-50/80 border border-transparent hover:border-indigo-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-heart-pulse text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">AI
@@ -1004,10 +1021,6 @@
 
                                     <a href="{{ url_for('first_aid') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-red-50/80 border border-transparent hover:border-red-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-kit-medical text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-red-700">Smart
@@ -1023,15 +1036,11 @@
                                     <div
                                         class="px-2 py-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                                         <span>Wellness &amp; Health Suite</span>
-                                        <i class="fas fa-spa text-slate-300"></i>
+                                        
                                     </div>
 
                                     <a href="{{ url_for('ayurveda') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-green-50/80 border border-transparent hover:border-green-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-seedling text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-green-700">Vedic
@@ -1043,10 +1052,6 @@
 
                                     <a href="{{ url_for('yoga') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-orange-50/80 border border-transparent hover:border-orange-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-spa text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-orange-700">Yoga
@@ -1058,10 +1063,6 @@
 
                                     <a href="{{ url_for('conditions') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-emerald-50/80 border border-transparent hover:border-emerald-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-stethoscope text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-emerald-700">Disease
@@ -1073,10 +1074,6 @@
 
                                     <a href="{{ url_for('cancer_care') }}" target="_blank" rel="noopener noreferrer"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-rose-50/80 border border-transparent hover:border-rose-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-ribbon text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-rose-700">Cancer
@@ -1088,10 +1085,6 @@
 
                                     <a href="{{ url_for('health_calculators') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-yellow-50/80 border border-transparent hover:border-yellow-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-calculator text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-yellow-700">Health
@@ -1103,10 +1096,6 @@
 
                                     <a href="{{ url_for('clinical_ai.nutrition_fitness_planner') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-emerald-50/80 border border-transparent hover:border-emerald-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-apple-whole text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-emerald-700">Nutrition &amp; Fitness</span>
@@ -1119,32 +1108,27 @@
                     </div>
 
                     <!-- Donor Networks Dropdown -->
-                    <div x-data="{ open: false }" class="relative">
+                    <div x-data="{ open: false, timeout: null }" class="relative"
+                        @mouseenter="clearTimeout(timeout); open = true"
+                        @mouseleave="timeout = setTimeout(() => open = false, 150)">
                         <button @click="open = !open" @click.away="open = false"
                             class="spherix-nav-tab group {% if request.endpoint in ['organ_donors_list', 'organ_donor_login', 'blood_donation_camps', 'blood_bank', 'blood_donors_list', 'blood_donor_login'] %}active{% endif %}">
-                            <i class="fas fa-hand-holding-heart text-[12px]"></i>
                             <span>DONOR NETWORKS</span>
-                            <i class="fas fa-chevron-down text-[9px] transition-transform duration-200"
-                                :class="open ? 'rotate-180' : ''"></i>
                             <span class="tab-underline"></span>
                         </button>
                         <div x-show="open" x-cloak x-transition.opacity.scale.origin.top.right
-                            class="mega-menu-glass absolute top-full right-0 mt-3 w-full md:w-[34rem] lg:w-[38rem] p-3.5 z-50 origin-top-right max-h-[85vh] overflow-y-auto">
+                            class="mega-menu-glass absolute top-full right-0 mt-3 w-full md:w-[34rem] lg:w-[38rem] p-3.5 z-50 origin-top-right max-h-[85vh] overflow-y-auto before:content-[''] before:absolute before:-top-3 before:left-0 before:right-0 before:h-3">
                             
                             <!-- Organ Legacy Section -->
                             <div class="mb-3">
                                 <div
                                     class="px-2 py-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                                     <span>Organ Legacy Network</span>
-                                    <i class="fas fa-heart text-slate-300"></i>
+                                    
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
                                     <a href="{{ url_for('organ_donors_list') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-sky-50/80 border border-transparent hover:border-sky-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-search text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-sky-700">Registry
@@ -1155,10 +1139,6 @@
                                     </a>
                                     <a href="{{ url_for('organ_donor_login') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-indigo-50/80 border border-transparent hover:border-indigo-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-hand-holding-heart text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">Organ
@@ -1175,15 +1155,11 @@
                                 <div
                                     class="px-2 py-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                                     <span>Blood Bank & Donation Drives</span>
-                                    <i class="fas fa-tint text-slate-300"></i>
+                                    
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
                                     <a href="{{ url_for('blood_donation_camps') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-red-50/80 border border-transparent hover:border-red-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-tent text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-red-700">Donation
@@ -1195,10 +1171,6 @@
 
                                     <a href="{{ url_for('blood_bank') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-rose-50/80 border border-transparent hover:border-rose-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-layer-group text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-rose-700">Live
@@ -1210,10 +1182,6 @@
 
                                     <a href="{{ url_for('blood_donors_list') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-pink-50/80 border border-transparent hover:border-pink-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-search text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-pink-700">Find
@@ -1225,10 +1193,6 @@
 
                                     <a href="{{ url_for('blood_donor_login') }}"
                                         class="flex items-center p-2.5 rounded-lg hover:bg-orange-50/80 border border-transparent hover:border-orange-100 transition-all group text-decoration-none">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                            <i class="fas fa-heart text-xs"></i>
-                                        </div>
                                         <div class="flex flex-col truncate">
                                             <span
                                                 class="text-xs font-bold text-slate-800 group-hover:text-orange-700">Blood
@@ -1246,40 +1210,34 @@
                                 <a href="{{ url_for('blood_bank') }}"
                                     class="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 group text-decoration-none">
                                     <span>Emergency Blood Stock</span>
-                                    <i
-                                        class="fas fa-arrow-right text-[10px] group-hover:translate-x-0.5 transition-transform"></i>
+                                    
                                 </a>
                             </div>
                         </div>
                     </div>
 
                     <!-- More Dropdown -->
-                    <div x-data="{ open: false }" class="relative">
+                    <div x-data="{ open: false, timeout: null }" class="relative"
+                        @mouseenter="clearTimeout(timeout); open = true"
+                        @mouseleave="timeout = setTimeout(() => open = false, 150)">
                         <button @click="open = !open" @click.away="open = false"
                             class="spherix-nav-tab group {% if request.endpoint in ['about', 'careers', 'legal_hub', 'blog', 'health_tips', 'gallery', 'faq_page'] %}active{% endif %}">
-                            <i class="fas fa-ellipsis-h text-[12px]"></i>
                             <span>MORE</span>
-                            <i class="fas fa-chevron-down text-[9px] transition-transform duration-200"
-                                :class="open ? 'rotate-180' : ''"></i>
                             <span class="tab-underline"></span>
                         </button>
                         <div x-show="open" x-cloak x-transition.opacity.scale.origin.top.right
-                            class="mega-menu-glass absolute top-full right-0 mt-3 w-72 md:w-80 lg:w-80 p-3 z-50 origin-top-right">
+                            class="mega-menu-glass absolute top-full right-0 mt-3 w-72 md:w-80 lg:w-80 p-3 z-50 origin-top-right before:content-[''] before:absolute before:-top-3 before:left-0 before:right-0 before:h-3">
 
                             <!-- Header -->
                             <div
                                 class="px-2 py-1.5 mb-1.5 text-xs font-bold text-slate-800 border-b border-slate-100 flex items-center justify-between">
                                 <span>Spherix Ecosystem</span>
-                                <i class="fas fa-compass text-slate-400"></i>
+                                
                             </div>
 
                             <div class="space-y-1">
                                 <a href="{{ url_for('about') }}"
                                     class="flex items-center p-2.5 rounded-lg hover:bg-indigo-50/80 border border-transparent hover:border-indigo-100 transition-all group text-decoration-none">
-                                    <div
-                                        class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                        <i class="fas fa-hospital text-xs"></i>
-                                    </div>
                                     <div class="flex flex-col truncate">
                                         <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">About
                                             Spherix Clinic</span>
@@ -1290,10 +1248,6 @@
 
                                 <a href="{{ url_for('faq_page') }}"
                                     class="flex items-center p-2.5 rounded-lg hover:bg-sky-50/80 border border-transparent hover:border-sky-100 transition-all group text-decoration-none">
-                                    <div
-                                        class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                        <i class="fas fa-circle-question text-xs"></i>
-                                    </div>
                                     <div class="flex flex-col truncate">
                                         <span class="text-xs font-bold text-slate-800 group-hover:text-sky-700">FAQ &
                                             Help Center</span>
@@ -1304,10 +1258,6 @@
 
                                 <a href="{{ url_for('health_tips') }}"
                                     class="flex items-center p-2.5 rounded-lg hover:bg-rose-50/80 border border-transparent hover:border-rose-100 transition-all group text-decoration-none">
-                                    <div
-                                        class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                        <i class="fas fa-lightbulb text-xs"></i>
-                                    </div>
                                     <div class="flex flex-col truncate">
                                         <span class="text-xs font-bold text-slate-800 group-hover:text-rose-700">Daily
                                             Health Tips</span>
@@ -1318,10 +1268,6 @@
 
                                 <a href="{{ url_for('blog') }}"
                                     class="flex items-center p-2.5 rounded-lg hover:bg-orange-50/80 border border-transparent hover:border-orange-100 transition-all group text-decoration-none">
-                                    <div
-                                        class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                        <i class="fas fa-newspaper text-xs"></i>
-                                    </div>
                                     <div class="flex flex-col truncate">
                                         <span
                                             class="text-xs font-bold text-slate-800 group-hover:text-orange-700">Medical
@@ -1333,10 +1279,6 @@
 
                                 <a href="{{ url_for('careers') }}"
                                     class="flex items-center p-2.5 rounded-lg hover:bg-blue-50/80 border border-transparent hover:border-blue-100 transition-all group text-decoration-none">
-                                    <div
-                                        class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                        <i class="fas fa-briefcase text-xs"></i>
-                                    </div>
                                     <div class="flex flex-col truncate">
                                         <span class="text-xs font-bold text-slate-800 group-hover:text-blue-700">Careers
                                             @ Spherix</span>
@@ -1347,10 +1289,6 @@
 
                                 <a href="{{ url_for('gallery') }}"
                                     class="flex items-center p-2.5 rounded-lg hover:bg-lime-50/80 border border-transparent hover:border-lime-100 transition-all group text-decoration-none">
-                                    <div
-                                        class="w-8 h-8 rounded-lg bg-lime-100 text-lime-600 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                        <i class="fas fa-images text-xs"></i>
-                                    </div>
                                     <div class="flex flex-col truncate">
                                         <span class="text-xs font-bold text-slate-800 group-hover:text-lime-700">Media
                                             Gallery</span>
@@ -1363,10 +1301,6 @@
                                 
                                 <a href="{{ url_for('legal_hub', policy_id='privacy-policy') }}"
                                     class="flex items-center p-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all group text-decoration-none">
-                                    <div
-                                        class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center mr-2.5 group-hover:scale-105 transition-transform flex-shrink-0">
-                                        <i class="fas fa-shield-halved text-xs"></i>
-                                    </div>
                                     <div class="flex flex-col truncate">
                                         <span class="text-xs font-bold text-slate-800 group-hover:text-slate-900">Legal
                                             & Privacy Hub</span>
@@ -1383,10 +1317,10 @@
                 <div class="flex items-center gap-2 flex-shrink-0 justify-end w-auto lg:min-w-[5rem] xl:min-w-[7rem]">
 
                     <!-- Header Quick Search Focus Button -->
-                    <button type="button" onclick="focusHeaderSearch();"
-                        class="w-7 h-7 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-700 hover:border-white flex items-center justify-center transition-all duration-200 shadow-2xs cursor-pointer group"
+                    <button type="button" onclick="focusHeaderSearch();" id="navbar-search-trigger-btn"
+                        class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/80 hover:border-sky-400 flex items-center justify-center transition-all duration-200 shadow-2xs cursor-pointer group"
                         title="Search Spherix (⌘K / Ctrl+K)">
-                        <i class="fas fa-search text-[10px] text-white group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-search text-[11px] text-sky-400 group-hover:scale-110 transition-transform"></i>
                     </button>
 
                     {% if current_user.is_authenticated %}
@@ -1522,7 +1456,6 @@
                         <!-- Account Access Tab Button -->
                         <button id="loginBtn"
                             class="spherix-nav-tab group cursor-pointer {% if request.endpoint in ['patient_login', 'doctor_login', 'hospital_login', 'blood_donor_login', 'organ_donor_login', 'staff_login', 'admin_login'] %}active{% endif %}">
-                            <i class="fas fa-user-shield text-[13px]"></i>
                             <span>Login</span>
                             <i id="loginBtnArrow"
                                 class="fas fa-chevron-down text-[9px] transition-transform duration-200"></i>
@@ -1774,23 +1707,23 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
                         <a href="{{ url_for('drug_checker') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-purple-700">
-                            <i class="fas fa-pills text-purple-600 w-4 text-center"></i> Drug Interaction
+                            Drug Interaction
                         </a>
                         <a href="{{ url_for('lab_analyzer') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">
-                            <i class="fas fa-microscope text-emerald-600 w-4 text-center"></i> Lab Analyzer AI
+                            Lab Analyzer AI
                         </a>
                         <a href="{{ url_for('radiology_ai') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700">
-                            <i class="fas fa-x-ray text-sky-600 w-4 text-center"></i> AI Radiology Suite
+                            AI Radiology Suite
                         </a>
                         <a href="{{ url_for('symptoms') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
-                            <i class="fas fa-heart-pulse text-indigo-600 w-4 text-center"></i> AI Symptom Triage
+                            AI Symptom Triage
                         </a>
                         <a href="{{ url_for('first_aid') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-red-50 hover:text-red-700">
-                            <i class="fas fa-kit-medical text-red-600 w-4 text-center"></i> Smart First Aid
+                            Smart First Aid
                         </a>
                     </div>
                 </div>
@@ -1802,23 +1735,23 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
                         <a href="{{ url_for('ayurveda') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-green-50 hover:text-green-700">
-                            <i class="fas fa-seedling text-green-600 w-4 text-center"></i> Vedic Ayurveda
+                            Vedic Ayurveda
                         </a>
                         <a href="{{ url_for('yoga') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-700">
-                            <i class="fas fa-spa text-orange-600 w-4 text-center"></i> Yoga & Meditation
+                            Yoga & Meditation
                         </a>
                         <a href="{{ url_for('conditions') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">
-                            <i class="fas fa-stethoscope text-emerald-600 w-4 text-center"></i> Disease Directory
+                            Disease Directory
                         </a>
                         <a href="{{ url_for('health_calculators') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-yellow-50 hover:text-yellow-700">
-                            <i class="fas fa-calculator text-yellow-600 w-4 text-center"></i> Health Calculators
+                            Health Calculators
                         </a>
                         <a href="{{ url_for('clinical_ai.nutrition_fitness_planner') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700">
-                            <i class="fas fa-apple-whole text-emerald-600 w-4 text-center"></i> Nutrition &amp; Fitness
+                            Nutrition &amp; Fitness
                         </a>
                     </div>
                 </div>
@@ -1830,19 +1763,19 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
                         <a href="{{ url_for('blood_bank') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-50">
-                            <i class="fas fa-layer-group text-rose-600 w-4 text-center"></i> Blood Bank Stock
+                            Blood Bank Stock
                         </a>
                         <a href="{{ url_for('blood_donation_camps') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-red-50 hover:text-red-600">
-                            <i class="fas fa-tent text-red-600 w-4 text-center"></i> Donation Camps
+                            Donation Camps
                         </a>
                         <a href="{{ url_for('blood_donors_list') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-pink-50 hover:text-pink-600">
-                            <i class="fas fa-search text-pink-600 w-4 text-center"></i> Find Blood Donors
+                            Find Blood Donors
                         </a>
                         <a href="{{ url_for('organ_donors_list') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-600">
-                            <i class="fas fa-search text-sky-600 w-4 text-center"></i> Organ Registry Network
+                            Organ Registry Network
                         </a>
                     </div>
                 </div>
@@ -1854,27 +1787,27 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
                         <a href="{{ url_for('about') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
-                            <i class="fas fa-hospital text-indigo-600 w-4 text-center"></i> About Spherix
+                            About Spherix
                         </a>
                         <a href="{{ url_for('faq_page') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700">
-                            <i class="fas fa-circle-question text-sky-600 w-4 text-center"></i> FAQ & Help Center
+                            FAQ & Help Center
                         </a>
                         <a href="{{ url_for('health_tips') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-700">
-                            <i class="fas fa-lightbulb text-rose-600 w-4 text-center"></i> Daily Health Tips
+                            Daily Health Tips
                         </a>
                         <a href="{{ url_for('blog') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-700">
-                            <i class="fas fa-newspaper text-orange-600 w-4 text-center"></i> Medical Journal
+                            Medical Journal
                         </a>
                         <a href="{{ url_for('careers') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700">
-                            <i class="fas fa-briefcase text-blue-600 w-4 text-center"></i> Careers @ Spherix
+                            Careers @ Spherix
                         </a>
                         <a href="{{ url_for('legal_hub', policy_id='privacy-policy') }}"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900">
-                            <i class="fas fa-shield-halved text-slate-600 w-4 text-center"></i> Privacy & Terms
+                            Privacy & Terms
                         </a>
                     </div>
                 </div>
@@ -2718,10 +2651,6 @@
             <div class="mb-6 p-3.5 sm:p-4 rounded-lg shadow-xl flex flex-col lg:flex-row items-center justify-between gap-3 relative overflow-hidden backdrop-blur-md transition-all duration-300">
 
                 <div class="flex items-center gap-3 relative z-10">
-                    <span
-                        class="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-500/20 to-red-600/30 text-rose-400 border border-rose-500/40 flex items-center justify-center text-base flex-shrink-0 shadow-[0_0_15px_rgba(244,63,94,0.3)] ring-2 ring-rose-500/20">
-                        <i class="fas fa-phone-volume animate-bounce"></i>
-                    </span>
                     <div>
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5 font-heading">
@@ -2739,29 +2668,29 @@
                 <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 relative z-10">
                     <a href="{{ url_for('emergency_track', sos_id='SOS-LIVE-2026') }}"
                         class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white text-xs font-black transition-all shadow-md shadow-rose-600/40 flex items-center gap-1.5 text-decoration-none hover:scale-105 active:scale-95 duration-200 border border-rose-400/40">
-                        <i class="fas fa-truck-medical animate-pulse"></i> 1-Click SOS Dispatch
+                        1-Click SOS Dispatch
                     </a>
                     <a href="tel:108"
                         class="px-2.5 py-1.5 rounded-lg text-rose-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 text-decoration-none shadow-xs hover:border-rose-400 hover:bg-rose-950/60 hover:-translate-y-0.5 bg-zinc-900 border border-rose-500/30">
-                        <i class="fas fa-ambulance text-[11px] text-rose-400"></i> Ambulance 108
+                        Ambulance 108
                     </a>
                     <a href="tel:112"
                         class="px-2.5 py-1.5 rounded-lg text-blue-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 text-decoration-none shadow-xs hover:border-blue-400 hover:bg-blue-950/60 hover:-translate-y-0.5 bg-zinc-900 border border-blue-500/30">
-                        <i class="fas fa-shield-alt text-[11px] text-blue-400"></i> National SOS 112
+                        National SOS 112
                     </a>
                     <a href="tel:1910"
                         class="px-2.5 py-1.5 rounded-lg text-pink-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 text-decoration-none shadow-xs hover:border-pink-400 hover:bg-pink-950/60 hover:-translate-y-0.5 bg-zinc-900 border border-pink-500/30">
-                        <i class="fas fa-droplet text-[11px] text-pink-400"></i> Blood SOS 1910
+                        Blood SOS 1910
                     </a>
                     <a href="tel:14416"
                         class="px-2.5 py-1.5 rounded-lg text-purple-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 text-decoration-none shadow-xs hover:border-purple-400 hover:bg-purple-950/60 hover:-translate-y-0.5 bg-zinc-900 border border-purple-500/30"
                         title="National Tele-MANAS Mental Health Helpline">
-                        <i class="fas fa-head-side-heart text-[11px] text-purple-400"></i> Tele-MANAS 14416
+                        Tele-MANAS 14416
                     </a>
                     <a href="tel:1091"
                         class="px-2.5 py-1.5 rounded-lg text-amber-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 text-decoration-none shadow-xs hover:border-amber-400 hover:bg-amber-950/60 hover:-translate-y-0.5 bg-zinc-900 border border-amber-500/30"
                         title="Women Safety Helpline">
-                        <i class="fas fa-person-dress text-[11px] text-amber-400"></i> Women 1091
+                        Women 1091
                     </a>
 
                 </div>
@@ -2800,37 +2729,37 @@
                             <span class="w-1 h-1 rounded-full bg-sky-400"></span>
                             <span>Connect With Spherix</span>
                         </div>
-                        <div class="flex flex-wrap gap-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
                             <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:border-blue-400 hover:bg-blue-600/30 transition-all duration-200 shadow-xs hover:-translate-y-0.5 border border-zinc-800 bg-zinc-900"
-                                title="Facebook">
-                                <i class="fab fa-facebook-f text-xs text-blue-400"></i>
+                                class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-[#1877F2]/15 border border-[#1877F2]/40 text-[#1877F2] hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2] transition-all duration-200 shadow-xs hover:-translate-y-0.5 group"
+                                title="Facebook" aria-label="Facebook">
+                                <i class="fab fa-brands fa-facebook-f text-sm group-hover:scale-110 transition-transform"></i>
                             </a>
                             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-300 hover:bg-white/10 transition-all duration-200 shadow-xs hover:-translate-y-0.5 border border-zinc-800 bg-zinc-900"
-                                title="Twitter / X">
-                                <i class="fab fa-x-twitter text-xs text-slate-300"></i>
+                                class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-white/10 border border-zinc-700 text-white hover:bg-white hover:text-black hover:border-white transition-all duration-200 shadow-xs hover:-translate-y-0.5 group"
+                                title="Twitter / X" aria-label="Twitter / X">
+                                <i class="fab fa-brands fa-x-twitter text-sm group-hover:scale-110 transition-transform"></i>
                             </a>
                             <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:border-pink-400 hover:bg-pink-600/30 transition-all duration-200 shadow-xs hover:-translate-y-0.5 border border-zinc-800 bg-zinc-900"
-                                title="Instagram">
-                                <i class="fab fa-instagram text-xs text-pink-400"></i>
+                                class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-[#E4405F]/15 border border-[#E4405F]/40 text-[#E4405F] hover:bg-[#E4405F] hover:text-white hover:border-[#E4405F] transition-all duration-200 shadow-xs hover:-translate-y-0.5 group"
+                                title="Instagram" aria-label="Instagram">
+                                <i class="fab fa-brands fa-instagram text-sm group-hover:scale-110 transition-transform"></i>
                             </a>
                             <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:border-blue-400 hover:bg-blue-600/30 transition-all duration-200 shadow-xs hover:-translate-y-0.5 border border-zinc-800 bg-zinc-900"
-                                title="LinkedIn">
-                                <i class="fab fa-linkedin-in text-xs text-blue-400"></i>
+                                class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-[#0A66C2]/15 border border-[#0A66C2]/40 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white hover:border-[#0A66C2] transition-all duration-200 shadow-xs hover:-translate-y-0.5 group"
+                                title="LinkedIn" aria-label="LinkedIn">
+                                <i class="fab fa-brands fa-linkedin-in text-sm group-hover:scale-110 transition-transform"></i>
                             </a>
                             <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:border-red-400 hover:bg-red-600/30 transition-all duration-200 shadow-xs hover:-translate-y-0.5 border border-zinc-800 bg-zinc-900"
-                                title="YouTube">
-                                <i class="fab fa-youtube text-xs text-red-400"></i>
+                                class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-[#FF0000]/15 border border-[#FF0000]/40 text-[#FF0000] hover:bg-[#FF0000] hover:text-white hover:border-[#FF0000] transition-all duration-200 shadow-xs hover:-translate-y-0.5 group"
+                                title="YouTube" aria-label="YouTube">
+                                <i class="fab fa-brands fa-youtube text-sm group-hover:scale-110 transition-transform"></i>
                             </a>
                             <a href="https://wa.me/919334325920?text=Hello%20Spherix%20Clinic,%20I%20would%20like%20medical%20assistance."
                                 target="_blank" rel="noopener noreferrer"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-400 hover:bg-emerald-600/30 transition-all duration-200 shadow-xs hover:-translate-y-0.5 border border-zinc-800 bg-zinc-900"
-                                title="WhatsApp 24x7 Help">
-                                <i class="fab fa-whatsapp text-xs text-emerald-400"></i>
+                                class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-[#25D366]/15 border border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all duration-200 shadow-xs hover:-translate-y-0.5 group"
+                                title="WhatsApp 24x7 Help" aria-label="WhatsApp">
+                                <i class="fab fa-brands fa-whatsapp text-sm group-hover:scale-110 transition-transform"></i>
                             </a>
                         </div>
                     </div>
@@ -2846,7 +2775,6 @@
                         <li>
                             <a href="{{ url_for('symptoms') }}"
                                 class="hover:text-cyan-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-stethoscope text-[11px] text-cyan-400 group-hover:scale-110 transition-transform"></i>
                                 <span>AI Symptom Diagnosis &amp; Triage</span>
                                 <span class="ml-auto px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 text-[9px] font-black border border-cyan-500/30">AI</span>
                             </a>
@@ -2854,7 +2782,6 @@
                         <li>
                             <a href="{{ url_for('drug_checker') }}"
                                 class="hover:text-indigo-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-capsules text-[11px] text-indigo-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Multi-Drug &amp; Food Radar</span>
                                 <span class="ml-auto px-1.5 py-0.2 rounded bg-indigo-950/80 text-indigo-300 text-[9px] font-black border border-indigo-500/30">OpenFDA</span>
                             </a>
@@ -2862,21 +2789,18 @@
                         <li>
                             <a href="{{ url_for('lab_analyzer') }}"
                                 class="hover:text-emerald-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-microscope text-[11px] text-emerald-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Lab Report AI Smart Analyzer</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('radiology_ai') }}"
                                 class="hover:text-sky-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-x-ray text-[11px] text-sky-400 group-hover:scale-110 transition-transform"></i>
                                 <span>AI Radiology &amp; DICOM Suite</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('cancer_care') }}"
                                 class="hover:text-pink-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-ribbon text-[11px] text-pink-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Oncology Intelligence Hub</span>
                                 <span class="ml-auto px-1.5 py-0.2 rounded bg-pink-950/80 text-pink-300 text-[9px] font-black border border-pink-500/30">NEW</span>
                             </a>
@@ -2884,28 +2808,24 @@
                         <li>
                             <a href="{{ url_for('hospital_live_queue', hospital_id=1) }}"
                                 class="hover:text-amber-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-tv text-[11px] text-amber-400 group-hover:scale-110 transition-transform"></i>
                                 <span>OPD Live Queue TV Kiosk</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('clinical_ai.nutrition_fitness_planner') }}"
                                 class="hover:text-emerald-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-apple-whole text-[11px] text-emerald-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Nutrition &amp; Fitness Architect</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('ayurveda') }}"
                                 class="hover:text-emerald-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-seedling text-[11px] text-emerald-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Vedic Ayurveda AI</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('yoga') }}"
                                 class="hover:text-orange-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-spa text-[11px] text-orange-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Yoga Therapy &amp; Mindfulness</span>
                             </a>
                         </li>
@@ -2922,35 +2842,30 @@
                         <li>
                             <a href="{{ url_for('doctors_list') }}"
                                 class="hover:text-sky-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-user-md text-[11px] text-sky-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Specialist Doctor Directory</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('telemedicine') }}"
                                 class="hover:text-teal-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-video text-[11px] text-teal-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Telemedicine Video Consult</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('hospitals_list') }}"
                                 class="hover:text-purple-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-hospital text-[11px] text-purple-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Hospital Bed &amp; ICU Tracker</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('medical_shop') }}" target="_blank" rel="noopener noreferrer"
                                 class="hover:text-amber-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-pills text-[11px] text-amber-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Spherix Rx Online Pharmacy</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('medicine_delivery_portal') }}"
                                 class="hover:text-emerald-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-truck-fast text-[11px] text-emerald-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Live Medicine Delivery GPS</span>
                                 <span class="ml-auto px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 text-[9px] font-black border border-emerald-500/30">LIVE</span>
                             </a>
@@ -2958,21 +2873,18 @@
                         <li>
                             <a href="{{ url_for('conditions') }}"
                                 class="hover:text-emerald-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-book-medical text-[11px] text-emerald-400 group-hover:scale-110 transition-transform"></i>
                                 <span>48+ Indexed Diseases</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('health_calculators') }}"
                                 class="hover:text-amber-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-calculator text-[11px] text-amber-400 group-hover:scale-110 transition-transform"></i>
                                 <span>BMI, BMR &amp; Cardio Risk Calc</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('first_aid') }}"
                                 class="hover:text-red-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-kit-medical text-[11px] text-red-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Smart First Aid Protocols</span>
                             </a>
                         </li>
@@ -2989,7 +2901,6 @@
                         <li>
                             <a href="{{ url_for('emergency_track', sos_id='SOS-LIVE-2026') }}"
                                 class="hover:text-rose-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-location-crosshairs text-[11px] text-rose-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Emergency SOS GPS Radar</span>
                                 <span class="ml-auto px-1.5 py-0.2 rounded bg-rose-950/80 text-rose-300 text-[9px] font-black border border-rose-500/30">24/7</span>
                             </a>
@@ -2997,49 +2908,42 @@
                         <li>
                             <a href="{{ url_for('ambulance_book') }}"
                                 class="hover:text-rose-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-truck-medical text-[11px] text-rose-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Road &amp; Air Ambulance Booking</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('blood_bank') }}"
                                 class="hover:text-rose-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-layer-group text-[11px] text-rose-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Live Blood Bank Reserves</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('blood_donation_camps') }}"
                                 class="hover:text-red-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-tent text-[11px] text-red-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Blood Donation Camps</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('blood_donors_list') }}"
                                 class="hover:text-rose-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-tint text-[11px] text-rose-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Verified Blood Donors Directory</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('organ_donors_list') }}"
                                 class="hover:text-sky-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-hand-holding-heart text-[11px] text-sky-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Organ Registry Directory</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('organ_donor_login') }}"
                                 class="hover:text-indigo-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-id-card text-[11px] text-indigo-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Organ Donor Portal Login</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('organ_donor_register') }}"
                                 class="hover:text-indigo-300 flex items-center gap-2 group transition-all duration-200 text-decoration-none text-slate-300 hover:translate-x-1">
-                                <i class="fas fa-user-plus text-[11px] text-indigo-400 group-hover:scale-110 transition-transform"></i>
                                 <span>Pledge as Organ Donor</span>
                             </a>
                         </li>
@@ -3056,16 +2960,13 @@
                     <!-- Contact Details -->
                     <ul class="space-y-1.5 text-xs">
                         <li class="flex items-start gap-2">
-                            <i class="fas fa-map-marker-alt text-sky-400 mt-0.5 flex-shrink-0"></i>
                             <span class="text-slate-300 leading-tight">Motihari, East Champaran, Bihar - 845401, India</span>
                         </li>
                         <li class="flex items-center gap-2">
-                            <i class="fas fa-envelope text-sky-400 flex-shrink-0"></i>
                             <a href="mailto:support@spherixclinic.com"
                                 class="text-slate-300 hover:text-white transition-colors text-decoration-none">support@spherixclinic.com</a>
                         </li>
                         <li class="flex items-center gap-2">
-                            <i class="fas fa-phone-alt text-emerald-400 flex-shrink-0"></i>
                             <a href="tel:+919334325920"
                                 class="text-white hover:text-emerald-300 transition-colors text-decoration-none font-bold">+91 933 4325 920</a>
                         </li>
@@ -3077,27 +2978,27 @@
                         <div class="grid grid-cols-2 gap-1.5">
                             <a href="{{ url_for('doctor_login') }}"
                                 class="p-1.5 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold text-center transition-all duration-200 text-decoration-none shadow-xs border border-zinc-800 bg-zinc-900 hover:bg-blue-900/40 hover:border-blue-500/60 hover:-translate-y-0.5">
-                                <i class="fas fa-user-md mr-1 text-[10px] text-blue-400"></i> Doctor
+                                Doctor
                             </a>
                             <a href="{{ url_for('patient_login') }}"
                                 class="p-1.5 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold text-center transition-all duration-200 text-decoration-none shadow-xs border border-zinc-800 bg-zinc-900 hover:bg-emerald-900/40 hover:border-emerald-500/60 hover:-translate-y-0.5">
-                                <i class="fas fa-user-injured mr-1 text-[10px] text-emerald-400"></i> Patient
+                                Patient
                             </a>
                             <a href="{{ url_for('hospital_login') }}"
                                 class="p-1.5 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold text-center transition-all duration-200 text-decoration-none shadow-xs border border-zinc-800 bg-zinc-900 hover:bg-purple-900/40 hover:border-purple-500/60 hover:-translate-y-0.5">
-                                <i class="fas fa-hospital mr-1 text-[10px] text-purple-400"></i> Hospital
+                                Hospital
                             </a>
                             <a href="{{ url_for('staff_login') }}"
                                 class="p-1.5 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold text-center transition-all duration-200 text-decoration-none shadow-xs border border-zinc-800 bg-zinc-900 hover:bg-cyan-900/40 hover:border-cyan-500/60 hover:-translate-y-0.5">
-                                <i class="fas fa-user-nurse mr-1 text-[10px] text-cyan-400"></i> Staff Login
+                                Staff Login
                             </a>
                             <a href="{{ url_for('blood_donor_login') }}"
                                 class="p-1.5 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold text-center transition-all duration-200 text-decoration-none shadow-xs border border-zinc-800 bg-zinc-900 hover:bg-amber-900/40 hover:border-amber-500/60 hover:-translate-y-0.5">
-                                <i class="fas fa-tint mr-1 text-[10px] text-red-700"></i> Blood Donor Login
+                                Blood Donor Login
                             </a>
                             <a href="{{ url_for('organ_donor_login') }}"
                                 class="p-1.5 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold text-center transition-all duration-200 text-decoration-none shadow-xs border border-zinc-800 bg-zinc-900 hover:bg-cyan-900/40 hover:border-cyan-500/60 hover:-translate-y-0.5">
-                                <i class="fas fa-hand-holding-heart mr-1 text-[10px] text-cyan-400"></i> Organ Donor Login
+                                Organ Donor Login
                             </a>
                         </div>
                     </div>
@@ -3110,35 +3011,35 @@
                 <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-emerald-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-shield-alt text-emerald-400"></i> HIPAA Compliant PHI
+                        HIPAA Compliant PHI
                     </span>
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-sky-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-landmark text-sky-400"></i> OpenFDA Grounded
+                        OpenFDA Grounded
                     </span>
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-indigo-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-brain text-indigo-400"></i> Groq Llama-3 AI Powered
+                        Groq Llama-3 AI Powered
                     </span>
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-blue-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-lock text-blue-400"></i> 2048-Bit RSA / TLS 1.3
+                        2048-Bit RSA / TLS 1.3
                     </span>
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-amber-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-certificate text-amber-400"></i> ISO 27001 Certified
+                        ISO 27001 Certified
                     </span>
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-teal-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-hospital-user text-teal-400"></i> NABH &amp; JCI Standards
+                        NABH &amp; JCI Standards
                     </span>
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-rose-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-id-card-clip text-rose-400"></i> ABDM / NDHM Compliant
+                        ABDM / NDHM Compliant
                     </span>
                     <span
                         class="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-200 flex items-center gap-1.5 shadow-xs hover:border-teal-400/60 hover:text-white transition-all bg-zinc-900 border border-zinc-800">
-                        <i class="fas fa-flask text-teal-400"></i> NABL Accredited Labs
+                        NABL Accredited Labs
                     </span>
                 </div>
                 <div class="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-800">
@@ -3152,7 +3053,7 @@
                 <div class="flex flex-wrap items-center justify-center xl:justify-start gap-x-3.5 gap-y-1.5 uppercase tracking-wider text-[10px]">
                     <a href="{{ url_for('sny') }}"
                         class="text-cyan-300 hover:text-cyan-100 transition-all text-decoration-none font-black flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-950/80 border border-cyan-500/40 shadow-xs hover:scale-105">
-                        <i class="fas fa-certificate text-[10px] text-cyan-400"></i> S N Y™
+                        S N Y™
                     </a>
                     <a href="{{ url_for('about') }}"
                         class="hover:text-sky-300 transition-colors text-decoration-none text-slate-300">About Spherix</a>
@@ -3176,19 +3077,19 @@
                     <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] mr-0.5">Featured:</span>
                     <a href="{{ url_for('drug_checker') }}"
                         class="text-indigo-200 hover:text-white bg-indigo-950/80 border border-indigo-500/40 px-2 py-0.5 rounded-md text-decoration-none font-bold hover:bg-indigo-900/90 transition-all shadow-xs flex items-center gap-1 text-[10px]">
-                        <i class="fas fa-capsules text-indigo-400 text-[9px]"></i> Drug Checker
+                        Drug Checker
                     </a>
                     <a href="{{ url_for('cancer_care') }}"
                         class="text-pink-200 hover:text-white bg-pink-950/80 border border-pink-500/40 px-2 py-0.5 rounded-md text-decoration-none font-bold hover:bg-pink-900/90 transition-all shadow-xs flex items-center gap-1 text-[10px]">
-                        <i class="fas fa-ribbon text-pink-400 text-[9px]"></i> Cancer Care
+                        Cancer Care
                     </a>
                     <a href="{{ url_for('medicine_delivery_portal') }}"
                         class="text-emerald-200 hover:text-white bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-md text-decoration-none font-bold hover:bg-emerald-900/90 transition-all shadow-xs flex items-center gap-1 text-[10px]">
-                        <i class="fas fa-truck-fast text-emerald-400 text-[9px]"></i> Live GPS
+                        Live GPS
                     </a>
                     <button type="button" onclick="window.scrollTo({ top: 0, behavior: 'smooth' });"
                         class="text-slate-100 hover:text-white px-2.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-xs bg-slate-900 hover:bg-slate-800 border border-slate-700 ml-0.5">
-                        <i class="fas fa-arrow-up text-[9px] text-sky-400"></i> Top
+                        Top
                     </button>
                 </div>
             </div>
@@ -3204,7 +3105,7 @@
                         All Rights Reserved. Spherix Clinic™ Global Health Intelligence Protocol.
                     </p>
                     <p class="text-[11px] text-slate-400 leading-relaxed max-w-3xl m-0 font-normal">
-                        <strong class="text-amber-300 font-bold"><i class="fas fa-shield-halved mr-1 text-amber-400"></i> Medical Disclaimer:</strong> Spherix AI diagnostic models, triage algorithms, and clinical guides are designed for decision-support and do not replace professional clinical evaluation, diagnosis, or treatment. In severe life-threatening emergencies, call <strong class="text-rose-400 font-bold">108 / 112</strong> immediately.
+                        <strong class="text-amber-300 font-bold">Medical Disclaimer:</strong> Spherix AI diagnostic models, triage algorithms, and clinical guides are designed for decision-support and do not replace professional clinical evaluation, diagnosis, or treatment. In severe life-threatening emergencies, call <strong class="text-rose-400 font-bold">108 / 112</strong> immediately.
                     </p>
                     <div
                         class="flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-0.5 text-[11px] text-slate-300 pt-0.5 font-medium">
@@ -3247,6 +3148,10 @@
         </div>
 
         <style>
+            #main-footer i {
+                display: none !important;
+            }
+
             /* Gold shimmer animation */
             .clinic-shimmer {
                 background: linear-gradient(90deg, #B8860B 0%, #D4AF37 50%, #B8860B 100%);
@@ -3894,18 +3799,53 @@
         let currentHeaderHighlightedIndex = -1;
         let headerSearchResultsUrls = [];
 
-        window.focusHeaderSearch = function () {
-            if (headerSearchInput) {
-                // Ensure top-utility-bar is in view
-                const topBar = document.getElementById('top-utility-bar');
-                if (topBar) {
-                    topBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-                setTimeout(() => {
-                    headerSearchInput.focus();
-                    openHeaderSearchDropdown();
-                }, 100);
+        window.openHeaderSearchBar = function () {
+            const triggerBtn = document.getElementById('header-search-trigger-btn');
+            const barWrap = document.getElementById('header-search-bar-wrap');
+            const input = document.getElementById('header-search-input');
+            const topBar = document.getElementById('top-utility-bar');
+
+            if (triggerBtn) triggerBtn.classList.add('hidden');
+            if (barWrap) {
+                barWrap.classList.remove('hidden');
+                barWrap.classList.add('flex');
             }
+            if (topBar) {
+                topBar.classList.add('z-[1060]');
+                topBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            const mainNav = document.getElementById('main-navbar');
+            if (mainNav) mainNav.classList.add('nav-backward');
+
+            setTimeout(() => {
+                if (input) {
+                    input.focus();
+                    openHeaderSearchDropdown();
+                }
+            }, 50);
+        };
+
+        window.closeHeaderSearchBar = function () {
+            const triggerBtn = document.getElementById('header-search-trigger-btn');
+            const barWrap = document.getElementById('header-search-bar-wrap');
+            const input = document.getElementById('header-search-input');
+
+            closeHeaderSearchDropdown();
+            if (barWrap) {
+                barWrap.classList.add('hidden');
+                barWrap.classList.remove('flex');
+            }
+            if (triggerBtn) triggerBtn.classList.remove('hidden');
+            if (input) input.blur();
+
+            const topBar = document.getElementById('top-utility-bar');
+            if (topBar) topBar.classList.remove('z-[1060]');
+            const mainNav = document.getElementById('main-navbar');
+            if (mainNav) mainNav.classList.remove('nav-backward');
+        };
+
+        window.focusHeaderSearch = function () {
+            window.openHeaderSearchBar();
         };
 
         function openHeaderSearchDropdown() {
@@ -4096,16 +4036,18 @@
                         window.location.href = headerSearchResultsUrls[0];
                     }
                 } else if (e.key === 'Escape') {
-                    closeHeaderSearchDropdown();
-                    headerSearchInput.blur();
+                    closeHeaderSearchBar();
                 }
             });
         }
 
-        // Close search dropdown on click outside
+        // Close search bar and dropdown on click outside
         document.addEventListener('click', (e) => {
-            if (headerSearchContainer && !headerSearchContainer.contains(e.target)) {
-                closeHeaderSearchDropdown();
+            const searchContainer = document.getElementById('header-search-container');
+            const navSearchBtn = document.getElementById('navbar-search-trigger-btn');
+            if (searchContainer && !searchContainer.contains(e.target)) {
+                if (navSearchBtn && navSearchBtn.contains(e.target)) return;
+                closeHeaderSearchBar();
             }
         });
 
@@ -4118,7 +4060,7 @@
                 e.preventDefault();
                 focusHeaderSearch();
             } else if (e.key === 'Escape') {
-                closeHeaderSearchDropdown();
+                closeHeaderSearchBar();
             }
         });
 

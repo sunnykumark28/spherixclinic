@@ -400,14 +400,16 @@ def doctor_dashboard():
                     try:
                         conn = get_db_connection()
                         if conn:
-                            cursor = conn.cursor()
-                            cursor.execute("SELECT doctor_id FROM doctor_images WHERE doctor_id = ?", (str(doctor.id),))
-                            if cursor.fetchone():
-                                cursor.execute("UPDATE doctor_images SET image_data = ?, content_type = ? WHERE doctor_id = ?", (img_bytes, mime, str(doctor.id)))
-                            else:
-                                cursor.execute("INSERT INTO doctor_images (doctor_id, image_data, content_type) VALUES (?, ?, ?)", (str(doctor.id), img_bytes, mime))
-                            conn.commit()
-                            conn.close()
+                            try:
+                                cursor = conn.cursor()
+                                cursor.execute("SELECT doctor_id FROM doctor_images WHERE doctor_id = ?", (str(doctor.id),))
+                                if cursor.fetchone():
+                                    cursor.execute("UPDATE doctor_images SET image_data = ?, content_type = ? WHERE doctor_id = ?", (img_bytes, mime, str(doctor.id)))
+                                else:
+                                    cursor.execute("INSERT INTO doctor_images (doctor_id, image_data, content_type) VALUES (?, ?, ?)", (str(doctor.id), img_bytes, mime))
+                                conn.commit()
+                            finally:
+                                conn.close()
                     except Exception as e:
                         print(f"doctor_images table sync notice: {e}")
         save_data()
@@ -1132,13 +1134,15 @@ def doctor_api_forgot_password_send_otp():
         masked_u = u[0] + ('*' * max(1, len(u) - 2)) + (u[-1] if len(u) > 1 else '')
         masked = f"{masked_u}@{dom}"
 
-    return jsonify({
+    res_data = {
         'success': True,
         'message': f"A 6-digit OTP verification code has been dispatched to {masked}.",
         'masked_email': masked,
-        'email_sent': email_sent,
-        'dev_otp': otp
-    })
+        'email_sent': email_sent
+    }
+    if current_app.config.get('TESTING') or current_app.debug:
+        res_data['dev_otp'] = otp
+    return jsonify(res_data)
 
 
 @doctor_bp.route('/doctor/api/forgot-password/verify-otp', methods=['POST'])
@@ -1281,14 +1285,16 @@ def doctor_api_account_send_otp():
         masked_u = u[0] + ('*' * max(1, len(u) - 2)) + (u[-1] if len(u) > 1 else '')
         masked = f"{masked_u}@{dom}"
 
-    return jsonify({
+    res_data = {
         'success': True,
         'message': f"A 6-digit authorization OTP code has been dispatched to {masked}.",
         'masked_email': masked,
         'email_sent': email_sent,
-        'action_type': action_type,
-        'dev_otp': otp
-    })
+        'action_type': action_type
+    }
+    if current_app.config.get('TESTING') or current_app.debug:
+        res_data['dev_otp'] = otp
+    return jsonify(res_data)
 
 
 @doctor_bp.route('/doctor/api/account/confirm-action', methods=['POST'])
@@ -1329,10 +1335,12 @@ def doctor_api_account_confirm_action():
         try:
             conn = get_db_connection()
             if conn:
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM doctors WHERE id = ?", (doc_id,))
-                conn.commit()
-                conn.close()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM doctors WHERE id = ?", (doc_id,))
+                    conn.commit()
+                finally:
+                    conn.close()
         except Exception as e:
             print(f"Error removing doctor from DB: {e}")
 
@@ -1563,20 +1571,21 @@ def get_doctor_image(doc_id):
     try:
         conn = get_db_connection()
         if conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ? AND image_data IS NOT NULL", (str(doc_id),))
-            row = cursor.fetchone()
-            if not row and doctor:
-                cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ? AND image_data IS NOT NULL", (str(doctor.id),))
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ? AND image_data IS NOT NULL", (str(doc_id),))
                 row = cursor.fetchone()
-            conn.close()
-            
-            if row and row[0]:
-                mime = row[1] or 'image/jpeg'
-                if doctor and getattr(doctor, 'profile_picture_url', None):
-                    UPLOAD_CACHE[str(doctor.profile_picture_url).strip()] = (row[0], mime)
-                    UPLOAD_CACHE[os.path.basename(str(doctor.profile_picture_url).strip())] = (row[0], mime)
-                return send_file(BytesIO(row[0]), mimetype=mime)
+                if not row and doctor:
+                    cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ? AND image_data IS NOT NULL", (str(doctor.id),))
+                    row = cursor.fetchone()
+                if row and row[0]:
+                    mime = row[1] or 'image/jpeg'
+                    if doctor and getattr(doctor, 'profile_picture_url', None):
+                        UPLOAD_CACHE[str(doctor.profile_picture_url).strip()] = (row[0], mime)
+                        UPLOAD_CACHE[os.path.basename(str(doctor.profile_picture_url).strip())] = (row[0], mime)
+                    return send_file(BytesIO(row[0]), mimetype=mime)
+            finally:
+                conn.close()
     except Exception as e:
         print(f"Error fetching doctor image from DB for {doc_id}: {e}")
 

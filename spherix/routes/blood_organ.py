@@ -801,13 +801,15 @@ def blood_donor_dashboard():
                         try:
                             conn = get_db_connection()
                             if conn:
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    "UPDATE blood_donors SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
-                                    (saved_filename, img_bytes, mime, str(current_user.id))
-                                )
-                                conn.commit()
-                                conn.close()
+                                try:
+                                    cursor = conn.cursor()
+                                    cursor.execute(
+                                        "UPDATE blood_donors SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                                        (saved_filename, img_bytes, mime, str(current_user.id))
+                                    )
+                                    conn.commit()
+                                finally:
+                                    conn.close()
                         except Exception as e:
                             print(f"Blood donor DB photo sync note: {e}")
         
@@ -964,13 +966,15 @@ def organ_donor_dashboard():
                         try:
                             conn = get_db_connection()
                             if conn:
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    "UPDATE organ_donors SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
-                                    (saved_filename, img_bytes, mime, str(current_user.id))
-                                )
-                                conn.commit()
-                                conn.close()
+                                try:
+                                    cursor = conn.cursor()
+                                    cursor.execute(
+                                        "UPDATE organ_donors SET profile_picture_url=?, profile_picture_data=?, profile_picture_content_type=? WHERE id=?",
+                                        (saved_filename, img_bytes, mime, str(current_user.id))
+                                    )
+                                    conn.commit()
+                                finally:
+                                    conn.close()
                         except Exception as e:
                             print(f"Organ donor DB photo sync note: {e}")
 

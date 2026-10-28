@@ -227,10 +227,12 @@ def bulk_mark_notifications_read():
         try:
             conn = get_db_connection()
             if conn:
-                cursor = conn.cursor()
-                cursor.execute("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'", (user_id,))
-                conn.commit()
-                conn.close()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'", (user_id,))
+                    conn.commit()
+                finally:
+                    conn.close()
         except Exception as e:
             print(f"⚠️ Error updating notifications status: {e}")
             
@@ -267,17 +269,33 @@ def home():
         'feedbacks': len(TEMP_DATA.get('feedbacks', {}))
     }
     
-    # Fetch all verified doctors to showcase in the loop
+    # Fetch all verified doctors to showcase in the loop, sorted by top rating (max 100)
     all_doctors = list(TEMP_DATA.get('doctors', {}).values())
     verified_doctors = deduplicate_entities([d for d in all_doctors if getattr(d, 'is_verified', True) and not getattr(d, 'is_hidden', False) and not getattr(d, 'is_blocked', False)])
+    verified_doctors = sorted(
+        verified_doctors,
+        key=lambda d: (
+            float(getattr(d, 'average_rating', 0) or 0),
+            float(getattr(d, 'experience', 0) or 0)
+        ),
+        reverse=True
+    )[:100]
 
     # Fetch patient webapp feedbacks
     all_feedbacks = list(TEMP_DATA.get('feedbacks', {}).values())
     sorted_feedbacks = sorted(all_feedbacks, key=lambda f: safe_date_sort_key(getattr(f, 'created_at', None)), reverse=True)
     
-    # Fetch all verified hospitals to showcase in the loop
+    # Fetch all verified hospitals to showcase in the loop, sorted by top rating (max 100)
     all_hospitals = list(TEMP_DATA.get('hospitals', {}).values())
     verified_hospitals = deduplicate_entities([h for h in all_hospitals if getattr(h, 'is_verified', True) and not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)])
+    verified_hospitals = sorted(
+        verified_hospitals,
+        key=lambda h: (
+            float(getattr(h, 'rating', 0) or getattr(h, 'average_rating', 0) or 0),
+            int(getattr(h, 'doctor_count', 0) or 0)
+        ),
+        reverse=True
+    )[:100]
     
     all_organ_requests = [r for r in TEMP_DATA.get('organ_requests', {}).values() if r.status == 'active']
     recent_organ_requests = sorted(all_organ_requests, key=lambda r: safe_date_sort_key(getattr(r, 'created_at', None)), reverse=True)[:6]
@@ -3451,11 +3469,14 @@ def serve_image(user_type, user_id):
         try:
             conn = get_db_connection()
             if conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ?", (user_id_str,))
-                row = cursor.fetchone()
-                if row and row[0]:
-                    return send_file(BytesIO(row[0]), mimetype=row[1] or 'image/jpeg')
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT image_data, content_type FROM doctor_images WHERE doctor_id = ?", (user_id_str,))
+                    row = cursor.fetchone()
+                    if row and row[0]:
+                        return send_file(BytesIO(row[0]), mimetype=row[1] or 'image/jpeg')
+                finally:
+                    conn.close()
         except Exception:
             pass
 
@@ -3524,79 +3545,75 @@ def serve_uploaded_file(filename):
         from spherix.services.upload_service import _write_bytes_safely
         conn = get_db_connection()
         if conn:
-            cursor = conn.cursor()
+            try:
+                cursor = conn.cursor()
 
-            # Check patients table
-            cursor.execute(
-                "SELECT profile_picture_data, profile_picture_content_type FROM patients WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
-                (f"%{clean_name}%", f"%{clean_path}%")
-            )
-            row = cursor.fetchone()
-            if row and row[0]:
-                blob_data, mime = row[0], row[1] or 'image/jpeg'
-                UPLOAD_CACHE[clean_name] = (blob_data, mime)
-                UPLOAD_CACHE[clean_path] = (blob_data, mime)
-                _write_bytes_safely(None, clean_name, blob_data)
+                # Check patients table
+                cursor.execute(
+                    "SELECT profile_picture_data, profile_picture_content_type FROM patients WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                    (f"%{clean_name}%", f"%{clean_path}%")
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    blob_data, mime = row[0], row[1] or 'image/jpeg'
+                    UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                    UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                    _write_bytes_safely(None, clean_name, blob_data)
+                    return send_file(BytesIO(blob_data), mimetype=mime)
+
+                # Check doctor_images table
+                cursor.execute(
+                    "SELECT di.image_data, di.content_type FROM doctor_images di JOIN doctors d ON d.id = di.doctor_id WHERE (d.profile_picture_url LIKE ? OR d.profile_picture_url LIKE ?) AND di.image_data IS NOT NULL",
+                    (f"%{clean_name}%", f"%{clean_path}%")
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    blob_data, mime = row[0], row[1] or 'image/jpeg'
+                    UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                    UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                    _write_bytes_safely(None, clean_name, blob_data)
+                    return send_file(BytesIO(blob_data), mimetype=mime)
+
+                # Check staff table
+                cursor.execute(
+                    "SELECT profile_picture_data, profile_picture_content_type FROM staff WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                    (f"%{clean_name}%", f"%{clean_path}%")
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    blob_data, mime = row[0], row[1] or 'image/jpeg'
+                    UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                    UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                    _write_bytes_safely(None, clean_name, blob_data)
+                    return send_file(BytesIO(blob_data), mimetype=mime)
+
+                # Check blood_donors table
+                cursor.execute(
+                    "SELECT profile_picture_data, profile_picture_content_type FROM blood_donors WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                    (f"%{clean_name}%", f"%{clean_path}%")
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    blob_data, mime = row[0], row[1] or 'image/jpeg'
+                    UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                    UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                    _write_bytes_safely(None, clean_name, blob_data)
+                    return send_file(BytesIO(blob_data), mimetype=mime)
+
+                # Check organ_donors table
+                cursor.execute(
+                    "SELECT profile_picture_data, profile_picture_content_type FROM organ_donors WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
+                    (f"%{clean_name}%", f"%{clean_path}%")
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    blob_data, mime = row[0], row[1] or 'image/jpeg'
+                    UPLOAD_CACHE[clean_name] = (blob_data, mime)
+                    UPLOAD_CACHE[clean_path] = (blob_data, mime)
+                    _write_bytes_safely(None, clean_name, blob_data)
+                    return send_file(BytesIO(blob_data), mimetype=mime)
+            finally:
                 conn.close()
-                return send_file(BytesIO(blob_data), mimetype=mime)
-
-            # Check doctor_images table
-            cursor.execute(
-                "SELECT di.image_data, di.content_type FROM doctor_images di JOIN doctors d ON d.id = di.doctor_id WHERE (d.profile_picture_url LIKE ? OR d.profile_picture_url LIKE ?) AND di.image_data IS NOT NULL",
-                (f"%{clean_name}%", f"%{clean_path}%")
-            )
-            row = cursor.fetchone()
-            if row and row[0]:
-                blob_data, mime = row[0], row[1] or 'image/jpeg'
-                UPLOAD_CACHE[clean_name] = (blob_data, mime)
-                UPLOAD_CACHE[clean_path] = (blob_data, mime)
-                _write_bytes_safely(None, clean_name, blob_data)
-                conn.close()
-                return send_file(BytesIO(blob_data), mimetype=mime)
-
-            # Check staff table
-            cursor.execute(
-                "SELECT profile_picture_data, profile_picture_content_type FROM staff WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
-                (f"%{clean_name}%", f"%{clean_path}%")
-            )
-            row = cursor.fetchone()
-            if row and row[0]:
-                blob_data, mime = row[0], row[1] or 'image/jpeg'
-                UPLOAD_CACHE[clean_name] = (blob_data, mime)
-                UPLOAD_CACHE[clean_path] = (blob_data, mime)
-                _write_bytes_safely(None, clean_name, blob_data)
-                conn.close()
-                return send_file(BytesIO(blob_data), mimetype=mime)
-
-            # Check blood_donors table
-            cursor.execute(
-                "SELECT profile_picture_data, profile_picture_content_type FROM blood_donors WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
-                (f"%{clean_name}%", f"%{clean_path}%")
-            )
-            row = cursor.fetchone()
-            if row and row[0]:
-                blob_data, mime = row[0], row[1] or 'image/jpeg'
-                UPLOAD_CACHE[clean_name] = (blob_data, mime)
-                UPLOAD_CACHE[clean_path] = (blob_data, mime)
-                _write_bytes_safely(None, clean_name, blob_data)
-                conn.close()
-                return send_file(BytesIO(blob_data), mimetype=mime)
-
-            # Check organ_donors table
-            cursor.execute(
-                "SELECT profile_picture_data, profile_picture_content_type FROM organ_donors WHERE (profile_picture_url LIKE ? OR profile_picture_url LIKE ?) AND profile_picture_data IS NOT NULL",
-                (f"%{clean_name}%", f"%{clean_path}%")
-            )
-            row = cursor.fetchone()
-            if row and row[0]:
-                blob_data, mime = row[0], row[1] or 'image/jpeg'
-                UPLOAD_CACHE[clean_name] = (blob_data, mime)
-                UPLOAD_CACHE[clean_path] = (blob_data, mime)
-                _write_bytes_safely(None, clean_name, blob_data)
-                conn.close()
-                return send_file(BytesIO(blob_data), mimetype=mime)
-
-            conn.close()
     except Exception as db_img_err:
         print(f"Database image lookup note for {clean_name}: {db_img_err}")
 

@@ -9,7 +9,9 @@ def patient_required(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if getattr(current_user, 'is_doctor', False) and getattr(current_user, 'email', '') != 'admin@spherixclinic.com':
+        is_patient = getattr(current_user, 'is_patient', False)
+        is_admin = getattr(current_user, 'email', '') == 'admin@spherixclinic.com'
+        if not is_patient and not is_admin:
             flash("Access denied. This page is for patients only.", "error")
             return redirect(url_for('patient_login'))
         return f(*args, **kwargs)

@@ -6,6 +6,11 @@ Main Application Entrypoint
 import os
 import ssl
 import subprocess
+import warnings
+
+# Suppress Google client library deprecation FutureWarning
+warnings.filterwarnings("ignore", category=FutureWarning, module="google")
+
 from spherix import create_app
 from spherix.extensions import socketio, login_manager, csrf, limiter, talisman, cors, jwt, oauth, razorpay_client
 from spherix.services.database import (

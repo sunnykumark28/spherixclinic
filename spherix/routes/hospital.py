@@ -2833,6 +2833,12 @@ def hospital_universal_user_action():
                 conn.commit()
         except Exception as sql_del_err:
             print(f"⚠️ SQL direct delete note: {sql_del_err}")
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
         flash(f"{display_name} '{target_name}' has been permanently deleted from records.", "success")
 
