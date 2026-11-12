@@ -1,0 +1,175 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}Book Oncology Consultation | Spherix Cancer Care{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">Book Appointment</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-10 space-y-10">
+
+    <!-- PAGE HEADER -->
+    <div class="text-center max-w-2xl mx-auto space-y-3">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200 uppercase tracking-wider">
+            <i class="fas fa-calendar-check text-rose-600"></i> Fast-Track Oncology Access
+        </span>
+        <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+            Schedule an Oncology Consultation
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+            Direct access to senior oncologists and Multidisciplinary Tumor Boards for primary diagnosis, surgical planning, or second opinions.
+        </p>
+    </div>
+
+    <!-- BOOKING FORM CARD -->
+    <div class="max-w-4xl mx-auto space-y-8">
+        <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-10 space-y-8">
+        
+        <form action="{{ url_for('cancer_care.book_appointment') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Section 1: Patient Information -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <i class="fas fa-user text-rose-600"></i> 1. Patient Profile
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label for="patient_name" class="text-xs font-bold text-slate-700">Patient Full Name <span class="text-rose-600">*</span></label>
+                        <input type="text" id="patient_name" name="patient_name" required value="{{ current_user.name if current_user.is_authenticated and current_user.role == 'patient' else '' }}" placeholder="Enter patient full legal name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="patient_phone" class="text-xs font-bold text-slate-700">Phone Number <span class="text-rose-600">*</span></label>
+                        <input type="tel" id="patient_phone" name="patient_phone" required value="{{ current_user.phone if current_user.is_authenticated else '' }}" placeholder="Enter contact phone number" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="patient_age" class="text-xs font-bold text-slate-700">Patient Age <span class="text-rose-600">*</span></label>
+                        <input type="number" id="patient_age" name="patient_age" min="1" max="110" value="{{ current_user.age if current_user.is_authenticated and current_user.age else '48' }}" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="patient_gender" class="text-xs font-bold text-slate-700">Biological Sex <span class="text-rose-600">*</span></label>
+                        <select id="patient_gender" name="patient_gender" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            <option value="female" {% if current_user.is_authenticated and current_user.gender == 'Female' %}selected{% endif %}>Female</option>
+                            <option value="male" {% if current_user.is_authenticated and current_user.gender == 'Male' %}selected{% endif %}>Male</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Clinical Selection -->
+            <div class="space-y-4 pt-2">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <i class="fas fa-stethoscope text-indigo-600"></i> 2. Clinical Care Details
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label for="doctor_id" class="text-xs font-bold text-slate-700">Select Oncologist / Department <span class="text-rose-600">*</span></label>
+                        <select id="doctor_id" name="doctor_id" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            {% for doc in specialists %}
+                            <option value="{{ doc.id }}" {% if selected_doctor_id == doc.id %}selected{% endif %}>
+                                {{ doc.name }} ({{ doc.specialization or doc.department or 'Oncology' }})
+                            </option>
+                            {% endfor %}
+                            <option value="tumor_board" {% if selected_doctor_id == 'tumor_board' %}selected{% endif %}>
+                                Full Multidisciplinary Tumor Board (Consensus Panel)
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="consultation_type" class="text-xs font-bold text-slate-700">Consultation Format <span class="text-rose-600">*</span></label>
+                        <select id="consultation_type" name="consultation_type" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            <option value="In-Person Hospital Visit" selected>In-Person Hospital Visit (Spherix Cancer Hub)</option>
+                            <option value="Cross-Border Video Consultation">Cross-Border Video Consultation (Telemedicine)</option>
+                            <option value="Multidisciplinary Tumor Board Review">Tumor Board Comprehensive Review (Second Opinion)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="appointment_date" class="text-xs font-bold text-slate-700">Preferred Date <span class="text-rose-600">*</span></label>
+                        <input type="date" id="appointment_date" name="appointment_date" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="appointment_time" class="text-xs font-bold text-slate-700">Preferred Time Slot <span class="text-rose-600">*</span></label>
+                        <select id="appointment_time" name="appointment_time" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            <option value="10:00 AM" selected>10:00 AM - Morning Slot</option>
+                            <option value="11:30 AM">11:30 AM - Late Morning</option>
+                            <option value="02:00 PM">02:00 PM - Afternoon Slot</option>
+                            <option value="03:30 PM">03:30 PM - Late Afternoon</option>
+                            <option value="05:00 PM">05:00 PM - Evening Priority</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Clinical Notes -->
+                <div class="space-y-1.5">
+                    <label for="clinical_notes" class="text-xs font-bold text-slate-700">Clinical Background / Primary Symptoms <span class="text-rose-600">*</span></label>
+                    <textarea id="clinical_notes" name="clinical_notes" rows="3" required placeholder="Describe primary symptoms, affected organ region, duration, and any prior biopsy or imaging findings..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed"></textarea>
+                </div>
+
+                <!-- Report Attachment -->
+                <div class="space-y-1.5">
+                    <label for="medical_report" class="text-xs font-bold text-slate-700">Upload Biopsy / Imaging Report (PDF or Images, Optional)</label>
+                    <input type="file" id="medical_report" name="medical_report" accept=".pdf,.png,.jpg,.jpeg" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100">
+                    <span class="text-[10px] text-slate-400 block">Accepted formats: PDF, PNG, JPG (Maximum 10 MB). File is stored in our HIPAA-compliant encrypted vault.</span>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <span class="text-xs text-slate-500 font-medium">
+                    <i class="fas fa-lock text-slate-400 mr-1"></i> Patient confidentiality protected under ISO 27001
+                </span>
+                <button type="submit" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all shadow-md shadow-rose-600/25 flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fas fa-calendar-check"></i> Confirm Consultation Request
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+    <!-- PREPARATION GUIDE -->
+    <div class="p-6 rounded-2xl bg-slate-100/70 border border-slate-200 space-y-3">
+        <h4 class="text-xs font-black uppercase tracking-wider text-slate-600 m-0">What to Bring to Your Oncology Consultation</h4>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-0 list-none text-xs text-slate-700 m-0">
+            <li class="flex items-center gap-2">
+                <i class="fas fa-circle-check text-emerald-600"></i> Original histopathology biopsy report and slides/blocks
+            </li>
+            <li class="flex items-center gap-2">
+                <i class="fas fa-circle-check text-emerald-600"></i> CT, PET-CT, or MRI DICOM scan discs and radiologist reports
+            </li>
+            <li class="flex items-center gap-2">
+                <i class="fas fa-circle-check text-emerald-600"></i> Recent Complete Blood Count (CBC) and liver/kidney panels
+            </li>
+            <li class="flex items-center gap-2">
+                <i class="fas fa-circle-check text-emerald-600"></i> List of all current prescription medications and dosages
+            </li>
+        </ul>
+    </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Set minimum date to tomorrow
+    const dateInput = document.getElementById('appointment_date');
+    if (dateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dateInput.min = tomorrow.toISOString().split('T')[0];
+        dateInput.value = tomorrow.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}
+

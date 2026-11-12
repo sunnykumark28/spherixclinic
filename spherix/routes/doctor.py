@@ -109,8 +109,20 @@ doctor_bp = Blueprint('doctor', __name__)
 
 @doctor_bp.route('/doctors')
 def doctors_list():
+    # Ensure verified oncology faculty are populated if needed
+    try:
+        from spherix.routes.cancer_care import seed_oncology_data_if_needed
+        seed_oncology_data_if_needed()
+    except Exception:
+        pass
+
     # This route fetches doctors from the database with global and domestic filtering
-    all_db_doctors = deduplicate_entities([d for d in TEMP_DATA['doctors'].values() if not getattr(d, 'is_hidden', False) and not getattr(d, 'is_blocked', False)])
+    all_db_doctors = deduplicate_entities([
+        d for d in TEMP_DATA['doctors'].values() 
+        if not getattr(d, 'is_hidden', False) 
+        and not getattr(d, 'is_blocked', False)
+        and getattr(d, 'publishing_status', 'published') in ['published', 'approved']
+    ])
     q = request.args.get('q', '').lower().strip()
     dept = request.args.get('dept', '').strip()
     country_filter = request.args.get('country', '').strip()
@@ -130,7 +142,8 @@ def doctors_list():
     if dept:
         filtered_doctors = [
             d for d in filtered_doctors
-            if d.department and d.department.lower() == dept.lower()
+            if (d.department and (d.department.lower() == dept.lower() or dept.lower() in d.department.lower()))
+            or (d.specialization and dept.lower() in d.specialization.lower())
         ]
     if country_filter and country_filter.lower() != 'all':
         filtered_doctors = [
@@ -233,6 +246,20 @@ def doctor_logout():
 
 
 
+@doctor_bp.route('/doctor_details')
+@doctor_bp.route('/doctor-details')
+@doctor_bp.route('/doctor_detail')
+@doctor_bp.route('/doctor-detail')
+@doctor_bp.route('/doctor/details')
+def doctor_details_alias():
+    doc_id = request.args.get('doc_id') or request.args.get('id')
+    if doc_id and doc_id in TEMP_DATA['doctors']:
+        return redirect(url_for('doctor_detail', doc_id=doc_id))
+    for doc in TEMP_DATA['doctors'].values():
+        if getattr(doc, 'publishing_status', 'published') in ['published', 'approved'] and not getattr(doc, 'is_blocked', False):
+            return redirect(url_for('doctor_detail', doc_id=doc.id))
+    return redirect(url_for('doctors_list'))
+
 @doctor_bp.route('/doctor', endpoint='doctor_portal')
 @doctor_bp.route('/doctor/', endpoint='doctor_portal_slash')
 def doctor_portal():
@@ -242,14 +269,53 @@ def doctor_portal():
 
 
 
-@doctor_bp.route('/doctor/<path:doc_id>', methods=['GET', 'POST'])
-def doctor_detail(doc_id):
-    # Find doctor from the database
-    doctor = TEMP_DATA['doctors'].get(doc_id)
+@doctor_bp.route('/doctor/<path:doc_id>', methods=['GET', 'POST'], endpoint='doctor_detail')
+@doctor_bp.route('/doctors/<path:doctor_slug>', methods=['GET', 'POST'], endpoint='doctor_detail_slug')
+def doctor_detail(doc_id=None, doctor_slug=None):
+    identifier = doctor_slug or doc_id
+    if not identifier:
+        flash("Doctor not found.", "error")
+        return redirect(url_for('doctors_list'))
+
+    # 1. Direct lookup in TEMP_DATA['doctors']
+    doctor = TEMP_DATA['doctors'].get(identifier)
+
+    # 2. Try parse_route_id
+    if not doctor:
+        parsed_id = parse_route_id(identifier)
+        doctor = TEMP_DATA['doctors'].get(parsed_id)
+
+    # 3. Slug lookup
+    if not doctor:
+        ident_lower = identifier.lower().strip()
+        for d in TEMP_DATA['doctors'].values():
+            d_slug = (getattr(d, 'slug', '') or '')
+            d_underscore_slug = (getattr(d, '_slug', '') or '')
+            if (isinstance(d_slug, str) and d_slug.lower() == ident_lower) or (isinstance(d_underscore_slug, str) and d_underscore_slug.lower() == ident_lower):
+                doctor = d
+                break
+
+    # 4. Fallback search by ID / license / name slug
+    if not doctor:
+        ident_clean = identifier.lower().replace('-', '').replace('_', '').replace('/', '')
+        for d in TEMP_DATA['doctors'].values():
+            d_id_clean = str(d.id).lower().replace('-', '').replace('_', '').replace('/', '')
+            if ident_clean in d_id_clean or d_id_clean in ident_clean:
+                doctor = d
+                break
+
     if not doctor:
         return "Doctor not found", 404
 
-    doc_id_val = doc_id # Use the string ID
+    # Access control: If doctor is blocked, hidden, or not published, allow only owner doctor or admin to view
+    is_owner = current_user.is_authenticated and getattr(current_user, 'is_doctor', False) and str(current_user.id) == str(doctor.id)
+    is_admin = current_user.is_authenticated and (getattr(current_user, 'is_admin', False) or getattr(current_user, 'role', '') == 'Admin')
+    
+    if (getattr(doctor, 'is_blocked', False) or getattr(doctor, 'is_hidden', False) or getattr(doctor, 'publishing_status', 'published') in ['suspended', 'rejected', 'draft', 'pending_approval', 'pending_verification', 'archived']) and not (is_owner or is_admin):
+        flash("This doctor profile is currently not available for public viewing.", "warning")
+        return redirect(url_for('doctors_list'))
+
+    doc_id_val = doctor.id # Use the string ID
 
     # If POST, it's an appointment booking
     if request.method == 'POST':
@@ -311,7 +377,7 @@ def doctor_detail(doc_id):
             TEMP_DATA['next_ids']['appointment'] += 1
             save_data() # Save after creating appointment
             return redirect(url_for('appointment_payment', appointment_id=appt_id))
-        return redirect(url_for('doctor_detail', doc_id=doc_id_val))
+        return redirect(url_for('doctor_detail_slug', doctor_slug=doctor.slug) if doctor_slug else url_for('doctor_detail', doc_id=doc_id_val))
 
     # Fetch other specialists in the same department or hospital
     related_doctors = [
@@ -324,6 +390,28 @@ def doctor_detail(doc_id):
 
     return render_template('doctor_detail.html', doctor=doctor, related_doctors=related_doctors)
 
+
+@doctor_bp.route('/doctor/<path:doc_id>/report', methods=['POST'])
+@doctor_bp.route('/doctors/<path:doc_id>/report', methods=['POST'])
+def report_doctor(doc_id):
+    doctor = TEMP_DATA['doctors'].get(doc_id)
+    if not doctor:
+        # Try finding by slug
+        for d in TEMP_DATA['doctors'].values():
+            if getattr(d, 'slug', '') == doc_id:
+                doctor = d
+                break
+    if not doctor:
+        flash("Doctor not found.", "error")
+        return redirect(url_for('doctors_list'))
+    reason = request.form.get('reason', 'Profile Discrepancy')
+    description = request.form.get('description', '')
+    reporter_email = request.form.get('reporter_email', '')
+    flash(f"Thank you for reporting. Your grievance regarding Dr. {doctor.first_name} {doctor.last_name} has been submitted to the Spherix Medical Quality & Verification Board. Case Ticket: REF-{utcnow().strftime('%Y%m%d%H%M%S')}.", "success")
+    return redirect(url_for('doctor_detail_slug', doctor_slug=doctor.slug))
+    reporter_email = request.form.get('reporter_email', '')
+    flash(f"Thank you for reporting. Your grievance regarding Dr. {doctor.first_name} {doctor.last_name} has been submitted to the Spherix Medical Quality & Verification Board. Case Ticket: REF-{utcnow().strftime('%Y%m%d%H%M%S')}.", "success")
+    return redirect(url_for('doctor_detail', doc_id=doc_id))
 
 
 @doctor_bp.route('/doctor/info')
@@ -365,18 +453,62 @@ def doctor_dashboard():
             flash('Password changed successfully!', 'success')
             return redirect(url_for('doctor_dashboard', tab='settings'))
 
-        fields_to_update = [
-            'first_name', 'last_name', 'email', 'phone', 'department', 
-            'specialization', 'address', 'hospital_name', 'hospital_address', 'city', 'state',
-            'district', 'pincode', 'country', 'bio', 'qualification', 'license_number',
-            'experience', 'consultation_type', 'consultation_fee', 'latitude', 'longitude',
-            'working_hours', 'languages_spoken', 'social_links'
+        # Comprehensive Doctor Profile Fields (Sections A-H)
+        all_profile_fields = [
+            'first_name', 'last_name', 'title', 'gender', 'dob', 'phone', 'whatsapp_number',
+            'department', 'specialization', 'secondary_specialization', 'address', 'hospital_name',
+            'hospital_address', 'city', 'state', 'district', 'pincode', 'country', 'bio',
+            'qualification', 'mbbs_degree', 'higher_degree', 'medical_degrees', 'university_name',
+            'college_name', 'graduation_year', 'license_number', 'medical_council_reg', 'certifications',
+            'fellowships', 'medical_training', 'experience', 'career_summary', 'treatment_philosophy',
+            'previous_hospitals', 'previous_employment', 'professional_experience', 'areas_of_expertise',
+            'sub_specializations', 'conditions_treated', 'diseases_diagnosed', 'treatments_offered',
+            'medical_procedures', 'preventive_healthcare', 'patient_counselling', 'diagnostic_services',
+            'clinic_name', 'clinic_address', 'hospital_affiliations', 'consultation_location',
+            'consultation_type', 'consultation_fee', 'follow_up_fee', 'video_fee', 'appointment_duration',
+            'weekly_availability', 'available_slots', 'working_hours', 'opd_schedule', 'availability_status',
+            'gallery_urls', 'clinic_photos', 'hospital_photos', 'event_photos', 'certificate_urls',
+            'video_urls', 'awards', 'achievements', 'publications', 'research_papers',
+            'medical_conferences', 'healthcare_contributions', 'honours', 'memberships',
+            'patient_instructions', 'faqs_custom', 'latitude', 'longitude', 'languages_spoken',
+            'cover_image_url'
         ]
-        for field in fields_to_update:
+
+        if not hasattr(doctor, 'social_links') or not isinstance(doctor.social_links, dict):
+            doctor.social_links = {}
+        if 'profile_details' not in doctor.social_links:
+            doctor.social_links['profile_details'] = {}
+
+        old_license = getattr(doctor, 'license_number', '') or getattr(doctor, 'license_no', '')
+        old_reg = getattr(doctor, 'medical_council_reg', '')
+
+        for field in all_profile_fields:
             if field in request.form:
-                setattr(doctor, field, request.form.get(field))
+                val = request.form.get(field, '').strip()
+                setattr(doctor, field, val)
+                doctor.social_links['profile_details'][field] = val
+
         if getattr(doctor, 'license_number', None):
             doctor.license_no = doctor.license_number
+
+        # Check for sensitive verification updates:
+        # If doctor changed medical registration or license number, and is not already admin verified, require review
+        new_license = getattr(doctor, 'license_number', '')
+        new_reg = getattr(doctor, 'medical_council_reg', '')
+        if (new_license and new_license != old_license) or (new_reg and new_reg != old_reg):
+            if not getattr(doctor, 'is_verified', False):
+                doctor.publishing_status = 'pending_verification'
+                doctor.social_links['profile_details']['publishing_status'] = 'pending_verification'
+
+        # Update slug dynamically
+        doctor._slug = None
+        new_slug = doctor.slug
+        doctor._slug = new_slug
+        doctor.social_links['profile_details']['slug'] = new_slug
+
+        # Update timestamp
+        doctor.updated_at = utcnow().isoformat()
+        doctor.social_links['profile_details']['updated_at'] = doctor.updated_at
         
         # Handle Profile Picture Upload (Cropped Base64 or Raw File)
         profile_input = request.form.get('cropped_profile_image') or request.form.get('profile_image_base64')
@@ -389,10 +521,11 @@ def doctor_dashboard():
             saved_filename = save_user_profile_image(
                 profile_input,
                 target_size=(500, 500),
-                filename_prefix=f"doctor_profile_{doctor.id}"
+                filename_prefix=f"doctor_profile_{str(doctor.id).replace('/', '_')}"
             )
             if saved_filename:
                 doctor.profile_picture_url = saved_filename
+                doctor.social_links['profile_details']['profile_picture_url'] = saved_filename
                 if saved_filename in UPLOAD_CACHE:
                     img_bytes, mime = UPLOAD_CACHE[saved_filename]
                     doctor.profile_picture_data = img_bytes
@@ -412,9 +545,50 @@ def doctor_dashboard():
                                 conn.close()
                     except Exception as e:
                         print(f"doctor_images table sync notice: {e}")
+
+        # Handle Doctor Cover Image Upload (Cropped Base64, Raw File, or Direct URL)
+        cover_input = request.form.get('cropped_cover_image') or request.form.get('cover_image_base64')
+        if not cover_input and 'cover_image' in request.files:
+            cfile = request.files['cover_image']
+            if cfile and cfile.filename != '':
+                cover_input = cfile
+
+        if cover_input:
+            saved_cover = save_user_profile_image(
+                cover_input,
+                target_size=(1600, 600),
+                filename_prefix=f"doctor_cover_{str(doctor.id).replace('/', '_')}",
+                subfolder='doctor_covers'
+            )
+            if saved_cover:
+                doctor.cover_image_url = saved_cover
+                doctor.social_links['profile_details']['cover_image_url'] = saved_cover
+        elif request.form.get('remove_cover_image') == '1':
+            doctor.cover_image_url = ''
+            if 'cover_image_url' in doctor.social_links.get('profile_details', {}):
+                doctor.social_links['profile_details']['cover_image_url'] = ''
+        elif request.form.get('cover_image_url'):
+            c_url = request.form.get('cover_image_url').strip()
+            doctor.cover_image_url = c_url
+            doctor.social_links['profile_details']['cover_image_url'] = c_url
+
+        # Ensure memory store TEMP_DATA has this updated object
+        TEMP_DATA['doctors'][doctor.id] = doctor
         save_data()
-        flash('Profile updated successfully!', 'success')
-        return redirect(url_for('doctor_dashboard'))
+
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json or 'application/json' in request.headers.get('Accept', '')
+        if is_ajax:
+            return jsonify({
+                'success': True,
+                'message': 'Doctor profile updated and synchronized with public view successfully!',
+                'slug': doctor.slug,
+                'public_url': url_for('doctor_detail_slug', doctor_slug=doctor.slug),
+                'profile_completion': doctor.profile_completion_pct,
+                'updated_at': doctor.updated_at
+            })
+
+        flash('Doctor profile updated and synchronized with public view successfully!', 'success')
+        return redirect(url_for('doctor_dashboard') + '#profile')
 
     # Fetch upcoming appointments
     today = date.today()
@@ -574,9 +748,9 @@ def doctor_dashboard():
     # Fetch lab requests made by this doctor
     lab_requests = [
         req for req in TEMP_DATA.get('lab_requests', {}).values()
-        if req.doctor_id == doctor.id
+        if (req.get('doctor_id') if isinstance(req, dict) else getattr(req, 'doctor_id', None)) == doctor.id
     ]
-    lab_requests.sort(key=lambda x: getattr(x, 'created_at', utcnow()) or utcnow(), reverse=True)
+    lab_requests.sort(key=lambda x: (x.get('created_at') if isinstance(x, dict) else getattr(x, 'created_at', None)) or utcnow(), reverse=True)
 
     def _get_appt_procedures(appt, pat=None):
         procs = []
@@ -1621,6 +1795,30 @@ def get_doctor_image(doc_id):
         <path d="M40 180 C40 135, 70 120, 100 120 C130 120, 160 135, 160 180 Z" fill="#cbd5e1"/>
     </svg>'''
     return Response(svg, mimetype='image/svg+xml')
+
+
+
+@doctor_bp.route('/doctor/cover/<path:doc_id>')
+def get_doctor_cover(doc_id):
+    """Serves the doctor's cover photo from database, cache or filesystem."""
+    doctor = TEMP_DATA['doctors'].get(doc_id)
+    if not doctor:
+        clean = str(doc_id).strip().lower()
+        doctor = next((d for d in TEMP_DATA['doctors'].values() if getattr(d, 'slug', '').lower() == clean or str(d.id).lower() == clean), None)
+    if doctor and getattr(doctor, 'cover_image_url', None):
+        img_name = str(doctor.cover_image_url).strip()
+        if img_name in UPLOAD_CACHE:
+            img_bytes, mime = UPLOAD_CACHE[img_name]
+            return Response(img_bytes, mimetype=mime)
+        fname = os.path.basename(img_name)
+        if fname in UPLOAD_CACHE:
+            img_bytes, mime = UPLOAD_CACHE[fname]
+            return Response(img_bytes, mimetype=mime)
+        for search_dir in ['static/uploads/doctor_covers', 'static/uploads/hospital_covers', 'static/uploads']:
+            full_p = os.path.join(current_app.root_path, '..', search_dir, fname)
+            if os.path.exists(full_p):
+                return send_from_directory(os.path.dirname(full_p), os.path.basename(full_p))
+    return redirect(url_for('static', filename='images/half_earth_background.jpg'))
 
 
 

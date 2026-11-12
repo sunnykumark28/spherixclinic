@@ -49,6 +49,7 @@ from spherix.services.database import (
     add_hospital_type, update_hospital_type, toggle_hospital_type_status,
     delete_hospital_type, log_user_logout
 )
+from spherix.security import get_security_command_center_telemetry
 from spherix.services.mail_service import (
     send_notification_email, send_notification_email_async, get_premium_otp_email_html,
     send_approval_notification, get_branded_general_email_html
@@ -399,7 +400,8 @@ def admin_dashboard():
                            jobs=list(reversed(sorted(TEMP_DATA.get('jobs', {}).values(), key=lambda j: getattr(j, 'id', 0)))),
                            job_applications=list(reversed(sorted(TEMP_DATA.get('job_applications', {}).values(), key=lambda a: getattr(a, 'id', 0)))),
                            auth_stats=get_auth_telemetry_stats(),
-                           auth_logs=list(TEMP_DATA.get('auth_activity_logs', []))[-50:])
+                           auth_logs=list(TEMP_DATA.get('auth_activity_logs', []))[-50:],
+                           security_telemetry=get_security_command_center_telemetry())
 
 
 @admin_bp.route('/admin/auth-telemetry/terminate', methods=['POST'])
@@ -2013,9 +2015,14 @@ def admin_login():
             save_data()
 
         # Standard password check against hashed credentials or configured bootstrap password
+        from spherix.security import (
+            verify_password, hash_password, register_new_session, log_security_event,
+            verify_totp_token, verify_and_consume_recovery_code
+        )
         is_valid = False
+        needs_rehash = False
         try:
-            is_valid = check_password_hash(user.password, password)
+            is_valid, needs_rehash = verify_password(user.password, password)
         except Exception:
             is_valid = False
 
@@ -2023,15 +2030,47 @@ def admin_login():
         bootstrap_pwd = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip()
         if not is_valid and email == 'admin@spherixclinic.com' and bootstrap_pwd and password == bootstrap_pwd:
             is_valid = True
-            user.password = generate_password_hash(bootstrap_pwd, method='pbkdf2:sha256:260000')
-            save_data()
+            needs_rehash = True
 
         if is_valid:
+            if needs_rehash:
+                user.password = hash_password(password)
+                save_data()
+
+            # Check MFA Enforcement
+            if getattr(user, 'mfa_enabled', False):
+                totp_input = request.form.get('totp_token', '').strip()
+                if totp_input:
+                    mfa_valid = False
+                    if verify_totp_token(getattr(user, 'mfa_secret', ''), totp_input):
+                        mfa_valid = True
+                    else:
+                        matched, remaining = verify_and_consume_recovery_code(totp_input, getattr(user, 'mfa_backup_codes', []))
+                        if matched:
+                            mfa_valid = True
+                            user.mfa_backup_codes = remaining
+                            save_data()
+                    if not mfa_valid:
+                        log_security_event("MFA_FAILED", "HIGH", f"Failed TOTP token during admin login for {email}", actor_id=str(user.id))
+                        flash('Invalid Multi-Factor Authenticator code.', 'error')
+                        return redirect(url_for('admin_login'))
+                else:
+                    # Redirect to 2nd step MFA Challenge
+                    session['pending_mfa_admin_id'] = str(user.id)
+                    return redirect(url_for('admin.admin_mfa_verify'))
+
             user.is_verified = True
             user.is_blocked = False
             login_user(user, remember=True)
             session['is_admin'] = True
             session['user_role'] = 'admin'
+            register_new_session(user.id, 'admin')
+            log_security_event(
+                event_type="LOGIN_SUCCESS",
+                severity="INFO",
+                details=f"Super Admin '{user.email}' authenticated successfully",
+                actor_id=str(user.id)
+            )
             admin_name = getattr(user, 'name', '') or f"Dr. {getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip() or 'System Administrator'
             log_auth_activity(
                 user_id=user.id,
@@ -2045,6 +2084,12 @@ def admin_login():
             flash('Admin authentication verified! Welcome to the Core Administration Terminal.', 'success')
             return redirect(url_for('admin_dashboard'))
         else:
+            log_security_event(
+                event_type="LOGIN_FAILED",
+                severity="HIGH",
+                details=f"Invalid administrator password attempt for '{email}'",
+                actor_id=str(email)
+            )
             log_auth_activity(
                 user_id=email,
                 user_name=str(email or 'Administrator'),
@@ -2845,6 +2890,7 @@ def admin_update_job_application_status(app_id):
     return redirect(url_for('admin_dashboard') + '?tab=job_applications')
 
 
+
 @admin_bp.route('/admin/jobs/application/delete/<int:app_id>', methods=['POST', 'GET'])
 @admin_required
 def admin_delete_job_application(app_id):
@@ -2857,5 +2903,221 @@ def admin_delete_job_application(app_id):
         flash(f"Application #{app_id} not found.", "error")
 
     return redirect(url_for('admin_dashboard') + '?tab=job_applications')
+
+
+# =====================================================================
+# SPHERIX ENTERPRISE SECURITY COMMAND CENTER & EMERGENCY CONTROLS
+# =====================================================================
+
+@admin_bp.route('/admin/security/telemetry', methods=['GET'])
+@admin_required
+def admin_security_telemetry():
+    """Returns live security telemetry metrics from genuine audit database."""
+    from spherix.security import get_security_command_center_telemetry
+    return jsonify(get_security_command_center_telemetry())
+
+
+@admin_bp.route('/admin/security/backup-now', methods=['POST'])
+@admin_required
+def admin_security_backup_now():
+    """Triggers an authenticated AES-encrypted database backup and tests its integrity."""
+    from spherix.security import (
+        create_encrypted_database_backup,
+        verify_backup_integrity,
+        log_security_event
+    )
+    backup_file = create_encrypted_database_backup()
+    if backup_file:
+        ok, msg = verify_backup_integrity(backup_file)
+        log_security_event(
+            event_type="ENCRYPTED_BACKUP_CREATED",
+            severity="INFO",
+            details=f"Backup created: {os.path.basename(backup_file)}. Integrity: {msg}",
+            actor_id=str(current_user.id)
+        )
+        flash(f"Encrypted database backup created successfully! {msg}", "success")
+    else:
+        flash("Failed to generate encrypted database backup. Check server storage.", "error")
+    return redirect(url_for('admin.admin_dashboard') + '?tab=security_center')
+
+
+@admin_bp.route('/admin/security/revoke-session/<session_id>', methods=['POST'])
+@admin_required
+def admin_security_revoke_session(session_id):
+    """Instantly revokes a specific user session."""
+    from spherix.security import revoke_session, log_security_event
+    revoke_session(session_id)
+    log_security_event(
+        event_type="SESSION_FORCE_REVOKED",
+        severity="MEDIUM",
+        details=f"Session '{session_id[:12]}...' was forcibly revoked by Administrator",
+        actor_id=str(current_user.id)
+    )
+    flash(f"Session {session_id[:12]}... has been revoked.", "info")
+    return redirect(url_for('admin.admin_dashboard') + '?tab=security_center')
+
+
+@admin_bp.route('/admin/security/revoke-user/<user_id>', methods=['POST'])
+@admin_required
+def admin_security_revoke_user(user_id):
+    """Global Killswitch: Terminates ALL active sessions for a user across all devices."""
+    from spherix.security import revoke_all_user_sessions, log_security_event
+    count = revoke_all_user_sessions(user_id)
+    log_security_event(
+        event_type="GLOBAL_KILLSWITCH_TRIGGERED",
+        severity="HIGH",
+        details=f"Admin revoked all {count} active sessions for user '{user_id}'",
+        actor_id=str(current_user.id)
+    )
+    flash(f"Global Killswitch: Terminated {count} active sessions for user {user_id}.", "warning")
+    return redirect(url_for('admin.admin_dashboard') + '?tab=security_center')
+
+
+@admin_bp.route('/admin/security/suspend-account/<user_id>', methods=['POST'])
+@admin_required
+def admin_security_suspend_account(user_id):
+    """Emergency incident response: Blocks an account and invalidates all active sessions."""
+    from spherix.security import revoke_all_user_sessions, log_security_event
+    found = False
+    for col_name in ['doctors', 'patients', 'hospitals', 'staff', 'blood_donors', 'organ_donors']:
+        if user_id in TEMP_DATA.get(col_name, {}):
+            u = TEMP_DATA[col_name][user_id]
+            u.is_blocked = True
+            found = True
+            break
+
+    if found:
+        save_data()
+        revoke_all_user_sessions(user_id)
+        log_security_event(
+            event_type="ACCOUNT_EMERGENCY_SUSPENDED",
+            severity="CRITICAL",
+            details=f"Account '{user_id}' was suspended and all sessions revoked.",
+            actor_id=str(current_user.id)
+        )
+        flash(f"Account {user_id} suspended and all active sessions revoked.", "danger")
+    else:
+        flash(f"User {user_id} not found.", "error")
+    return redirect(url_for('admin.admin_dashboard') + '?tab=security_center')
+
+
+@admin_bp.route('/admin/security/mfa/setup', methods=['GET', 'POST'])
+@admin_required
+def admin_mfa_setup():
+    """Generates MFA Secret and QR Code for Super Admin."""
+    from spherix.security import (
+        generate_mfa_secret,
+        generate_mfa_qr_base64,
+        generate_backup_recovery_codes,
+        verify_totp_token,
+        log_security_event
+    )
+    user = current_user
+    if request.method == 'POST':
+        token = request.form.get('totp_token', '').strip()
+        secret = session.get('pending_mfa_secret')
+        backup_hashes = session.get('pending_mfa_backup_hashes', [])
+        if secret and verify_totp_token(secret, token):
+            user.mfa_secret = secret
+            user.mfa_enabled = True
+            user.mfa_backup_codes = backup_hashes
+            save_data()
+            session.pop('pending_mfa_secret', None)
+            session.pop('pending_mfa_backup_hashes', None)
+            log_security_event(
+                event_type="MFA_ENROLLED",
+                severity="HIGH",
+                details=f"User '{user.email}' successfully configured TOTP Multi-Factor Authentication",
+                actor_id=str(user.id)
+            )
+            flash("Multi-Factor Authentication (MFA) successfully enabled!", "success")
+            return redirect(url_for('admin.admin_dashboard') + '?tab=security_center')
+        else:
+            flash("Invalid 6-digit authenticator code. Please check your app and try again.", "error")
+
+    # Generate new MFA secret
+    secret = generate_mfa_secret()
+    session['pending_mfa_secret'] = secret
+    user_email = getattr(user, 'email', 'admin@spherixclinic.com')
+    qr_base64 = generate_mfa_qr_base64(secret, user_email)
+    raw_codes, hashed_codes = generate_backup_recovery_codes(8)
+    session['pending_mfa_backup_hashes'] = hashed_codes
+
+    return render_template(
+        'admin_mfa_setup.html',
+        secret=secret,
+        qr_code_url=qr_base64,
+        recovery_codes=raw_codes
+    )
+
+
+@admin_bp.route('/admin/mfa/verify', methods=['GET', 'POST'])
+def admin_mfa_verify():
+    """Verifies MFA TOTP token or recovery code during admin login."""
+    pending_id = session.get('pending_mfa_admin_id')
+    if not pending_id:
+        return redirect(url_for('admin.admin_login'))
+
+    user = None
+    for col in ['doctors', 'patients']:
+        if pending_id in TEMP_DATA.get(col, {}):
+            user = TEMP_DATA[col][pending_id]
+            break
+    if not user:
+        session.pop('pending_mfa_admin_id', None)
+        return redirect(url_for('admin.admin_login'))
+
+    if request.method == 'POST':
+        token = request.form.get('token', '').strip()
+        from spherix.security import (
+            verify_totp_token,
+            verify_and_consume_recovery_code,
+            register_new_session,
+            log_security_event
+        )
+        is_valid = False
+        secret = getattr(user, 'mfa_secret', None)
+        if secret and verify_totp_token(secret, token):
+            is_valid = True
+        else:
+            stored_codes = getattr(user, 'mfa_backup_codes', [])
+            matched, remaining = verify_and_consume_recovery_code(token, stored_codes)
+            if matched:
+                is_valid = True
+                user.mfa_backup_codes = remaining
+                save_data()
+                log_security_event(
+                    event_type="RECOVERY_CODE_CONSUMED",
+                    severity="HIGH",
+                    details=f"Admin '{user.email}' used single-use backup recovery code",
+                    actor_id=str(user.id)
+                )
+
+        if is_valid:
+            session.pop('pending_mfa_admin_id', None)
+            login_user(user, remember=True)
+            session['is_admin'] = True
+            session['user_role'] = 'admin'
+            register_new_session(user.id, 'admin')
+            log_security_event(
+                event_type="LOGIN_SUCCESS",
+                severity="INFO",
+                details=f"Super Admin '{user.email}' verified MFA and logged in",
+                actor_id=str(user.id)
+            )
+            flash("MFA verification successful! Welcome back.", "success")
+            return redirect(url_for('admin.admin_dashboard'))
+        else:
+            from spherix.security import log_security_event
+            log_security_event(
+                event_type="MFA_VERIFICATION_FAILED",
+                severity="HIGH",
+                details=f"Failed MFA attempt for user '{user.email}'",
+                actor_id=str(user.id)
+            )
+            flash("Invalid authenticator token or recovery code. Please try again.", "error")
+
+    return render_template('admin_mfa_verify.html', user_email=user.email)
+
 
 

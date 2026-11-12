@@ -1,0 +1,443 @@
+{% extends "layout.html" %}
+
+{% block title %}Spherix Insurance — A Financial Protection Division of Spherix Clinic{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] text-slate-900 pb-20 w-full">
+
+  <!-- ================= HERO & BRANDING SECTION ================= -->
+  <section class="relative bg-gradient-to-br from-[#002f5e] via-[#004b87] to-[#0284c7] text-white py-14 px-4 sm:px-6 lg:px-12 overflow-hidden shadow-xl">
+    <!-- Ambient glow decorative layers -->
+    <div class="absolute -top-24 -right-24 w-96 h-96 bg-sky-400/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto relative z-10">
+      
+      <!-- Top division badge & breadcrumb -->
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-sky-100">
+          <i class="fas fa-shield-halved text-emerald-400"></i>
+          <span>A Financial Protection Division of Spherix Clinic &bull; IRDAI-Authorized Life Insurance Protection</span>
+        </div>
+
+        {% if current_user.is_authenticated and current_user.is_patient %}
+        <div class="flex items-center gap-2">
+          <a href="{{ url_for('patient_dashboard') }}?tab=tab-insurance" class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-all flex items-center gap-1.5">
+            <i class="fas fa-columns text-sky-300"></i>
+            <span>Patient Dashboard</span>
+          </a>
+          <a href="{{ url_for('insurance.my_policies') }}" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black shadow-sm transition-all flex items-center gap-1.5">
+            <i class="fas fa-file-shield"></i>
+            <span>My Policies ({{ patient_stats.active_policies }})</span>
+          </a>
+        </div>
+        {% else %}
+        <a href="{{ url_for('patient_login') }}?next={{ url_for('insurance.insurance_home') }}" class="px-4 py-1.5 rounded-lg bg-white text-[#004b87] hover:bg-sky-50 text-xs font-bold transition-all">
+          Patient Login &rarr;
+        </a>
+        {% endif %}
+      </div>
+
+      <!-- Main Headline Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div class="lg:col-span-7 space-y-4">
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black font-heading tracking-tight leading-tight">
+            Spherix Insurance
+          </h1>
+          <p class="text-base sm:text-lg text-sky-100 font-medium leading-relaxed max-w-2xl">
+            Protect your loved ones with authorized Life Insurance products from India's premier IRDAI-registered insurers. Compare verified policies, calculate accurate premiums, and enjoy digital claim assistance through your patient account.
+          </p>
+
+          <!-- Key Trust Badges -->
+          <div class="flex flex-wrap gap-3 pt-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 border border-white/15 text-xs font-semibold text-slate-100">
+              <i class="fas fa-certificate text-amber-400"></i> IRDAI Authorized Insurers
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 border border-white/15 text-xs font-semibold text-slate-100">
+              <i class="fas fa-percent text-emerald-400"></i> 99%+ Claim Settlement Ratios
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 border border-white/15 text-xs font-semibold text-slate-100">
+              <i class="fas fa-bolt text-cyan-300"></i> Direct Digital Issuance
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 border border-white/15 text-xs font-semibold text-slate-100">
+              <i class="fas fa-hand-holding-heart text-rose-300"></i> Free Claims Assistance
+            </span>
+          </div>
+
+          <!-- CTAs -->
+          <div class="flex items-center flex-wrap gap-3 pt-4">
+            <a href="{{ url_for('insurance.explore_plans') }}" class="px-6 py-3 rounded-xl bg-white text-[#004b87] hover:bg-sky-50 font-black text-sm shadow-lg transition-all flex items-center gap-2">
+              <span>Explore All Plans</span>
+              <i class="fas fa-arrow-right"></i>
+            </a>
+            <a href="{{ url_for('insurance.compare_plans') }}" class="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold text-sm transition-all flex items-center gap-2">
+              <i class="fas fa-scale-balanced text-sky-300"></i>
+              <span>Compare Plans</span>
+            </a>
+            <a href="{{ url_for('insurance.my_applications') }}" class="px-4 py-3 rounded-xl bg-transparent hover:bg-white/10 text-sky-200 font-bold text-sm transition-all">
+              Track Applications
+            </a>
+          </div>
+        </div>
+
+        <!-- Quick Interactive Quote Estimator Card -->
+        <div class="lg:col-span-5">
+          <div class="bg-white rounded-2xl p-6 sm:p-7 shadow-2xl text-slate-900 border border-slate-100">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+              <div>
+                <h3 class="font-black text-base sm:text-lg text-slate-900 font-heading">Instant Life Cover Calculator</h3>
+                <p class="text-xs text-slate-500">Calculate real actuarial premiums in seconds</p>
+              </div>
+              <span class="p-2.5 rounded-xl bg-blue-50 text-[#004b87]">
+                <i class="fas fa-calculator text-base"></i>
+              </span>
+            </div>
+
+            <form id="heroQuoteForm" onsubmit="calculateHeroQuote(event)" class="space-y-3.5 text-xs">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Select Life Insurance Plan</label>
+                <select id="calcProductId" class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-[#004b87] font-semibold text-slate-800">
+                  {% for p in products %}
+                  <option value="{{ p.id }}" data-rate="{{ p.base_annual_rate_per_lakh }}">{{ p.product_name }} ({{ p.partner_name }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Your Age (Years)</label>
+                  <input type="number" id="calcAge" value="30" min="18" max="65" class="w-full border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white focus:outline-[#004b87] font-bold text-slate-800">
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Gender</label>
+                  <select id="calcGender" class="w-full border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white focus:outline-[#004b87] font-bold text-slate-800">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female (Special Discount)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Sum Insured (Cover)</label>
+                  <select id="calcSumInsured" class="w-full border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white focus:outline-[#004b87] font-bold text-slate-800">
+                    <option value="5000000">₹50 Lakh</option>
+                    <option value="10000000" selected>₹1 Crore</option>
+                    <option value="15000000">₹1.5 Crore</option>
+                    <option value="20000000">₹2 Crore</option>
+                    <option value="30000000">₹3 Crore</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Do you consume tobacco?</label>
+                  <select id="calcSmoker" class="w-full border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white focus:outline-[#004b87] font-bold text-slate-800">
+                    <option value="0">No (Non-Smoker)</option>
+                    <option value="1">Yes (Smoker)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Live Estimate Display -->
+              <div class="p-3.5 rounded-xl bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-100 flex items-center justify-between">
+                <div>
+                  <span class="text-xxs uppercase font-extrabold text-slate-500 tracking-wider block">Estimated Premium</span>
+                  <span class="text-xl font-black text-[#004b87]" id="heroEstimatedPremium">₹820 / month</span>
+                  <span class="text-xxs text-slate-500 block">₹9,840 / year (incl. 18% GST)</span>
+                </div>
+                <button type="submit" class="px-4 py-2.5 rounded-lg bg-[#004b87] hover:bg-[#002f5e] text-white font-black text-xs transition-colors shadow-sm cursor-pointer">
+                  Apply Now &rarr;
+                </button>
+              </div>
+
+              <p class="text-center text-[10px] text-slate-400">
+                *Subject to partner insurer underwriting and medical clearance.
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= PATIENT COVERAGE OVERVIEW (IF LOGGED IN) ================= -->
+  {% if current_user.is_authenticated and current_user.is_patient and patient_stats.active_policies > 0 %}
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 -mt-6 relative z-20">
+    <div class="bg-white rounded-xl p-5 shadow-md border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xl font-bold">
+          <i class="fas fa-shield-check"></i>
+        </div>
+        <div>
+          <span class="text-xxs font-black uppercase text-emerald-700 tracking-wider">Financial Shield Active</span>
+          <h4 class="text-base font-black text-slate-900">Total Active Protection: ₹{{ '%.0f'|format(patient_stats.total_coverage) }} across {{ patient_stats.active_policies }} Policy(s)</h4>
+          <p class="text-xs text-slate-500">Your nominees and family benefits are secured under Spherix financial protection.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('insurance.my_policies') }}" class="px-4 py-2 rounded-lg bg-[#004b87] hover:bg-[#002f5e] text-white text-xs font-bold transition-all">
+          View Policy Schedules
+        </a>
+        <a href="{{ url_for('insurance.my_claims') }}" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+          Claims Assistance
+        </a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ================= SECTION 2: VERIFIED PARTNER INSURERS ================= -->
+  <!-- ================= SECTION 2: AUTHORIZED LIFE UNDERWRITER ================= -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mt-12">
+    <div class="bg-gradient-to-r from-blue-900 via-sky-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 border border-sky-800/40 shadow-xl relative overflow-hidden">
+      <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div class="lg:col-span-8">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-300 text-xs font-bold mb-3 border border-white/10">
+            <i class="fas fa-shield-check"></i> Sole Authorized Life Underwriter
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black font-heading tracking-tight mb-2">
+            Spherix Life Insurance Corporation (SLIC)
+          </h2>
+          <p class="text-sky-100 text-sm max-w-2xl leading-relaxed">
+            All insurance policies, risk assessment, claim settlements, and financial guarantees are underwritten exclusively by <strong>Spherix Life Insurance Corporation (SLIC)</strong>. Experience 100% digital issuance, 99.85% verified claim settlement ratio, and direct cashless hospital coordination across all clinical branches.
+          </p>
+          <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-200 mt-4">
+            <span class="inline-flex items-center gap-1.5"><i class="fas fa-certificate text-amber-400"></i> IRDAI Reg. #SLIC-IRDAI-2026-888</span>
+            <span class="inline-flex items-center gap-1.5"><i class="fas fa-building text-sky-300"></i> CIN: U66010DL2026PLC987654</span>
+            <span class="inline-flex items-center gap-1.5"><i class="fas fa-phone text-emerald-400"></i> Toll-Free: 1800 266 8888</span>
+          </div>
+        </div>
+        <div class="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3 justify-center">
+          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 text-center">
+            <span class="text-xxs uppercase tracking-wider text-sky-200 block font-bold">Claim Settlement Ratio</span>
+            <span class="text-3xl font-black text-emerald-400 font-heading">99.85%</span>
+            <span class="text-xxs text-slate-300 block mt-0.5">Highest tier settlement performance</span>
+          </div>
+          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 text-center">
+            <span class="text-xxs uppercase tracking-wider text-sky-200 block font-bold">Solvency Ratio</span>
+            <span class="text-3xl font-black text-cyan-300 font-heading">2.25x</span>
+            <span class="text-xxs text-slate-300 block mt-0.5">Exceeds statutory requirement</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 3: POPULAR LIFE INSURANCE PRODUCTS ================= -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mt-14">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div>
+        <span class="text-xxs uppercase font-black text-[#004b87] tracking-wider">Curated Protection</span>
+        <h2 class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 font-heading">
+          Explore Life Insurance Plans
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+          Select pure risk term cover, whole life protection, or guaranteed family savings.
+        </p>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <a href="{{ url_for('insurance.explore_plans') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#004b87] text-white shadow-xs">
+          All Products ({{ products|length }})
+        </a>
+        <a href="{{ url_for('insurance.explore_plans', category='Term Life') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">
+          Term Life
+        </a>
+        <a href="{{ url_for('insurance.explore_plans', category='Whole Life') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">
+          Whole Life (Age 100)
+        </a>
+        <a href="{{ url_for('insurance.explore_plans', category='Savings') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">
+          Savings-Linked
+        </a>
+      </div>
+    </div>
+
+    <!-- Product Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for pr in products %}
+      <div class="bg-white rounded-2xl border-2 border-slate-200 hover:border-[#004b87] hover:shadow-xl transition-all flex flex-col justify-between p-6 group">
+        <div>
+          <!-- Card Header Badges -->
+          <div class="flex items-center justify-between mb-3">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider {% if pr.category == 'Term Life' %}bg-sky-50 text-sky-800 border border-sky-200{% elif pr.category == 'Whole Life' %}bg-purple-50 text-purple-800 border border-purple-200{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200{% endif %}">
+              {{ pr.category }}
+            </span>
+            <span class="text-xs font-bold text-slate-500 font-mono">
+              UIN: {{ pr.uin_number }}
+            </span>
+          </div>
+
+          <h3 class="text-lg font-black text-slate-900 group-hover:text-[#004b87] transition-colors font-heading">
+            {{ pr.product_name }}
+          </h3>
+          <p class="text-xs font-semibold text-slate-500 mt-0.5">
+            Issued by <strong>{{ pr.partner_name }}</strong> &bull; IRDAI #{{ pr.irda_reg_no }}
+          </p>
+          <p class="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
+            {{ pr.tagline }}
+          </p>
+
+          <!-- Specifications Box -->
+          <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Life Coverage:</span>
+              <strong class="text-slate-900">₹{{ '%.0f'|format(pr.min_sum_insured/100000) }} Lakh – ₹{{ '%.0f'|format(pr.max_sum_insured/10000000) }} Cr</strong>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Policy Term:</span>
+              <strong class="text-slate-800">{{ pr.min_term_years }} to {{ pr.max_term_years }} Years</strong>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Entry Age:</span>
+              <strong class="text-slate-800">{{ pr.min_entry_age }} – {{ pr.max_entry_age }} Years</strong>
+            </div>
+          </div>
+
+          <!-- Key Benefits List -->
+          <div class="mt-4 space-y-1.5">
+            <span class="text-xxs uppercase font-black text-slate-400 tracking-wider">Key Benefits</span>
+            {% for b in pr.key_benefits[:3] %}
+            <div class="flex items-start gap-1.5 text-xs text-slate-700">
+              <i class="fas fa-check-circle text-emerald-600 text-xxs mt-1 shrink-0"></i>
+              <span class="line-clamp-1">{{ b }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Card Footer & CTA -->
+        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+          <div>
+            <span class="text-xxs text-slate-400 block font-bold uppercase">Starting From</span>
+            <span class="text-base font-black text-[#004b87]">
+              ₹{{ '%.0f'|format(pr.base_annual_rate_per_lakh * 100) }} <span class="text-xxs font-normal text-slate-500">/ yr</span>
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <a href="{{ url_for('insurance.compare_plans') }}?plans={{ pr.id }}" class="p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold" title="Compare this plan">
+              <i class="fas fa-scale-balanced"></i>
+            </a>
+            <a href="{{ url_for('insurance.apply_insurance', product_id=pr.id) }}" class="px-4 py-2 rounded-lg bg-[#004b87] hover:bg-[#002f5e] text-white text-xs font-black shadow-xs transition-all flex items-center gap-1">
+              <span>Apply</span>
+              <i class="fas fa-arrow-right text-xxs"></i>
+            </a>
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- View All Plans Banner -->
+    <div class="mt-8 text-center">
+      <a href="{{ url_for('insurance.explore_plans') }}" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-300 hover:bg-white text-xs font-bold text-slate-700 shadow-xs transition-all">
+        <span>View Complete 6-Product Life Catalog</span>
+        <i class="fas fa-arrow-right text-xxs"></i>
+      </a>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 4: 6-STEP TRANSPARENT WORKFLOW ================= -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mt-20">
+    <div class="text-center max-w-2xl mx-auto mb-12">
+      <span class="text-xxs uppercase font-black text-indigo-600 tracking-wider">Hassle-Free Protection</span>
+      <h2 class="text-2xl sm:text-3xl font-black text-slate-900 font-heading mt-1">
+        How Life Insurance Works at Spherix
+      </h2>
+      <p class="text-xs sm:text-sm text-slate-500 mt-1">
+        From instantaneous quotation to verified digital policy schedule issuance in 6 seamless steps.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs">
+        <span class="w-8 h-8 rounded-full bg-blue-100 text-[#004b87] font-black text-xs flex items-center justify-center mb-3">1</span>
+        <h4 class="font-extrabold text-sm text-slate-900">Personal Information</h4>
+        <p class="text-xs text-slate-500 mt-1">Provide your age, gender, contact coordinates, and residential address with digital prefill from your patient record.</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs">
+        <span class="w-8 h-8 rounded-full bg-blue-100 text-[#004b87] font-black text-xs flex items-center justify-center mb-3">2</span>
+        <h4 class="font-extrabold text-sm text-slate-900">Select Cover &amp; Term</h4>
+        <p class="text-xs text-slate-500 mt-1">Choose your financial protection sum insured (₹50 Lakh to ₹5 Crore) and policy term up to age 85 or 100.</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs">
+        <span class="w-8 h-8 rounded-full bg-blue-100 text-[#004b87] font-black text-xs flex items-center justify-center mb-3">3</span>
+        <h4 class="font-extrabold text-sm text-slate-900">Nominee Registration</h4>
+        <p class="text-xs text-slate-500 mt-1">Designate legal beneficiaries (Spouse, Children, Parents) with explicit share percentages and appointee details.</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs">
+        <span class="w-8 h-8 rounded-full bg-blue-100 text-[#004b87] font-black text-xs flex items-center justify-center mb-3">4</span>
+        <h4 class="font-extrabold text-sm text-slate-900">Health Declarations &amp; Consent</h4>
+        <p class="text-xs text-slate-500 mt-1">Answer standard insurer health questions and authorize explicit statutory data transfer for underwriting.</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs">
+        <span class="w-8 h-8 rounded-full bg-blue-100 text-[#004b87] font-black text-xs flex items-center justify-center mb-3">5</span>
+        <h4 class="font-extrabold text-sm text-slate-900">KYC Verification</h4>
+        <p class="text-xs text-slate-500 mt-1">Upload Aadhaar, PAN card, or identity documents securely with encrypted server-side document verification.</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-xs">
+        <span class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center mb-3">6</span>
+        <h4 class="font-extrabold text-sm text-slate-900">Approval &amp; Policy Issuance</h4>
+        <p class="text-xs text-slate-500 mt-1">Authorized insurer completes underwriting. Pay via secure gateway to receive your cryptographic policy schedule instantly.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= SECTION 5: STATUTORY IRDAI DISCLAIMER ================= -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mt-16">
+    <div class="bg-slate-100 rounded-2xl p-6 border border-slate-200 text-slate-600 text-xs leading-relaxed space-y-2">
+      <div class="flex items-center gap-2 font-bold text-slate-800">
+        <i class="fas fa-scale-balanced text-indigo-700"></i>
+        <span>Regulatory Compliance &amp; IRDAI Statutory Notice</span>
+      </div>
+      <p>
+        <strong>Spherix Insurance</strong> is the financial protection and life security division of Spherix Clinic. All life insurance products, policies, terms, riders, and guarantees are underwritten directly by <strong>Spherix Life Insurance Corporation (SLIC)</strong> (IRDAI Reg. #SLIC-IRDAI-2026-888 &bull; CIN: U66010DL2026PLC987654).
+      </p>
+      <p>
+        Underwriting decisions, risk evaluations, policy issuance, premium rates, and claim settlements are administered by Spherix Life Insurance Corporation (SLIC) in accordance with the provisions of Section 39 and Section 45 of the Insurance Act, 1938.
+      </p>
+      <p class="text-[11px] text-slate-500 pt-1">
+        Insurance is the subject matter of solicitation. For more details on risk factors, terms and conditions, please read the official sales brochure carefully before concluding a sale. Free Look period: 30 days for policies sourced electronically.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+function calculateHeroQuote(e) {
+  if (e) e.preventDefault();
+  const prodId = document.getElementById('calcProductId').value;
+  const age = document.getElementById('calcAge').value;
+  const gender = document.getElementById('calcGender').value;
+  const sumInsured = document.getElementById('calcSumInsured').value;
+  const isSmoker = document.getElementById('calcSmoker').value;
+
+  fetch(`/api/insurance/quote?product_id=${encodeURIComponent(prodId)}&age=${age}&gender=${gender}&sum_insured=${sumInsured}&is_smoker=${isSmoker}&frequency=ANNUAL`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.success && data.quote) {
+        const q = data.quote;
+        const monthly = Math.round(q.total_premium / 12);
+        document.getElementById('heroEstimatedPremium').innerText = `₹${monthly.toLocaleString()} / month`;
+        window.location.href = `/patient/insurance/apply?product_id=${encodeURIComponent(prodId)}&age=${age}&gender=${gender}&sum_insured=${sumInsured}&is_smoker=${isSmoker}`;
+      } else {
+        alert(data.error || "Could not calculate quotation.");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      window.location.href = `/patient/insurance/apply?product_id=${encodeURIComponent(prodId)}`;
+    });
+}
+</script>
+{% endblock %}

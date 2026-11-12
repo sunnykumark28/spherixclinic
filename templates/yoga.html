@@ -51,6 +51,27 @@
     .custom-scroll::-webkit-scrollbar { width: 5px; }
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+
+    /* Hide Header, Nav, Footer, and Floating Action Dock when Yoga Studio Sidebar Drawer is open */
+    body.sidebar-drawer-open #top-utility-bar,
+    body.sidebar-drawer-open header,
+    body.sidebar-drawer-open nav,
+    body.sidebar-drawer-open nav.glass-nav,
+    body.sidebar-drawer-open #main-navbar,
+    body.sidebar-drawer-open #main-footer,
+    body.sidebar-drawer-open footer,
+    body.sidebar-drawer-open #floating-actions-dock,
+    body.sidebar-drawer-open .floating-cart-badge,
+    body.sidebar-drawer-open #cancer-floating-cta,
+    body.sidebar-drawer-open #feedback-toggle-btn,
+    body.sidebar-drawer-open #chatbot-toggle-btn,
+    body.sidebar-drawer-open #global-search-modal,
+    body.sidebar-drawer-open #symptom-chat-toggle {
+        opacity: 0 !important;
+        display: none !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
 </style>
 
 <!-- HERO SECTION: Elegant & Immersive -->
@@ -310,6 +331,10 @@
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2.5 relative z-10">
+                        <button type="button" onclick="openYogaStudioDrawer();" class="px-4 py-3.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg hover:scale-105 active:scale-95 border border-emerald-400/40">
+                            <i class="fas fa-arrow-right-to-bracket text-emerald-200"></i>
+                            <span>Open Studio Sidebar</span>
+                        </button>
                         <button type="button" onclick="startGuidedPractice();" class="px-5 py-3.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs sm:text-sm flex items-center gap-2.5 shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer">
                             <i class="fas fa-play-circle text-base text-stone-950"></i>
                             <span>Start Guided Practice</span>
@@ -422,8 +447,191 @@
     </div>
 </section>
 
+<!-- ================= YOGA STUDIO SLIDING SIDEBAR DRAWER ================= -->
+<div id="yoga-studio-drawer-modal" class="fixed inset-0 z-[1001] hidden overflow-hidden" role="dialog" aria-modal="true">
+    <!-- Backdrop Blur -->
+    <div class="fixed inset-0 bg-stone-950/60 backdrop-blur-md transition-opacity duration-300 opacity-0" id="yoga-studio-backdrop" onclick="closeYogaStudioDrawer();"></div>
+
+    <!-- Sliding Right Side Drawer Panel -->
+    <div class="fixed inset-y-0 right-0 pl-4 sm:pl-10 max-w-full flex">
+        <div id="yoga-studio-panel" class="w-screen max-w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl xl:max-w-4xl bg-stone-50 shadow-2xl border-l border-stone-200 flex flex-col transform transition-transform duration-300 ease-out translate-x-full">
+            
+            <!-- Drawer Header -->
+            <div class="p-5 sm:p-6 bg-gradient-to-r from-stone-900 via-emerald-950 to-stone-900 text-white flex items-start justify-between border-b border-emerald-900/60 shrink-0">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-lg bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shadow-inner shrink-0">
+                        <i class="fas fa-om"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30" id="drawer-source-badge">
+                                ✦ Groq Neural AI Synthesis
+                            </span>
+                            <span class="px-2.5 py-0.5 rounded-md bg-white/10 text-amber-300 text-[10px] font-mono font-bold" id="drawer-safety-score">
+                                99.5% Biomechanical Precision
+                            </span>
+                        </div>
+                        <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight mt-1" id="drawer-studio-title">
+                            Yoga Sanctuary Studio Flow
+                        </h3>
+                        <p class="text-xs text-emerald-200/90 font-medium line-clamp-1" id="drawer-studio-summary">
+                            Tailored breath-synchronized asana sequence
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeYogaStudioDrawer();" class="px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-white/15" title="Exit Studio (Esc)">
+                    <i class="fas fa-xmark text-sm"></i>
+                    <span class="hidden sm:inline">Exit Studio</span>
+                </button>
+            </div>
+
+            <!-- Drawer Quick Actions Sticky Bar -->
+            <div class="px-5 sm:px-6 py-3 bg-white border-b border-stone-200/80 flex items-center justify-between gap-2 shrink-0 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" onclick="startGuidedPractice();" class="px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs flex items-center gap-2 shadow-sm transition active:scale-95 cursor-pointer">
+                        <i class="fas fa-play-circle text-stone-950"></i>
+                        <span>Start Guided Practice</span>
+                    </button>
+                    <button type="button" onclick="readSessionAloud();" id="drawer-tts-btn" class="px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="Listen with voice guidance">
+                        <i class="fas fa-volume-high text-emerald-700"></i>
+                        <span>Listen</span>
+                    </button>
+                    <button type="button" onclick="copySessionSummary();" class="px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="Copy routine text">
+                        <i class="fas fa-copy text-stone-500"></i>
+                        <span>Copy</span>
+                    </button>
+                    <button type="button" onclick="window.print();" class="px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="Print session">
+                        <i class="fas fa-print text-stone-500"></i>
+                        <span>Print</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleAmbientSound();" class="px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-emerald-900 text-white text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-music text-amber-400"></i>
+                        <span id="drawer-ambient-btn-text">432Hz Drone</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Drawer Scrollable Content Body -->
+            <div class="p-5 sm:p-7 space-y-6 overflow-y-auto flex-grow text-stone-800 custom-scroll" id="yoga-studio-drawer-body">
+                
+                <!-- Loading State inside Drawer -->
+                <div id="drawer-loading-state" class="py-16 text-center space-y-4">
+                    <div class="inline-flex gap-2">
+                        <span class="w-3.5 h-3.5 bg-emerald-600 rounded-full animate-bounce"></span>
+                        <span class="w-3.5 h-3.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span class="w-3.5 h-3.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.5s]"></span>
+                    </div>
+                    <p class="serif italic text-stone-800 text-lg font-bold">Synthesizing clinical yoga sequence with Groq Neural AI...</p>
+                    <p class="text-xs text-stone-500">Formulating kinetic chain alignment, target muscles, and Vedic dosha energetics</p>
+                </div>
+
+                <!-- Loaded Content Container inside Drawer -->
+                <div id="drawer-loaded-content" class="hidden space-y-6">
+                    
+                    <!-- AI Clinical Rationale Banner -->
+                    <div class="p-5 rounded-xl bg-emerald-50/90 border border-emerald-200 text-stone-800 space-y-2 shadow-xs">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 text-emerald-900 font-black text-xs uppercase tracking-wider">
+                                <i class="fas fa-brain text-emerald-700"></i>
+                                <span>Neural Formulation & Clinical Rationale</span>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" id="drawer-profile-tag">20m • Intermediate</span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-stone-700 font-medium leading-relaxed mb-0" id="drawer-ai-reasoning">
+                            ...
+                        </p>
+                    </div>
+
+                    <!-- Ayurvedic Energetic Blueprint Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="p-3.5 rounded-lg bg-white border border-stone-200 shadow-xs space-y-1">
+                            <span class="text-[10px] font-extrabold uppercase text-stone-400">Vata Impact</span>
+                            <p class="text-xs font-bold text-blue-700 truncate" id="drawer-vata">Grounding</p>
+                        </div>
+                        <div class="p-3.5 rounded-lg bg-white border border-stone-200 shadow-xs space-y-1">
+                            <span class="text-[10px] font-extrabold uppercase text-stone-400">Pitta Impact</span>
+                            <p class="text-xs font-bold text-amber-700 truncate" id="drawer-pitta">Cooling</p>
+                        </div>
+                        <div class="p-3.5 rounded-lg bg-white border border-stone-200 shadow-xs space-y-1">
+                            <span class="text-[10px] font-extrabold uppercase text-stone-400">Kapha Impact</span>
+                            <p class="text-xs font-bold text-emerald-700 truncate" id="drawer-kapha">Stimulating</p>
+                        </div>
+                        <div class="p-3.5 rounded-lg bg-white border border-stone-200 shadow-xs space-y-1">
+                            <span class="text-[10px] font-extrabold uppercase text-stone-400">Chakra</span>
+                            <p class="text-xs font-bold text-stone-900 truncate" id="drawer-chakra">Anahata & Manipura</p>
+                        </div>
+                    </div>
+
+                    <!-- Breathwork & Mudra Bar -->
+                    <div class="p-4 rounded-lg bg-stone-100/90 border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-wind text-cyan-600"></i>
+                            <span><strong>Pranayama:</strong> <span id="drawer-pranayama">Nadi Shodhana</span></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-hand-holding-heart text-amber-600"></i>
+                            <span><strong>Mudra:</strong> <span id="drawer-mudra">Gyan Mudra</span></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-clock text-stone-500"></i>
+                            <span><span id="drawer-dinacharya">Morning / Twilight</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Pose Flow Header -->
+                    <div class="flex items-center justify-between border-b border-stone-200 pb-2.5 pt-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                            <h4 class="text-base font-black text-stone-900">Custom Asana Sequence & Alignment</h4>
+                        </div>
+                        <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100" id="drawer-pose-count">5 Poses</span>
+                    </div>
+
+                    <!-- Dynamic Asanas Cards Grid -->
+                    <div id="drawer-poses-grid" class="space-y-4">
+                        <!-- Dynamic Pose Cards injected here -->
+                    </div>
+
+                    <!-- Full Monograph Accordion / Section -->
+                    <div class="p-5 rounded-xl bg-white border border-stone-200/90 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-book-open text-emerald-700"></i>
+                                <h4 class="text-sm font-black text-stone-900">Complete Yogic & Ayurvedic Monograph</h4>
+                            </div>
+                            <button type="button" onclick="copyFullMonograph();" class="text-xs font-bold text-stone-500 hover:text-emerald-700 flex items-center gap-1 cursor-pointer">
+                                <i class="fas fa-copy"></i>
+                                <span>Copy</span>
+                            </button>
+                        </div>
+                        <div id="drawer-monograph-content" class="text-stone-700 text-xs sm:text-sm leading-relaxed space-y-3">
+                            <!-- Formatted Monograph injected here -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Drawer Sticky Footer -->
+            <div class="px-5 sm:px-6 py-4 bg-white border-t border-stone-200/90 text-xs flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-1.5 text-stone-500 text-[11px]">
+                    <i class="fas fa-shield-heart text-emerald-600"></i>
+                    <span>Listen to your body; maintain gentle breath awareness throughout.</span>
+                </div>
+                <button type="button" onclick="closeYogaStudioDrawer();" class="px-4 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition cursor-pointer">
+                    Close Studio Flow
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 <!-- ================= 5. INTERACTIVE GUIDED POSE PLAYER MODAL ================= -->
-<div id="guidedPlayerModal" class="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+<div id="guidedPlayerModal" class="fixed inset-0 z-[1050] bg-stone-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-lg max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-stone-200 relative overflow-hidden text-center space-y-6">
         
         <!-- Header & Close -->
@@ -534,6 +742,22 @@
     let isAmbientPlaying = false;
 
     // Advanced Markdown to Rich Clinical Monograph Formatter
+    function cleanYogaText(text) {
+        if (!text) return '';
+        let s = String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        return s
+            .replace(/\*\*([\s\S]*?)\*\*/g, '<strong class="font-bold text-stone-900">$1</strong>')
+            .replace(/\*\*/g, '');
+    }
+
+    function stripYogaStars(text) {
+        if (!text) return '';
+        return String(text).replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*\*/g, '').trim();
+    }
+
     function formatAIResponse(text) {
         if (!text) return '';
         
@@ -548,7 +772,8 @@
             .replace(/^> (.*$)/gim, '<blockquote class="p-4 my-3 rounded-lg bg-emerald-50/80 border-l-4 border-emerald-600 text-stone-800 italic font-medium text-xs sm:text-sm">$1</blockquote>')
             
             // Inline styling
-            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-stone-950 font-black">$1</strong>')
+            .replace(/\*\*([\s\S]*?)\*\*/g, '<strong class="text-stone-950 font-black">$1</strong>')
+            .replace(/\*\*/g, '')
             .replace(/\*(.*?)\*/g, '<em class="text-emerald-900 font-medium">$1</em>')
             .replace(/`([^`]+)`/g, '<span class="px-2 py-0.5 rounded-md bg-stone-100 text-stone-800 font-mono text-[11px] font-bold border border-stone-200">$1</span>')
             
@@ -578,6 +803,53 @@
         });
     }
 
+    // Open Yoga Studio Sliding Sidebar Drawer
+    function openYogaStudioDrawer() {
+        const modal = document.getElementById('yoga-studio-drawer-modal');
+        const backdrop = document.getElementById('yoga-studio-backdrop');
+        const panel = document.getElementById('yoga-studio-panel');
+        
+        document.getElementById('drawer-loading-state').classList.remove('hidden');
+        document.getElementById('drawer-loaded-content').classList.add('hidden');
+        
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden', 'sidebar-drawer-open');
+        
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
+            panel.classList.remove('translate-x-full');
+            panel.classList.add('translate-x-0');
+        }, 10);
+    }
+
+    // Close Yoga Studio Sliding Sidebar Drawer
+    function closeYogaStudioDrawer() {
+        const modal = document.getElementById('yoga-studio-drawer-modal');
+        const backdrop = document.getElementById('yoga-studio-backdrop');
+        const panel = document.getElementById('yoga-studio-panel');
+        
+        backdrop.classList.remove('opacity-100');
+        backdrop.classList.add('opacity-0');
+        panel.classList.remove('translate-x-0');
+        panel.classList.add('translate-x-full');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden', 'sidebar-drawer-open');
+        }, 300);
+
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+
+    // Global Keydown Listener for Escape Key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeYogaStudioDrawer();
+            closeGuidedPractice();
+        }
+    });
+
     // 1-Click Preset Handler
     function applyPreset(goal, duration, difficulty, focus, accommodation = 'none') {
         document.getElementById('session-goal').value = goal;
@@ -585,11 +857,11 @@
         document.getElementById('session-difficulty').value = difficulty;
         document.getElementById('session-accommodation').value = accommodation;
 
-        // Auto trigger generator
+        // Auto trigger generator and open studio drawer
         document.getElementById('session-generator-form').dispatchEvent(new Event('submit'));
     }
 
-    // Form submission
+    // Form submission -> Launches Yoga Studio Sidebar Drawer with Real-Time AI Generation
     document.getElementById('session-generator-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const duration = document.getElementById('session-duration').value;
@@ -602,6 +874,9 @@
         document.getElementById('session-response').classList.add('hidden');
         document.getElementById('session-loading').classList.remove('hidden');
 
+        // Immediately Open Sidebar Drawer with live synthesis state
+        openYogaStudioDrawer();
+
         fetch('/api/yoga-session-generator', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -612,35 +887,107 @@
             activeSessionData = data;
             document.getElementById('session-loading').classList.add('hidden');
             
-            // Set Header & Source Badges
-            document.getElementById('session-title-display').innerText = data.title || `${goal.toUpperCase()} Yoga Sequence`;
-            document.getElementById('session-summary-display').innerText = data.summary || `Personalized ${duration}-minute ${difficulty} sequence.`;
-            
-            const sourceBadge = document.getElementById('session-source-badge');
-            if (sourceBadge) {
-                sourceBadge.innerText = data.source === 'groq_ai' ? 'Groq AI Neural Synthesis' : 'Clinical Vedic Protocol';
+            const isGroq = data.source === 'groq_ai';
+            const sourceBadgeText = isGroq ? '✦ Groq Neural AI Synthesis' : '✦ Clinical Vedic AI Protocol';
+            const safetyScoreText = data.safety_score || '99.5% Biomechanical Precision';
+            const poses = data.poses || [];
+            const dosha = data.dosha || {};
+
+            // 1. POPULATE SIDEBAR STUDIO DRAWER
+            document.getElementById('drawer-studio-title').innerText = stripYogaStars(data.title || `${goal.toUpperCase()} Yoga Routine`);
+            document.getElementById('drawer-studio-summary').innerText = stripYogaStars(data.summary || `Personalized ${duration}-minute ${difficulty} sequence.`);
+            document.getElementById('drawer-source-badge').innerText = sourceBadgeText;
+            document.getElementById('drawer-safety-score').innerText = safetyScoreText;
+            document.getElementById('drawer-ai-reasoning').innerHTML = cleanYogaText(data.ai_reasoning || 'Personalized clinical sequence formulated to match your metabolic goals and accommodate musculoskeletal integrity.');
+            document.getElementById('drawer-profile-tag').innerText = `${duration}m • ${difficulty.toUpperCase()} • ${accommodation.toUpperCase()}`;
+
+            // Populate Drawer Blueprint
+            document.getElementById('drawer-vata').innerText = dosha.vata || 'Grounding';
+            document.getElementById('drawer-pitta').innerText = dosha.pitta || 'Cooling';
+            document.getElementById('drawer-kapha').innerText = dosha.kapha || 'Stimulating';
+            document.getElementById('drawer-chakra').innerText = data.chakra || 'Anahata & Manipura';
+            document.getElementById('drawer-pranayama').innerText = data.pranayama || 'Nadi Shodhana';
+            document.getElementById('drawer-mudra').innerText = data.mudra || 'Gyan Mudra';
+            document.getElementById('drawer-dinacharya').innerText = data.dinacharya || 'Sunrise / Twilight';
+            document.getElementById('drawer-pose-count').innerText = `${poses.length} Asanas (${duration} mins)`;
+
+            // Populate Drawer Poses Grid
+            const drawerPosesGrid = document.getElementById('drawer-poses-grid');
+            if (drawerPosesGrid && poses.length > 0) {
+                drawerPosesGrid.innerHTML = poses.map((p, idx) => `
+                    <div class="p-5 sm:p-6 rounded-xl bg-white border border-stone-200/90 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col justify-between group space-y-4">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <span class="px-2.5 py-1 rounded-md bg-stone-100 text-stone-700 text-[10px] font-black uppercase tracking-wider">
+                                    Step ${idx + 1} • ${p.category || 'Asana'}
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    ${p.target_muscles ? `
+                                        <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-100 line-clamp-1 max-w-[200px]" title="Target Musculature: ${p.target_muscles}">
+                                            <i class="fas fa-dumbbell mr-1 text-emerald-600"></i>${p.target_muscles}
+                                        </span>
+                                    ` : ''}
+                                    <span class="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-mono font-bold border border-emerald-100">
+                                        ${p.duration_text || '3 mins'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="text-base sm:text-lg font-black text-stone-900 group-hover:text-emerald-800 transition">
+                                    ${p.name}
+                                </h4>
+                                <div class="text-xs font-bold text-emerald-700 italic font-mono mt-0.5">
+                                    ${p.sanskrit || ''}
+                                </div>
+                            </div>
+
+                            <div class="p-3 rounded-lg bg-cyan-50/80 border border-cyan-100 text-[11px] text-cyan-950 font-medium leading-tight flex items-center gap-2">
+                                <i class="fas fa-wind text-cyan-600 shrink-0"></i>
+                                <span><strong>Breath:</strong> ${p.breath}</span>
+                            </div>
+
+                            <p class="text-xs text-stone-600 font-normal leading-relaxed">
+                                ${cleanYogaText(p.cue)}
+                            </p>
+                        </div>
+
+                        <div class="pt-3 border-t border-stone-100 flex items-center justify-between gap-2 text-[11px]">
+                            <span class="truncate max-w-[240px] text-stone-500 font-semibold" title="${stripYogaStars(p.benefits)}">✦ ${stripYogaStars(p.benefits)}</span>
+                            <button type="button" onclick="startSinglePosePractice(${idx});" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm">
+                                <i class="fas fa-play text-[9px]"></i>
+                                <span>Practice</span>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
             }
 
-            // Populate Ayurvedic Dosha & Energetic Blueprint Grid
-            const dosha = data.dosha || {};
+            // Populate Drawer Monograph
+            document.getElementById('drawer-monograph-content').innerHTML = formatAIResponse(data.session_markdown);
+
+            // Switch loading state in drawer
+            document.getElementById('drawer-loading-state').classList.add('hidden');
+            document.getElementById('drawer-loaded-content').classList.remove('hidden');
+
+            // 2. POPULATE ON-PAGE SESSION RESPONSE
+            document.getElementById('session-title-display').innerText = stripYogaStars(data.title || `${goal.toUpperCase()} Yoga Sequence`);
+            document.getElementById('session-summary-display').innerText = stripYogaStars(data.summary || `Personalized ${duration}-minute ${difficulty} sequence.`);
+            
+            const sourceBadge = document.getElementById('session-source-badge');
+            if (sourceBadge) sourceBadge.innerText = sourceBadgeText;
+
+            // Populate on-page blueprint
             document.getElementById('blueprint-vata').innerText = dosha.vata || 'Grounding & Soothing';
             document.getElementById('blueprint-pitta').innerText = dosha.pitta || 'Cooling & Harmonizing';
             document.getElementById('blueprint-kapha').innerText = dosha.kapha || 'Invigorating & Mobilizing';
-            
             document.getElementById('blueprint-chakra').innerText = data.chakra || 'Anahata & Muladhara';
             document.getElementById('blueprint-pranayama').innerText = data.pranayama || 'Nadi Shodhana Pranayama';
             document.getElementById('blueprint-mudra').innerText = data.mudra || 'Gyan & Chin Mudra';
-            
-            if (data.dinacharya) {
-                document.getElementById('blueprint-dinacharya').innerText = data.dinacharya;
-            }
+            if (data.dinacharya) document.getElementById('blueprint-dinacharya').innerText = data.dinacharya;
 
-            // Render Poses Grid
-            const poses = data.poses || [];
             const poseCountBadge = document.getElementById('session-pose-count-badge');
-            if (poseCountBadge) {
-                poseCountBadge.innerText = `${poses.length} Asanas (${duration} mins)`;
-            }
+            if (poseCountBadge) poseCountBadge.innerText = `${poses.length} Asanas (${duration} mins)`;
 
             const grid = document.getElementById('session-poses-grid');
             if (grid && poses.length > 0) {
@@ -651,9 +998,16 @@
                                 <span class="px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 text-[10px] font-black uppercase tracking-wider">
                                     Step ${idx + 1} • ${p.category || 'Asana'}
                                 </span>
-                                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-mono font-bold border border-emerald-100">
-                                    ${p.duration_text || '2 mins'}
-                                </span>
+                                <div class="flex items-center gap-1.5">
+                                    ${p.target_muscles ? `
+                                        <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-100 truncate max-w-[130px]">
+                                            ${p.target_muscles}
+                                        </span>
+                                    ` : ''}
+                                    <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-mono font-bold border border-emerald-100">
+                                        ${p.duration_text || '2 mins'}
+                                    </span>
+                                </div>
                             </div>
 
                             <div>
@@ -671,12 +1025,12 @@
                             </div>
 
                             <p class="text-xs text-stone-600 font-normal leading-relaxed">
-                                ${p.cue}
+                                ${cleanYogaText(p.cue)}
                             </p>
                         </div>
 
                         <div class="pt-4 mt-4 border-t border-stone-100 flex items-center justify-between text-[11px]">
-                            <span class="truncate max-w-[200px] text-stone-500 font-semibold" title="${p.benefits}">✦ ${p.benefits}</span>
+                            <span class="truncate max-w-[200px] text-stone-500 font-semibold" title="${stripYogaStars(p.benefits)}">✦ ${stripYogaStars(p.benefits)}</span>
                             <button type="button" onclick="startSinglePosePractice(${idx});" class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold flex items-center gap-1.5 transition cursor-pointer active:scale-95">
                                 <i class="fas fa-play text-[9px]"></i>
                                 <span>Practice</span>
@@ -686,17 +1040,18 @@
                 `).join('');
             }
 
-            // Render Markdown Monograph
             document.getElementById('session-response-content').innerHTML = formatAIResponse(data.session_markdown);
             document.getElementById('session-response').classList.remove('hidden');
             btn.disabled = false;
-
-            // Smooth scroll to results
-            document.getElementById('session-response').scrollIntoView({ behavior: 'smooth', block: 'start' });
         })
         .catch(err => {
             console.error("Yoga generator error:", err);
             document.getElementById('session-loading').classList.add('hidden');
+            document.getElementById('drawer-loading-state').innerHTML = `
+                <div class="p-5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                    Could not synthesize yoga routine. Please check your connection and try again.
+                </div>
+            `;
             btn.disabled = false;
         });
     });
@@ -833,8 +1188,12 @@
             osc2.start();
             isAmbientPlaying = true;
 
-            document.getElementById('ambient-icon').className = 'fas fa-pause text-[10px]';
-            document.getElementById('ambient-btn-text').innerText = 'Pause Zen Drone';
+            const ambientIcon = document.getElementById('ambient-icon');
+            if (ambientIcon) ambientIcon.className = 'fas fa-pause text-[10px]';
+            const ambientBtnText = document.getElementById('ambient-btn-text');
+            if (ambientBtnText) ambientBtnText.innerText = 'Pause Zen Drone';
+            const drawerAmbientText = document.getElementById('drawer-ambient-btn-text');
+            if (drawerAmbientText) drawerAmbientText.innerText = 'Pause 432Hz';
         } catch (e) {
             console.warn("Ambient drone error:", e);
         }
@@ -844,8 +1203,12 @@
         if (audioContext) {
             audioContext.close();
             isAmbientPlaying = false;
-            document.getElementById('ambient-icon').className = 'fas fa-play text-[10px]';
-            document.getElementById('ambient-btn-text').innerText = 'Play Zen Drone';
+            const ambientIcon = document.getElementById('ambient-icon');
+            if (ambientIcon) ambientIcon.className = 'fas fa-play text-[10px]';
+            const ambientBtnText = document.getElementById('ambient-btn-text');
+            if (ambientBtnText) ambientBtnText.innerText = 'Play Zen Drone';
+            const drawerAmbientText = document.getElementById('drawer-ambient-btn-text');
+            if (drawerAmbientText) drawerAmbientText.innerText = '432Hz Drone';
         }
     }
 
@@ -869,9 +1232,13 @@
 
     function readSessionAloud() {
         if (!('speechSynthesis' in window) || !activeSessionData) return;
+        const inlineTtsBtn = document.getElementById('tts-read-btn');
+        const drawerTtsBtn = document.getElementById('drawer-tts-btn');
+
         if (window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
-            document.getElementById('tts-read-btn').classList.remove('bg-emerald-500');
+            if (inlineTtsBtn) inlineTtsBtn.classList.remove('bg-emerald-500');
+            if (drawerTtsBtn) drawerTtsBtn.classList.remove('bg-emerald-600', 'text-white');
             return;
         }
         const intro = `${activeSessionData.title}. ${activeSessionData.summary}. Starting your flow.`;
@@ -880,8 +1247,14 @@
         const utterance = new SpeechSynthesisUtterance(full);
         utterance.rate = 0.88;
         window.speechSynthesis.speak(utterance);
-        document.getElementById('tts-read-btn').classList.add('bg-emerald-500');
-        utterance.onend = () => document.getElementById('tts-read-btn').classList.remove('bg-emerald-500');
+
+        if (inlineTtsBtn) inlineTtsBtn.classList.add('bg-emerald-500');
+        if (drawerTtsBtn) drawerTtsBtn.classList.add('bg-emerald-600', 'text-white');
+
+        utterance.onend = () => {
+            if (inlineTtsBtn) inlineTtsBtn.classList.remove('bg-emerald-500');
+            if (drawerTtsBtn) drawerTtsBtn.classList.remove('bg-emerald-600', 'text-white');
+        };
     }
 
     // Copy Summary Helper

@@ -6,9 +6,10 @@ multi-step doorstep and walk-in booking, order tracking, and tamper-proof report
 
 import os
 import io
+import re
 import json
 from datetime import datetime, date, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, send_file, current_app
 from flask_login import current_user
@@ -33,18 +34,29 @@ from spherix.services.diagnostic_ai import (
 
 diagnostic_bp = Blueprint('diagnostic', __name__)
 
-def get_registered_areas() -> List[Dict[str, Any]]:
+def get_registered_areas(country: Optional[str] = 'India') -> List[Dict[str, Any]]:
     """Returns list of distinct registered cities/areas with center counts."""
     try:
         conn = get_diagnostic_db()
         cursor = conn.cursor()
-        cursor.execute("""
-        SELECT city, COUNT(*) as center_count
-        FROM pathology_centers
-        WHERE is_active = 1 AND city IS NOT NULL AND TRIM(city) != ''
-        GROUP BY city
-        ORDER BY center_count DESC, city ASC
-        """)
+        query = """
+        SELECT c.city, COUNT(DISTINCT c.id) as center_count
+        FROM pathology_centers c
+        JOIN pathology_organizations o ON c.organization_id = o.id
+        WHERE c.is_active = 1 
+          AND c.verification_status IN ('VERIFIED', 'REGISTERED', 'APPROVED')
+          AND (o.status IS NULL OR o.status IN ('VERIFIED', 'REGISTERED', 'APPROVED'))
+          AND c.city IS NOT NULL AND TRIM(c.city) != ''
+        """
+        params = []
+        if country and country.lower() != 'all':
+            query += " AND LOWER(c.country) = LOWER(?)"
+            params.append(country.strip())
+        query += """
+        GROUP BY c.city
+        ORDER BY center_count DESC, c.city ASC
+        """
+        cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
         cities = []
@@ -53,23 +65,28 @@ def get_registered_areas() -> List[Dict[str, Any]]:
         return cities
     except Exception:
         return [
-            {"city": "New Delhi", "count": 12},
-            {"city": "Mumbai", "count": 8},
-            {"city": "Bengaluru", "count": 7},
-            {"city": "Hyderabad", "count": 5},
-            {"city": "Motihari", "count": 3}
+            {"city": "New Delhi", "count": 1},
+            {"city": "Motihari", "count": 1}
         ]
 
 @diagnostic_bp.route('/diagnostic')
 @diagnostic_bp.route('/medical-lab', endpoint='medical_lab')
 def diagnostic_home():
     """Diagnostic Network Portal Landing Page."""
-    country = request.args.get('country', 'India').strip()
+    country = request.args.get('country', '').strip()
     city = request.args.get('city', '').strip()
     search = request.args.get('q', '').strip()
 
+    # Determine country filter: default to India for home/medical-lab view if not specified
+    target_country = country if country else 'India'
+    if target_country.lower() == 'all':
+        target_country = None
+
     # Fetch verified centers
-    verified_centers = find_matching_pathology_centers(country=country if country != 'All' else None, city=city if city else None)
+    if city and not country:
+        verified_centers = find_matching_pathology_centers(city=city)
+    else:
+        verified_centers = find_matching_pathology_centers(country=target_country, city=city if city else None)
     
     # Filter categories
     categories = DIAGNOSTIC_MASTER_CATEGORIES
@@ -89,11 +106,12 @@ def diagnostic_home():
         featured_tests=featured_tests,
         packages=packages,
         centers=verified_centers,
+        all_centers=find_matching_pathology_centers(country=target_country),
         selected_country=country,
         selected_city=city,
         search_query=search,
         countries=COUNTRIES_195,
-        registered_areas=get_registered_areas()
+        registered_areas=get_registered_areas(country=target_country)
     )
 
 @diagnostic_bp.route('/diagnostic/search')
@@ -185,11 +203,12 @@ def compare_tests():
     """Interactive Price & Center Comparison Engine."""
     test_code = request.args.get('code', 'CBC').strip().upper()
     city = request.args.get('city', '').strip()
-    country = request.args.get('country', 'India').strip()
+    country = request.args.get('country', '').strip()
     lat = request.args.get('lat', type=float)
     lng = request.args.get('lng', type=float)
 
-    comparison = get_test_price_comparison(test_code, user_lat=lat, user_lng=lng, city=city, country=country)
+    target_country = country if (country and country.lower() != 'all') else None
+    comparison = get_test_price_comparison(test_code, user_lat=lat, user_lng=lng, city=city, country=target_country)
     ai_insights = get_groq_diagnostic_test_insight(test_code)
 
     return render_template(
@@ -366,8 +385,8 @@ def packages_catalog():
         packages=packages,
         search_query=search,
         featured_tests=MASTER_TESTS_CATALOG[:8],
-        centers=find_matching_pathology_centers(),
-        registered_areas=get_registered_areas()
+        centers=find_matching_pathology_centers(country='India'),
+        registered_areas=get_registered_areas(country='India')
     )
 
 @diagnostic_bp.route('/diagnostic/centers')
@@ -378,12 +397,35 @@ def centers_directory():
     service = request.args.get('service', '').strip() # HOME_COLLECTION, WALK_IN
     sort_by = request.args.get('sort', 'distance').strip()
 
-    centers = find_matching_pathology_centers(
-        country=country if country and country != 'All' else None,
+    # Spherix Clinic registered network is centered in India.
+    # Default to India if no specific country is requested.
+    target_country = country if country else 'India'
+    if target_country.lower() == 'all':
+        target_country = None
+
+    raw_centers = find_matching_pathology_centers(
+        country=target_country,
         city=city if city else None,
         service_type=service if service else None,
         sort_by=sort_by
     )
+
+    # Extra deduplication safeguard to guarantee no duplicate centers are rendered
+    seen_ids = set()
+    seen_facilities = set()
+    deduped_centers = []
+    for c in raw_centers:
+        cid = str(c.get('id', '')).strip()
+        name_key = (
+            re.sub(r'[^a-z0-9]', '', (c.get('center_name') or '').lower()),
+            re.sub(r'[^a-z0-9]', '', (c.get('city') or '').lower())
+        )
+        if cid in seen_ids or name_key in seen_facilities:
+            continue
+        seen_ids.add(cid)
+        seen_facilities.add(name_key)
+        deduped_centers.append(c)
+    centers = deduped_centers
 
     return render_template(
         'pathology.html',
@@ -395,7 +437,7 @@ def centers_directory():
         selected_city=city,
         selected_service=service,
         countries=COUNTRIES_195,
-        registered_areas=get_registered_areas()
+        registered_areas=get_registered_areas(country=target_country)
     )
 
 @diagnostic_bp.route('/diagnostic/centers/<center_id>')

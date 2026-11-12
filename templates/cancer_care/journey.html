@@ -1,0 +1,286 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}My Cancer Care Journey | Roadmap & Survivorship Tracker{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">My Care Journey</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-10 space-y-12">
+
+    <!-- PAGE HEADER -->
+    <div class="text-center max-w-2xl mx-auto space-y-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200 uppercase tracking-wider">
+            <i class="fas fa-route text-rose-600"></i> Personalized Oncology Navigator
+        </span>
+        <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+            My Cancer Care Journey
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+            A structured, 6-milestone navigation roadmap designed to guide patients and families from initial diagnostic evaluation through survivorship and thriving.
+        </p>
+    </div>
+
+    <!-- 6-MILESTONE INTERACTIVE ROADMAP -->
+    <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-10 shadow-xs space-y-8">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 m-0">Care Pathway Milestones</h3>
+                <p class="text-xs text-slate-500 m-0">Click any milestone below to review recommended clinical steps and checklist items.</p>
+            </div>
+            <button type="button" onclick="window.print()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors">
+                <i class="fas fa-print text-slate-500"></i> Print Roadmap
+            </button>
+        </div>
+
+        <!-- Horizontal Stepper (Desktop) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <button type="button" onclick="switchMilestone(1)" id="ms-btn-1" class="ms-btn p-3.5 rounded-xl border-2 border-rose-600 bg-rose-50 text-rose-800 font-bold text-xs flex flex-col items-center gap-2 transition-all cursor-pointer text-center">
+                <span class="w-6 h-6 rounded-full bg-rose-600 text-white font-extrabold text-xs flex items-center justify-center">1</span>
+                <span>Screening</span>
+            </button>
+            <button type="button" onclick="switchMilestone(2)" id="ms-btn-2" class="ms-btn p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs flex flex-col items-center gap-2 transition-all cursor-pointer text-center">
+                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center">2</span>
+                <span>Diagnosis</span>
+            </button>
+            <button type="button" onclick="switchMilestone(3)" id="ms-btn-3" class="ms-btn p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs flex flex-col items-center gap-2 transition-all cursor-pointer text-center">
+                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center">3</span>
+                <span>Tumor Board</span>
+            </button>
+            <button type="button" onclick="switchMilestone(4)" id="ms-btn-4" class="ms-btn p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs flex flex-col items-center gap-2 transition-all cursor-pointer text-center">
+                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center">4</span>
+                <span>Active Therapy</span>
+            </button>
+            <button type="button" onclick="switchMilestone(5)" id="ms-btn-5" class="ms-btn p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs flex flex-col items-center gap-2 transition-all cursor-pointer text-center">
+                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center">5</span>
+                <span>Rehabilitation</span>
+            </button>
+            <button type="button" onclick="switchMilestone(6)" id="ms-btn-6" class="ms-btn p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs flex flex-col items-center gap-2 transition-all cursor-pointer text-center">
+                <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center">6</span>
+                <span>Survivorship</span>
+            </button>
+        </div>
+
+        <!-- Dynamic Milestone Content Card -->
+        <div id="milestone-details" class="p-6 sm:p-8 rounded-2xl bg-slate-50 border border-slate-200 space-y-6">
+            <!-- Populated via JS -->
+        </div>
+    </section>
+
+    <!-- DAILY SYMPTOM & SIDE-EFFECT LOG -->
+    <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+        <div class="border-b border-slate-100 pb-4">
+            <span class="text-xs font-black uppercase tracking-wider text-rose-600">Patient-Reported Outcomes (PROs)</span>
+            <h2 class="text-xl font-display font-extrabold text-slate-900 tracking-tight">Daily Symptom & Vital Log</h2>
+            <p class="text-xs text-slate-500 font-normal m-0">Track energy, treatment side-effects, and temperatures to share with your oncology nurse navigator.</p>
+        </div>
+
+        <form id="symptom-log-form" onsubmit="event.preventDefault(); saveSymptomLogEntry();" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div class="space-y-1">
+                    <label for="log_fatigue" class="text-xs font-bold text-slate-700">Fatigue Level (1-10)</label>
+                    <select id="log_fatigue" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold">
+                        <option value="1">1 - Minimal / Normal</option>
+                        <option value="3">3 - Mild tiredness</option>
+                        <option value="5" selected>5 - Moderate (Needs naps)</option>
+                        <option value="8">8 - Severe exhaustion</option>
+                        <option value="10">10 - Bedbound / Extreme</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label for="log_pain" class="text-xs font-bold text-slate-700">Pain Level (0-10)</label>
+                    <select id="log_pain" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold">
+                        <option value="0" selected>0 - No pain</option>
+                        <option value="2">2 - Mild discomfort</option>
+                        <option value="5">5 - Moderate ache</option>
+                        <option value="8">8 - Severe pain</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label for="log_temp" class="text-xs font-bold text-slate-700">Body Temperature (°F)</label>
+                    <input type="number" id="log_temp" step="0.1" value="98.6" placeholder="Enter temperature" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold">
+                </div>
+
+                <div class="space-y-1">
+                    <label for="log_nausea" class="text-xs font-bold text-slate-700">Nausea / Appetite</label>
+                    <select id="log_nausea" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs font-semibold">
+                        <option value="None" selected>None / Good appetite</option>
+                        <option value="Mild">Mild nausea (Controlled)</option>
+                        <option value="Moderate">Moderate nausea</option>
+                        <option value="Severe">Severe / Vomiting</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label for="log_notes" class="text-xs font-bold text-slate-700">Daily Observations / Questions for Doctor</label>
+                <input type="text" id="log_notes" placeholder="Enter brief note about today's symptoms, diet, or treatment response..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-medium">
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-xs">
+                    Log Today's Entry
+                </button>
+            </div>
+        </form>
+
+        <div id="log-history-list" class="space-y-2 pt-2 border-t border-slate-100">
+            <div class="text-[11px] font-black uppercase text-slate-400">Recent Patient Entries</div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between text-slate-700">
+                <span><strong>Today (98.6°F):</strong> Fatigue 5/10, Pain 0/10, Appetite stable post-infusion.</span>
+                <span class="text-emerald-600 font-bold">Stable</span>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+const MILESTONES = {
+    1: {
+        title: "Milestone 1: Discovery, Awareness & Early Screening",
+        tag: "Pre-Diagnosis Phase",
+        desc: "Identifying physical changes, conducting clinical self-examinations, and undergoing routine age-appropriate screening tests.",
+        checklist: [
+            "Review family cancer history across maternal and paternal lines",
+            "Undergo recommended mammography, colonoscopy, or Pap/HPV testing",
+            "Document symptom onset date, duration, and localized changes",
+            "Consult primary care physician for initial physical examination"
+        ],
+        nextAction: "Schedule diagnostic workup if lesion or warning sign identified."
+    },
+    2: {
+        title: "Milestone 2: Diagnostic Workup, Biopsies & Biomarkers",
+        tag: "Histologic & Genomic Confirmation",
+        desc: "Tissue core biopsies, high-resolution PET-CT/MRI cross-sectional scans, and Next-Generation Sequencing (NGS) gene panels.",
+        checklist: [
+            "Complete guided core needle biopsy to secure histological specimen",
+            "Immunohistochemistry testing: ER/PR/HER2, PD-L1, or MMR/MSI status",
+            "Whole-body 18F-FDG PET-CT scan to evaluate regional nodes and distant organs",
+            "Collect official pathology report copies and DICOM scan discs"
+        ],
+        nextAction: "Submit complete diagnostic dossier to the Multidisciplinary Tumor Board."
+    },
+    3: {
+        title: "Milestone 3: Multidisciplinary Tumor Board Consensus",
+        tag: "Care Plan Formulation",
+        desc: "Collaborative review by surgical oncologists, medical oncologists, radiation physicists, and molecular pathologists.",
+        checklist: [
+            "Receive AJCC 8th Edition TNM clinical staging determination",
+            "Formulate sequence of modalities (e.g. Neoadjuvant chemo &rarr; Surgery &rarr; Radiation)",
+            "Review clinical trial eligibility and targeted therapy options",
+            "Obtain formal second opinion if complex or borderline resectable"
+        ],
+        nextAction: "Initiate first therapeutic cycle under care navigator guidance."
+    },
+    4: {
+        title: "Milestone 4: Active Precision Multimodal Treatment",
+        tag: "Therapeutic Execution",
+        desc: "Undergoing definitive surgical resection, systemic chemotherapy/immunotherapy infusions, or image-guided radiotherapy.",
+        checklist: [
+            "Attend pre-chemo education and receive 3-drug antiemetic prescriptions",
+            "Monitor daily temperatures and report febrile spikes (≥100.4°F) immediately",
+            "Undergo scheduled midpoint surveillance imaging (e.g. interval CT)",
+            "Engage in oncology nutrition to protect lean muscle and hydration"
+        ],
+        nextAction: "Transition to recovery, wound rehabilitation, and physical therapy."
+    },
+    5: {
+        title: "Milestone 5: Post-Treatment Recovery & Rehabilitation",
+        tag: "Restoration Phase",
+        desc: "Physical therapy, lymphedema prevention, psychological counseling, and gradual restoration of baseline stamina.",
+        checklist: [
+            "Upper extremity or pelvic floor physical therapy regimens",
+            "Lymphedema sleeve fitting and manual drainage instruction",
+            "Cardio-oncology echocardiographic follow-up for anthracycline/HER2 patients",
+            "DEXA scan for bone density surveillance during hormone blockade"
+        ],
+        nextAction: "Enroll in the Spherix Long-Term Survivorship Clinic."
+    },
+    6: {
+        title: "Milestone 6: Long-Term Survivorship & Surveillance",
+        tag: "Thriving Beyond Cancer",
+        desc: "Structured follow-up protocols every 3-6 months for the first 2-3 years, ensuring early detection of recurrence and overall wellness.",
+        checklist: [
+            "Adhere to surveillance CT/MRI scans and tumor marker schedules",
+            "Receive updated non-live vaccinations post-immune reconstitution",
+            "Maintain plant-forward Mediterranean nutrition and regular exercise",
+            "Participate in peer support circles and cancer survivor networks"
+        ],
+        nextAction: "Celebrate milestone survivorship anniversaries and empower others."
+    }
+};
+
+function switchMilestone(step) {
+    document.querySelectorAll('.ms-btn').forEach(btn => {
+        btn.classList.remove('border-rose-600', 'bg-rose-50', 'text-rose-800');
+        btn.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-700');
+    });
+
+    const activeBtn = document.getElementById(`ms-btn-${step}`);
+    if (activeBtn) {
+        activeBtn.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-700');
+        activeBtn.classList.add('border-rose-600', 'bg-rose-50', 'text-rose-800');
+    }
+
+    const data = MILESTONES[step];
+    if (!data) return;
+
+    const details = document.getElementById('milestone-details');
+    details.innerHTML = `
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800">${data.tag}</span>
+                <span class="text-xs font-bold text-slate-400">Step ${step} of 6</span>
+            </div>
+            <h3 class="text-xl font-display font-extrabold text-slate-900 m-0">${data.title}</h3>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal m-0">${data.desc}</p>
+            
+            <div class="space-y-2 pt-2">
+                <h5 class="text-xs font-bold uppercase tracking-wider text-slate-800 m-0">Key Milestone Checklist:</h5>
+                <ul class="space-y-2 pl-0 list-none text-xs text-slate-700">
+                    ${data.checklist.map(item => `
+                        <li class="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                            <i class="fas fa-check-circle text-emerald-500 mt-0.5 shrink-0"></i>
+                            <span>${item}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-center justify-between">
+                <div><strong>Next Priority:</strong> ${data.nextAction}</div>
+                <a href="{% if current_user.is_authenticated and current_user.role == 'patient' %}{{ url_for('cancer_care.book_appointment') }}{% else %}{{ url_for('patient_login', next=url_for('cancer_care.book_appointment')) }}{% endif %}" class="font-bold underline text-rose-700 hover:text-rose-900 shrink-0 ml-4">Coordinate Care</a>
+            </div>
+        </div>
+    `;
+}
+
+function saveSymptomLogEntry() {
+    const fatigue = document.getElementById('log_fatigue').value;
+    const pain = document.getElementById('log_pain').value;
+    const temp = document.getElementById('log_temp').value;
+    const notes = document.getElementById('log_notes').value;
+
+    const container = document.getElementById('log-history-list');
+    const newEntry = document.createElement('div');
+    newEntry.className = 'p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between text-slate-700';
+    newEntry.innerHTML = `
+        <span><strong>Just Now (${temp}°F):</strong> Fatigue ${fatigue}/10, Pain ${pain}/10. ${notes ? notes : ''}</span>
+        <span class="text-emerald-600 font-bold">Recorded</span>
+    `;
+    container.insertBefore(newEntry, container.children[1]);
+    document.getElementById('log_notes').value = '';
+    alert('Daily symptom log entry recorded successfully.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    switchMilestone(1);
+});
+</script>
+{% endblock %}
+

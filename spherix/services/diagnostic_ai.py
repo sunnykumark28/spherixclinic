@@ -15,6 +15,17 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 GROQ_API_BASE = os.getenv('GROQ_API_BASE', 'https://api.groq.com/openai/v1')
 GROQ_API_MODEL = os.getenv('GROQ_API_MODEL', 'openai/gpt-oss-20b')
 
+def _clean_stars_recursively(obj):
+    """Recursively cleans markdown bold asterisks (**text**) and stray ** from strings, lists, and dicts."""
+    if isinstance(obj, str):
+        cleaned = re.sub(r'\*\*([^*]+)\*\*', r'\1', obj)
+        return cleaned.replace('**', '').strip()
+    elif isinstance(obj, list):
+        return [_clean_stars_recursively(x) for x in obj]
+    elif isinstance(obj, dict):
+        return {k: _clean_stars_recursively(v) for k, v in obj.items()}
+    return obj
+
 # Clinical Knowledge Base Fallback for Offline / Non-API environments
 FALLBACK_TEST_KNOWLEDGE: Dict[str, Dict[str, Any]] = {
     "CBC": {
@@ -360,7 +371,7 @@ Respond ONLY with the raw valid JSON object. Do not include markdown code block 
                         "safety_measures": "Standardized ISO-certified sterile disposable single-use needles and vacutainers.",
                         "aftercare_advice": "Hold gauze firmly over the puncture site for 3-5 minutes; stay well-hydrated."
                     }
-                return parsed_json
+                return _clean_stars_recursively(parsed_json)
 
         except Exception as e:
             print(f"⚠️ Groq diagnostic AI call encountered exception: {e}. Utilizing clinical fallback.")
@@ -374,7 +385,7 @@ Respond ONLY with the raw valid JSON object. Do not include markdown code block 
         data['category'] = category
         data['sample_type'] = sample_type
         data['base_price_inr'] = base_price
-        return data
+        return _clean_stars_recursively(data)
 
     # 4. Synthesize Dynamic Fallback for any other test in catalog
     desc = test_data.get('description', f'{test_name} is a standardized diagnostic investigation.') if test_data else f'{test_name} diagnostic investigation.'
@@ -467,7 +478,7 @@ Return ONLY valid JSON with two fields:
                 cleaned = re.sub(r'^```json\s*', '', raw_text.strip())
                 cleaned = re.sub(r'^```\s*', '', cleaned)
                 cleaned = re.sub(r'```$', '', cleaned.strip())
-                return json.loads(cleaned)
+                return _clean_stars_recursively(json.loads(cleaned))
         except Exception as e:
             print(f"⚠️ Groq pathologist AI summary error: {e}")
 

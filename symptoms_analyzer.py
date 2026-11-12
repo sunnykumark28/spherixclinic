@@ -57,11 +57,54 @@ class SymptomAnalyzer:
 
     def load_knowledge_base(self) -> bool:
         """
-        Load and index knowledge base from JSON file.
+        Load and index knowledge base from SQLite database (with fallback to JSON).
         
         Returns:
             bool: True if loaded successfully, False otherwise
         """
+        # 1. Attempt loading from primary SQLite database
+        try:
+            db_candidates = [
+                os.getenv('SQLITE_DB_PATH'),
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db'),
+                'spherixclinic.db'
+            ]
+            for db_file in db_candidates:
+                if db_file and os.path.exists(db_file):
+                    import sqlite3
+                    conn = sqlite3.connect(db_file)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_knowledge_base'")
+                    if cursor.fetchone():
+                        cursor.execute("SELECT condition_name, description, detailed_advice, self_care, suggested_medicines, when_to_see_doctor, recommended_departments FROM ai_knowledge_base")
+                        rows = cursor.fetchall()
+                        if rows:
+                            self.knowledge_base = {}
+                            for r in rows:
+                                self.knowledge_base[r[0]] = {
+                                    'description': r[1],
+                                    'detailed_advice': r[2],
+                                    'self_care': json.loads(r[3]) if r[3] else [],
+                                    'suggested_medicines': json.loads(r[4]) if r[4] else [],
+                                    'when_to_see_doctor': r[5],
+                                    'recommended_departments': json.loads(r[6]) if r[6] else []
+                                }
+                            for condition, data in self.knowledge_base.items():
+                                description = data.get('description', '').lower()
+                                advice = data.get('detailed_advice', '').lower()
+                                self_care = ' '.join(data.get('self_care', [])).lower()
+                                departments = ' '.join(data.get('recommended_departments', [])).lower()
+                                combined = f"{condition.lower()} {description} {advice} {self_care} {departments}"
+                                self.symptom_keywords[condition] = self._tokenize(combined)
+
+                            print(f"✅ Knowledge base loaded from database ({len(self.knowledge_base)} conditions)")
+                            conn.close()
+                            return True
+                    conn.close()
+        except Exception as db_err:
+            pass
+
+        # 2. Fallback to JSON file if database unavailable
         try:
             if not os.path.exists(self.knowledge_base_path):
                 print(f"⚠️ Knowledge base not found at {self.knowledge_base_path}")

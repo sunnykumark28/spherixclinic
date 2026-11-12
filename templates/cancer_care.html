@@ -192,9 +192,10 @@
                 <button type="button" onclick="openCancerChatDrawer()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer" title="AI Oncology Advisor">
                     <span class="hidden sm:inline">AI Oncology Chat</span>
                 </button>
-                <button type="button" onclick="openCancerCheckerModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer" title="AI Cancer Risk Triage">
-                    <span class="hidden sm:inline">Risk Triage</span>
-                </button>
+                <a href="{{ url_for('symptoms') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-sm text-decoration-none" title="AI Symptoms Checker">
+                    <i class="fas fa-stethoscope"></i>
+                    <span class="hidden sm:inline">Symptoms Checker</span>
+                </a>
                 <a href="tel:102" class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors" title="Emergency Hotline">
                     <span class="hidden lg:inline">24/7 Helpline</span>
                 </a>
@@ -239,10 +240,10 @@
 
                     <!-- Primary Action Matrix -->
                     <div class="flex flex-wrap items-center gap-3.5">
-                        <button type="button" onclick="openCancerCheckerModal()" class="btn-rose-solid inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm cursor-pointer shadow-md">
+                        <a href="{{ url_for('symptoms') }}" class="btn-rose-solid inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm shadow-md text-decoration-none">
                             <i data-lucide="sparkles" class="w-4 h-4"></i>
-                            <span>Check Cancer (AI Risk Triage)</span>
-                        </button>
+                            <span>Symptoms Checker</span>
+                        </a>
                         
                         <a href="#cancer-atlas" class="inline-flex items-center gap-2 px-5 py-3.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-sm rounded-lg transition-all shadow-sm">
                             <i data-lucide="layout-grid" class="w-4 h-4 text-slate-500"></i>
@@ -296,9 +297,9 @@
                 </p>
             </div>
             <div class="flex items-center gap-2.5">
-                <button type="button" onclick="openCancerCheckerModal()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-sm">
-                    Quick AI Assessment
-                </button>
+                <a href="{{ url_for('symptoms') }}" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-sm text-decoration-none">
+                    Symptoms Checker
+                </a>
                 <a href="{{ url_for('emergency') }}" class="px-3 py-1.5 rounded-lg bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition-colors">
                     Emergency Desk
                 </a>
@@ -318,10 +319,10 @@
                     Select an organ system below to view high-yield clinical indicators, red-flag symptoms, early screening tests, and standard diagnostic workup.
                 </p>
             </div>
-            <button type="button" onclick="openCancerCheckerModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all self-start md:self-auto cursor-pointer border border-slate-200">
+            <a href="{{ url_for('symptoms') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all self-start md:self-auto border border-slate-200 text-decoration-none">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-rose-600"></i>
-                <span>Triage by My Symptoms</span>
-            </button>
+                <span>Symptoms Checker</span>
+            </a>
         </div>
 
         <!-- Organ Selector Buttons Grid -->
@@ -1189,12 +1190,12 @@
         <span>AI Oncology Chat</span>
     </button>
 
-    <!-- AI Risk Triage Assessment Toggle -->
-    <button type="button" onclick="openCancerCheckerModal()" class="btn-rose-solid flex items-center gap-2.5 px-4 py-3 rounded-lg text-white font-bold shadow-xl text-xs uppercase tracking-wider cursor-pointer group transition-all hover:scale-105 active:scale-95">
+    <!-- AI Symptoms Checker Toggle -->
+    <a href="{{ url_for('symptoms') }}" class="btn-rose-solid flex items-center gap-2.5 px-4 py-3 rounded-lg text-white font-bold shadow-xl text-xs uppercase tracking-wider group transition-all hover:scale-105 active:scale-95 text-decoration-none">
         <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
         <i data-lucide="sparkles" class="w-4 h-4 text-rose-100 group-hover:rotate-12 transition-transform"></i>
-        <span>Check Cancer Risk</span>
-    </button>
+        <span>Symptoms Checker</span>
+    </a>
 </div>
 
 <!-- ================= MODAL / DRAWER: AI ONCOLOGY CONSULTANT CHAT (SIDE DRAWER) ================= -->
@@ -2186,7 +2187,8 @@
                 aiBubble.className = "flex items-start gap-2.5";
                 
                 let formattedAnswer = (data.answer || "No response received.")
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*\*/g, '')
                     .replace(/\n\n/g, '<br><br>')
                     .replace(/\n/g, '<br>');
 
@@ -2541,18 +2543,29 @@
                             }
                         }
 
+                        function formatCancerText(str) {
+                            if (!str) return '';
+                            let s = String(str)
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;');
+                            return s
+                                .replace(/\*\*([\s\S]*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>')
+                                .replace(/\*\*/g, '');
+                        }
+
                         const conditionEl = document.getElementById('res-primary-condition');
                         if (conditionEl) { conditionEl.innerText = r.primary_condition || 'Oncology Clinical Assessment'; }
 
                         const summaryEl = document.getElementById('res-summary-text');
-                        if (summaryEl) { summaryEl.innerText = r.rationale || r.clinical_summary || 'Evidence-based review complete.'; }
+                        if (summaryEl) { summaryEl.innerHTML = formatCancerText(r.rationale || r.clinical_summary || 'Evidence-based review complete.'); }
 
                         const screeningBox = document.getElementById('res-screening-list');
                         if (screeningBox && r.recommended_screening) {
                             screeningBox.innerHTML = r.recommended_screening.map(item => `
                                 <li class="flex items-start gap-2">
                                     <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0"></span>
-                                    <span>${item}</span>
+                                    <span>${formatCancerText(item)}</span>
                                 </li>
                             `).join('');
                         }
@@ -2562,7 +2575,7 @@
                             treatmentBox.innerHTML = r.treatment_pathway.map(item => `
                                 <li class="flex items-start gap-2">
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0"></span>
-                                    <span>${item}</span>
+                                    <span>${formatCancerText(item)}</span>
                                 </li>
                             `).join('');
                         }

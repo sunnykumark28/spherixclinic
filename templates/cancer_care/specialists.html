@@ -1,0 +1,170 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}Cancer Specialist Directory | Verified Oncologists{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">Specialist Directory</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-10 space-y-10">
+
+    <!-- PAGE HEADER -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
+        <div class="space-y-2 max-w-2xl">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200 uppercase tracking-wider">
+                <i class="fas fa-user-doctor text-rose-600"></i> Board-Certified Oncology Faculty
+            </span>
+            <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+                Cancer Specialists & Oncologists
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 font-normal m-0 leading-relaxed">
+                Connect with leading surgical, medical, radiation, and hematologic oncologists. All specialists participate in weekly Multidisciplinary Tumor Boards for collaborative clinical decision making.
+            </p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="w-full md:w-80 shrink-0">
+            <label for="doctor-search-input" class="sr-only">Search Oncologists</label>
+            <div class="relative">
+                <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="doctor-search-input" placeholder="Search oncologist name or subspecialty..." oninput="filterDoctors()" class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 focus:border-rose-600 text-xs sm:text-sm font-semibold text-slate-900 shadow-2xs">
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER PILLS -->
+    <div class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick="filterBySubspecialty('all')" class="doc-filter-btn cancer-pill-active px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 transition-all cursor-pointer">
+            All Specialists ({{ specialists|length }})
+        </button>
+        <button type="button" onclick="filterBySubspecialty('surgical')" class="doc-filter-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-all cursor-pointer">
+            Surgical Oncology
+        </button>
+        <button type="button" onclick="filterBySubspecialty('medical')" class="doc-filter-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-all cursor-pointer">
+            Medical Oncology
+        </button>
+        <button type="button" onclick="filterBySubspecialty('radiation')" class="doc-filter-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-all cursor-pointer">
+            Radiation Oncology
+        </button>
+        <button type="button" onclick="filterBySubspecialty('hematology')" class="doc-filter-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition-all cursor-pointer">
+            Hematology & BMT
+        </button>
+    </div>
+
+    <!-- SPECIALISTS GRID -->
+    <div id="specialists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for doc in specialists %}
+        <div class="doctor-card rounded-2xl bg-white border border-slate-200 p-6 shadow-xs cancer-card-hover flex flex-col justify-between space-y-5"
+             data-name="{{ doc.name|lower }}"
+             data-spec="{{ (doc.specialization or doc.department or '')|lower }}">
+            
+            <div class="space-y-4">
+                <div class="flex items-start gap-4">
+                    <div class="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+                        <img src="{{ doc.image or 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80' }}" alt="{{ doc.name }}" class="w-full h-full object-cover">
+                        <span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" title="Verified & Active"></span>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-bold text-slate-900 leading-snug">{{ doc.name }}</span>
+                            <i class="fas fa-circle-check text-rose-600 text-xs" title="Verified Oncology Specialist"></i>
+                        </div>
+                        <div class="text-xs font-semibold text-rose-600">{{ doc.specialization or 'Senior Oncology Consultant' }}</div>
+                        <div class="text-[11px] text-slate-500">{{ doc.qualification or 'MBBS, MD, DM (Medical Oncology)' }}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-hospital text-slate-400 w-4"></i>
+                        <span class="truncate">{{ doc.hospital_name or 'Spherix Comprehensive Cancer Hub' }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-briefcase text-slate-400 w-4"></i>
+                        <span>{{ doc.experience or '14+ Years Clinical Practice' }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-clock text-slate-400 w-4"></i>
+                        <span>{{ doc.timings or 'Mon - Fri (09:00 AM - 04:00 PM)' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Consultation Fee</span>
+                    <span class="text-sm font-extrabold text-slate-900">₹{{ doc.consultation_fee or '1,200' }}</span>
+                </div>
+                <a href="{% if current_user.is_authenticated and current_user.role == 'patient' %}{{ url_for('cancer_care.book_appointment') }}?doctor_id={{ doc.id }}{% else %}{{ url_for('patient_login', next=url_for('cancer_care.book_appointment', doctor_id=doc.id)) }}{% endif %}" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider transition-colors text-decoration-none shadow-sm flex items-center gap-1.5">
+                    <i class="fas fa-calendar-check"></i> Book Consult
+                </a>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Empty State -->
+    <div id="no-doctors-found" class="hidden py-16 text-center space-y-3">
+        <i class="fas fa-user-doctor text-4xl text-slate-300"></i>
+        <h3 class="text-base font-bold text-slate-800 m-0">No matching oncology specialists found</h3>
+        <p class="text-xs text-slate-500 m-0">Try clearing your search query or selecting a broader specialty.</p>
+        <button type="button" onclick="resetDoctorFilters()" class="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold">
+            Reset Filters
+        </button>
+    </div>
+
+</div>
+
+<script>
+let currentSubspec = 'all';
+
+function filterBySubspecialty(sub) {
+    currentSubspec = sub;
+    document.querySelectorAll('.doc-filter-btn').forEach(btn => {
+        btn.classList.remove('cancer-pill-active', 'bg-rose-600', 'text-white');
+        btn.classList.add('bg-white', 'text-slate-700');
+    });
+    event.target.classList.add('cancer-pill-active', 'bg-rose-600', 'text-white');
+    event.target.classList.remove('bg-white', 'text-slate-700');
+    filterDoctors();
+}
+
+function filterDoctors() {
+    const q = (document.getElementById('doctor-search-input')?.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.doctor-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const name = card.getAttribute('data-name') || '';
+        const spec = card.getAttribute('data-spec') || '';
+
+        const matchesSub = (currentSubspec === 'all' || spec.includes(currentSubspec));
+        const matchesQuery = (!q || name.includes(q) || spec.includes(q));
+
+        if (matchesSub && matchesQuery) {
+            card.classList.remove('hidden');
+            visibleCount++;
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+
+    const empty = document.getElementById('no-doctors-found');
+    if (visibleCount === 0) {
+        empty.classList.remove('hidden');
+    } else {
+        empty.classList.add('hidden');
+    }
+}
+
+function resetDoctorFilters() {
+    const input = document.getElementById('doctor-search-input');
+    if (input) input.value = '';
+    filterBySubspecialty('all');
+}
+</script>
+{% endblock %}
+

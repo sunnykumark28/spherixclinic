@@ -27,6 +27,11 @@ from flask import (
     send_from_directory, Response, current_app
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from spherix.security import (
+    hash_password, verify_password, validate_password_strength,
+    register_new_session, revoke_session, revoke_all_user_sessions,
+    log_security_event
+)
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_login import login_user, login_required, logout_user, current_user
@@ -137,6 +142,11 @@ def doctor_register():
             flash('Passwords do not match. Please re-enter.', 'error')
             return redirect(url_for('doctor_register'))
 
+        pwd_valid, pwd_msg = validate_password_strength(password)
+        if not pwd_valid:
+            flash(pwd_msg, 'error')
+            return redirect(url_for('doctor_register'))
+
         existing_doctor = next((doc for doc in TEMP_DATA['doctors'].values() if doc.email.lower() == email.lower()), None)
         if existing_doctor:
             flash('A practitioner account with this institutional email already exists. Please log in.', 'error')
@@ -164,7 +174,7 @@ def doctor_register():
             'first_name': first_name,
             'last_name': last_name,
             'email': email,
-            'password': generate_password_hash(password, method='pbkdf2:sha256:260000'),
+            'password': hash_password(password),
             'department': department,
             'specialization': specialization or f"{department} Specialist",
             'qualification': qualification,
@@ -392,15 +402,10 @@ def doctor_login():
             if not getattr(doctor, 'is_verified', False):
                 flash('Your doctor account is pending administrative verification by Spherix Clinic. You will be able to log in once your medical credentials and license are approved.', 'warning')
                 return redirect(url_for('doctor_login'))
+            is_valid = False
+            needs_rehash = False
             try:
-                # Standard check
-                is_valid = check_password_hash(doctor.password, password)
-            except AttributeError as e:
-                # Fallback for old hash methods like scrypt if hashlib doesn't support it
-                if 'scrypt' in str(e):
-                    is_valid = check_password_hash(generate_password_hash(password, method='pbkdf2:sha256:260000'), password)
-                else:
-                    is_valid = False # Another attribute error occurred
+                is_valid, needs_rehash = verify_password(doctor.password, password)
             except Exception:
                 is_valid = False
 
@@ -408,17 +413,23 @@ def doctor_login():
             bootstrap_pwd = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', '').strip()
             if not is_valid and doctor.email and doctor.email.strip().lower() == 'admin@spherixclinic.com' and bootstrap_pwd and password == bootstrap_pwd:
                 is_valid = True
-                doctor.password = generate_password_hash(bootstrap_pwd, method='pbkdf2:sha256:260000')
-                save_data()
+                needs_rehash = True
 
             if is_valid:
-                # If login is successful, check if the password needs to be rehashed to the new format.
-                if not doctor.password.startswith('pbkdf2:sha256'):
-                    doctor.password = generate_password_hash(password, method='pbkdf2:sha256:260000')
-                    save_data() # Save the updated password hash
+                # Automatic upgrade to Argon2id hashing
+                if needs_rehash:
+                    doctor.password = hash_password(password)
+                    save_data()
 
                 login_user(doctor, remember=True)
                 session['user_role'] = 'doctor'
+                register_new_session(doctor.id, 'doctor')
+                log_security_event(
+                    event_type="LOGIN_SUCCESS",
+                    severity="INFO",
+                    details=f"Doctor '{doctor.email}' authenticated to Clinical Portal",
+                    actor_id=str(doctor.id)
+                )
                 if doctor.email and doctor.email.strip().lower() == 'admin@spherixclinic.com':
                     session['is_admin'] = True
 
@@ -436,6 +447,12 @@ def doctor_login():
                 flash('Logged in successfully to Doctor Portal!', 'success')
                 return redirect(url_for('doctor_dashboard'))
 
+        log_security_event(
+            event_type="LOGIN_FAILED",
+            severity="MEDIUM",
+            details=f"Failed clinician login attempt for '{login_input}'",
+            actor_id=str(login_input)
+        )
         log_auth_activity(
             user_id=login_input,
             user_name=str(login_input or 'Doctor'),
@@ -621,6 +638,19 @@ def logout():
         pass
 
     try:
+        active_sess_id = session.get('_auth_session_id')
+        if active_sess_id:
+            revoke_session(active_sess_id)
+        log_security_event(
+            event_type="LOGOUT",
+            severity="INFO",
+            details=f"User '{u_email or u_id}' logged out gracefully",
+            actor_id=str(u_id or 'anonymous')
+        )
+    except Exception:
+        pass
+
+    try:
         logout_user()
     except Exception:
         pass
@@ -737,6 +767,11 @@ def hospital_register():
             flash('Passwords do not match. Please re-enter.', 'error')
             return redirect(url_for('hospital_register'))
 
+        pwd_valid, pwd_msg = validate_password_strength(password)
+        if not pwd_valid:
+            flash(pwd_msg, 'error')
+            return redirect(url_for('hospital_register'))
+
         existing_hospital = next((h for h in TEMP_DATA['hospitals'].values() if h.email.lower() == email.lower()), None)
         if existing_hospital:
             flash('An institution with this administrator email already exists. Please log in.', 'error')
@@ -767,7 +802,7 @@ def hospital_register():
         session['hospital_signup_data'] = {
             'name': name,
             'email': email,
-            'password': generate_password_hash(password, method='pbkdf2:sha256:260000'),
+            'password': hash_password(password),
             'country': country,
             'city': city,
             'state': state,
@@ -993,7 +1028,16 @@ def hospital_login():
         if not hospital:
             hospital = next((h for h in TEMP_DATA['hospitals'].values() if h.email == login_input), None)
 
-        if hospital and check_password_hash(hospital.password, password):
+        is_valid = False
+        needs_rehash = False
+        if hospital:
+            is_valid, needs_rehash = verify_password(hospital.password, password)
+
+        if hospital and is_valid:
+            if needs_rehash:
+                hospital.password = hash_password(password)
+                save_data()
+
             if getattr(hospital, 'is_blocked', False):
                 flash('Your account has been blocked by an administrator.', 'error')
                 return redirect(url_for('hospital_login'))
@@ -1002,6 +1046,13 @@ def hospital_login():
                 return redirect(url_for('hospital_login'))
             login_user(hospital)
             session['user_role'] = 'hospital'
+            register_new_session(hospital.id, 'hospital')
+            log_security_event(
+                event_type="LOGIN_SUCCESS",
+                severity="INFO",
+                details=f"Hospital '{hospital.email}' authenticated successfully",
+                actor_id=str(hospital.id)
+            )
             hosp_name = getattr(hospital, 'name', 'Hospital Facility')
             log_auth_activity(
                 user_id=hospital.id,
@@ -1015,6 +1066,12 @@ def hospital_login():
             flash('Hospital login successful!', 'success')
             return redirect(url_for('hospital_dashboard'))
         else:
+            log_security_event(
+                event_type="LOGIN_FAILED",
+                severity="MEDIUM",
+                details=f"Failed hospital login attempt for '{login_input}'",
+                actor_id=str(login_input)
+            )
             log_auth_activity(
                 user_id=login_input,
                 user_name=str(login_input or 'Hospital User'),
@@ -1298,22 +1355,27 @@ def patient_login():
             if not getattr(patient, 'is_verified', False):
                 flash('Your patient account is pending administrative verification by Spherix Clinic. You will be able to log in once your account has been verified by our administration team.', 'warning')
                 return redirect(url_for('patient_login'))
+            is_valid = False
+            needs_rehash = False
             try:
-                # Standard check
-                is_valid = check_password_hash(patient.password, password)
-            except AttributeError as e:
-                if 'scrypt' in str(e):
-                    is_valid = True
-                else:
-                    is_valid = False
+                is_valid, needs_rehash = verify_password(patient.password, password)
+            except Exception:
+                is_valid = False
 
             if is_valid:
-                if not patient.password.startswith('pbkdf2:sha256'):
-                    patient.password = generate_password_hash(password, method='pbkdf2:sha256:260000')
+                if needs_rehash:
+                    patient.password = hash_password(password)
                     save_data()
 
                 login_user(patient)
                 session['user_role'] = 'patient'
+                register_new_session(patient.id, 'patient')
+                log_security_event(
+                    event_type="LOGIN_SUCCESS",
+                    severity="INFO",
+                    details=f"Patient '{patient.email}' authenticated to Patient Portal",
+                    actor_id=str(patient.id)
+                )
                 p_name = getattr(patient, 'name', '') or f"{getattr(patient, 'first_name', '')} {getattr(patient, 'last_name', '')}".strip()
                 log_auth_activity(
                     user_id=patient.id,
@@ -1330,6 +1392,12 @@ def patient_login():
                     return redirect(next_page)
                 return redirect(url_for('patient_dashboard'))
 
+        log_security_event(
+            event_type="LOGIN_FAILED",
+            severity="MEDIUM",
+            details=f"Failed patient login attempt for '{login_input}'",
+            actor_id=str(login_input)
+        )
         log_auth_activity(
             user_id=login_input,
             user_name=str(login_input or 'Patient User'),

@@ -1,0 +1,274 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}{{ cancer.name }} | Clinical Monograph & Treatment Protocols{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<a href="{{ url_for('cancer_care.types') }}" class="text-slate-500 hover:text-rose-600 transition-colors text-decoration-none">
+    Cancer Types
+</a>
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">{{ cancer.name }}</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="space-y-12 pb-20">
+
+    <!-- HERO HEADER -->
+    <section class="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white pt-12 pb-16 border-b border-slate-800 w-full">
+        <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                
+                <div class="lg:col-span-8 space-y-5">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-600/30 text-rose-300 border border-rose-500/40">
+                            <i class="fas {{ cancer.icon }} mr-1"></i> {{ cancer.category_label }}
+                        </span>
+                        <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">
+                            5-Yr Survival: {{ cancer.survival_rate_5yr.split(';')[0] }}
+                        </span>
+                    </div>
+
+                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-display font-black tracking-tight text-white leading-tight">
+                        {{ cancer.name }}
+                    </h1>
+
+                    <p class="text-sm sm:text-base text-slate-300 leading-relaxed font-normal max-w-3xl">
+                        {{ cancer.description }}
+                    </p>
+
+                    <!-- Key Biomarkers Bar -->
+                    <div class="pt-2 space-y-2">
+                        <div class="text-[11px] font-black uppercase tracking-wider text-slate-400">Standard Molecular Biomarkers</div>
+                        <div class="flex flex-wrap gap-2">
+                            {% for b in cancer.key_biomarkers %}
+                            <span class="px-3 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-slate-200 text-xs font-bold">
+                                {{ b }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Action CTAs -->
+                    <div class="flex flex-wrap items-center gap-3 pt-4">
+                        <a href="{% if current_user.is_authenticated and current_user.role == 'patient' %}{{ url_for('cancer_care.book_appointment') }}?cancer={{ cancer_slug }}{% else %}{{ url_for('patient_login', next=url_for('cancer_care.book_appointment', cancer=cancer_slug)) }}{% endif %}" class="px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs uppercase tracking-wider transition-all text-decoration-none shadow-lg shadow-rose-600/30 flex items-center gap-2">
+                            <i class="fas fa-calendar-check"></i> Consult Specialist
+                        </a>
+                        <a href="{{ url_for('symptoms') }}" class="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs uppercase tracking-wider transition-all text-decoration-none flex items-center gap-2">
+                            <i class="fas fa-stethoscope text-rose-400"></i> Symptoms Checker
+                        </a>
+                        <a href="{{ url_for('cancer_care.ai_companion') }}" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all text-decoration-none flex items-center gap-2">
+                            <i class="fas fa-robot text-emerald-400"></i> AI Questions
+                        </a>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4">
+                    <div class="rounded-2xl overflow-hidden border border-slate-700 shadow-2xl bg-slate-800">
+                        <div class="relative h-64 sm:h-72">
+                            <img src="{{ cancer.image }}" alt="{{ cancer.name }}" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 right-4 text-xs text-slate-300">
+                                <strong class="text-white block font-bold">Recommended Screening Standard:</strong>
+                                <span>{{ cancer.screening_test }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTENT SECTIONS CONTAINER -->
+    <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 space-y-12">
+
+        <!-- 1. SYMPTOMS & CLINICAL PRESENTATION -->
+        <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div class="border-b border-slate-100 pb-3">
+                <span class="text-xs font-black uppercase tracking-wider text-rose-600">Clinical Presentation</span>
+                <h2 class="text-xl sm:text-2xl font-display font-extrabold text-slate-900 tracking-tight">Characteristic Symptoms & Warning Signs</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for sym in cancer.symptoms %}
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                    <i class="fas fa-circle-dot text-rose-600 text-sm mt-0.5 shrink-0"></i>
+                    <span class="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed">{{ sym }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- 2. RISK FACTORS & PREVENTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Risk Factors -->
+            <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
+                <div class="border-b border-slate-100 pb-3">
+                    <span class="text-xs font-black uppercase tracking-wider text-amber-600">Epidemiology & Etiology</span>
+                    <h3 class="text-lg font-display font-extrabold text-slate-900 tracking-tight">Known Risk Factors</h3>
+                </div>
+                <ul class="space-y-3 pl-0 list-none text-xs sm:text-sm text-slate-700 m-0">
+                    {% for risk in cancer.risk_factors %}
+                    <li class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="fas fa-triangle-exclamation text-amber-500 text-xs mt-1 shrink-0"></i>
+                        <span class="leading-relaxed">{{ risk }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <!-- Prevention & Screening -->
+            <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
+                <div class="border-b border-slate-100 pb-3">
+                    <span class="text-xs font-black uppercase tracking-wider text-emerald-600">Risk Reduction & Proactive Health</span>
+                    <h3 class="text-lg font-display font-extrabold text-slate-900 tracking-tight">Prevention & Screening Protocols</h3>
+                </div>
+                <ul class="space-y-3 pl-0 list-none text-xs sm:text-sm text-slate-700 m-0">
+                    {% for prev in cancer.prevention %}
+                    <li class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="fas fa-shield-halved text-emerald-500 text-xs mt-1 shrink-0"></i>
+                        <span class="leading-relaxed">{{ prev }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </div>
+
+        <!-- 3. DIAGNOSIS & STAGING WORKUP -->
+        <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div class="border-b border-slate-100 pb-3">
+                <span class="text-xs font-black uppercase tracking-wider text-indigo-600">Diagnostic Pathway</span>
+                <h2 class="text-xl sm:text-2xl font-display font-extrabold text-slate-900 tracking-tight">Standard Diagnostic Staging Modalities</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for diag in cancer.diagnosis %}
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <div class="flex items-center gap-2 text-indigo-600 text-xs font-bold">
+                        <i class="fas fa-microscope"></i> Step {{ loop.index }}
+                    </div>
+                    <p class="text-xs text-slate-800 font-medium m-0 leading-relaxed">{{ diag }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- 4. MULTIMODAL TREATMENT PATHWAYS -->
+        <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-100 pb-3">
+                <div>
+                    <span class="text-xs font-black uppercase tracking-wider text-rose-600">Therapeutic Modalities</span>
+                    <h2 class="text-xl sm:text-2xl font-display font-extrabold text-slate-900 tracking-tight">Multidisciplinary Treatment Pathways</h2>
+                </div>
+                <span class="text-xs font-semibold text-slate-500">MDT Tumor Board Consensus Required</span>
+            </div>
+
+            <!-- Treatment Modality Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {% if cancer.treatment_modalities %}
+                    <div class="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-rose-600 font-bold text-xs uppercase tracking-wider">
+                            <i class="fas fa-scalpel"></i> Surgical Oncology
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed m-0">{{ cancer.treatment_modalities.surgery }}</p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider">
+                            <i class="fas fa-syringe"></i> Chemotherapy Regimens
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed m-0">{{ cancer.treatment_modalities.chemotherapy }}</p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-sky-600 font-bold text-xs uppercase tracking-wider">
+                            <i class="fas fa-radiation"></i> Radiation Therapy
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed m-0">{{ cancer.treatment_modalities.radiotherapy }}</p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-wider">
+                            <i class="fas fa-shield-virus"></i> Immunotherapy
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed m-0">{{ cancer.treatment_modalities.immunotherapy }}</p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-purple-600 font-bold text-xs uppercase tracking-wider">
+                            <i class="fas fa-dna"></i> Targeted Therapy
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed m-0">{{ cancer.treatment_modalities.targeted_therapy }}</p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
+                            <i class="fas fa-capsules"></i> Endocrine / Hormone Therapy
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed m-0">{{ cancer.treatment_modalities.hormone_therapy }}</p>
+                    </div>
+                {% else %}
+                    {% for trt in cancer.treatments %}
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                        <p class="text-xs text-slate-700 leading-relaxed m-0">{{ trt }}</p>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Common Pharmaceutical Agents -->
+            {% if cancer.common_drugs %}
+            <div class="p-4 rounded-xl bg-slate-100/70 border border-slate-200 space-y-2">
+                <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Representative Pharmacotherapeutic Agents</span>
+                <div class="flex flex-wrap gap-2">
+                    {% for d in cancer.common_drugs %}
+                    <span class="px-2.5 py-1 rounded bg-white border border-slate-200 text-xs font-semibold text-slate-800 shadow-2xs">{{ d }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- 5. RECOVERY & SURVIVORSHIP -->
+        <section class="rounded-2xl bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+                <span class="text-xs font-black uppercase tracking-wider text-teal-600">Rehabilitation & Living Well</span>
+                <h3 class="text-lg font-display font-extrabold text-slate-900 tracking-tight">Recovery & Long-Term Surveillance</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for rec in cancer.recovery %}
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+                    <i class="fas fa-heart-pulse text-teal-600 text-xs mt-1 shrink-0"></i>
+                    <span class="text-xs sm:text-sm text-slate-700 leading-relaxed">{{ rec }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- 6. CLINICAL REFERENCES -->
+        <section class="p-6 rounded-2xl bg-slate-100/60 border border-slate-200 space-y-3">
+            <h4 class="text-xs font-black uppercase tracking-wider text-slate-500 m-0">Evidence-Based Clinical References & Guidelines</h4>
+            <ul class="space-y-1 pl-4 list-disc text-xs text-slate-600 m-0">
+                {% for ref in cancer.references %}
+                <li>{{ ref }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <!-- BOTTOM CONSULTATION CTA -->
+        <div class="p-8 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl shadow-rose-600/20">
+            <div class="space-y-1">
+                <h3 class="text-xl font-display font-black tracking-tight m-0">Discuss Your Case with a Specialized {{ cancer.name }} Oncologist</h3>
+                <p class="text-xs text-rose-100 m-0">Multidisciplinary reviews available in person and via international telemedicine.</p>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+                <a href="{% if current_user.is_authenticated and current_user.role == 'patient' %}{{ url_for('cancer_care.book_appointment') }}?cancer={{ cancer_slug }}{% else %}{{ url_for('patient_login', next=url_for('cancer_care.book_appointment', cancer=cancer_slug)) }}{% endif %}" class="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-900 font-extrabold text-xs uppercase tracking-wider transition-all text-decoration-none shadow-md">
+                    Schedule Consultation
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+

@@ -113,7 +113,7 @@
                     <input 
                         type="text" 
                         id="diseaseSearchInput" 
-                        placeholder="Search by disease name, symptom (e.g. Chest pain, Fever, Vision loss)..." 
+                        placeholder="Search by disease name or symptom..." 
                         class="w-full bg-transparent text-slate-900 placeholder-slate-400 px-3.5 py-3 focus:outline-none text-xs sm:text-sm font-semibold"
                         oninput="handleDiseaseSearchTyping(this.value);"
                     >
@@ -562,6 +562,14 @@
             .replace(/'/g, '&#039;');
     }
 
+    function formatConditionMarkdown(str) {
+        if (!str) return '';
+        let escaped = escapeHtml(str);
+        return escaped
+            .replace(/\*\*([\s\S]*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>')
+            .replace(/\*\*/g, '');
+    }
+
     function renderDiseaseCardHTML(dis) {
         const disNameClean = (dis.name || '').replace(/'/g, "\\'");
         const tagsHtml = (dis.symptom_tags || []).map(t => `
@@ -769,7 +777,7 @@
                     document.getElementById('modalSourceBadge').innerText = dis.source_label || 'NIH MedQuAD + Groq AI';
 
                     // 1. Overview
-                    document.getElementById('mOverview').innerText = dis.overview || '';
+                    document.getElementById('mOverview').innerHTML = formatConditionMarkdown(dis.overview || '');
 
                     // 2. Key Facts
                     const kfList = document.getElementById('mKeyFacts');
@@ -777,7 +785,7 @@
                         kfList.innerHTML = (dis.key_facts || []).map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-check-circle text-amber-600 mt-1 shrink-0 text-xs"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -794,12 +802,12 @@
                         symDesc = rawSym.description || '';
                         symItems = rawSym.list || [];
                     }
-                    document.getElementById('mSymptomsDesc').innerText = symDesc;
+                    document.getElementById('mSymptomsDesc').innerHTML = formatConditionMarkdown(symDesc);
                     const symTags = document.getElementById('mSymptomsTags');
                     if (symTags) {
                         symTags.innerHTML = (dis.symptom_tags || []).map(t => `
                             <span class="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 text-xs font-bold">
-                                ${escapeHtml(t)}
+                                ${formatConditionMarkdown(t)}
                             </span>
                         `).join('');
                     }
@@ -808,7 +816,7 @@
                         symList.innerHTML = symItems.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-circle-dot text-rose-500 mt-1 text-[8px] shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -820,7 +828,7 @@
                         causesList.innerHTML = rawCauses.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-circle-check text-indigo-500 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -832,7 +840,7 @@
                         rfList.innerHTML = rawRf.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-triangle-exclamation text-red-500 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -844,7 +852,7 @@
                         diagList.innerHTML = rawDiag.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-stethoscope text-purple-600 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -856,7 +864,7 @@
                         prevList.innerHTML = rawPrev.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-shield text-emerald-600 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -865,20 +873,20 @@
                     const spec = dis.specialist_to_visit || {};
                     document.getElementById('mSpecialistPrimary').innerText = spec.primary_specialist || (typeof spec === 'string' ? spec : 'Consulting Physician');
                     document.getElementById('mSpecialistDept').innerText = spec.department || 'Clinical Consultation';
-                    document.getElementById('mSpecialistUrgent').innerText = spec.when_urgent || 'Seek emergency evaluation for severe acute symptoms.';
+                    document.getElementById('mSpecialistUrgent').innerHTML = formatConditionMarkdown(spec.when_urgent || 'Seek emergency evaluation for severe acute symptoms.');
 
                     // 9. Treatment
                     const treat = dis.treatment || {};
                     let treatDesc = typeof treat === 'string' ? treat : (treat.overview || '');
                     let treatMedList = Array.isArray(treat) ? treat : (treat.medications || []);
                     let treatProcList = [...(treat.procedures || []), ...(treat.therapies || [])];
-                    document.getElementById('mTreatmentOverview').innerText = treatDesc;
+                    document.getElementById('mTreatmentOverview').innerHTML = formatConditionMarkdown(treatDesc);
                     const treatMeds = document.getElementById('mTreatmentMeds');
                     if (treatMeds) {
                         treatMeds.innerHTML = treatMedList.map(m => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-pill text-blue-500 mt-0.5 text-[10px] shrink-0"></i>
-                                <span>${escapeHtml(m)}</span>
+                                <span>${formatConditionMarkdown(m)}</span>
                             </li>
                         `).join('');
                     }
@@ -887,7 +895,7 @@
                         treatProc.innerHTML = treatProcList.map(p => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-circle-check text-sky-500 mt-0.5 text-[10px] shrink-0"></i>
-                                <span>${escapeHtml(p)}</span>
+                                <span>${formatConditionMarkdown(p)}</span>
                             </li>
                         `).join('');
                     }
@@ -899,7 +907,7 @@
                         compList.innerHTML = rawComp.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-circle-exclamation text-orange-500 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -911,7 +919,7 @@
                         altList.innerHTML = rawAlt.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-spa text-emerald-500 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -923,7 +931,7 @@
                         hcList.innerHTML = rawHc.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-house-chimney-medical text-cyan-600 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -935,7 +943,7 @@
                         lwList.innerHTML = rawLw.map(item => `
                             <li class="flex items-start gap-2">
                                 <i class="fas fa-heart text-rose-400 mt-1 text-xs shrink-0"></i>
-                                <span>${escapeHtml(item)}</span>
+                                <span>${formatConditionMarkdown(item)}</span>
                             </li>
                         `).join('');
                     }
@@ -951,9 +959,9 @@
                                 <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
                                     <div class="font-black text-slate-900 text-xs mb-1.5 flex items-start gap-2">
                                         <i class="fas fa-circle-question text-violet-600 mt-0.5 shrink-0"></i>
-                                        <span>${escapeHtml(qText)}</span>
+                                        <span>${formatConditionMarkdown(qText)}</span>
                                     </div>
-                                    ${aText ? `<p class="text-xs text-slate-700 leading-relaxed font-medium pl-5">${escapeHtml(aText)}</p>` : ''}
+                                    ${aText ? `<p class="text-xs text-slate-700 leading-relaxed font-medium pl-5">${formatConditionMarkdown(aText)}</p>` : ''}
                                 </div>
                             `;
                         }).join('');
@@ -966,7 +974,7 @@
                         refList.innerHTML = rawRef.map(ref => `
                             <li class="flex items-center gap-2">
                                 <i class="fas fa-bookmark text-slate-400 text-[10px]"></i>
-                                <span>${escapeHtml(ref)}</span>
+                                <span>${formatConditionMarkdown(ref)}</span>
                             </li>
                         `).join('');
                     }

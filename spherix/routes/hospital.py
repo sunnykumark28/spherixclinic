@@ -110,9 +110,17 @@ hospital_bp = Blueprint('hospital', __name__)
 @hospital_bp.route('/hospitals')
 def hospitals_list():
     """Displays a list of registered hospitals with advanced multi-dimensional filtering."""
+    # Ensure verified oncology hospitals are populated if needed
+    try:
+        from spherix.routes.cancer_care import seed_oncology_data_if_needed
+        seed_oncology_data_if_needed()
+    except Exception:
+        pass
+
     all_hospitals = deduplicate_entities([
         h for h in TEMP_DATA.get('hospitals', {}).values() 
         if not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)
+        and getattr(h, 'publishing_status', 'published') in ['published', 'approved']
     ])
     
     # Query parameters
@@ -452,13 +460,32 @@ def api_nearby_hospitals():
 
 
 
-@hospital_bp.route('/hospital/<path:hospital_id>')
-def hospital_detail(hospital_id):
-    hospital_id = parse_route_id(hospital_id)
-    hospital = TEMP_DATA['hospitals'].get(hospital_id)
+@hospital_bp.route('/hospital/<path:hospital_id>', endpoint='hospital_detail')
+@hospital_bp.route('/hospitals/<path:hospital_slug>', endpoint='hospital_detail_slug')
+def hospital_detail(hospital_id=None, hospital_slug=None):
+    identifier = hospital_slug or hospital_id
+    if not identifier:
+        flash("Hospital not found.", "error")
+        return redirect(url_for('hospitals_list'))
+
+    parsed_id = parse_route_id(identifier)
+    hospital = TEMP_DATA['hospitals'].get(parsed_id)
+    if not hospital:
+        clean_target = str(identifier).strip().lower()
+        hospital = next((h for h in TEMP_DATA['hospitals'].values() if getattr(h, 'slug', '').lower() == clean_target or str(h.id).lower() == clean_target or (h.name or '').lower() == clean_target), None)
+
     if not hospital:
         flash("Hospital not found.", "error")
         return redirect(url_for('hospitals_list'))
+
+    # Publishing & Verification Visibility Checks (Section 6 & 8)
+    is_owner = current_user.is_authenticated and (str(getattr(current_user, 'id', '')) == str(hospital.id) or (getattr(current_user, 'is_staff', False) and getattr(current_user, 'hospital_name', '') == hospital.name))
+    is_admin = current_user.is_authenticated and (getattr(current_user, 'role', '') == 'Admin' or getattr(current_user, 'email', '') == 'admin@spherixclinic.com')
+
+    if getattr(hospital, 'publishing_status', 'published') in ['draft', 'rejected', 'pending_verification', 'pending_approval', 'pending', 'suspended', 'archived'] or getattr(hospital, 'is_blocked', False) or getattr(hospital, 'is_hidden', False):
+        if not is_owner and not is_admin:
+            flash("This healthcare facility profile is currently not available for public viewing.", "info")
+            return redirect(url_for('hospitals_list'))
     
     # Get doctors for this hospital
     hospital_doctors = [
@@ -475,7 +502,7 @@ def hospital_detail(hospital_id):
             departments_with_doctors[dept] = []
         departments_with_doctors[dept].append(doc)
 
-    hospital_departments = sorted(departments_with_doctors.keys())
+    hospital_departments = sorted(list(set(list(departments_with_doctors.keys()) + hospital.departments_list)))
 
     # Sort doctors consistently (by ID)
     def parse_doc_id(d):
@@ -505,6 +532,7 @@ def hospital_detail(hospital_id):
     
     hospital_organ_requests = [r for r in TEMP_DATA.get('organ_requests', {}).values() if r.hospital_id == str(hospital.id) and r.status == 'active']
     hospital_organ_donors = [d for d in TEMP_DATA.get('organ_donors', {}).values() if str(getattr(d, 'hospital_id', '')) == str(hospital.id) and getattr(d, 'status', 'pending') == 'approved']
+    hospital_reviews = [r for r in TEMP_DATA.get('reviews', {}).values() if str(getattr(r, 'hospital_id', '')) == str(hospital.id)]
     
     return render_template(
         'hospital_detail.html', 
@@ -515,9 +543,60 @@ def hospital_detail(hospital_id):
         departments=hospital_departments,
         organ_requests=hospital_organ_requests,
         organ_donors=hospital_organ_donors,
+        reviews=hospital_reviews,
         page=page,
         total_pages=total_pages
     )
+
+
+@hospital_bp.route('/hospital/image/<path:hospital_id>')
+def get_hospital_image(hospital_id):
+    """Serves the hospital's logo image."""
+    h_id = parse_route_id(hospital_id)
+    hospital = TEMP_DATA['hospitals'].get(h_id)
+    if not hospital:
+        clean = str(hospital_id).strip().lower()
+        hospital = next((h for h in TEMP_DATA['hospitals'].values() if getattr(h, 'slug', '').lower() == clean or str(h.id).lower() == clean), None)
+    
+    if hospital and getattr(hospital, 'logo_url', None):
+        img_name = str(hospital.logo_url).strip()
+        if img_name in UPLOAD_CACHE:
+            img_bytes, mime = UPLOAD_CACHE[img_name]
+            return Response(img_bytes, mimetype=mime)
+        fname = os.path.basename(img_name)
+        if fname in UPLOAD_CACHE:
+            img_bytes, mime = UPLOAD_CACHE[fname]
+            return Response(img_bytes, mimetype=mime)
+        for search_dir in ['static/uploads/hospital_logos', 'static/uploads']:
+            full_p = os.path.join(current_app.root_path, '..', search_dir, fname)
+            if os.path.exists(full_p):
+                return send_from_directory(os.path.dirname(full_p), fname)
+    return redirect('/static/images/spherix_clinic_logo.png')
+
+
+@hospital_bp.route('/hospital/cover/<path:hospital_id>')
+def get_hospital_cover(hospital_id):
+    """Serves the hospital's cover image."""
+    h_id = parse_route_id(hospital_id)
+    hospital = TEMP_DATA['hospitals'].get(h_id)
+    if not hospital:
+        clean = str(hospital_id).strip().lower()
+        hospital = next((h for h in TEMP_DATA['hospitals'].values() if getattr(h, 'slug', '').lower() == clean or str(h.id).lower() == clean), None)
+    
+    if hospital and getattr(hospital, 'cover_image_url', None):
+        img_name = str(hospital.cover_image_url).strip()
+        if img_name in UPLOAD_CACHE:
+            img_bytes, mime = UPLOAD_CACHE[img_name]
+            return Response(img_bytes, mimetype=mime)
+        fname = os.path.basename(img_name)
+        if fname in UPLOAD_CACHE:
+            img_bytes, mime = UPLOAD_CACHE[fname]
+            return Response(img_bytes, mimetype=mime)
+        for search_dir in ['static/uploads/hospital_covers', 'static/uploads']:
+            full_p = os.path.join(current_app.root_path, '..', search_dir, fname)
+            if os.path.exists(full_p):
+                return send_from_directory(os.path.dirname(full_p), fname)
+    return redirect('/static/images/half_earth_background.jpg')
 
 
 
@@ -2029,25 +2108,82 @@ def hospital_dashboard():
         # --- Update Profile ---
         elif 'update_profile' in request.form:
             # Check if new email is unique
-            new_email = request.form.get('email')
-            if new_email != current_user.email:
-                existing_hospital = next((h for h in TEMP_DATA['hospitals'].values() if h.email == new_email), None)
+            new_email = request.form.get('email', '').strip()
+            if new_email and new_email != current_user.email:
+                existing_hospital = next((h for h in TEMP_DATA['hospitals'].values() if str(h.id) != str(current_user.id) and h.email == new_email), None)
                 if existing_hospital:
                     flash('This email is already registered to another hospital.', 'error')
                     return redirect(url_for('hospital_dashboard') + '#settings')
                 current_user.email = new_email
             
-            # Update basic info
-            current_user.name = request.form.get('name')
-            current_user.president_ceo = request.form.get('president_ceo', '').strip() or getattr(current_user, 'president_ceo', 'Managing Director')
-            current_user.director_name = current_user.president_ceo
-            current_user.superintendent_name = request.form.get('superintendent_name', '').strip() or getattr(current_user, 'superintendent_name', 'Medical Superintendent')
-            current_user.blood_bank_staff = current_user.superintendent_name
-            current_user.phone = request.form.get('phone')
-            current_user.address = request.form.get('address')
-            current_user.city = request.form.get('city')
-            current_user.state = request.form.get('state')
-            current_user.zip_code = request.form.get('zip_code')
+            # Basic Information & Identity
+            if request.form.get('name'):
+                current_user.name = request.form.get('name').strip()
+                import re
+                current_user._slug = re.sub(r'[^a-z0-9]+', '-', current_user.name.lower()).strip('-')
+            if request.form.get('president_ceo'):
+                current_user.president_ceo = request.form.get('president_ceo').strip()
+                current_user.director_name = current_user.president_ceo
+            if request.form.get('superintendent_name'):
+                current_user.superintendent_name = request.form.get('superintendent_name').strip()
+                current_user.blood_bank_staff = current_user.superintendent_name
+            if request.form.get('establishment_year'):
+                current_user.establishment_year = request.form.get('establishment_year').strip()
+            if request.form.get('website'):
+                current_user.website = request.form.get('website').strip()
+
+            # Sensitive Verification Claims (Section 6)
+            new_license = request.form.get('license_number', '').strip()
+            sensitive_change = False
+            if new_license and new_license != getattr(current_user, 'license_number', ''):
+                current_user.license_number = new_license
+                current_user.license_no = new_license
+                sensitive_change = True
+
+            new_accreditation = request.form.get('accreditation', '').strip()
+            if new_accreditation and new_accreditation != getattr(current_user, 'accreditation', ''):
+                current_user.accreditation = new_accreditation
+                sensitive_change = True
+
+            if request.form.get('certifications') is not None:
+                current_user.certifications = request.form.get('certifications').strip()
+
+            # Contact & Location
+            if request.form.get('phone'):
+                current_user.phone = request.form.get('phone').strip()
+            if request.form.get('emergency_phone'):
+                current_user.emergency_phone = request.form.get('emergency_phone').strip()
+            if request.form.get('ambulance_phone'):
+                current_user.ambulance_phone = request.form.get('ambulance_phone').strip()
+            if request.form.get('patient_support_phone'):
+                current_user.patient_support_phone = request.form.get('patient_support_phone').strip()
+            if request.form.get('patient_support_email'):
+                current_user.patient_support_email = request.form.get('patient_support_email').strip()
+
+            if request.form.get('address'):
+                current_user.address = request.form.get('address').strip()
+            if request.form.get('city'):
+                current_user.city = request.form.get('city').strip()
+            if request.form.get('state'):
+                current_user.state = request.form.get('state').strip()
+            if request.form.get('zip_code'):
+                current_user.zip_code = request.form.get('zip_code').strip()
+            if request.form.get('country'):
+                current_user.country = request.form.get('country').strip()
+            if request.form.get('google_maps_url'):
+                current_user.google_maps_url = request.form.get('google_maps_url').strip()
+
+            # Geolocation Coordinates
+            if request.form.get('latitude'):
+                try:
+                    current_user.latitude = float(request.form.get('latitude'))
+                except (ValueError, TypeError):
+                    pass
+            if request.form.get('longitude'):
+                try:
+                    current_user.longitude = float(request.form.get('longitude'))
+                except (ValueError, TypeError):
+                    pass
 
             # Classification & Specialization Updates
             hosp_type_id = request.form.get('hospital_type_id')
@@ -2060,45 +2196,208 @@ def hospital_dashboard():
                 except (ValueError, TypeError):
                     pass
             elif request.form.get('facility_type'):
-                current_user.hospital_type = request.form.get('facility_type')
+                current_user.hospital_type = request.form.get('facility_type').strip()
 
-            # Specialties
+            # Clinical Specialties & Departments
             spec_list = request.form.getlist('specialties')
             if not spec_list and request.form.get('specialties_csv'):
                 spec_list = [s.strip() for s in request.form.get('specialties_csv').split(',') if s.strip()]
             if spec_list:
                 current_user.specialties = spec_list
 
-            # Facilities
+            if request.form.get('departments_custom') is not None:
+                current_user.departments_custom = request.form.get('departments_custom').strip()
+
+            # Facilities & Infrastructure
             fac_list = request.form.getlist('facilities')
             if not fac_list and request.form.get('facilities_csv'):
                 fac_list = [f.strip() for f in request.form.get('facilities_csv').split(',') if f.strip()]
             if fac_list:
                 current_user.facilities = fac_list
 
-            # Emergency Services
+            if request.form.get('infrastructure') is not None:
+                current_user.infrastructure = request.form.get('infrastructure').strip()
+            if request.form.get('medical_equipment') is not None:
+                current_user.medical_equipment = request.form.get('medical_equipment').strip()
+            if request.form.get('diagnostic_services') is not None:
+                current_user.diagnostic_services = request.form.get('diagnostic_services').strip()
+            if request.form.get('laboratory_facilities') is not None:
+                current_user.laboratory_facilities = request.form.get('laboratory_facilities').strip()
+
+            # Services & Availability Toggles
             if 'emergency_services' in request.form:
                 current_user.emergency_services = request.form.get('emergency_services') in ['on', 'true', '1', True]
-            if request.form.get('emergency_phone'):
-                current_user.emergency_phone = request.form.get('emergency_phone').strip()
-            if request.form.get('ambulance_phone'):
-                current_user.ambulance_phone = request.form.get('ambulance_phone').strip()
+            if 'blood_bank_available' in request.form:
+                current_user.blood_bank_available = request.form.get('blood_bank_available') in ['on', 'true', '1', True]
+            
+            # Blood Group Stock Reserves (A+, A-, B+, B-, AB+, AB-, O+, O-)
+            blood_groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+            stock = dict(getattr(current_user, 'blood_stock', {}) or {"A+": 0, "A-": 0, "B+": 0, "B-": 0, "AB+": 0, "AB-": 0, "O+": 0, "O-": 0})
+            has_stock_update = False
+            for bg in blood_groups:
+                f_key = f"blood_stock_{bg.replace('+', 'pos').replace('-', 'neg')}"
+                if f_key in request.form:
+                    has_stock_update = True
+                    try:
+                        stock[bg] = max(0, int(request.form.get(f_key) or 0))
+                    except (ValueError, TypeError):
+                        pass
+            if has_stock_update:
+                current_user.blood_stock = stock
 
-            # About & Geolocation Coordinates
+            if 'pharmacy_available' in request.form:
+                current_user.pharmacy_available = request.form.get('pharmacy_available') in ['on', 'true', '1', True]
+            if request.form.get('pharmacy_hours'):
+                current_user.pharmacy_hours = request.form.get('pharmacy_hours').strip()
+            if 'ambulance_services' in request.form:
+                current_user.ambulance_services = request.form.get('ambulance_services') in ['on', 'true', '1', True]
+            if request.form.get('ambulance_count'):
+                try:
+                    current_user.ambulance_count = int(request.form.get('ambulance_count'))
+                except (ValueError, TypeError):
+                    pass
+
+            # International Patient Care & Settings
+            if 'international_bed_booking_enabled' in request.form:
+                current_user.international_bed_booking_enabled = request.form.get('international_bed_booking_enabled') in ['on', 'true', '1', True]
+            if request.form.get('currency'):
+                current_user.currency = request.form.get('currency').strip()
+            if request.form.get('timezone'):
+                current_user.timezone = request.form.get('timezone').strip()
+            intl_services = request.form.getlist('international_services')
+            if not intl_services and request.form.get('international_services_csv'):
+                intl_services = [s.strip() for s in request.form.get('international_services_csv').split(',') if s.strip()]
+            if intl_services:
+                current_user.international_services = intl_services
+
+            # Ward-wise Bed Inventory & OT
+            try:
+                if request.form.get('general_beds') is not None:
+                    current_user.general_beds = max(0, int(request.form.get('general_beds') or 0))
+                if request.form.get('available_general_beds') is not None:
+                    current_user.available_general_beds = max(0, int(request.form.get('available_general_beds') or 0))
+                if request.form.get('private_beds') is not None:
+                    current_user.private_beds = max(0, int(request.form.get('private_beds') or 0))
+                if request.form.get('available_private_beds') is not None:
+                    current_user.available_private_beds = max(0, int(request.form.get('available_private_beds') or 0))
+                if request.form.get('icu_beds') is not None:
+                    current_user.icu_beds = max(0, int(request.form.get('icu_beds') or 0))
+                if request.form.get('available_icu_beds') is not None:
+                    current_user.available_icu_beds = max(0, int(request.form.get('available_icu_beds') or 0))
+                if request.form.get('nicu_beds') is not None:
+                    current_user.nicu_beds = max(0, int(request.form.get('nicu_beds') or 0))
+                if request.form.get('available_nicu_beds') is not None:
+                    current_user.available_nicu_beds = max(0, int(request.form.get('available_nicu_beds') or 0))
+                if request.form.get('picu_beds') is not None:
+                    current_user.picu_beds = max(0, int(request.form.get('picu_beds') or 0))
+                if request.form.get('available_picu_beds') is not None:
+                    current_user.available_picu_beds = max(0, int(request.form.get('available_picu_beds') or 0))
+                if request.form.get('emergency_beds') is not None:
+                    current_user.emergency_beds = max(0, int(request.form.get('emergency_beds') or 0))
+                if request.form.get('available_emergency_beds') is not None:
+                    current_user.available_emergency_beds = max(0, int(request.form.get('available_emergency_beds') or 0))
+                if request.form.get('operation_theatres') is not None:
+                    current_user.operation_theatres = max(0, int(request.form.get('operation_theatres') or 0))
+                if request.form.get('available_ot') is not None:
+                    current_user.available_ot = max(0, int(request.form.get('available_ot') or 0))
+
+                # Recalculate total & available beds from breakdown if provided
+                if current_user.general_beds or current_user.icu_beds or current_user.private_beds:
+                    current_user.total_beds = current_user.general_beds + current_user.private_beds + current_user.icu_beds + current_user.nicu_beds + current_user.picu_beds + current_user.emergency_beds
+                    current_user.available_beds = current_user.available_general_beds + current_user.available_private_beds + current_user.available_icu_beds + current_user.available_nicu_beds + current_user.available_picu_beds + current_user.available_emergency_beds
+            except (ValueError, TypeError):
+                pass
+
+            # Pricing, Fees & Insurance
+            try:
+                if request.form.get('consultation_fee') is not None:
+                    raw_c = request.form.get('consultation_fee', '').strip()
+                    current_user.consultation_fee = float(raw_c) if raw_c != '' else None
+                if request.form.get('follow_up_fee') is not None:
+                    raw_fu = request.form.get('follow_up_fee', '').strip()
+                    current_user.follow_up_fee = float(raw_fu) if raw_fu != '' else None
+                if request.form.get('general_bed_fee') is not None:
+                    raw_g = request.form.get('general_bed_fee', '').strip()
+                    current_user.general_bed_fee = float(raw_g) if raw_g != '' else None
+                if request.form.get('private_bed_fee') is not None:
+                    raw_p = request.form.get('private_bed_fee', '').strip()
+                    current_user.private_bed_fee = float(raw_p) if raw_p != '' else None
+                if request.form.get('icu_bed_fee') is not None:
+                    raw_i = request.form.get('icu_bed_fee', '').strip()
+                    current_user.icu_bed_fee = float(raw_i) if raw_i != '' else None
+                if request.form.get('emergency_bed_fee') is not None:
+                    raw_emg = request.form.get('emergency_bed_fee', '').strip()
+                    current_user.emergency_bed_fee = float(raw_emg) if raw_emg != '' else None
+                if request.form.get('ot_fee') is not None:
+                    raw_ot = request.form.get('ot_fee', '').strip()
+                    current_user.ot_fee = float(raw_ot) if raw_ot != '' else None
+                if request.form.get('admission_charge') is not None:
+                    raw_a = request.form.get('admission_charge', '').strip()
+                    current_user.admission_charge = float(raw_a) if raw_a != '' else None
+                if request.form.get('ambulance_fee') is not None:
+                    raw_amb = request.form.get('ambulance_fee', '').strip()
+                    current_user.ambulance_fee = float(raw_amb) if raw_amb != '' else None
+            except (ValueError, TypeError):
+                pass
+
+            if request.form.get('insurance_cashless') is not None:
+                current_user.insurance_cashless = request.form.get('insurance_cashless').strip()
+
+            # About / Mission, Visiting Hours, Guidelines, FAQs
             if 'about' in request.form:
                 current_user.about = request.form.get('about', '').strip()
-            if request.form.get('latitude'):
-                try:
-                    current_user.latitude = float(request.form.get('latitude'))
-                except (ValueError, TypeError):
-                    pass
-            if request.form.get('longitude'):
-                try:
-                    current_user.longitude = float(request.form.get('longitude'))
-                except (ValueError, TypeError):
-                    pass
-            
-            # Handle Logo / Profile Image Upload (Base64 cropped or raw file)
+            if request.form.get('visiting_hours') is not None:
+                current_user.visiting_hours = request.form.get('visiting_hours').strip()
+            if request.form.get('patient_guidelines') is not None:
+                current_user.patient_guidelines = request.form.get('patient_guidelines').strip()
+
+            # Structured or Raw FAQs
+            faq_q_list = request.form.getlist('faq_questions[]') or request.form.getlist('faq_questions')
+            faq_a_list = request.form.getlist('faq_answers[]') or request.form.getlist('faq_answers')
+            if faq_q_list and faq_a_list:
+                structured_faqs = []
+                for q_item, a_item in zip(faq_q_list, faq_a_list):
+                    if q_item.strip() and a_item.strip():
+                        structured_faqs.append({"q": q_item.strip(), "a": a_item.strip()})
+                if structured_faqs:
+                    import json
+                    current_user.faqs = json.dumps(structured_faqs)
+            elif request.form.get('faqs') is not None:
+                current_user.faqs = request.form.get('faqs').strip()
+
+            if request.form.get('gallery_urls') is not None:
+                current_user.gallery_urls = request.form.get('gallery_urls').strip()
+            if request.form.get('video_urls') is not None:
+                current_user.video_urls = request.form.get('video_urls').strip()
+
+            # Handle Multiple Gallery Photo Uploads
+            if 'gallery_files' in request.files:
+                gfiles = request.files.getlist('gallery_files')
+                uploaded_urls = []
+                for gfile in gfiles:
+                    if gfile and gfile.filename != '':
+                        saved_g = save_user_profile_image(
+                            gfile,
+                            target_size=(1200, 800),
+                            filename_prefix=f"hospital_gal_{str(current_user.id).replace('/', '_')}",
+                            subfolder='hospital_gallery'
+                        )
+                        if saved_g:
+                            uploaded_urls.append(url_for('static', filename='uploads/' + saved_g))
+                if uploaded_urls:
+                    existing = [u.strip() for u in (current_user.gallery_urls or '').split(',') if u.strip()]
+                    existing.extend(uploaded_urls)
+                    current_user.gallery_urls = ', '.join(existing)
+
+            # Social Media Links
+            social_payload = {}
+            for s_key in ['facebook', 'twitter', 'linkedin', 'youtube', 'instagram']:
+                if request.form.get(f"social_{s_key}"):
+                    social_payload[s_key] = request.form.get(f"social_{s_key}").strip()
+            if social_payload:
+                current_user.social_links = social_payload
+
+            # Handle Brand Logo Upload
             logo_input = request.form.get('cropped_profile_image') or request.form.get('logo_base64')
             if not logo_input and 'logo' in request.files:
                 file = request.files['logo']
@@ -2109,41 +2408,71 @@ def hospital_dashboard():
                 saved_logo = save_user_profile_image(
                     logo_input,
                     target_size=(500, 500),
-                    filename_prefix=f"hospital_logo_{current_user.id}",
+                    filename_prefix=f"hospital_logo_{str(current_user.id).replace('/', '_')}",
                     subfolder='hospital_logos'
                 )
                 if saved_logo:
                     current_user.logo_url = saved_logo
                     current_user.profile_picture_url = saved_logo
+
+            # Handle Cover Image Upload
+            cover_input = request.form.get('cropped_cover_image') or request.form.get('cover_base64')
+            if not cover_input and 'cover_image' in request.files:
+                cfile = request.files['cover_image']
+                if cfile and cfile.filename != '':
+                    cover_input = cfile
+
+            if cover_input:
+                saved_cover = save_user_profile_image(
+                    cover_input,
+                    target_size=(1600, 600),
+                    filename_prefix=f"hospital_cover_{str(current_user.id).replace('/', '_')}",
+                    subfolder='hospital_covers'
+                )
+                if saved_cover:
+                    current_user.cover_image_url = saved_cover
+
+            # Publishing and Verification Workflow Logic (Section 6)
+            verification_notice = ""
+            req_pub_status = request.form.get('publishing_status')
+            if req_pub_status in ['published', 'draft', 'hidden', 'pending_verification']:
+                current_user.publishing_status = req_pub_status
+                if req_pub_status == 'hidden':
+                    current_user.is_hidden = True
+                elif req_pub_status == 'published':
+                    current_user.is_hidden = False
+            elif sensitive_change and not getattr(current_user, 'is_verified', False):
+                current_user.publishing_status = 'pending_verification'
+                verification_notice = " Sensitive verification claims (Registration/Accreditation) were submitted and are pending administrative review."
+            else:
+                current_user.publishing_status = 'published'
+
+            if 'is_hidden' in request.form:
+                current_user.is_hidden = request.form.get('is_hidden') in ['on', 'true', '1', True]
+
+            current_user.updated_at = utcnow().isoformat()
             
-            # Synchronize into TEMP_DATA
+            # Synchronize into TEMP_DATA memory store
             if current_user.id in TEMP_DATA.get('hospitals', {}):
                 hosp_mem = TEMP_DATA['hospitals'][current_user.id]
-                hosp_mem.name = current_user.name
-                hosp_mem.email = current_user.email
-                hosp_mem.president_ceo = current_user.president_ceo
-                hosp_mem.director_name = current_user.director_name
-                hosp_mem.superintendent_name = current_user.superintendent_name
-                hosp_mem.blood_bank_staff = current_user.blood_bank_staff
-                hosp_mem.phone = current_user.phone
-                hosp_mem.address = current_user.address
-                hosp_mem.city = current_user.city
-                hosp_mem.state = current_user.state
-                hosp_mem.zip_code = current_user.zip_code
-                hosp_mem.hospital_type_id = getattr(current_user, 'hospital_type_id', 1)
-                hosp_mem.hospital_type = getattr(current_user, 'hospital_type', 'General Hospital')
-                hosp_mem.specialties = getattr(current_user, 'specialties', [])
-                hosp_mem.facilities = getattr(current_user, 'facilities', [])
-                hosp_mem.emergency_services = getattr(current_user, 'emergency_services', True)
-                hosp_mem.emergency_phone = getattr(current_user, 'emergency_phone', None)
-                hosp_mem.ambulance_phone = getattr(current_user, 'ambulance_phone', None)
-                hosp_mem.about = getattr(current_user, 'about', '')
-                hosp_mem.latitude = getattr(current_user, 'latitude', None)
-                hosp_mem.longitude = getattr(current_user, 'longitude', None)
-                hosp_mem.logo_url = getattr(current_user, 'logo_url', None)
-            
+                for attr_key, attr_val in current_user.__dict__.items():
+                    if not attr_key.startswith('__'):
+                        setattr(hosp_mem, attr_key, attr_val)
+
             save_data()
-            flash('Hospital profile and clinical classification updated successfully.', 'success')
+
+            success_msg = f"Hospital profile and public view synchronized successfully!{verification_notice}"
+            
+            # Check AJAX / Fetch response
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json or 'application/json' in request.headers.get('Accept', ''):
+                return jsonify({
+                    'success': True,
+                    'message': success_msg,
+                    'slug': current_user.slug,
+                    'public_url': url_for('hospital_detail_slug', hospital_slug=current_user.slug)
+                })
+
+            flash(success_msg, 'success')
             return redirect(url_for('hospital_dashboard') + '#settings')
 
         # --- Update Security ---
@@ -2168,6 +2497,32 @@ def hospital_dashboard():
         # --- Update Resources ---
         elif 'update_resources' in request.form:
             try:
+                # Optional Ward Beds breakdown
+                if request.form.get('general_beds') is not None:
+                    current_user.general_beds = max(0, int(request.form.get('general_beds') or 0))
+                if request.form.get('available_general_beds') is not None:
+                    current_user.available_general_beds = max(0, int(request.form.get('available_general_beds') or 0))
+                if request.form.get('private_beds') is not None:
+                    current_user.private_beds = max(0, int(request.form.get('private_beds') or 0))
+                if request.form.get('available_private_beds') is not None:
+                    current_user.available_private_beds = max(0, int(request.form.get('available_private_beds') or 0))
+                if request.form.get('nicu_beds') is not None:
+                    current_user.nicu_beds = max(0, int(request.form.get('nicu_beds') or 0))
+                if request.form.get('available_nicu_beds') is not None:
+                    current_user.available_nicu_beds = max(0, int(request.form.get('available_nicu_beds') or 0))
+                if request.form.get('picu_beds') is not None:
+                    current_user.picu_beds = max(0, int(request.form.get('picu_beds') or 0))
+                if request.form.get('available_picu_beds') is not None:
+                    current_user.available_picu_beds = max(0, int(request.form.get('available_picu_beds') or 0))
+                if request.form.get('emergency_beds') is not None:
+                    current_user.emergency_beds = max(0, int(request.form.get('emergency_beds') or 0))
+                if request.form.get('available_emergency_beds') is not None:
+                    current_user.available_emergency_beds = max(0, int(request.form.get('available_emergency_beds') or 0))
+                if request.form.get('operation_theatres') is not None:
+                    current_user.operation_theatres = max(0, int(request.form.get('operation_theatres') or 0))
+                if request.form.get('available_ot') is not None:
+                    current_user.available_ot = max(0, int(request.form.get('available_ot') or 0))
+
                 total = int(request.form.get('total_beds', current_user.total_beds))
                 available = int(request.form.get('available_beds', current_user.available_beds))
                 icu = int(request.form.get('icu_beds', current_user.icu_beds))
@@ -2185,11 +2540,20 @@ def hospital_dashboard():
                         current_user.general_bed_fee = float(request.form.get('general_bed_fee', current_user.general_bed_fee))
                     if 'icu_bed_fee' in request.form:
                         current_user.icu_bed_fee = float(request.form.get('icu_bed_fee', current_user.icu_bed_fee))
+                    if 'private_bed_fee' in request.form:
+                        current_user.private_bed_fee = float(request.form.get('private_bed_fee', current_user.private_bed_fee))
                         
                     current_user.doctors_available = request.form.get('doctors_available', current_user.doctors_available)
-                    
+                    current_user.updated_at = utcnow().isoformat()
+
+                    if current_user.id in TEMP_DATA.get('hospitals', {}):
+                        hosp_mem = TEMP_DATA['hospitals'][current_user.id]
+                        for attr_key, attr_val in current_user.__dict__.items():
+                            if not attr_key.startswith('__'):
+                                setattr(hosp_mem, attr_key, attr_val)
+
                     save_data()
-                    flash('Resources and availability updated successfully.', 'success')
+                    flash('Resources and operational capacity updated successfully.', 'success')
             except ValueError:
                 flash('Invalid input for resources.', 'error')
             return redirect(url_for('hospital_dashboard') + '#settings')
@@ -2822,6 +3186,11 @@ def hospital_universal_user_action():
             flash(f"{display_name} '{target_name}' verification set to {status_str}.", "success")
 
     elif action == 'delete':
+        ALLOWED_HOSPITAL_COLLECTIONS = {'doctors', 'patients', 'staff', 'blood_donors', 'organ_donors'}
+        if collection_key not in ALLOWED_HOSPITAL_COLLECTIONS:
+            flash("Invalid collection specified for deletion.", "error")
+            return redirect(url_for('hospital.hospital_dashboard'))
+
         actual_key = next((k for k, v in TEMP_DATA[collection_key].items() if v == user_obj or str(k) == str(user_id)), user_id)
         TEMP_DATA[collection_key].pop(actual_key, None)
         
@@ -2829,7 +3198,17 @@ def hospital_universal_user_action():
             conn = get_db_connection()
             if conn:
                 cur = conn.cursor()
-                cur.execute(f"DELETE FROM {collection_key} WHERE id = ?", (str(actual_key),))
+                # Strict whitelisted table deletion
+                if collection_key == 'doctors':
+                    cur.execute("DELETE FROM doctors WHERE id = ?", (str(actual_key),))
+                elif collection_key == 'patients':
+                    cur.execute("DELETE FROM patients WHERE id = ?", (str(actual_key),))
+                elif collection_key == 'staff':
+                    cur.execute("DELETE FROM staff WHERE id = ?", (str(actual_key),))
+                elif collection_key == 'blood_donors':
+                    cur.execute("DELETE FROM blood_donors WHERE id = ?", (str(actual_key),))
+                elif collection_key == 'organ_donors':
+                    cur.execute("DELETE FROM organ_donors WHERE id = ?", (str(actual_key),))
                 conn.commit()
         except Exception as sql_del_err:
             print(f"⚠️ SQL direct delete note: {sql_del_err}")

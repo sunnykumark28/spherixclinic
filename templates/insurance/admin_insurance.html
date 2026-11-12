@@ -1,0 +1,311 @@
+{% extends "layout.html" %}
+
+{% block title %}Insurance Management Console — Spherix Admin{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f1f5f9] text-slate-900 pb-20 w-full">
+
+  <!-- Admin Top Banner -->
+  <section class="bg-gradient-to-r from-[#001e3d] via-[#002f5e] to-[#004b87] text-white py-8 px-4 sm:px-6 lg:px-12 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-300 mb-1">
+          <a href="{{ url_for('admin.admin_dashboard') }}" class="hover:underline flex items-center gap-1">
+            <i class="fas fa-arrow-left text-xxs"></i> Admin Dashboard
+          </a>
+          <span>/</span>
+          <span>Financial Protection Management</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black font-heading tracking-tight flex items-center gap-3">
+          <span>Spherix Insurance Administration Console</span>
+          <span class="px-2.5 py-0.5 rounded-full text-xxs font-black uppercase tracking-wider bg-sky-400 text-slate-950">
+            Operations Console
+          </span>
+        </h1>
+        <p class="text-xs text-sky-100 mt-1">
+          Monitoring authorized IRDAI partner alliances, application flows, active policies, payment reconciliation, and audit logs.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-bold border border-white/20">
+          <i class="fas fa-user-shield text-emerald-400 me-1"></i> Admin: Super Admin
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Executive KPIs Ribbon -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 -mt-5 relative z-10">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Active Policies</span>
+        <span class="text-xl font-black text-emerald-700">{{ kpi_active_policies }}</span>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Total Sum Insured</span>
+        <span class="text-base font-black text-[#004b87]">₹{{ '%.0f'|format(kpi_total_coverage/10000000) }} Cr</span>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Gross Premium</span>
+        <span class="text-base font-black text-slate-900">₹{{ '%.0f'|format(kpi_gross_premium) }}</span>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Pending Apps</span>
+        <span class="text-xl font-black text-amber-600">{{ kpi_pending_apps }}</span>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Claims in Review</span>
+        <span class="text-xl font-black text-indigo-600">{{ kpi_active_claims }}</span>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Partner Insurers</span>
+        <span class="text-xl font-black text-slate-800">{{ kpi_partners_count }}</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Administrative Tabs & Workplace -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mt-8">
+    
+    <!-- Tab Navigation -->
+    <div class="flex items-center gap-2.5 sm:gap-3.5 overflow-x-auto pb-3 mb-6 border-b border-slate-200">
+      <a href="{{ url_for('insurance.admin_insurance_overview', tab='overview') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all {% if active_tab == 'overview' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        Overview &amp; Queues
+      </a>
+      <a href="{{ url_for('insurance.admin_insurance_overview', tab='partners') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all {% if active_tab == 'partners' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        Partner Insurers ({{ partners|length }})
+      </a>
+      <a href="{{ url_for('insurance.admin_insurance_overview', tab='products') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all {% if active_tab == 'products' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        Products Catalog ({{ products|length }})
+      </a>
+      <a href="{{ url_for('insurance.admin_insurance_overview', tab='applications') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all {% if active_tab == 'applications' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        All Proposals ({{ recent_apps|length }})
+      </a>
+      <a href="{{ url_for('insurance.admin_insurance_overview', tab='policies') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all {% if active_tab == 'policies' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        Issued Policies ({{ recent_pols|length }})
+      </a>
+      <a href="{{ url_for('insurance.admin_insurance_overview', tab='audit') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all {% if active_tab == 'audit' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        Regulatory Audit Trail
+      </a>
+    </div>
+
+    <!-- Administrative Notice -->
+    <div class="p-3.5 rounded-xl bg-slate-200/70 border border-slate-300 text-slate-700 text-xs flex items-center justify-between mb-6">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-lock text-slate-500"></i>
+        <span><strong>Regulatory Separation of Duties:</strong> Spherix Clinic internal administrators cannot approve underwriting or issue policies directly. All underwriting authorizations and policy certifications are cryptographically received from the authorized partner insurer's integration gateway.</span>
+      </div>
+      <span class="text-xxs font-mono font-bold uppercase text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-300">IRDAI Compliant</span>
+    </div>
+
+    <!-- ================= TAB: OVERVIEW ================= -->
+    {% if active_tab == 'overview' or not active_tab %}
+    <div class="space-y-6">
+      
+      <!-- Recent Applications Queue -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-black text-sm text-slate-900 font-heading">Recent Insurance Proposals &amp; Underwriting Status</h3>
+          <span class="text-xs text-slate-400">Live Gateway Sync</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+              <tr>
+                <th class="p-3">Application Ref</th>
+                <th class="p-3">Patient ID</th>
+                <th class="p-3">Plan / Insurer</th>
+                <th class="p-3">Underwriting Decision</th>
+                <th class="p-3">Status</th>
+                <th class="p-3">Submitted At</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for app in recent_apps %}
+              <tr class="hover:bg-slate-50/50">
+                <td class="p-3 font-mono font-bold text-slate-800">{{ app.application_number }}</td>
+                <td class="p-3 font-semibold text-slate-600">PAT-{{ app.patient_id }}</td>
+                <td class="p-3 font-bold text-slate-900">{{ app.product_name }} ({{ app.partner_name }})</td>
+                <td class="p-3 font-semibold text-slate-600">{{ app.underwriting_decision or 'Pending Review' }}</td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase {% if app.status == 'ACTIVE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% elif app.status == 'APPROVED' %}bg-blue-50 text-[#004b87] border border-blue-200{% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
+                    {{ app.status }}
+                  </span>
+                </td>
+                <td class="p-3 text-slate-500">{{ app.created_at }}</td>
+                <td class="p-3 text-right">
+                  <a href="{{ url_for('insurance.application_detail', app_id=app.id) }}" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs">
+                    Inspect
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Policies Registry -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-black text-sm text-slate-900 font-heading">Issued Policy Registry (Active Risk In-Force)</h3>
+          <span class="text-xs text-emerald-700 font-bold"><i class="fas fa-check-circle me-1"></i> Verified Insurer Issued</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+              <tr>
+                <th class="p-3">Policy Number</th>
+                <th class="p-3">Insured / Patient</th>
+                <th class="p-3">Plan / Insurer</th>
+                <th class="p-3">Sum Insured</th>
+                <th class="p-3">Premium / Frequency</th>
+                <th class="p-3">Next Due</th>
+                <th class="p-3 text-right">Schedule</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for pol in recent_pols %}
+              <tr class="hover:bg-slate-50/50">
+                <td class="p-3 font-mono font-bold text-[#004b87]">{{ pol.policy_number }}</td>
+                <td class="p-3 font-semibold text-slate-700">PAT-{{ pol.patient_id }}</td>
+                <td class="p-3 font-bold text-slate-900">{{ pol.product_name }}</td>
+                <td class="p-3 font-black text-emerald-700">₹{{ '%.0f'|format(pol.sum_insured) }}</td>
+                <td class="p-3 font-bold text-slate-800">₹{{ '%.0f'|format(pol.premium_amount) }} ({{ pol.premium_frequency }})</td>
+                <td class="p-3 text-slate-600">{{ pol.next_premium_due_date }}</td>
+                <td class="p-3 text-right">
+                  <a href="{{ url_for('insurance.download_policy_document', policy_id=pol.id) }}" target="_blank" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs">
+                    <i class="fas fa-file-pdf text-rose-500 me-1"></i> View
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    {% endif %}
+
+    <!-- ================= TAB: PARTNERS ================= -->
+    {% if active_tab == 'partners' %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for part in partners %}
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="px-2.5 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+            IRDAI Registered
+          </span>
+          <span class="font-mono text-xxs font-bold text-slate-400">Reg #{{ part.irda_reg_no }}</span>
+        </div>
+        <h4 class="font-black text-base text-slate-900 font-heading">{{ part.legal_name }}</h4>
+        <p class="text-slate-500 font-semibold">{{ part.brand_name }} &bull; CIN: {{ part.cin_number }}</p>
+        
+        <div class="p-3 bg-slate-50 rounded-xl space-y-1 text-xxs">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Claim Settlement Ratio:</span>
+            <strong class="text-emerald-700 font-black text-xs">{{ part.claim_settlement_ratio }}%</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Solvency Ratio:</span>
+            <strong class="text-slate-800 font-bold">{{ part.solvency_ratio }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Toll Free:</span>
+            <span class="text-slate-700 font-mono">{{ part.toll_free }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ================= TAB: PRODUCTS ================= -->
+    {% if active_tab == 'products' %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+            <tr>
+              <th class="p-3">Product Name</th>
+              <th class="p-3">Partner</th>
+              <th class="p-3">Category</th>
+              <th class="p-3">UIN Number</th>
+              <th class="p-3">Base Rate / Lakh</th>
+              <th class="p-3">Term Limits</th>
+              <th class="p-3">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for prod in products %}
+            <tr>
+              <td class="p-3 font-black text-slate-900">{{ prod.product_name }}</td>
+              <td class="p-3 font-semibold text-slate-700">{{ prod.partner_name }}</td>
+              <td class="p-3 font-bold text-sky-800">{{ prod.category }}</td>
+              <td class="p-3 font-mono text-slate-600">{{ prod.uin_number }}</td>
+              <td class="p-3 font-bold text-slate-800">₹{{ prod.base_annual_rate_per_lakh }}</td>
+              <td class="p-3 text-slate-600">{{ prod.min_term_years }} - {{ prod.max_term_years }} yrs</td>
+              <td class="p-3">
+                <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Published
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ================= TAB: AUDIT LOGS ================= -->
+    {% if active_tab == 'audit' %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+      <h3 class="font-black text-sm text-slate-900 font-heading">Statutory Insurance Audit Trail (Immutable Events)</h3>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+            <tr>
+              <th class="p-3">Timestamp</th>
+              <th class="p-3">Entity Type</th>
+              <th class="p-3">Entity ID</th>
+              <th class="p-3">Actor Role</th>
+              <th class="p-3">Action</th>
+              <th class="p-3">IP Address</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-mono text-xxs">
+            {% for log in audit_logs %}
+            <tr>
+              <td class="p-3 text-slate-500">{{ log.created_at }}</td>
+              <td class="p-3 font-bold text-slate-800">{{ log.entity_type }}</td>
+              <td class="p-3 text-slate-600">{{ log.entity_id }}</td>
+              <td class="p-3 font-bold text-indigo-700">{{ log.actor_role }}</td>
+              <td class="p-3 font-black text-slate-900">{{ log.action }}</td>
+              <td class="p-3 text-slate-400">{{ log.ip_address }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </section>
+
+</div>
+{% endblock %}
+

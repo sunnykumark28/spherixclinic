@@ -1,1 +1,0 @@
-from security.captcha import *

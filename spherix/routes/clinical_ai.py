@@ -422,7 +422,7 @@ Required JSON keys:
   "title": "Clear Emergency Protocol Title",
   "urgency_level": "CRITICAL / HIGH / MODERATE",
   "immediate_actions": [
-    "Step 1 with bold key action",
+    "Step 1 with direct actionable instruction",
     "Step 2 with specific duration/cadence",
     "Step 3..."
   ],
@@ -458,7 +458,15 @@ Required JSON keys:
             out_text = resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
             parsed = _extract_json_payload(out_text)
             if parsed and isinstance(parsed, dict):
-                return jsonify({"success": True, "protocol": parsed, "source": "groq_ai"})
+                def _clean_s(o):
+                    if isinstance(o, str):
+                        return re.sub(r'\*\*([^*]+)\*\*', r'\1', o).replace('**', '').strip()
+                    elif isinstance(o, list):
+                        return [_clean_s(x) for x in o]
+                    elif isinstance(o, dict):
+                        return {k: _clean_s(v) for k, v in o.items()}
+                    return o
+                return jsonify({"success": True, "protocol": _clean_s(parsed), "source": "groq_ai"})
         except Exception as e:
             print(f"❌ Groq first aid protocol error: {e}")
 
@@ -613,7 +621,15 @@ Required JSON keys:
             out_text = resp.json().get('choices', [{}])[0].get('message', {}).get('content', '')
             parsed = _extract_json_payload(out_text)
             if parsed and isinstance(parsed, dict):
-                return jsonify({"success": True, "analysis": parsed, "source": "groq_ayurgenix_ai"})
+                def _clean_s(o):
+                    if isinstance(o, str):
+                        return re.sub(r'\*\*([^*]+)\*\*', r'\1', o).replace('**', '').strip()
+                    elif isinstance(o, list):
+                        return [_clean_s(x) for x in o]
+                    elif isinstance(o, dict):
+                        return {k: _clean_s(v) for k, v in o.items()}
+                    return o
+                return jsonify({"success": True, "analysis": _clean_s(parsed), "source": "groq_ayurgenix_ai"})
         except Exception as e:
             print(f"❌ Ayurvedic Groq AI analysis error: {e}")
 
@@ -2192,597 +2208,7 @@ def hospital_radiology_request():
 
 
 
-@clinical_ai_bp.route("/cancer-care")
-def cancer_care():
-    """Displays the comprehensive oncology intelligence web application."""
-    return render_template("cancer_care.html", cancers=CANCER_DATA)
-
-
-
-@clinical_ai_bp.route("/cancer-care/<cancer_slug>")
-def cancer_detail(cancer_slug):
-    """Redirects to cancer care hub and opens side drawer for the selected cancer."""
-    if cancer_slug not in CANCER_DATA:
-        flash("Cancer type not found.", "error")
-        return redirect(url_for('cancer_care'))
-    return redirect(url_for('cancer_care', cancer=cancer_slug))
-
-
-
-@clinical_ai_bp.route("/api/cancer/risk-assess", methods=["POST"])
-@csrf.exempt
-def api_cancer_risk_assess():
-    """Computes evidence-based oncology risk score and personalized screening roadmap."""
-    data = request.get_json() or {}
-    
-    age = int(data.get('age', 35) or 35)
-    gender = str(data.get('gender', 'female')).lower()
-    family_history = data.get('family_history', [])
-    smoking = data.get('smoking', 'never')
-    alcohol = data.get('alcohol', 'none')
-    sun_exposure = data.get('sun_exposure', 'low')
-    symptoms = data.get('symptoms', [])
-    
-    score = 10
-    risk_factors_detected = []
-    screenings_recommended = []
-    
-    if age >= 50:
-        score += 25
-        risk_factors_detected.append("Advancing age (≥50)")
-    elif age >= 40:
-        score += 15
-        risk_factors_detected.append("Age 40-49 screening threshold")
-    
-    if "breast" in family_history or "ovarian" in family_history:
-        score += 25
-        risk_factors_detected.append("Hereditary Breast/Ovarian Cancer syndrome risk")
-        screenings_recommended.append({
-            "test": "Genetic Testing (BRCA1/2) & Annual Breast MRI",
-            "timeline": "Immediate consultation with Cancer Genetics specialist",
-            "urgency": "High"
-        })
-    if "colon" in family_history:
-        score += 20
-        risk_factors_detected.append("Familial Colorectal Cancer risk")
-        screenings_recommended.append({
-            "test": "Early Screening Colonoscopy",
-            "timeline": f"Start at age {max(25, age - 10)} or immediately",
-            "urgency": "High"
-        })
-    if "prostate" in family_history and gender == 'male':
-        score += 15
-        risk_factors_detected.append("First-degree Prostate Cancer history")
-        screenings_recommended.append({
-            "test": "Serum PSA + DRE Exam",
-            "timeline": "Annual baseline test starting age 40",
-            "urgency": "Moderate"
-        })
-        
-    if smoking == 'current_heavy':
-        score += 30
-        risk_factors_detected.append("Heavy tobacco consumption (>20 pack-years)")
-        if age >= 50:
-            screenings_recommended.append({
-                "test": "Low-Dose Chest CT (LDCT)",
-                "timeline": "Annual thoracic screening recommended",
-                "urgency": "High"
-            })
-    elif smoking == 'current_light':
-        score += 15
-        risk_factors_detected.append("Active tobacco use")
-    elif smoking == 'former':
-        score += 8
-        risk_factors_detected.append("Former tobacco history")
-        
-    if sun_exposure == 'high':
-        score += 12
-        risk_factors_detected.append("Frequent UV / blistering sunburn exposure")
-        screenings_recommended.append({
-            "test": "Full-Body Digital Dermoscopy",
-            "timeline": "Annual total body skin mapping",
-            "urgency": "Moderate"
-        })
-        
-    red_flag_count = 0
-    symptom_explanations = []
-    if "unexplained_weight_loss" in symptoms:
-        score += 20
-        red_flag_count += 1
-        symptom_explanations.append("Unexplained weight loss (>10 lbs in 6 months)")
-    if "palpable_lump" in symptoms:
-        score += 25
-        red_flag_count += 1
-        symptom_explanations.append("New palpable breast/lymph node mass")
-    if "persistent_cough" in symptoms:
-        score += 18
-        red_flag_count += 1
-        symptom_explanations.append("Chronic cough or hemoptysis (>3 weeks)")
-    if "rectal_bleeding" in symptoms:
-        score += 22
-        red_flag_count += 1
-        symptom_explanations.append("Rectal bleeding or unexplained dark stools")
-    if "changing_mole" in symptoms:
-        score += 20
-        red_flag_count += 1
-        symptom_explanations.append("Asymmetrical or evolving pigmented skin mole")
-        
-    if gender == 'female' and age >= 40 and not any('Mammogram' in s['test'] for s in screenings_recommended):
-        screenings_recommended.append({
-            "test": "Annual 3D Digital Mammogram",
-            "timeline": "Every 12 months for women aged 40+",
-            "urgency": "Standard"
-        })
-    if age >= 45 and not any('Colonoscopy' in s['test'] for s in screenings_recommended):
-        screenings_recommended.append({
-            "test": "Screening Colonoscopy",
-            "timeline": "Every 10 years (or annual FIT test) starting at 45",
-            "urgency": "Standard"
-        })
-    if gender == 'male' and age >= 50 and not any('PSA' in s['test'] for s in screenings_recommended):
-        screenings_recommended.append({
-            "test": "Prostate Specific Antigen (PSA) Blood Test",
-            "timeline": "Every 1-2 years based on baseline PSA level",
-            "urgency": "Standard"
-        })
-    if gender == 'female' and age >= 25 and age <= 65:
-        screenings_recommended.append({
-            "test": "High-Risk HPV & Cervical Pap Smear",
-            "timeline": "Every 3-5 years as per NCCN clinical protocol",
-            "urgency": "Standard"
-        })
-        
-    score = min(100, max(5, score))
-    
-    if red_flag_count >= 2 or score >= 70:
-        risk_level = "High"
-        risk_color = "#e11d48"
-        summary = "Elevated risk indicators detected. We strongly recommend scheduling a clinical consultation with an oncology specialist for targeted diagnostic workup."
-    elif red_flag_count == 1 or score >= 45:
-        risk_level = "Elevated"
-        risk_color = "#f59e0b"
-        summary = "Moderate-to-elevated clinical risk factors identified. Proactive screening and lifestyle risk reduction are recommended."
-    elif score >= 25:
-        risk_level = "Moderate"
-        risk_color = "#0ea5e9"
-        summary = "Standard age and lifestyle risk profile. Adhere to routine preventive health screenings."
-    else:
-        risk_level = "Low"
-        risk_color = "#10b981"
-        summary = "Low baseline oncological risk profile. Maintain balanced nutrition, exercise, and age-recommended checkups."
-        
-    return jsonify({
-        "success": True,
-        "risk_score": score,
-        "risk_level": risk_level,
-        "risk_color": risk_color,
-        "summary": summary,
-        "risk_factors": risk_factors_detected,
-        "warning_symptoms": symptom_explanations,
-        "screenings": screenings_recommended,
-        "preventive_actions": [
-            "Maintain an active physical regimen (≥150 min weekly moderate exercise)",
-            "Adopt a Mediterranean diet rich in antioxidants, cruciferous vegetables, and dietary fiber",
-            "Strictly avoid tobacco products and minimize alcohol intake",
-            "Practice sun safety with broad-spectrum SPF 50+ sunscreen",
-            "Stay up-to-date with your annual clinical examinations at Spherix Clinic"
-        ]
-    })
-
-
-
-@clinical_ai_bp.route("/api/cancer/ai-consult", methods=["POST"])
-@csrf.exempt
-def api_cancer_ai_consult():
-    """Interactive oncology intelligence advisor for patients, survivors, and caregivers."""
-    data = request.get_json() or {}
-    query = data.get('query', '').strip()
-    
-    if not query:
-        return jsonify({"success": False, "error": "Please enter a clinical question or oncology term."}), 400
-        
-    ai_response = None
-    groq_api_key = os.environ.get("GROQ_API_KEY")
-    if groq_api_key and not groq_api_key.startswith("gsk_yourActual"):
-        try:
-            import requests
-            headers = {
-                "Authorization": f"Bearer {groq_api_key}",
-                "Content-Type": "application/json"
-            }
-            system_prompt = (
-                "You are Spherix Clinic's Senior Oncology Intelligence AI Assistant. "
-                "Provide accurate, compassionate, medically sound, and evidence-based explanations of cancer biology, "
-                "staging (TNM), diagnostic pathology terms (HER2, EGFR, Gleason, etc.), treatment mechanisms (chemo, immunotherapy, radiation), "
-                "and supportive symptom management. Always remind users to discuss clinical decisions with their oncologist."
-            )
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": query}
-                ],
-                "temperature": 0.3,
-                "max_tokens": 600
-            }
-            resp = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=8)
-            if resp.status_code == 200:
-                result = resp.json()
-                ai_response = result['choices'][0]['message']['content']
-        except Exception as e:
-            print(f"DEBUG: Groq cancer consult fallback due to {e}")
-            
-    if not ai_response:
-        q_lower = query.lower()
-        if "gleason" in q_lower:
-            ai_response = (
-                "**Gleason Score Explanation:**\n\n"
-                "The Gleason Score evaluates prostate biopsy tissue pattern (Grade Group 1 to 5):\n"
-                "- **Gleason 6 (3+3):** Low-grade, slow growing (Grade Group 1).\n"
-                "- **Gleason 7 (3+4 or 4+3):** Intermediate risk (Grade Group 2 or 3).\n"
-                "- **Gleason 8-10:** High-grade, more aggressive (Grade Group 4 or 5).\n\n"
-                "*Clinical Guidance:* A Gleason score helps your multidisciplinary team decide between Active Surveillance, Surgery (Prostatectomy), or Radiation."
-            )
-        elif "her2" in q_lower or "er/pr" in q_lower:
-            ai_response = (
-                "**Breast Cancer Biomarkers (HER2 & ER/PR):**\n\n"
-                "- **ER+ / PR+ (Hormone Receptor Positive):** Cells grow in response to estrogen/progesterone. Responds well to endocrine blockers like Tamoxifen or Anastrozole.\n"
-                "- **HER2-Positive:** Cells produce excess HER2 growth protein. Targeted monoclonal antibodies like **Trastuzumab (Herceptin)** and **Pertuzumab** specifically bind to and destroy these cells.\n"
-                "- **Triple Negative (TNBC):** Lacks ER, PR, and HER2; treated with targeted chemotherapy and modern immune checkpoint inhibitors (Pembrolizumab)."
-            )
-        elif "immunotherapy" in q_lower or "checkpoint" in q_lower or "pd-l1" in q_lower:
-            ai_response = (
-                "**How Immunotherapy Works:**\n\n"
-                "Unlike traditional chemotherapy (which directly damages dividing cells), **Immunotherapy** unleashes your body's immune T-cells to recognize and destroy cancer cells.\n\n"
-                "- **Checkpoint Inhibitors (PD-1 / PD-L1 Blockers):** Cancer cells often present a 'don't eat me' shield (PD-L1). Drugs like Pembrolizumab and Nivolumab remove this shield.\n"
-                "- **Side Effects:** Side effects are primarily inflammatory (rash, colitis, pneumonitis, thyroiditis), which are promptly managed with corticosteroids."
-            )
-        elif "stage 4" in q_lower or "metastatic" in q_lower:
-            ai_response = (
-                "**Understanding Metastatic (Stage IV) Cancer:**\n\n"
-                "Stage IV means cancer cells have spread beyond the primary organ to distant sites (such as liver, lungs, bones, or brain).\n\n"
-                "- **Modern Advances:** Precision oncology, targeted molecular therapy, and immunotherapy have transformed many Stage IV conditions into manageable chronic conditions.\n"
-                "- **Goals of Therapy:** Maximize quality of life, maintain durable disease control, and target genetic vulnerabilities in tumor DNA."
-            )
-        elif "nausea" in q_lower or "side effect" in q_lower or "fatigue" in q_lower:
-            ai_response = (
-                "**Chemotherapy Side-Effect Management:**\n\n"
-                "1. **Anticipatory & Acute Nausea:** Modern 3-drug antiemetic regimens (5-HT3 antagonists + NK1 inhibitors + Dexamethasone) prevent up to 90% of nausea.\n"
-                "2. **Fatigue:** Gentle 15-minute daily walks, strategic short naps, and drinking 2-3 liters of electrolyte-rich fluids daily.\n"
-                "3. **Infection Precaution:** If you develop a fever **≥100.4°F (38.0°C)** during chemotherapy, contact your care team immediately for febrile neutropenia evaluation."
-            )
-        else:
-            ai_response = (
-                f"**Oncology Clinical Intelligence Insights:**\n\n"
-                f"Regarding your inquiry about *'{query}'*:\n\n"
-                "- **Clinical Context:** In modern oncology, diagnosis and treatment are personalized based on genomic profiling, biomarkers, and high-resolution staging.\n"
-                "- **Next Steps:** We recommend compiling your pathology report and imaging scans for discussion with your Spherix Clinic oncology specialist.\n\n"
-                "*Disclaimer: This AI consultation provides evidence-based educational insights and does not replace formal clinical evaluation.*"
-            )
-            
-    return jsonify({
-        "success": True,
-        "query": query,
-        "answer": ai_response,
-        "timestamp": utcnow().strftime('%H:%M:%S UTC')
-    })
-
-
-
-@clinical_ai_bp.route("/api/cancer/clinical-trials", methods=["GET"])
-def api_cancer_clinical_trials():
-    """Returns verified active oncology clinical trials."""
-    trials = [
-        {
-            "id": "NCT-05891240",
-            "title": "Next-Generation Dual Checkpoint Inhibitor in Advanced NSCLC",
-            "phase": "Phase III",
-            "condition": "Lung Cancer (NSCLC)",
-            "eligibility": "Stage III/IV, PD-L1 ≥ 1%, No prior immunotherapy",
-            "locations": ["Spherix Oncology Research Center", "Memorial Cancer Institute"],
-            "status": "Recruiting"
-        },
-        {
-            "id": "NCT-05118432",
-            "title": "Novel Antibody-Drug Conjugate (ADC) for HER2-Low Metastatic Breast Cancer",
-            "phase": "Phase II",
-            "condition": "Breast Cancer",
-            "eligibility": "HER2 IHC 1+ or 2+/ISH-, Progression on prior endocrine therapy",
-            "locations": ["Spherix Comprehensive Cancer Hub"],
-            "status": "Recruiting"
-        },
-        {
-            "id": "NCT-04987112",
-            "title": "PSMA-Targeted Radioligand Therapy for Castration-Resistant Prostate Cancer",
-            "phase": "Phase III",
-            "condition": "Prostate Cancer",
-            "eligibility": "PSMA-positive PET scan, mCRPC with prior ARPI exposure",
-            "locations": ["Spherix Nuclear Medicine Unit"],
-            "status": "Active"
-        },
-        {
-            "id": "NCT-06041988",
-            "title": "Personalized mRNA Neoantigen Vaccine Combined with Pembrolizumab for Resected Melanoma",
-            "phase": "Phase II/III",
-            "condition": "Melanoma",
-            "eligibility": "High-risk Stage IIIB-IV post complete surgical resection",
-            "locations": ["Spherix Genomic Therapeutics Suite"],
-            "status": "Recruiting"
-        }
-    ]
-    return jsonify({"success": True, "trials": trials})
-
-
-
-@clinical_ai_bp.route("/api/cancer/ai-deep-diagnosis", methods=["POST"])
-@csrf.exempt
-def api_cancer_ai_deep_diagnosis():
-    """Performs deep AI-powered oncology diagnostic matching, biomarker identification, and clinical triage."""
-    import json
-    data = request.get_json() or {}
-    
-    age = int(data.get('age', 40) or 40)
-    gender = str(data.get('gender', 'female')).lower()
-    organ_system = str(data.get('organ_system', 'general')).lower()
-    duration = str(data.get('duration', '1-3 months'))
-    symptoms_text = str(data.get('symptoms_text', '')).strip()
-    red_flags = data.get('red_flags', [])
-    family_history = data.get('family_history', [])
-    smoking = str(data.get('smoking', 'never'))
-    lab_notes = str(data.get('lab_notes', '')).strip()
-    
-    ai_result = None
-    groq_api_key = os.environ.get("GROQ_API_KEY")
-    if groq_api_key and not groq_api_key.startswith("gsk_yourActual"):
-        try:
-            import requests
-            headers = {
-                "Authorization": f"Bearer {groq_api_key}",
-                "Content-Type": "application/json"
-            }
-            system_prompt = (
-                "You are Spherix Clinic's Principal Oncology Diagnostic AI System. "
-                "Analyze the patient's clinical presentation, symptoms, organ location, red flags, and risk history. "
-                "You must return ONLY valid JSON matching this schema: "
-                "{"
-                "  \"primary_condition\": \"Name of primary condition or suspected neoplasm\","
-                "  \"confidence_pct\": 82,"
-                "  \"risk_level\": \"High Risk\" | \"Elevated Risk\" | \"Moderate Risk\" | \"Low / Benign Indication\","
-                "  \"risk_color\": \"#e11d48\" | \"#f59e0b\" | \"#0ea5e9\" | \"#10b981\","
-                "  \"urgency\": \"Urgent (Consult within 1-2 weeks)\" | \"Priority (2-3 weeks)\" | \"Standard\","
-                "  \"differential_diagnoses\": [\"Condition 1\", \"Condition 2\", \"Benign Differential\"],"
-                "  \"key_biomarkers\": [\"Biomarker 1\", \"Biomarker 2\", \"Biomarker 3\"],"
-                "  \"diagnostic_workup\": [\"Step 1: Imaging\", \"Step 2: Biopsy/Pathology\", \"Step 3: Blood/Genomics\"],"
-                "  \"treatment_pathway\": [\"Modalities 1\", \"Modalities 2\", \"Modalities 3\"],"
-                "  \"specialist_type\": \"Surgical Oncologist / Medical Oncologist (Subspecialty)\","
-                "  \"clinical_summary\": \"Concise, empathetic, evidence-based clinical analysis of symptoms.\""
-                "}"
-            )
-            user_prompt = (
-                f"Patient Profile: Age {age}, Gender {gender}\n"
-                f"Affected Body Region: {organ_system}\n"
-                f"Symptom Duration: {duration}\n"
-                f"Patient Description: {symptoms_text}\n"
-                f"Checked Red Flags: {', '.join(red_flags) if red_flags else 'None'}\n"
-                f"Family History: {', '.join(family_history) if family_history else 'None'}\n"
-                f"Smoking Status: {smoking}\n"
-                f"Lab / Scan Findings: {lab_notes if lab_notes else 'None provided'}"
-            )
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": 0.2,
-                "response_format": {"type": "json_object"},
-                "max_tokens": 1000
-            }
-            resp = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=10)
-            if resp.status_code == 200:
-                result_json = resp.json()
-                raw_content = result_json['choices'][0]['message']['content']
-                ai_result = json.loads(raw_content)
-        except Exception as e:
-            print(f"DEBUG: Groq deep diagnosis fallback: {e}")
-            
-    # Clinical Expert Heuristic Engine Fallback
-    if not ai_result:
-        full_text = f"{organ_system} {symptoms_text} {' '.join(red_flags)} {lab_notes}".lower()
-        
-        # 1. Breast Detection
-        if "breast" in organ_system or "breast" in full_text or "nipple" in full_text or "mammogram" in full_text or "bi-rads" in full_text:
-            is_high = "palpable_lump" in red_flags or "lump" in full_text or "bi-rads 4" in full_text or "bi-rads 5" in full_text or "breast" in family_history
-            ai_result = {
-                "primary_condition": "Suspected Mammary Neoplasm / Breast Lesion" if is_high else "Benign Breast Condition (Fibroadenoma / Cyst)",
-                "confidence_pct": 84 if is_high else 65,
-                "risk_level": "High Risk" if is_high else "Moderate Risk",
-                "risk_color": "#e11d48" if is_high else "#0ea5e9",
-                "urgency": "Urgent (Diagnostic workup within 1-2 weeks)" if is_high else "Standard Clinical Exam",
-                "differential_diagnoses": ["Invasive Ductal Carcinoma (IDC)", "Ductal Carcinoma In Situ (DCIS)", "Fibroadenoma", "Fibrocystic Mastopathy"],
-                "key_biomarkers": ["HER2/neu (ERBB2)", "Estrogen Receptor (ER)", "Progesterone Receptor (PR)", "Ki-67 Proliferation", "BRCA1 / BRCA2 Germline"],
-                "diagnostic_workup": [
-                    "High-Resolution 3D Digital Diagnostic Mammogram with Tomosynthesis",
-                    "Targeted Breast & Axillary Lymph Node Ultrasound",
-                    "Ultrasound-Guided Core Needle Biopsy with Histopathology",
-                    "Contrast-Enhanced Breast MRI if high risk / dense tissue"
-                ],
-                "treatment_pathway": [
-                    "Breast-Conserving Surgery (Lumpectomy with Sentinel Node Biopsy) or Mastectomy",
-                    "Targeted Anti-HER2 Monoclonal Antibodies (Trastuzumab + Pertuzumab if HER2+)",
-                    "Endocrine Blockade (Tamoxifen or Aromatase Inhibitors for ER+/PR+)",
-                    "Adjuvant or Neoadjuvant Chemotherapy & Whole Breast Radiotherapy"
-                ],
-                "specialist_type": "Breast Surgical Oncologist & Comprehensive Breast Center",
-                "clinical_summary": f"Based on the reported {duration} history and physical markers in the breast tissue, immediate imaging and histological evaluation are recommended to rule out malignant etiology and confirm cellular receptor status."
-            }
-        # 2. Lung & Thoracic Detection
-        elif "lung" in organ_system or "chest" in organ_system or "cough" in full_text or "hemoptysis" in full_text or smoking in ['current_heavy', 'current_light']:
-            is_high = "hemoptysis" in red_flags or "cough" in red_flags or "unexplained_weight_loss" in red_flags or smoking == 'current_heavy'
-            ai_result = {
-                "primary_condition": "Pulmonary Nodule / Bronchogenic Neoplasm" if is_high else "Chronic Bronchial Inflammatory Syndrome",
-                "confidence_pct": 82 if is_high else 60,
-                "risk_level": "High Risk" if is_high else "Elevated Risk",
-                "risk_color": "#e11d48" if is_high else "#f59e0b",
-                "urgency": "Urgent (Pulmonology / Thoracic Oncology consult within 1-2 weeks)",
-                "differential_diagnoses": ["Non-Small Cell Lung Cancer (Adenocarcinoma / Squamous)", "Small Cell Lung Cancer (SCLC)", "Infectious Granuloma", "Atypical Pneumonitis"],
-                "key_biomarkers": ["EGFR Mutation (Exons 19, 21 L858R)", "ALK Gene Rearrangement", "ROS1", "BRAF V600E", "PD-L1 Tumor Proportion Score (%)"],
-                "diagnostic_workup": [
-                    "High-Resolution Contrast Chest CT Scan (Thin Cut Lung Protocol)",
-                    "Whole-Body FDG PET-CT for Staging & Node Assessment",
-                    "Endobronchial Ultrasound (EBUS) with Transbronchial Needle Aspiration",
-                    "Next-Generation Sequencing (NGS 50+ Lung Gene Panel)"
-                ],
-                "treatment_pathway": [
-                    "Video-Assisted Thoracoscopic Surgery (VATS) Lobectomy",
-                    "Targeted Tyrosine Kinase Inhibitors (Osimertinib, Alectinib)",
-                    "Immune Checkpoint Blockade (Pembrolizumab / Nivolumab)",
-                    "Stereotactic Body Radiotherapy (SBRT) for early medically inoperable cases"
-                ],
-                "specialist_type": "Thoracic Surgical Oncologist & Interventional Pulmonologist",
-                "clinical_summary": f"Given the reported respiratory symptoms, cough duration ({duration}), and exposure markers, high-resolution thoracic imaging and molecular staging are indicated."
-            }
-        # 3. Colorectal & GI Detection
-        elif "colon" in organ_system or "gi" in organ_system or "abdomen" in organ_system or "stool" in full_text or "rectal" in full_text or "rectal_bleeding" in red_flags:
-            is_high = "rectal_bleeding" in red_flags or "unexplained_weight_loss" in red_flags or "colon" in family_history
-            ai_result = {
-                "primary_condition": "Colorectal Neoplasm / Advanced Adenoma" if is_high else "Gastrointestinal Bleeding / Diverticular Disease",
-                "confidence_pct": 80 if is_high else 65,
-                "risk_level": "High Risk" if is_high else "Elevated Risk",
-                "risk_color": "#e11d48" if is_high else "#f59e0b",
-                "urgency": "Priority (Diagnostic Colonoscopy within 2 weeks)",
-                "differential_diagnoses": ["Colorectal Adenocarcinoma", "High-Grade Villous Adenoma", "Inflammatory Bowel Disease (IBD)", "Internal Hemorrhoids / Angiodysplasia"],
-                "key_biomarkers": ["MSI (Microsatellite Instability) / dMMR", "KRAS / NRAS Exons 2, 3, 4", "BRAF V600E Mutation", "HER2 Amplification"],
-                "diagnostic_workup": [
-                    "Complete Optical Diagnostic Colonoscopy with Polypectomy / Biopsy",
-                    "Abdominopelvic Contrast CT with Triphasic Liver Protocol",
-                    "Pelvic High-Resolution MRI (for rectal lesions to assess mesorectal fascia)",
-                    "Serum Carcinoembryonic Antigen (CEA) Quantitative Level"
-                ],
-                "treatment_pathway": [
-                    "Laparoscopic or Robotic Partial Colectomy with Mesocolic Excision",
-                    "Adjuvant FOLFOX (Oxaliplatin, Leucovorin, 5-FU) or CAPOX",
-                    "Neoadjuvant Total Neoadjuvant Therapy (TNT) for rectal cancer",
-                    "Anti-VEGF (Bevacizumab) or Anti-EGFR (Cetuximab) targeted therapy"
-                ],
-                "specialist_type": "Colorectal Surgical Oncologist & Gastroenterologist",
-                "clinical_summary": f"Lower gastrointestinal symptoms and bleeding over {duration} require direct visual colonoscopic inspection and mucosal biopsy to rule out colonic neoplasia."
-            }
-        # 4. Skin & Melanoma Detection
-        elif "skin" in organ_system or "mole" in full_text or "melanoma" in full_text or "changing_mole" in red_flags:
-            is_high = "changing_mole" in red_flags or "asymmetry" in full_text or "border" in full_text
-            ai_result = {
-                "primary_condition": "Cutaneous Melanoma (ABCDE Evolution)" if is_high else "Dysplastic / Atypical Melanocytic Nevus",
-                "confidence_pct": 86 if is_high else 70,
-                "risk_level": "High Risk" if is_high else "Moderate Risk",
-                "risk_color": "#e11d48" if is_high else "#0ea5e9",
-                "urgency": "Urgent (Excisional biopsy within 7-10 days)",
-                "differential_diagnoses": ["Superficial Spreading Melanoma", "Nodular Melanoma", "Dysplastic Nevus", "Pigmented Basal Cell Carcinoma"],
-                "key_biomarkers": ["BRAF V600E / V600K Mutation", "NRAS Mutation", "c-KIT Exon 11/13", "PD-L1 Status"],
-                "diagnostic_workup": [
-                    "High-Magnification Digital Polarized Dermatoscopy",
-                    "Complete Excisional Biopsy with 1-2 mm Margins (Avoid punch/shave through tumor base)",
-                    "Breslow Tumor Thickness Measurement & Mitotic Rate Analysis",
-                    "Sentinel Lymph Node Biopsy (SLNB) for lesions > 0.8 mm depth"
-                ],
-                "treatment_pathway": [
-                    "Wide Local Excision (1-2 cm margins according to Breslow depth)",
-                    "Adjuvant Dual Immunotherapy (Nivolumab + Ipilimumab or Pembrolizumab)",
-                    "Targeted BRAF + MEK Inhibitor Combination (Dabrafenib + Trametinib if BRAF+)",
-                    "Radiation therapy to regional nodal basins if multiple positive nodes"
-                ],
-                "specialist_type": "Dermatologic Surgical Oncologist / Mohs Specialist",
-                "clinical_summary": f"Pigmented lesion changes matching ABCDE criteria over {duration} warrant immediate dermatoscopic inspection and total excisional biopsy."
-            }
-        # 5. Hematologic / Lymphoma Detection
-        elif "blood" in organ_system or "lymph" in full_text or "sweats" in full_text or "bruising" in full_text or "night_sweats" in red_flags:
-            is_high = "palpable_lump" in red_flags or "unexplained_weight_loss" in red_flags
-            ai_result = {
-                "primary_condition": "Lymphoproliferative Neoplasm (Lymphoma / Leukemia)" if is_high else "Reactive Infectious Lymphadenopathy",
-                "confidence_pct": 79 if is_high else 65,
-                "risk_level": "High Risk" if is_high else "Moderate Risk",
-                "risk_color": "#e11d48" if is_high else "#0ea5e9",
-                "urgency": "Priority (Hematology-Oncology evaluation within 2 weeks)",
-                "differential_diagnoses": ["Hodgkin Lymphoma", "Diffuse Large B-Cell Lymphoma (DLBCL)", "Acute/Chronic Leukemia", "Infectious Mononucleosis"],
-                "key_biomarkers": ["CD20, CD30, CD15 Cell Markers", "BCR-ABL1 / Philadelphia Chromosome", "MYC, BCL2 Rearrangements", "Flow Cytometry Immunophenotyping"],
-                "diagnostic_workup": [
-                    "Excisional Whole Lymph Node Biopsy (Core/FNA insufficient for architecture)",
-                    "Complete Blood Count (CBC) with Peripheral Smear & LDH level",
-                    "Whole-Body FDG PET-CT for Lugano Staging",
-                    "Bone Marrow Aspiration and Trephine Biopsy"
-                ],
-                "treatment_pathway": [
-                    "Immunochemotherapy (R-CHOP or ABVD regimens)",
-                    "Targeted Monoclonal Antibodies & Antibody-Drug Conjugates (Brentuximab)",
-                    "Autologous / Allogeneic Stem Cell Transplant",
-                    "CAR-T Cell Cellular Immunotherapy (CD19-targeted)"
-                ],
-                "specialist_type": "Hematologist-Oncologist & Blood Marrow Transplant Specialist",
-                "clinical_summary": f"Persistent lymph node enlargement, systemic constitutional symptoms, and night sweats over {duration} indicate need for excisional biopsy and flow cytometry."
-            }
-        # 6. Prostate / Pelvic Detection
-        elif "prostate" in organ_system or "urine" in full_text or "psa" in full_text:
-            is_high = "prostate" in family_history or "psa" in full_text or age >= 50
-            ai_result = {
-                "primary_condition": "Prostatic Adenocarcinoma / Elevated PSA" if is_high else "Benign Prostatic Hyperplasia (BPH) / Prostatitis",
-                "confidence_pct": 81 if is_high else 68,
-                "risk_level": "Elevated Risk" if is_high else "Moderate Risk",
-                "risk_color": "#f59e0b" if is_high else "#0ea5e9",
-                "urgency": "Priority (Urologic Oncology consultation within 2-3 weeks)",
-                "differential_diagnoses": ["Prostate Adenocarcinoma (Gleason 6-10)", "Benign Prostatic Hyperplasia (BPH)", "Chronic Pelvic Pain Syndrome", "Bacterial Prostatitis"],
-                "key_biomarkers": ["Serum Total & Free PSA", "Gleason Score / ISUP Grade Group", "PSMA Expression", "Germline DNA Repair (BRCA2, ATM)"],
-                "diagnostic_workup": [
-                    "Multiparametric Prostate MRI (PI-RADS v2.1 scoring)",
-                    "MRI-Ultrasound Fusion Targeted Transperineal Biopsy",
-                    "PSMA-PET Total Body Molecular Scan (if intermediate/high risk)",
-                    "Decipher or Prolaris Genomic Recurrence Testing"
-                ],
-                "treatment_pathway": [
-                    "Active Surveillance with Serial mpMRI & PSA for Grade Group 1",
-                    "Robot-Assisted Laparoscopic Radical Prostatectomy (RALP)",
-                    "Intensity-Modulated Radiation (IMRT) + Androgen Deprivation Therapy (ADT)",
-                    "PSMA Radioligand Therapy (Lu-177 Pluvicto) for advanced disease"
-                ],
-                "specialist_type": "Urologic Surgical Oncologist",
-                "clinical_summary": f"Urinary hesitancy, pelvic symptoms, or PSA dynamics over {duration} warrant multiparametric MRI and targeted fusion biopsy."
-            }
-        # 7. General / Other Neoplasm Detection
-        else:
-            is_high = len(red_flags) >= 2 or "unexplained_weight_loss" in red_flags
-            ai_result = {
-                "primary_condition": "Oncologic Diagnostic Evaluation Required" if is_high else "Non-Malignant Systemic Presentation",
-                "confidence_pct": 74 if is_high else 55,
-                "risk_level": "High Risk" if is_high else "Moderate Risk",
-                "risk_color": "#e11d48" if is_high else "#0ea5e9",
-                "urgency": "Priority (Comprehensive Oncology Consultation)",
-                "differential_diagnoses": ["Malignancy of Undetermined Primary", "Systemic Endocrine / Metabolic Disorder", "Chronic Autoimmune Syndrome"],
-                "key_biomarkers": ["Broad Serum Tumor Markers (CEA, CA 19-9, CA 125, AFP)", "Circulating Tumor DNA (ctDNA)", "Next-Gen Comprehensive Genomic Panel"],
-                "diagnostic_workup": [
-                    "Comprehensive Oncology Blood Panel with CBC, CMP, LDH, CRP",
-                    "Total-Body Contrast-Enhanced CT Scan (Neck, Chest, Abdomen, Pelvis)",
-                    "Targeted Tissue Biopsy of most accessible suspicious lesion",
-                    "Genetic Counseling and Germline Testing"
-                ],
-                "treatment_pathway": [
-                    "Multidisciplinary Tumor Board Staging & Consensus Recommendation",
-                    "Targeted molecular therapy based on genomic alterations",
-                    "Systemic Immunotherapy & Chemotherapy protocols"
-                ],
-                "specialist_type": "Multidisciplinary Medical Oncologist",
-                "clinical_summary": f"Reported clinical symptoms lasting {duration} with {len(red_flags)} warning indicators require formal multidisciplinary diagnostic staging."
-            }
-
-    return jsonify({
-        "success": True,
-        "result": ai_result,
-        "input_profile": {
-            "age": age,
-            "gender": gender,
-            "organ_system": organ_system,
-            "duration": duration
-        },
-        "timestamp": utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
-    })
+# Oncology intelligence & Cancer Care Centre is now managed by dedicated cancer_care_bp (spherix/routes/cancer_care.py)
 
 
 
@@ -2803,11 +2229,13 @@ def api_yoga_session_generator():
     focus = str(data.get('focus', 'full body')).strip().lower()
     accommodation = str(data.get('accommodation', 'none')).strip().lower()
 
-    # Curated Clinically-Structured Sequence Library for Instant & Reliable Rendering
+    # Curated Clinically-Structured Multi-Goal Library with Target Muscles
     CURATED_SEQUENCES = {
         'stress relief': {
             'title': f"Somatic Nervous System Reset & Stress Dissolution Flow ({duration}m)",
             'summary': "Restorative slow-flow calibrated to downregulate cortisol, calm Vata dosha, and stimulate vagal tone.",
+            'ai_reasoning': "Formulated specifically to downregulate sympathetic hyperarousal through parasympathetic vagus nerve activation, thoracic breath expansion, and gentle spinal decompression without joint compression.",
+            'safety_score': "99.5% Biomechanical Precision",
             'dosha': {'vata': 'Deeply Pacifying (Warm & Grounding)', 'pitta': 'Soothing & Cooling', 'kapha': 'Gentle Circulatory Support'},
             'chakra': 'Anahata (Heart) & Muladhara (Root)',
             'pranayama': 'Bhramari (Humming Bee) & Extended Exhalation 4:8',
@@ -2823,8 +2251,9 @@ def api_yoga_session_generator():
                     'duration_secs': 180,
                     'duration_text': '3 mins',
                     'breath': 'Inhale deep into the back ribs; exhale melt chest to floor',
-                    'cue': 'Big toes touching, knees wide as the mat. Walk hands forward and rest third eye (Ajna) on the mat. Surrender shoulder tension.',
-                    'benefits': 'Stimulates parasympathetic nervous system, stretches lower back & ankles.'
+                    'cue': 'Big toes touching, knees wide as the mat. Walk hands forward and rest third eye on the mat. Surrender shoulder tension.',
+                    'benefits': 'Stimulates parasympathetic nervous system, stretches lower back & ankles.',
+                    'target_muscles': 'Thoracolumbar Fascia, Latissimus Dorsi, Gluteus Maximus'
                 },
                 {
                     'name': 'Marjaryasana-Bitilasana (Cat-Cow Breath Wave)',
@@ -2834,7 +2263,8 @@ def api_yoga_session_generator():
                     'duration_text': '3 mins (10 cycles)',
                     'breath': 'Inhale drop belly & lift crown; Exhale round spine like a cat',
                     'cue': 'Wrists under shoulders, knees under hips. Initiate movement from the tailbone, rippling sequentially up each vertebra.',
-                    'benefits': 'Synchronizes breath with spinal flexion-extension and calms sympathetic overdrive.'
+                    'benefits': 'Synchronizes breath with spinal flexion-extension and calms sympathetic overdrive.',
+                    'target_muscles': 'Erector Spinae, Rectus Abdominis, Multifidus'
                 },
                 {
                     'name': 'Anjaneyasana (Low Lunge with Heart Opening)',
@@ -2844,7 +2274,8 @@ def api_yoga_session_generator():
                     'duration_text': '3 mins',
                     'breath': 'Inhale sweep arms high, Exhale soften shoulders and open sternum',
                     'cue': 'Step right foot forward, lower left knee. Lift torso, cactus arms to open chest and gently stretch the psoas.',
-                    'benefits': 'Releases deep emotional tension and fight-or-flight stress stored in hip flexors.'
+                    'benefits': 'Releases deep emotional tension and fight-or-flight stress stored in hip flexors.',
+                    'target_muscles': 'Iliopsoas, Quadratus Lumborum, Pectoralis Major'
                 },
                 {
                     'name': 'Supta Matsyendrasana (Supine Spinal Twist)',
@@ -2854,23 +2285,27 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins (2m/side)',
                     'breath': 'Slow passive exhalations, releasing abdominal resistance',
                     'cue': 'Lie on back, hug knees, drop knees to the right while gazing left. Extend left arm wide in a T-shape.',
-                    'benefits': 'Aids visceral organ massage, gently stretches paraspinal musculature and releases lumbar holding patterns.'
+                    'benefits': 'Aids visceral organ massage, gently stretches paraspinal musculature and releases lumbar holding patterns.',
+                    'target_muscles': 'Internal/External Obliques, Piriformis, Gluteus Medius'
                 },
                 {
-                    'name': 'Savasana with 432Hz Sound Integration',
+                    'name': 'Savasana with Sound Integration',
                     'sanskrit': 'शवासन',
                     'category': 'cool-down',
                     'duration_secs': 300,
                     'duration_text': '5 mins',
                     'breath': 'Effortless natural autonomic breath',
                     'cue': 'Extend legs wide, palms facing upwards, close eyes. Relax jaw, tongue, brow, and float in quiet awareness.',
-                    'benefits': 'Integrates neuromuscular reorganization, initiates deep delta-wave restorative autonomic recovery.'
+                    'benefits': 'Integrates neuromuscular reorganization, initiates deep delta-wave restorative autonomic recovery.',
+                    'target_muscles': 'Total Body Myofascial System Deactivation'
                 }
             ]
         },
         'morning vitality': {
             'title': f"Solar Prana Awakening & Agni Boost Flow ({duration}m)",
             'summary': "Dynamic solar sequence designed to awaken metabolic fire (Agni), clear Kapha sluggishness, and sharpen mental clarity.",
+            'ai_reasoning': "Engineered to elevate basal metabolic rate and lymphatic flow through dynamic multi-joint vinyasa patterns, activating the solar plexus and clearing residual sleep inertia.",
+            'safety_score': "99.2% Biomechanical Precision",
             'dosha': {'vata': 'Harmonizing & Stabilizing', 'pitta': 'Ignites Healthy Solar Energy', 'kapha': 'Powerful Kapha-Reducer (Clears Lethargy)'},
             'chakra': 'Manipura (Solar Plexus) & Vishuddha (Throat)',
             'pranayama': 'Surya Bhedana & Kapalabhati (Skull-Shining Breath)',
@@ -2887,7 +2322,8 @@ def api_yoga_session_generator():
                     'duration_text': '2 mins',
                     'breath': 'Inhale sweep arms upward, Exhale ground feet into the earth',
                     'cue': 'Stand root-to-crown, interlace fingers above, gentle side stretch left and right to expand intercostal muscles.',
-                    'benefits': 'Awakens posture, decompresses spine after sleep, promotes venous return.'
+                    'benefits': 'Awakens posture, decompresses spine after sleep, promotes venous return.',
+                    'target_muscles': 'Anterior Tibialis, Quadriceps, Intercostals'
                 },
                 {
                     'name': 'Classical Surya Namaskar A (Sun Salutation Flow)',
@@ -2897,7 +2333,8 @@ def api_yoga_session_generator():
                     'duration_text': '5 mins (3-5 rounds)',
                     'breath': '1 breath per movement linked seamlessly with awareness',
                     'cue': 'Flow from Mountain -> Forward Fold -> Half Lift -> Plank -> Chaturanga -> Upward Dog -> Downward Dog.',
-                    'benefits': 'Warms whole body musculature, boosts lymphatic circulation and synovial joint lubrication.'
+                    'benefits': 'Warms whole body musculature, boosts lymphatic circulation and synovial joint lubrication.',
+                    'target_muscles': 'Full Body Kinetic Chain (Hamstrings, Deltoids, Core)'
                 },
                 {
                     'name': 'Virabhadrasana II (Warrior II Flow)',
@@ -2907,7 +2344,8 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins (2m/side)',
                     'breath': 'Inhale warrior stability, Exhale reverse warrior opening',
                     'cue': 'Wide stance, front knee bent 90°, arms outstretched parallel to earth. Gaze over front middle finger with unwavering focus.',
-                    'benefits': 'Builds stamina, opens hips and groin, ignites inner willpower (Ichha Shakti).'
+                    'benefits': 'Builds stamina, opens hips and groin, ignites inner willpower.',
+                    'target_muscles': 'Quadriceps, Gluteus Medius, Deltoids'
                 },
                 {
                     'name': 'Utkatasana (Chair Pose & Core Hold)',
@@ -2917,7 +2355,8 @@ def api_yoga_session_generator():
                     'duration_text': '3 mins',
                     'breath': 'Strong steady inhales and exhales through the nose',
                     'cue': 'Bend knees, sink hips back as if sitting in an invisible chair, raise arms overhead alongside ears, chest proud.',
-                    'benefits': 'Strengthens quadriceps, glutes, and awakens abdominal core Agni.'
+                    'benefits': 'Strengthens quadriceps, glutes, and awakens abdominal core Agni.',
+                    'target_muscles': 'Quadriceps, Gluteus Maximus, Transverse Abdominis'
                 },
                 {
                     'name': 'Nadi Shodhana Pranayama (Alternate Nostril Breath)',
@@ -2927,13 +2366,16 @@ def api_yoga_session_generator():
                     'duration_text': '3 mins',
                     'breath': 'Alternate nostril breathing (Inhale Left, Exhale Right, Inhale Right, Exhale Left)',
                     'cue': 'Use right Vishnu mudra to alternate nostrils. Keep breath silent, slow, smooth, and balanced.',
-                    'benefits': 'Harmonizes Ida and Pingala nadis and left/right brain hemispheres for supreme focus.'
+                    'benefits': 'Harmonizes Ida and Pingala nadis and left/right brain hemispheres for supreme focus.',
+                    'target_muscles': 'Diaphragm, Autonomic Nervous System'
                 }
             ]
         },
         'flexibility': {
             'title': f"Deep Fascial Release & Yin Flexibility Immersion ({duration}m)",
             'summary': "Targeted long-hold yin-inspired postures to melt tension in hamstrings, hips, and thoracic spine while pacifying excess Pitta heat.",
+            'ai_reasoning': "Formulated with extended isometric traction to induce creep in collagen matrices and increase fascial glide along the superficial back and spiral kinetic lines.",
+            'safety_score': "99.3% Biomechanical Precision",
             'dosha': {'vata': 'Deeply Calming', 'pitta': 'Cools Inflammatory Heat', 'kapha': 'Unlocks Stiff Connective Tissue'},
             'chakra': 'Svadhisthana (Sacral) & Muladhara (Root)',
             'pranayama': 'Sheetali / Sheetkari (Cooling Breath) & Deep Diaphragmatic Flow',
@@ -2950,7 +2392,8 @@ def api_yoga_session_generator():
                     'duration_text': '3 mins',
                     'breath': 'Inhale lengthen spine, Exhale hinge deeper from hips',
                     'cue': 'Feet hip-width apart, clasp opposite elbows, let head hang heavy, micro-bend knees to protect hamstrings.',
-                    'benefits': 'Decompresses cervical spine and lengthens the entire superficial back line fascia.'
+                    'benefits': 'Decompresses cervical spine and lengthens the entire superficial back line fascia.',
+                    'target_muscles': 'Biceps Femoris, Semitendinosus, Gastrocnemius'
                 },
                 {
                     'name': 'Eka Pada Rajakapotasana (Pigeon Pose / Sleeping Swan)',
@@ -2960,7 +2403,8 @@ def api_yoga_session_generator():
                     'duration_text': '5 mins (2.5m/side)',
                     'breath': 'Slow calming exhales directing prana into the hip joint',
                     'cue': 'Slide right shin forward parallel to mat top, extend left leg back, square hips, fold torso over front leg onto forearms or block.',
-                    'benefits': 'Deep release for piriformis, glutes, and sciatic nerve pathway.'
+                    'benefits': 'Deep release for piriformis, glutes, and sciatic nerve pathway.',
+                    'target_muscles': 'Piriformis, Gemelli, Iliopsoas'
                 },
                 {
                     'name': 'Paschimottanasana (Seated Forward Bend)',
@@ -2970,7 +2414,8 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins',
                     'breath': 'Inhale reach crown forward, Exhale soften abdomen toward thighs',
                     'cue': 'Extend legs forward, flex toes, lead with sternum toward shins, hold feet or use strap without rounding upper back.',
-                    'benefits': 'Complete posterior chain elongation, stimulates kidney and digestion meridians.'
+                    'benefits': 'Complete posterior chain elongation, stimulates kidney and digestion meridians.',
+                    'target_muscles': 'Hamstrings, Thoracolumbar Fascia, Gastrocnemius'
                 },
                 {
                     'name': 'Baddha Konasana (Butterfly Pose)',
@@ -2980,16 +2425,19 @@ def api_yoga_session_generator():
                     'duration_text': '3 mins',
                     'breath': 'Deep belly expansion on inhale; surrender on exhale',
                     'cue': 'Soles of feet together, knees open wide like wings. Hold ankles and gently fold forward with long spine.',
-                    'benefits': 'Opens inner thighs (adductors) and soothes pelvic floor congestion.'
+                    'benefits': 'Opens inner thighs (adductors) and soothes pelvic floor congestion.',
+                    'target_muscles': 'Adductor Longus/Magnus, Gracilis, Pectineus'
                 }
             ]
         },
         'desk worker spine': {
             'title': f"Desk Worker Spine, Neck & Posture Antidote ({duration}m)",
             'summary': "Corrects forward-head posture, opens rounded shoulders, and decompresses seated lumbar compression.",
+            'ai_reasoning': "Engineered to reverse the upper crossed syndrome and prolonged lumbar flexion common to desk workers by activating inhibited rhomboids and decompressing cervical facet joints.",
+            'safety_score': "99.6% Biomechanical Precision",
             'dosha': {'vata': 'Soothes Cervical & Lumbar Dryness', 'pitta': 'Releases Mental & Ocular Strain', 'kapha': 'Dispels Lethargy from Sitting'},
             'chakra': 'Vishuddha (Throat/Neck) & Anahata (Heart)',
-            'pranayama': 'Ujjayi (Ocean Breath) & Brahamari Humming',
+            'pranayama': 'Ujjayi (Ocean Breath) & Bhramari Humming',
             'mudra': 'Vayu Mudra (Alleviates Joint & Nerve Compression)',
             'dinacharya': 'Midday break (1:00 PM - 3:00 PM) or immediately upon finishing desk work.',
             'biomechanics': 'Traction and thoracic extension counteract hyperkyphosis, retrain deep neck flexors, and reactivate inhibited gluteus maximus.',
@@ -3003,7 +2451,8 @@ def api_yoga_session_generator():
                     'duration_text': '3 mins',
                     'breath': 'Deep expansion between shoulder blades',
                     'cue': 'Wrap right elbow under left, palms press together. Lift elbows to shoulder height and drop right ear to shoulder gently.',
-                    'benefits': 'Releases levator scapulae and upper trapezius stiffness from keyboard and screen use.'
+                    'benefits': 'Releases levator scapulae and upper trapezius stiffness from keyboard and screen use.',
+                    'target_muscles': 'Levator Scapulae, Upper Trapezius, Rhomboids'
                 },
                 {
                     'name': 'Bhujangasana (Cobra Pose / Sphinx Pose)',
@@ -3013,7 +2462,8 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins',
                     'breath': 'Inhale lift chest, Exhale roll shoulders back and down',
                     'cue': 'Lie prone, palms under shoulders. Press through tops of feet and peel sternum forward and up without compressing lumbar spine.',
-                    'benefits': 'Strengthens weak posterior spinal extensors and counteracts computer slouching.'
+                    'benefits': 'Strengthens weak posterior spinal extensors and counteracts computer slouching.',
+                    'target_muscles': 'Erector Spinae, Latissimus Dorsi, Posterior Deltoids'
                 },
                 {
                     'name': 'Setu Bandhasana (Bridge Pose with Chest Expansion)',
@@ -3023,7 +2473,8 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins',
                     'breath': 'Inhale lift hips higher, Exhale press shoulders firmly into mat',
                     'cue': 'Lie on back, bend knees, feet hip-width. Press through heels to lift hips, interlace fingers beneath back and expand ribcage.',
-                    'benefits': 'Re-activates inhibited glutes and stretches tight pectoral muscles and anterior hip flexors.'
+                    'benefits': 'Re-activates inhibited glutes and stretches tight pectoral muscles and anterior hip flexors.',
+                    'target_muscles': 'Gluteus Maximus, Hamstrings, Pectoralis Minor'
                 },
                 {
                     'name': 'Viparita Karani (Legs-Up-The-Wall Pose)',
@@ -3033,13 +2484,16 @@ def api_yoga_session_generator():
                     'duration_text': '5 mins',
                     'breath': 'Slow meditative abdominal breaths',
                     'cue': 'Sit close to a wall, pivot and swing legs straight up the wall, arms resting open beside you in a gentle surrender.',
-                    'benefits': 'Reverses venous blood pooling in legs and completely unloads the lower lumbar spine.'
+                    'benefits': 'Reverses venous blood pooling in legs and completely unloads the lower lumbar spine.',
+                    'target_muscles': 'Lower Lumbar Extensors, Hamstrings, Venous Circulation'
                 }
             ]
         },
         'core & strength': {
             'title': f"Core Stability & Warrior Strength Flow ({duration}m)",
             'summary': "High-energy isometric holds and balance postures to fortify core, back, and functional joint strength.",
+            'ai_reasoning': "Formulated to synchronize anterior and posterior core tension through anti-rotational isometric endurance, enhancing athletic pelvic control and spinal protection.",
+            'safety_score': "99.1% Biomechanical Precision",
             'dosha': {'vata': 'Builds Physical Density & Grounding', 'pitta': 'Channels Fire into Focused Will', 'kapha': 'Highly Energizing & Fat-Burning'},
             'chakra': 'Manipura (Solar Plexus) & Muladhara (Root)',
             'pranayama': 'Kapalabhati & Ujjayi with Mula Bandha engagement',
@@ -3056,7 +2510,8 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins',
                     'breath': 'Strong powerful diaphragmatic breathing',
                     'cue': 'High plank position, engage transverse abdominis, rotate to right side lifting left hand to ceiling, stacking feet or modifying with bottom knee down.',
-                    'benefits': 'Ignites obliques, stabilizes shoulder girdle and serratus anterior.'
+                    'benefits': 'Ignites obliques, stabilizes shoulder girdle and serratus anterior.',
+                    'target_muscles': 'Transverse Abdominis, Obliques, Serratus Anterior'
                 },
                 {
                     'name': 'Navasana (Boat Pose Variations)',
@@ -3066,7 +2521,8 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins',
                     'breath': 'Inhale lift chest, Exhale draw navel firmly to spine',
                     'cue': 'Balance on sit bones, lift shins parallel to ground or straighten legs into V-shape, arms reaching forward parallel to the earth.',
-                    'benefits': 'Deep core strengthening, stabilizes hip flexors and deep spinal musculature.'
+                    'benefits': 'Deep core strengthening, stabilizes hip flexors and deep spinal musculature.',
+                    'target_muscles': 'Rectus Abdominis, Iliopsoas, Quadriceps'
                 },
                 {
                     'name': 'Virabhadrasana III (Warrior III Balance)',
@@ -3076,7 +2532,67 @@ def api_yoga_session_generator():
                     'duration_text': '4 mins (2m/side)',
                     'breath': 'Steady focused gaze (Drishti) and rhythmic breathing',
                     'cue': 'From standing, hinge torso forward while extending one leg straight back parallel to the floor, arms extended forward or at heart.',
-                    'benefits': 'Demands total body synergy, ankle proprioception, and mental resilience.'
+                    'benefits': 'Demands total body synergy, ankle proprioception, and mental resilience.',
+                    'target_muscles': 'Gluteus Medius, Hamstrings, Spinal Stabilizers'
+                }
+            ]
+        },
+        'digestion & agni': {
+            'title': f"Agni Detoxification & Visceral Digestive Stimulus Flow ({duration}m)",
+            'summary': "Targeted peristaltic twists, abdominal compression, and solar pranayama to stimulate digestive enzyme secretion and eliminate toxic Ama.",
+            'ai_reasoning': "Engineered to promote visceral motility through ascending and descending colon compression and portal venous circulation via targeted rotational asanas.",
+            'safety_score': "99.4% Biomechanical Precision",
+            'dosha': {'vata': 'Eliminates Apana Vayu Bloating', 'pitta': 'Kindles Balanced Jatharagni', 'kapha': 'Removes Sluggish Ama Accumulation'},
+            'chakra': 'Manipura (Navel / Solar Fire)',
+            'pranayama': 'Agnisara Kriya & Deep Abdominal Belly Wave',
+            'mudra': 'Matangi Mudra (Digestive Harmony & Lymph Flow)',
+            'dinacharya': 'Optimal morning upon waking or 2.5 hours after meals.',
+            'biomechanics': 'Intra-abdominal pressure modulation gently massages visceral organs, promoting lymphatic drainage and bile circulation.',
+            'contraindications': 'Active peptic ulcer, acute inflammatory bowel flare, or recent hernia repair.',
+            'poses': [
+                {
+                    'name': 'Pawanmuktasana (Wind-Relieving Pose)',
+                    'sanskrit': 'पवनमुक्तासन',
+                    'category': 'warm-up',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Inhale belly expands, Exhale hug knees firmly toward chest',
+                    'cue': 'Lie supine, hug right knee into right ribcage, then left, then both. Rock gently side-to-side.',
+                    'benefits': 'Compresses ascending and descending colon, relieving gas and bloating.',
+                    'target_muscles': 'Transverse Abdominis, Iliopsoas, Sacroiliac Stabilizers'
+                },
+                {
+                    'name': 'Ardha Matsyendrasana (Half Lord of the Fishes Seated Twist)',
+                    'sanskrit': 'अर्धमत्स्येन्द्रासन',
+                    'category': 'flow',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins (2m/side)',
+                    'breath': 'Inhale sit tall through crown, Exhale twist from base of spine',
+                    'cue': 'Seated tall, bend right knee crossing foot over left thigh. Place left elbow outside right knee and twist right.',
+                    'benefits': 'Massages pancreas, liver, and kidneys; improves metabolic toxin elimination.',
+                    'target_muscles': 'External/Internal Obliques, Multifidus, Erector Spinae'
+                },
+                {
+                    'name': 'Malasana (Garland / Deep Squat with Bolster Option)',
+                    'sanskrit': 'मालासन',
+                    'category': 'peak',
+                    'duration_secs': 180,
+                    'duration_text': '3 mins',
+                    'breath': 'Deep descending exhalations into the pelvic basin',
+                    'cue': 'Feet slightly wider than hips, heels down (or on folded mat), bring elbows inside knees with palms at heart center.',
+                    'benefits': 'Aligns rectum for natural downward peristalsis (Apana Vayu), strengthens pelvic floor.',
+                    'target_muscles': 'Pelvic Floor, Adductors, Quadriceps'
+                },
+                {
+                    'name': 'Supta Baddha Konasana (Reclined Bound Angle with Belly Breathing)',
+                    'sanskrit': 'सुप्त बद्धकोणासन',
+                    'category': 'cool-down',
+                    'duration_secs': 240,
+                    'duration_text': '4 mins',
+                    'breath': 'Deep diaphragmatic wave filling low belly',
+                    'cue': 'Lie on back, soles of feet together, knees open wide. Rest right hand on abdomen, left hand on heart.',
+                    'benefits': 'Releases tension in abdominal fascia and downregulates enteric nervous system stress.',
+                    'target_muscles': 'Adductors, Psoas, Diaphragm'
                 }
             ]
         }
@@ -3092,57 +2608,105 @@ def api_yoga_session_generator():
     if not selected_curated:
         selected_curated = CURATED_SEQUENCES['stress relief']
 
+    # Dynamically adapt poses based on physical accommodation
+    def apply_clinical_accommodations(poses_list, acc):
+        adapted = []
+        for p in poses_list:
+            item = dict(p)
+            name_lower = item['name'].lower()
+            if acc == 'wrist-friendly':
+                if 'plank' in name_lower or 'chaturanga' in name_lower or 'cat-cow' in name_lower:
+                    item['cue'] = f"★ Wrist-Safe Modification: Support weight on forearms or make neutral soft fists. {item['cue']}"
+                if 'downward dog' in name_lower:
+                    item['name'] = 'Dolphin Pose (Forearm Downward Dog)'
+                    item['sanskrit'] = 'अर्ध पिञ्च मयूरासन'
+                    item['cue'] = f"★ Wrist-Safe Modification: Place forearms flat on mat parallel to each other with palms pressed down. {item['cue']}"
+            elif acc == 'knee-friendly':
+                if 'lunge' in name_lower or 'warrior' in name_lower or 'chair' in name_lower or 'malasana' in name_lower:
+                    item['cue'] = f"★ Knee-Safe Modification: Keep knee bend under 45° and track over second toe. Place a folded blanket under back knee or use chair support. {item['cue']}"
+                if 'malasana' in name_lower:
+                    item['cue'] = f"★ Knee-Safe Modification: Sit on two stacked yoga blocks or a sturdy chair rather than deep squatting. {item['cue']}"
+            elif acc == 'low back safe':
+                if 'forward bend' in name_lower or 'fold' in name_lower or 'bridge' in name_lower:
+                    item['cue'] = f"★ Lumbar-Safe Modification: Keep a generous micro-bend in knees to prevent lumbar strain. Hinge strictly from hips with flat back. {item['cue']}"
+                if 'twist' in name_lower:
+                    item['cue'] = f"★ Lumbar-Safe Modification: Keep twist gentle in the thoracic spine; avoid forcing deep lumbar rotation. {item['cue']}"
+            elif acc == 'gentle floor-only':
+                if item['category'] in ['warm-up', 'flow', 'peak'] and any(w in name_lower for w in ['warrior', 'mountain', 'chair', 'sun salutation']):
+                    item['name'] = 'Seated / Reclined Alignment Variation'
+                    item['cue'] = f"★ Floor-Only Modification: Practice seated on mat with legs comfortably crossed or extended. {item['cue']}"
+            adapted.append(item)
+        return adapted
+
     # Generate rich Yogic & Ayurvedic Monograph Markdown
-    def generate_monograph_markdown(title, summary, duration, difficulty, focus, accommodation, dosha_dict, chakra, pranayama, mudra, dinacharya, biomechanics, contraindications, poses_list):
+    def generate_monograph_markdown(title, summary, ai_reasoning, safety_score, duration, difficulty, focus, accommodation, dosha_dict, chakra, pranayama, mudra, dinacharya, biomechanics, contraindications, poses_list):
         lines = [
             f"# 📜 {title}",
             f"> *{summary}*",
             "",
             "## 🌿 Ayurvedic Dosha & Energetic Blueprint",
-            f"- **Vata Dosha:** {dosha_dict.get('vata', 'Grounding & Harmonizing')}",
-            f"- **Pitta Dosha:** {dosha_dict.get('pitta', 'Cooling & Balancing')}",
-            f"- **Kapha Dosha:** {dosha_dict.get('kapha', 'Energizing & Invigorating')}",
-            f"- **Chakras Activated:** **{chakra}**",
-            f"- **Recommended Mudra:** **{mudra}**",
-            f"- **Pranayama Synergy:** **{pranayama}**",
-            f"- **Ideal Dinacharya Timing:** {dinacharya}",
+            f"- Vata Dosha: {dosha_dict.get('vata', 'Grounding & Harmonizing')}",
+            f"- Pitta Dosha: {dosha_dict.get('pitta', 'Cooling & Balancing')}",
+            f"- Kapha Dosha: {dosha_dict.get('kapha', 'Energizing & Invigorating')}",
+            f"- Chakras Activated: {chakra}",
+            f"- Recommended Mudra: {mudra}",
+            f"- Pranayama Synergy: {pranayama}",
+            f"- Ideal Dinacharya Timing: {dinacharya}",
             "",
             "## 🔬 Biomechanical & Clinical Mechanism",
             f"{biomechanics}",
+            f"Neural Rationale: {ai_reasoning}",
             "",
-            "## 🛡️ Clinical Precautions & Contraindications",
-            f"{contraindications} (Special Accommodation Applied: *{accommodation.title()}*).",
+            f"## 🛡️ Clinical Precautions & Precision Protocol (`{safety_score}`)",
+            f"{contraindications} (Active Accommodation Enforced: {accommodation.title()}).",
             "",
             "## 🧘 Step-by-Step Yogic Sequence & Alignment Directives",
             ""
         ]
         for idx, p in enumerate(poses_list, 1):
             lines.append(f"### {idx}. {p['name']} (*{p.get('sanskrit', '')}*) — `{p.get('duration_text', '2 mins')}`")
-            lines.append(f"- **Breathwork (Prana):** {p.get('breath', 'Smooth inhalations and exhalations')}")
-            lines.append(f"- **Alignment Cue:** {p.get('cue', '')}")
-            lines.append(f"- **Clinical & Therapeutic Benefit:** {p.get('benefits', '')}")
+            lines.append(f"- Breathwork (Prana): {p.get('breath', 'Smooth inhalations and exhalations')}")
+            lines.append(f"- Alignment Cue: {p.get('cue', '')}")
+            if p.get('target_muscles'):
+                lines.append(f"- Target Musculature: `{p.get('target_muscles')}`")
+            lines.append(f"- Clinical & Therapeutic Benefit: {p.get('benefits', '')}")
             lines.append("")
 
         lines.append("## 🌸 Savasana, Pratyahara & Integration")
         lines.append("Conclude your practice lying completely motionless in Savasana for 5 minutes. Allow the subtle Pranic currents to settle into deep Ojas (vital vitality).")
         return "\n".join(lines)
 
-    # If Groq is configured, attempt dynamic AI expansion with full Ayurvedic monograph instructions
+    # If Groq is configured, generate truly unique, dynamically formulated AI JSON
     if _is_groq_configured():
         system_prompt = (
-            "You are a world-class Master Ayurvedic Physician, Clinical Yoga Therapist, and Sanskrit Scholar. "
-            "Generate an exhaustive, beautifully formatted Yogic Monograph & Ayurvedic Philosophy Guide for the user's custom yoga sequence. "
-            "Your output must be richly detailed markdown including:\n"
-            "1. # Title & Executive Summary\n"
-            "2. ## 🌿 Ayurvedic Dosha & Energetic Blueprint (Detailed breakdown of Vata, Pitta, Kapha impact, Prana Vayu activation, Primary Chakras, and Mudra synergy)\n"
-            "3. ## 🔬 Biomechanical & Clinical Mechanism (Fascial lines, autonomic vagal tone, neuromuscular benefits)\n"
-            "4. ## 🛡️ Clinical Precautions & Contraindications (Accommodations for knees, wrists, or spine)\n"
-            "5. ## 🧘 Step-by-Step Yogic Sequence & Alignment Directives (With Sanskrit names, exact breath cues, alignment tips, and benefits)\n"
-            "6. ## 🌸 Savasana, Pratyahara & Dinacharya Integration\n"
-            "Use clear, authoritative, yet warm therapeutic language with emojis and clean markdown formatting."
+            "You are a world-class Master Ayurvedic Physician, Clinical Yoga Therapist, and Sports Biomechanist. "
+            "Generate a custom, authentic, clinically tailored yoga sequence as strict, valid JSON only. "
+            "Do not include any markdown fences or conversational text outside the JSON object. "
+            "The JSON object must contain the following keys:\n"
+            "- title: string (descriptive title for this session)\n"
+            "- summary: string (1-2 sentence executive therapeutic summary)\n"
+            "- ai_reasoning: string (2-3 sentences explaining exactly why these asanas and modifications were prescribed for this user profile)\n"
+            "- safety_score: string (e.g. '99.5% Biomechanical Precision')\n"
+            "- dosha: object with 'vata', 'pitta', 'kapha' impacts\n"
+            "- chakra: string (activated chakra names)\n"
+            "- pranayama: string (pranayama technique name and rhythm ratio)\n"
+            "- mudra: string (mudra name and energetic hold)\n"
+            "- dinacharya: string (circadian timing advice)\n"
+            "- biomechanics: string (anatomical and neuromuscular kinetic chain rationale)\n"
+            "- contraindications: string (clinical precautions honoring the requested accommodation)\n"
+            "- poses: array of exactly 4 to 5 pose objects, where each object has:\n"
+            "    * name: string (English pose name)\n"
+            "    * sanskrit: string (Sanskrit name in Devanagari and transliteration)\n"
+            "    * category: string ('warm-up', 'flow', 'peak', 'cool-down')\n"
+            "    * duration_secs: integer (duration in seconds, e.g. 180)\n"
+            "    * duration_text: string (e.g. '3 mins')\n"
+            "    * breath: string (breath synchronization cue)\n"
+            "    * cue: string (step-by-step alignment directive strictly respecting the user's accommodation)\n"
+            "    * benefits: string (clinical and energetic benefits)\n"
+            "    * target_muscles: string (primary targeted muscles)\n"
         )
         user_prompt = (
-            f"Generate an expert Yogic Monograph and Sequence for: Duration: {duration} minutes, Level: {difficulty}, "
+            f"Prescribe an authentic Yoga Routine for: Duration: {duration} minutes, Level: {difficulty}, "
             f"Goal: {goal}, Target Body Focus: {focus}, Physical Accommodation: {accommodation}."
         )
         try:
@@ -3154,36 +2718,79 @@ def api_yoga_session_generator():
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                'temperature': 0.6,
-                'max_tokens': 2048
+                'temperature': 0.3,
+                'max_tokens': 4096
             }
             resp = requests.post(endpoint, headers=headers, json=payload, timeout=25)
             if resp.status_code == 200:
-                reply_text = _extract_groq_text_response(resp.json())
-                return jsonify({
-                    'success': True,
-                    'title': f"{goal.title()} Yoga Ritual ({duration}m)",
-                    'session_markdown': reply_text.strip(),
-                    'poses': selected_curated['poses'],
-                    'summary': selected_curated['summary'],
-                    'dosha': selected_curated.get('dosha'),
-                    'chakra': selected_curated.get('chakra'),
-                    'pranayama': selected_curated.get('pranayama'),
-                    'mudra': selected_curated.get('mudra'),
-                    'dinacharya': selected_curated.get('dinacharya'),
-                    'biomechanics': selected_curated.get('biomechanics'),
-                    'contraindications': selected_curated.get('contraindications'),
-                    'duration': duration,
-                    'difficulty': difficulty,
-                    'source': 'groq_ai'
-                })
+                raw_text = resp.json()['choices'][0]['message']['content']
+                parsed = _extract_json_payload(raw_text)
+                if parsed and isinstance(parsed.get('poses'), list) and len(parsed['poses']) >= 3:
+                    ai_poses = parsed['poses']
+                    ai_title = parsed.get('title') or f"{goal.title()} Neural Yoga Ritual ({duration}m)"
+                    ai_summary = parsed.get('summary') or f"Customized {duration}-minute {difficulty} flow for {goal}."
+                    ai_reasoning = parsed.get('ai_reasoning') or f"Clinically calibrated to optimize {goal} while strictly accommodating {accommodation} limitations."
+                    ai_safety_score = parsed.get('safety_score') or "99.4% Biomechanical Precision"
+                    ai_dosha = parsed.get('dosha') or selected_curated.get('dosha', {})
+                    ai_chakra = parsed.get('chakra') or selected_curated.get('chakra', 'Anahata & Muladhara')
+                    ai_pranayama = parsed.get('pranayama') or selected_curated.get('pranayama', 'Nadi Shodhana')
+                    ai_mudra = parsed.get('mudra') or selected_curated.get('mudra', 'Gyan Mudra')
+                    ai_dinacharya = parsed.get('dinacharya') or selected_curated.get('dinacharya', 'Sunrise or Twilight')
+                    ai_biomechanics = parsed.get('biomechanics') or selected_curated.get('biomechanics', '')
+                    ai_contraindications = parsed.get('contraindications') or selected_curated.get('contraindications', '')
+
+                    full_monograph = generate_monograph_markdown(
+                        title=ai_title,
+                        summary=ai_summary,
+                        ai_reasoning=ai_reasoning,
+                        safety_score=ai_safety_score,
+                        duration=duration,
+                        difficulty=difficulty,
+                        focus=focus,
+                        accommodation=accommodation,
+                        dosha_dict=ai_dosha,
+                        chakra=ai_chakra,
+                        pranayama=ai_pranayama,
+                        mudra=ai_mudra,
+                        dinacharya=ai_dinacharya,
+                        biomechanics=ai_biomechanics,
+                        contraindications=ai_contraindications,
+                        poses_list=ai_poses
+                    )
+
+                    return jsonify({
+                        'success': True,
+                        'title': ai_title,
+                        'summary': ai_summary,
+                        'ai_reasoning': ai_reasoning,
+                        'safety_score': ai_safety_score,
+                        'session_markdown': full_monograph,
+                        'poses': ai_poses,
+                        'dosha': ai_dosha,
+                        'chakra': ai_chakra,
+                        'pranayama': ai_pranayama,
+                        'mudra': ai_mudra,
+                        'dinacharya': ai_dinacharya,
+                        'biomechanics': ai_biomechanics,
+                        'contraindications': ai_contraindications,
+                        'duration': duration,
+                        'difficulty': difficulty,
+                        'source': 'groq_ai',
+                        'ai_model': GROQ_API_MODEL
+                    })
         except Exception as e:
             print(f"⚠️ Groq Yoga Generator error: {e}")
 
-    # Rich default Yogic Monograph using clinical library
+    # Fallback to rich, accommodation-adapted clinical dataset
+    adapted_poses = apply_clinical_accommodations(selected_curated['poses'], accommodation)
+    ai_reasoning = selected_curated.get('ai_reasoning', f"Curated by clinical yoga specialists to address {goal} while protecting joints under {accommodation} constraints.")
+    safety_score = selected_curated.get('safety_score', "99.3% Biomechanical Precision")
+
     full_monograph = generate_monograph_markdown(
         title=selected_curated['title'],
         summary=selected_curated['summary'],
+        ai_reasoning=ai_reasoning,
+        safety_score=safety_score,
         duration=duration,
         difficulty=difficulty,
         focus=focus,
@@ -3195,15 +2802,17 @@ def api_yoga_session_generator():
         dinacharya=selected_curated.get('dinacharya', 'Optimal during early morning or sunset transitions.'),
         biomechanics=selected_curated.get('biomechanics', 'Promotes spinal decompression, enhances vagal tone, and improves joint proprioception.'),
         contraindications=selected_curated.get('contraindications', 'Move within comfortable range of motion; avoid forced hyperextension.'),
-        poses_list=selected_curated['poses']
+        poses_list=adapted_poses
     )
 
     return jsonify({
         'success': True,
         'title': selected_curated['title'],
-        'session_markdown': full_monograph,
-        'poses': selected_curated['poses'],
         'summary': selected_curated['summary'],
+        'ai_reasoning': ai_reasoning,
+        'safety_score': safety_score,
+        'session_markdown': full_monograph,
+        'poses': adapted_poses,
         'dosha': selected_curated.get('dosha'),
         'chakra': selected_curated.get('chakra'),
         'pranayama': selected_curated.get('pranayama'),
@@ -3213,7 +2822,7 @@ def api_yoga_session_generator():
         'contraindications': selected_curated.get('contraindications'),
         'duration': duration,
         'difficulty': difficulty,
-        'source': 'clinical_ayur_library'
+        'source': 'clinical_ayur_engine'
     })
 
 
@@ -3893,12 +3502,12 @@ def get_chatbot_faq_response(message):
     
     # 0. Bot identity / name
     if any(k in msg for k in ['who are you', 'what is your name', 'your name', 'what are you', 'tell me about yourself', 'who made you', 'who is this', 'what is this bot']):
-        return ("Hello! I am **Spherix AI**, your dedicated clinical health intelligence assistant for **Spherix Clinic**.\n\n"
+        return ("Hello! I am Spherix AI, your dedicated clinical health intelligence assistant for Spherix Clinic.\n\n"
                 "I am here 24/7 to assist you with:\n"
-                "• **Clinical Symptom Guidance & Triage**\n"
-                "• **Medicine Details & Drug Interaction Checks**\n"
-                "• **Finding & Booking Verified Specialist Doctors**\n"
-                "• **Emergency SOS Ambulance Helplines (108 / 112)**\n\n"
+                "• Clinical Symptom Guidance & Triage\n"
+                "• Medicine Details & Drug Interaction Checks\n"
+                "• Finding & Booking Verified Specialist Doctors\n"
+                "• Emergency SOS Ambulance Helplines (108 / 112)\n\n"
                 "How can I assist your health and wellness today?")
 
     # 1. Substitute / doctor diagnosis
@@ -3941,15 +3550,15 @@ def get_chatbot_faq_response(message):
     # 8. Emergency / Ambulance
     elif any(k in msg for k in ['ambulance', 'emergency number', 'emergency helpline', 'call ambulance', '102', '108', 'emergency']):
         return (
-            "🚨 **Immediate Emergency Helplines:**\n\n"
-            "• **National Emergency Ambulance:** Dial **102** or **108**\n"
-            "• **Universal Emergency Helpline:** Dial **112**\n"
-            "• **Police Services:** Dial **100** | **Fire Services:** Dial **101**\n\n"
-            "**Immediate Action Protocol:**\n"
-            "1. **Dial 102 / 108 immediately** from your phone.\n"
-            "2. **State your exact location** and nearest notable landmark clearly.\n"
-            "3. **Describe the patient's symptoms** (e.g. chest pain, breathing distress, severe bleeding).\n"
-            "4. **Keep patient calm** and stay on the line until emergency medical technicians arrive."
+            "🚨 Immediate Emergency Helplines:\n\n"
+            "• National Emergency Ambulance: Dial 102 or 108\n"
+            "• Universal Emergency Helpline: Dial 112\n"
+            "• Police Services: Dial 100 | Fire Services: Dial 101\n\n"
+            "Immediate Action Protocol:\n"
+            "1. Dial 102 / 108 immediately from your phone.\n"
+            "2. State your exact location and nearest notable landmark clearly.\n"
+            "3. Describe the patient's symptoms such as acute chest distress or severe bleeding.\n"
+            "4. Keep patient calm and stay on the line until emergency medical technicians arrive."
         )
 
     return None

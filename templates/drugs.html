@@ -386,10 +386,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function formatDrugText(str) {
+        if (!str) return '';
+        let s = String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        return s
+            .replace(/\*\*([\s\S]*?)\*\*/g, '<strong class="font-bold text-slate-800">$1</strong>')
+            .replace(/\*\*/g, '');
+    }
+
     // Render Drug Information in Side Drawer
     function renderDrugDetails(data) {
         const sideEffects = Array.isArray(data.common_side_effects) && data.common_side_effects.length > 0
-            ? data.common_side_effects.map(effect => `<li class="flex items-start gap-2"><i class="fas fa-circle-dot text-amber-500 text-[9px] mt-1.5 shrink-0"></i><span>${effect}</span></li>`).join('')
+            ? data.common_side_effects.map(effect => `<li class="flex items-start gap-2"><i class="fas fa-circle-dot text-amber-500 text-[9px] mt-1.5 shrink-0"></i><span>${formatDrugText(effect)}</span></li>`).join('')
             : '<li>Mild gastrointestinal discomfort in sensitive individuals.</li>';
 
         return `
@@ -400,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fas fa-prescription-bottle text-sky-600"></i> Drug Class & Overview
                     </h4>
                     <p class="text-xs sm:text-sm font-medium text-slate-700 leading-relaxed">
-                        ${data.description || 'Pharmaceutical formulation indexed in the clinical database.'}
+                        ${formatDrugText(data.description || 'Pharmaceutical formulation indexed in the clinical database.')}
                     </p>
                 </div>
 
@@ -410,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fas fa-stethoscope text-sky-600"></i> Primary Clinical Indication
                     </h4>
                     <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                        ${data.primary_use || 'Provides targeted therapeutic relief as directed by attending physician.'}
+                        ${formatDrugText(data.primary_use || 'Provides targeted therapeutic relief as directed by attending physician.')}
                     </p>
                 </div>
 
@@ -420,8 +431,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
                         <i class="fas fa-clock text-slate-600"></i> Dosage Schedule & Regimen
                     </h4>
-                    ${data.usage_instructions ? `<p class="text-xs text-slate-600 mb-2 leading-relaxed"><strong class="text-slate-800">Instructions:</strong> ${data.usage_instructions}</p>` : ''}
-                    ${data.dosage_interval ? `<p class="text-xs text-sky-700 font-semibold font-mono-code"><strong class="text-slate-800">Interval:</strong> ${data.dosage_interval}</p>` : ''}
+                    ${data.usage_instructions ? `<p class="text-xs text-slate-600 mb-2 leading-relaxed"><strong class="text-slate-800">Instructions:</strong> ${formatDrugText(data.usage_instructions)}</p>` : ''}
+                    ${data.dosage_interval ? `<p class="text-xs text-sky-700 font-semibold font-mono-code"><strong class="text-slate-800">Interval:</strong> ${formatDrugText(data.dosage_interval)}</p>` : ''}
                 </div>` : ''}
 
                 <!-- Side Effects -->
@@ -440,14 +451,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fas fa-shield-halved text-amber-600"></i> Contraindications & Caution
                     </h4>
                     <p class="text-xs text-amber-900 leading-relaxed">
-                        ${data.caution || 'Do not exceed prescribed dosage. Consult doctor during pregnancy or chronic conditions.'}
+                        ${formatDrugText(data.caution || 'Do not exceed prescribed dosage. Consult doctor during pregnancy or chronic conditions.')}
                     </p>
                 </div>
 
                 ${data.clinical_notes ? `
                 <div class="p-4 rounded-lg bg-slate-100 border border-slate-200">
                     <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Clinical Notes</h4>
-                    <p class="text-xs text-slate-700 leading-relaxed">${data.clinical_notes}</p>
+                    <p class="text-xs text-slate-700 leading-relaxed">${formatDrugText(data.clinical_notes)}</p>
                 </div>` : ''}
 
                 <!-- Quick Shop CTA -->

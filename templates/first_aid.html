@@ -61,6 +61,27 @@
         from { transform: scale(0.92); opacity: 0.8; }
         to { transform: scale(1.08); opacity: 1; }
     }
+
+    /* Hide Header, Nav, Footer, and Floating Action Dock when sidebar is open */
+    body.sidebar-drawer-open #top-utility-bar,
+    body.sidebar-drawer-open header,
+    body.sidebar-drawer-open nav,
+    body.sidebar-drawer-open nav.glass-nav,
+    body.sidebar-drawer-open #main-navbar,
+    body.sidebar-drawer-open #main-footer,
+    body.sidebar-drawer-open footer,
+    body.sidebar-drawer-open #floating-actions-dock,
+    body.sidebar-drawer-open .floating-cart-badge,
+    body.sidebar-drawer-open #cancer-floating-cta,
+    body.sidebar-drawer-open #feedback-toggle-btn,
+    body.sidebar-drawer-open #chatbot-toggle-btn,
+    body.sidebar-drawer-open #global-search-modal,
+    body.sidebar-drawer-open #symptom-chat-toggle {
+        opacity: 0 !important;
+        display: none !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
 </style>
 {% endblock %}
 
@@ -122,7 +143,7 @@
                         <i data-lucide="search" class="w-5 h-5 text-rose-600"></i>
                     </div>
                     <input type="text" id="emergencyInput" 
-                           placeholder="Type emergency (e.g., Deep laceration, 2nd degree burn, Heatstroke, CPR)..."
+                           placeholder="Type emergency situation..."
                            class="w-full bg-transparent text-slate-800 placeholder-slate-400 px-3.5 py-3 focus:outline-none text-xs sm:text-sm font-semibold">
                     
                     <button type="button" id="voiceSearchBtn" title="Voice Input" class="p-2.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors mr-1 cursor-pointer">
@@ -131,7 +152,6 @@
 
                     <button type="submit" id="generateBtn" class="px-5 py-3 rounded-lg bg-slate-900 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer shadow-md">
                         <span>Get Protocol</span>
-                        <i class="fas fa-bolt text-amber-400 text-xs"></i>
                     </button>
                 </form>
             </div>
@@ -508,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
 
         drawerModal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
+        document.body.classList.add('overflow-hidden', 'sidebar-drawer-open');
 
         setTimeout(() => {
             drawerBackdrop.classList.remove('opacity-0');
@@ -546,35 +566,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     Connection error. In critical emergencies, please dial 911 / 102 immediately.
                 </div>`;
         } finally {
-            generateBtn.innerHTML = '<span>Get Protocol</span><i class="fas fa-bolt text-amber-400 text-xs ml-1"></i>';
+            generateBtn.innerHTML = '<span>Get Protocol</span>';
             generateBtn.disabled = false;
         }
     }
 
+    function formatFirstAidText(text) {
+        if (!text) return '';
+        let s = String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        s = s.replace(/\*\*([\s\S]*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>');
+        s = s.replace(/\*\*/g, '');
+        return s;
+    }
+
+    function stripStars(text) {
+        if (!text) return '';
+        return String(text).replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*\*/g, '').trim();
+    }
+
     function renderProtocolInDrawer(p, source) {
-        drawerProtocolTitle.textContent = p.title || 'Emergency First Aid Protocol';
-        drawerUrgencyBadge.textContent = `${p.urgency_level || 'HIGH'} PRIORITY`;
+        drawerProtocolTitle.textContent = stripStars(p.title || 'Emergency First Aid Protocol');
+        drawerUrgencyBadge.textContent = `${stripStars(p.urgency_level || 'HIGH')} PRIORITY`;
         drawerSourceBadge.textContent = source === 'groq_ai' ? 'Groq AI Paramedic' : 'Trauma Protocol';
 
-        currentProtocolText = `${p.title}. `;
+        currentProtocolText = `${stripStars(p.title)}. `;
 
         const stepsHtml = (p.immediate_actions || []).map((step, idx) => {
-            currentProtocolText += `Step ${idx + 1}: ${step}. `;
+            currentProtocolText += `Step ${idx + 1}: ${stripStars(step)}. `;
             return `
                 <div class="flex items-start gap-3.5 p-3.5 rounded-lg bg-slate-50 border border-slate-200">
                     <span class="w-7 h-7 rounded-lg bg-rose-600 text-white font-bold text-xs flex items-center justify-center shrink-0 font-mono-code">
                         ${idx + 1}
                     </span>
-                    <p class="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed pt-0.5">${step}</p>
+                    <p class="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed pt-0.5">${formatFirstAidText(step)}</p>
                 </div>`;
         }).join('');
 
         const dontsHtml = (p.critical_donts || []).map(d => 
-            `<li class="flex items-start gap-2"><i class="fas fa-circle-xmark text-rose-600 mt-0.5 shrink-0"></i><span>${d}</span></li>`
+            `<li class="flex items-start gap-2"><i class="fas fa-circle-xmark text-rose-600 mt-0.5 shrink-0"></i><span>${formatFirstAidText(d)}</span></li>`
         ).join('');
 
         const emsHtml = (p.call_ems_triggers || []).map(t => 
-            `<li class="flex items-start gap-2"><i class="fas fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0"></i><span>${t}</span></li>`
+            `<li class="flex items-start gap-2"><i class="fas fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0"></i><span>${formatFirstAidText(t)}</span></li>`
         ).join('');
 
         drawerContentBody.innerHTML = `
@@ -616,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="p-4 rounded-lg bg-slate-100 border border-slate-200">
                     <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Aftercare & Recovery Position</h4>
                     <p class="text-xs text-slate-600 leading-relaxed">
-                        ${p.recovery_position_or_aftercare || 'Monitor airway and vitals continuously until emergency medical technicians arrive.'}
+                        ${formatFirstAidText(p.recovery_position_or_aftercare || 'Monitor airway and vitals continuously until emergency medical technicians arrive.')}
                     </p>
                 </div>
             </div>`;
@@ -626,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeDrawer = function() {
         drawerBackdrop.classList.add('opacity-0');
         drawerPanel.classList.add('translate-x-full');
-        document.body.classList.remove('overflow-hidden');
+        document.body.classList.remove('overflow-hidden', 'sidebar-drawer-open');
         if ('speechSynthesis' in window) window.speechSynthesis.cancel();
         drawerSpeakText.textContent = 'Read Aloud';
         setTimeout(() => {

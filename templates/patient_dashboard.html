@@ -151,6 +151,15 @@
       display: none !important;
     }
 
+    .sidebar-link i.insurance-nav-icon,
+    .sidebar-sublink i.insurance-nav-icon,
+    .insurance-nav-icon {
+      display: inline-block !important;
+      font-size: 0.8rem;
+      width: 16px;
+      text-align: center;
+    }
+
     .sidebar-link:hover {
       background: #f1f5f9;
       color: #0284c7;
@@ -614,7 +623,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 14px;
+      padding: 9px 18px;
       border: 1.5px solid #e2e8f0;
       border-radius: var(--pat-radius-md, 8px) !important;
       background: #ffffff;
@@ -1046,6 +1055,54 @@
       z-index: 1065 !important;
     }
 
+    /* Clickable Booked Items & Booking Details Sidebar */
+    .clickable-booked-item {
+      cursor: pointer !important;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .clickable-booked-item:hover {
+      background-color: rgba(2, 132, 199, 0.06) !important;
+      transform: translateY(-1px);
+    }
+    .clickable-booked-item:active {
+      transform: translateY(0);
+    }
+    .booking-details-offcanvas {
+      width: 600px !important;
+      max-width: 96vw !important;
+      border-left: 1px solid #e2e8f0;
+      background: #ffffff;
+      box-shadow: -12px 0 45px rgba(15, 23, 42, 0.16);
+      z-index: 1065 !important;
+    }
+    .booking-details-offcanvas .offcanvas-body {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f8fafc;
+    }
+    .drawer-info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .drawer-info-card.highlight-card {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+    }
+    .drawer-section-title {
+      font-size: 0.72rem;
+      font-family: monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .action-choice-card {
       border: 2px solid #e2e8f0;
       border-radius: var(--pat-radius, 10px) !important;
@@ -1281,7 +1338,7 @@
         {% set total_unread_comm = (unread_notifications|length if unread_notifications else 0) + (unread_messages_count or 0) %}
         <span class="badge-counter bg-danger text-white" id="sidebarTotalBadge" {% if total_unread_comm == 0 %}style="display:none;"{% endif %}>{{ total_unread_comm }}</span>
       </a>
-      <div class="ms-3 ps-2 border-start d-flex flex-column gap-1 my-1">
+      <div class="ms-3 ps-2 border-start d-flex flex-column gap-1.5 my-2">
         <a class="sidebar-sublink" data-comm="notifications" onclick="switchNotifChatView('notifications')">
           <span>Notifications</span>
           <span class="badge bg-danger text-white ms-auto font-mono" id="sidebarNotifBadge">{{ unread_notifications|length if unread_notifications else 0 }}</span>
@@ -1320,7 +1377,72 @@
         <span class="badge-counter bg-rose-100 text-rose-800" style="background:#ffe4e6; color:#9f1239;">AI Triage</span>
       </a>
 
-      <!-- SECTION 4: ACCOUNT & SETTINGS -->
+      <!-- SECTION 4: FINANCIAL PROTECTION (SPHERIX INSURANCE) -->
+      <div class="sidebar-section-title d-flex align-items-center justify-content-between pe-3">
+        <span>Financial Protection (SLIC)</span>
+        <span class="badge bg-primary-subtle text-primary font-mono" style="font-size: 0.65rem;">SLIC</span>
+      </div>
+      <!-- 1. Life Insurance Overview Hub -->
+      <a class="sidebar-link" data-tab="tab-insurance" onclick="switchPatientTab('tab-insurance', this)" title="Spherix Insurance Overview & Hub">
+        <i class="fas fa-shield-halved text-primary insurance-nav-icon"></i>
+        <span>Life Insurance</span>
+        <span class="badge-counter bg-blue-100 text-blue-800" style="background:#e0f2fe; color:#0369a1;">Spherix Protect</span>
+      </a>
+      <div class="ms-3 ps-2 border-start d-flex flex-column gap-1.5 my-2">
+        <!-- 2. Explore Insurance Plans -->
+        <a href="{{ url_for('insurance.explore_plans') }}" class="sidebar-sublink" title="Browse verified life insurance products">
+          <i class="fas fa-compass text-info me-2 insurance-nav-icon"></i>
+          <span>Explore Insurance Plans</span>
+        </a>
+        <!-- 3. Compare Plans -->
+        <a href="{{ url_for('insurance.compare_plans') }}" class="sidebar-sublink" title="Side-by-side life policy comparison matrix">
+          <i class="fas fa-scale-balanced text-warning me-2 insurance-nav-icon"></i>
+          <span>Compare Plans</span>
+        </a>
+        <!-- 4. Apply for Insurance -->
+        <a href="{{ url_for('insurance.apply_insurance') }}" class="sidebar-sublink" title="Multi-step proposal application form">
+          <i class="fas fa-file-signature text-success me-2 insurance-nav-icon"></i>
+          <span>Apply for Insurance</span>
+        </a>
+        <!-- 5. My Applications -->
+        <a href="{{ url_for('insurance.my_applications') }}" class="sidebar-sublink" title="Track submitted proposals and underwriting status">
+          <i class="fas fa-file-lines text-primary me-2 insurance-nav-icon"></i>
+          <span>My Applications</span>
+          {% if patient_insurance_applications %}
+          <span class="badge bg-light text-dark ms-auto font-mono">{{ patient_insurance_applications|length }}</span>
+          {% endif %}
+        </a>
+        <!-- 6. My Insurance Policies -->
+        <a href="{{ url_for('insurance.my_policies') }}" class="sidebar-sublink" title="View issued active policies and schedules">
+          <i class="fas fa-certificate text-emerald-600 me-2 insurance-nav-icon"></i>
+          <span>My Insurance Policies</span>
+          {% if patient_insurance_policies %}
+          <span class="badge bg-success text-white ms-auto font-mono">{{ patient_insurance_policies|length }}</span>
+          {% endif %}
+        </a>
+        <!-- 7. Premium Payments -->
+        <a href="{{ url_for('insurance.my_payments') }}" class="sidebar-sublink" title="Pay premiums and view transaction ledger">
+          <i class="fas fa-credit-card text-indigo-500 me-2 insurance-nav-icon"></i>
+          <span>Premium Payments</span>
+        </a>
+        <!-- 8. Claims Assistance -->
+        <a href="{{ url_for('insurance.my_claims') }}" class="sidebar-sublink" title="File claim notification and track assistance">
+          <i class="fas fa-hand-holding-medical text-danger me-2 insurance-nav-icon"></i>
+          <span>Claims Assistance</span>
+        </a>
+        <!-- 9. Insurance Documents -->
+        <a href="{{ url_for('insurance.my_documents') }}" class="sidebar-sublink" title="Official policy documents, KYC & certificates">
+          <i class="fas fa-folder-closed text-secondary me-2 insurance-nav-icon"></i>
+          <span>Insurance Documents</span>
+        </a>
+        <!-- 10. Insurance Support -->
+        <a href="{{ url_for('insurance.insurance_support') }}" class="sidebar-sublink" title="Helpdesk, insurer grievance officers & IRDAI">
+          <i class="fas fa-headset text-teal-600 me-2 insurance-nav-icon"></i>
+          <span>Insurance Support</span>
+        </a>
+      </div>
+
+      <!-- SECTION 5: ACCOUNT & SETTINGS -->
       <div class="sidebar-section-title">Account &amp; Settings</div>
       <!-- My Profile -->
       <a class="sidebar-link" data-tab="tab-profile" onclick="switchPatientTab('tab-profile', this)">
@@ -1358,12 +1480,44 @@
       <!-- Center: Omnibar Search Bar -->
       <div class="search-input-box">
         <i class="fas fa-search"></i>
-        <input type="text" id="patientGlobalSearch" placeholder="Search appointments, medicines, doctors, lab tests..." onkeyup="handlePatientDashboardSearch(this.value)">
+        <input type="text" id="patientGlobalSearch" placeholder="Search appointments, medicines, doctors, lab tests, insurance plans..." onkeyup="handlePatientDashboardSearch(this.value)">
       </div>
 
-      <!-- Right Header Actions: Emergency SOS, Notification Button, Profile Pic -->
+      <!-- Right Header Actions: Life Insurance Dropdown, Emergency SOS, Notification Button, Profile Pic -->
       <div class="d-flex align-items-center gap-2.5">
         
+        <!-- Spherix Life Insurance Corporation (SLIC) Quick Access Dropdown in Header -->
+        <div class="dropdown">
+          <button class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-2 border shadow-xs" 
+                  type="button" id="headerInsuranceDropdown" data-bs-toggle="dropdown" aria-expanded="false" 
+                  style="background: linear-gradient(135deg, #0284c7 0%, #004b87 100%); color: #ffffff; border: none; font-size: 0.82rem;">
+            <i class="fas fa-shield-halved text-amber-300 insurance-nav-icon"></i>
+            <span class="d-none d-sm-inline">SLIC Insurance</span>
+            <span class="badge rounded-pill bg-white text-dark font-mono d-none d-md-inline" style="font-size: 0.65rem; padding: 2px 6px;">99.85% CSR</span>
+            <i class="fas fa-chevron-down ms-0.5" style="font-size: 0.6rem; opacity: 0.85;"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-2 mt-2" aria-labelledby="headerInsuranceDropdown" style="min-width: 270px; z-index: 1080;">
+            <li class="px-3 py-2 border-bottom">
+              <div class="d-flex align-items-center justify-content-between">
+                <strong class="d-block text-dark small" style="font-weight: 800;">Spherix Life Insurance (SLIC)</strong>
+                <span class="badge bg-success-subtle text-success font-mono" style="font-size: 0.65rem;">IRDAI Reg. #888</span>
+              </div>
+              <small class="text-muted" style="font-size: 0.72rem;">Financial Protection Division</small>
+            </li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold cursor-pointer" onclick="switchPatientTab('tab-insurance', document.querySelector('[data-tab=\'tab-insurance\']'))"><i class="fas fa-home me-2 text-primary insurance-nav-icon"></i>Insurance Dashboard</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.explore_plans') }}"><i class="fas fa-compass me-2 text-info insurance-nav-icon"></i>Explore Insurance Plans</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.compare_plans') }}"><i class="fas fa-scale-balanced me-2 text-warning insurance-nav-icon"></i>Compare Plans</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.apply_insurance') }}"><i class="fas fa-file-signature me-2 text-success insurance-nav-icon"></i>Apply for Insurance</a></li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.my_applications') }}"><i class="fas fa-file-lines me-2 text-primary insurance-nav-icon"></i>My Applications</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.my_policies') }}"><i class="fas fa-certificate me-2 text-emerald-600 insurance-nav-icon"></i>My Insurance Policies</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.my_payments') }}"><i class="fas fa-credit-card me-2 text-indigo-500 insurance-nav-icon"></i>Premium Payments</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.my_claims') }}"><i class="fas fa-hand-holding-medical me-2 text-danger insurance-nav-icon"></i>Claims Assistance</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.my_documents') }}"><i class="fas fa-folder-closed me-2 text-secondary insurance-nav-icon"></i>Insurance Documents</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('insurance.insurance_support') }}"><i class="fas fa-headset me-2 text-teal-600 insurance-nav-icon"></i>24/7 Insurance Support</a></li>
+          </ul>
+        </div>
+
         <!-- Emergency SOS Button -->
         <a href="{{ url_for('ambulance_book') }}" class="btn btn-sm btn-danger rounded-pill px-3 py-1.5 fw-bold d-none d-sm-inline-flex align-items-center gap-1.5 shadow-sm text-decoration-none" title="Instant Emergency Ambulance Dispatch">
           <i class="fas fa-ambulance"></i>
@@ -1403,6 +1557,7 @@
               <small class="text-muted font-monospace">{{ current_user.email or current_user.phone }}</small>
             </li>
             <li><a class="dropdown-item rounded-3 py-2 mt-1 small fw-semibold cursor-pointer" onclick="switchPatientTab('tab-profile', document.querySelector('[data-tab=\'tab-profile\']'))"><i class="fas fa-user-pen me-2 text-primary"></i>Edit Profile</a></li>
+            <li><a class="dropdown-item rounded-3 py-2 small fw-semibold cursor-pointer" onclick="switchPatientTab('tab-insurance', document.querySelector('[data-tab=\'tab-insurance\']'))"><i class="fas fa-shield-halved me-2 text-sky-600"></i>Life Insurance (SLIC)</a></li>
             <li><a class="dropdown-item rounded-3 py-2 small fw-semibold cursor-pointer" onclick="switchPatientTab('tab-orders', document.querySelector('[data-tab=\'tab-orders\']'))"><i class="fas fa-clipboard-list me-2 text-success"></i>Orders &amp; Bookings</a></li>
             <li><a class="dropdown-item rounded-3 py-2 small fw-semibold cursor-pointer" onclick="switchPatientTab('tab-security', document.querySelector('[data-tab=\'tab-security\']'))"><i class="fas fa-shield-halved me-2 text-secondary"></i>Security &amp; Safety</a></li>
             <li><a class="dropdown-item rounded-3 py-2 small fw-semibold" href="{{ url_for('main.download_patient_id_card') }}"><i class="fas fa-id-card me-2 text-indigo-500"></i>Digital ID Card</a></li>
@@ -1628,7 +1783,7 @@
               {% if appointments and appointments|length > 0 %}
                 <div class="d-flex flex-column gap-3">
                   {% for appt in appointments[:4] %}
-                  <div class="p-3 rounded-3 border bg-white shadow-xs d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div class="p-3 rounded-3 border bg-white shadow-xs d-flex align-items-center justify-content-between flex-wrap gap-2 clickable-booked-item" onclick="openBookingItemSidebar('appointment', '{{ appt.id }}')" title="Click to view consultation details in sidebar">
                     <div class="d-flex align-items-center gap-3">
                       <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold" style="width: 44px; height: 44px; font-size: 1.1rem;">
                         <i class="fas fa-user-md"></i>
@@ -1643,6 +1798,7 @@
                         {{ appt.status|capitalize }}
                       </span>
                       <small class="text-muted d-block font-mono">{{ appt.appointment_date }} at {{ appt.appointment_time }}</small>
+                      <small class="text-primary fw-semibold d-block mt-0.5"><i class="fas fa-bars-staggered me-1"></i>View Details</small>
                     </div>
                   </div>
                   {% endfor %}
@@ -1672,7 +1828,7 @@
               {% if orders and orders|length > 0 %}
                 <div class="d-flex flex-column gap-2.5">
                   {% for order in orders[:3] %}
-                  <div class="p-3 rounded-3 border bg-white shadow-xs cursor-pointer" onclick="showMedicineOrderDetails('{{ order.id }}')" title="Click to view full details for Order #SPX-MED-{{ order.id }}">
+                  <div class="p-3 rounded-3 border bg-white shadow-xs cursor-pointer clickable-booked-item" onclick="openBookingItemSidebar('medicine', '{{ order.id }}')" title="Click to view full details in sidebar for Order #SPX-MED-{{ order.id }}">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                       <strong class="text-dark small font-mono">Order #SPX-MED-{{ order.id }}</strong>
                       <span class="badge bg-{{ 'success' if order.status in ['delivered', 'completed'] else ('info' if order.status in ['out for delivery', 'out_for_delivery'] else 'warning') }} text-{{ 'white' if order.status in ['delivered', 'completed'] else 'dark' }} rounded-pill">
@@ -1684,7 +1840,7 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                       <small class="text-muted font-mono"><i class="far fa-calendar-alt text-primary me-1"></i>{{ order.order_date or 'Recent' }}</small>
-                      <small class="text-primary fw-semibold"><i class="fas fa-eye me-1"></i>Full Details</small>
+                      <small class="text-primary fw-semibold"><i class="fas fa-bars-staggered me-1"></i>View Details</small>
                     </div>
                   </div>
                   {% endfor %}
@@ -1722,7 +1878,7 @@
           </div>
           
           <!-- Screen Navigation Tabs -->
-          <div class="d-flex flex-wrap gap-2 mb-4 p-2 bg-light rounded-3 border" id="orderScreenTabs" role="tablist">
+          <div class="d-flex flex-wrap gap-2.5 sm:gap-3 mb-4 p-2.5 bg-light rounded-3 border" id="orderScreenTabs" role="tablist">
             <button type="button" class="order-screen-tab active" id="tab-btn-appointments" onclick="showOrderScreen('appointments', this)">
               <span>Doctor Consultations</span>
               <span class="badge bg-primary text-white rounded-pill ms-1">{{ appointments|length }}</span>
@@ -1775,7 +1931,7 @@
                   </thead>
                   <tbody>
                     {% for appt in appointments %}
-                    <tr>
+                    <tr class="clickable-booked-item" onclick="openBookingItemSidebar('appointment', '{{ appt.id }}')" title="Click row to open details &amp; receipt in sidebar">
                       <td>
                         <strong class="badge bg-primary text-white font-mono px-2 py-1">{{ appt.token_number or appt.token_no or ('TK-' ~ appt.id) }}</strong>
                       </td>
@@ -1803,16 +1959,19 @@
                       </td>
                       <td>
                         <div class="d-flex gap-1.5 flex-wrap">
-                          <a href="{{ url_for('patient.appointment_payment_receipt', appointment_id=appt.id) }}" class="btn btn-sm btn-light border p-1 px-2" title="Download Official Receipt">
+                          <button type="button" class="btn btn-sm btn-outline-primary p-1 px-2" onclick="openBookingItemSidebar('appointment', '{{ appt.id }}'); event.stopPropagation();" title="View Details in Sidebar">
+                            <i class="fas fa-bars-staggered me-1"></i> Details
+                          </button>
+                          <a href="{{ url_for('patient.appointment_payment_receipt', appointment_id=appt.id) }}" class="btn btn-sm btn-light border p-1 px-2" onclick="event.stopPropagation();" title="Download Official Receipt">
                             <i class="fas fa-receipt text-primary"></i> Receipt
                           </a>
                           {% if appt.consultation_type in ['telemedicine', 'video'] %}
-                          <button type="button" class="btn btn-sm btn-purple text-white p-1 px-2" style="background:#7c3aed;" onclick="switchPatientTab('tab-telemedicine', document.querySelector('[data-tab=\'tab-telemedicine\']'))">
+                          <button type="button" class="btn btn-sm btn-purple text-white p-1 px-2" style="background:#7c3aed;" onclick="event.stopPropagation(); switchPatientTab('tab-telemedicine', document.querySelector('[data-tab=\'tab-telemedicine\']'))">
                             <i class="fas fa-video"></i> Join Call
                           </button>
                           {% endif %}
                           {% if appt.status not in ['cancelled', 'completed'] %}
-                          <form action="{{ url_for('patient.cancel_appointment', appointment_id=appt.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this appointment?');" class="d-inline">
+                          <form action="{{ url_for('patient.cancel_appointment', appointment_id=appt.id) }}" method="POST" onsubmit="event.stopPropagation(); return confirm('Are you sure you want to cancel this appointment?');" class="d-inline" onclick="event.stopPropagation();">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger p-1 px-2" title="Cancel Appointment">
                               <i class="fas fa-xmark"></i>
@@ -1854,7 +2013,7 @@
             {% if orders and orders|length > 0 %}
               <div class="d-flex flex-column gap-4">
                 {% for order in orders %}
-                <div class="medicine-order-card" onclick="showMedicineOrderDetails('{{ order.id }}')" title="Click to view full details for Order #SPX-MED-{{ order.id }}">
+                <div class="medicine-order-card clickable-booked-item" onclick="openBookingItemSidebar('medicine', '{{ order.id }}')" title="Click to view full details in sidebar for Order #SPX-MED-{{ order.id }}">
                   
                   <!-- Card Header: Ref, Date, and Status Badge -->
                   <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3.5 pb-2.5 border-bottom">
@@ -1962,8 +2121,8 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2.5 flex-wrap">
-                      <button type="button" class="btn btn-sm btn-light border rounded-pill px-3.5 py-1.5 fw-bold" onclick="showMedicineOrderDetails('{{ order.id }}'); event.stopPropagation();">
-                        <i class="fas fa-receipt text-primary me-1.5"></i> Full Details
+                      <button type="button" class="btn btn-sm btn-light border rounded-pill px-3.5 py-1.5 fw-bold" onclick="openBookingItemSidebar('medicine', '{{ order.id }}'); event.stopPropagation();">
+                        <i class="fas fa-bars-staggered text-primary me-1.5"></i> Full Details
                       </button>
                       <a href="{{ url_for('main.print_invoice', order_id=order.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-3.5 py-1.5 fw-bold" onclick="event.stopPropagation();" title="Download Official Tax Invoice PDF">
                         <i class="fas fa-file-invoice me-1.5"></i> Invoice PDF
@@ -2012,12 +2171,13 @@
                       <th>Room &amp; Bed Category</th>
                       <th>Admission Date</th>
                       <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for bb in bed_bookings %}
-                    <tr>
-                      <td><strong class="font-mono text-dark">#{{ bb.id }}</strong></td>
+                    <tr class="clickable-booked-item" onclick="openBookingItemSidebar('bed', '{{ bb.id }}')" title="Click row to open bed details &amp; admission slip in sidebar">
+                      <td><strong class="font-mono text-dark">{{ bb.id }}</strong></td>
                       <td>
                         <strong class="text-dark">{{ bb.hospital_name or 'Facility Center' }}</strong>
                       </td>
@@ -2029,6 +2189,13 @@
                         <span class="badge bg-{{ 'success' if bb.status in ['approved', 'admitted'] else 'warning' }} rounded-pill px-2.5 py-1">
                           {{ bb.status|capitalize }}
                         </span>
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center gap-1.5">
+                          <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1" onclick="openBookingItemSidebar('bed', '{{ bb.id }}'); event.stopPropagation();" title="View Details &amp; Admission Slip in Sidebar">
+                            <i class="fas fa-file-medical me-1"></i> Details &amp; Slip
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {% endfor %}
@@ -2071,11 +2238,12 @@
                       <th>Destination</th>
                       <th>Fee</th>
                       <th>Dispatch Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for amb in ambulance_bookings %}
-                    <tr>
+                    <tr class="clickable-booked-item" onclick="openBookingItemSidebar('ambulance', '{{ amb.id }}')" title="Click row to open ambulance dispatch details &amp; trip sheet in sidebar">
                       <td><strong class="font-mono text-danger">{{ amb.id }}</strong></td>
                       <td>
                         <strong class="text-dark">{{ amb.vehicle_name or amb.ambulance_type|title }}</strong>
@@ -2088,6 +2256,13 @@
                         <span class="badge bg-{{ 'success' if amb.status == 'completed' else ('danger' if amb.status == 'dispatched' else 'warning') }} rounded-pill px-2.5 py-1">
                           {{ amb.status|replace('_', ' ')|capitalize }}
                         </span>
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center gap-1.5">
+                          <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1" onclick="openBookingItemSidebar('ambulance', '{{ amb.id }}'); event.stopPropagation();" title="View Details &amp; Download Trip Sheet in Sidebar">
+                            <i class="fas fa-file-waveform me-1"></i> Trip Sheet
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {% endfor %}
@@ -2134,29 +2309,36 @@
                       <th>Doctor / Center</th>
                       <th>Requested Date</th>
                       <th>Status</th>
-                      <th>Report</th>
+                      <th>Report &amp; Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for lr in lab_requests %}
-                    <tr>
-                      <td><strong class="font-mono text-dark">#{{ lr.id if lr is mapping else getattr(lr, 'id', 'N/A') }}</strong></td>
+                    {% set lr_id = lr.id if lr is mapping else getattr(lr, 'id', 'N/A') %}
+                    {% set lr_status = (lr.status if lr is mapping else getattr(lr, 'status', ''))|lower %}
+                    <tr class="clickable-booked-item" onclick="openBookingItemSidebar('lab', '{{ lr_id }}')" title="Click row to open diagnostic report &amp; investigation details in sidebar">
+                      <td><strong class="font-mono text-dark">#{{ lr_id }}</strong></td>
                       <td><strong>{{ lr.test_name if lr is mapping else getattr(lr, 'test_name', 'Clinical Lab Test') }}</strong></td>
                       <td><small class="text-muted">{{ lr.doctor_name if lr is mapping else getattr(lr, 'doctor_name', 'Attending Physician') }}</small></td>
                       <td><span class="font-mono text-muted">{{ lr.created_at if lr is mapping else getattr(lr, 'created_at', 'Recent') }}</span></td>
                       <td>
-                        <span class="badge bg-{{ 'success' if (lr.status if lr is mapping else getattr(lr, 'status', '')) == 'completed' else 'warning' }} rounded-pill px-2.5 py-1">
-                          {{ (lr.status if lr is mapping else getattr(lr, 'status', 'Pending'))|capitalize }}
+                        <span class="badge bg-{{ 'success' if lr_status == 'completed' else 'warning' }} rounded-pill px-2.5 py-1">
+                          {{ lr_status|capitalize if lr_status else 'Pending' }}
                         </span>
                       </td>
                       <td>
-                        {% if (lr.status if lr is mapping else getattr(lr, 'status', '')) == 'completed' %}
-                        <a href="{{ url_for('patient.download_lab_report_pdf', lab_id=(lr.id if lr is mapping else getattr(lr, 'id', '1'))) }}" class="btn btn-sm btn-outline-success p-1 px-2.5">
-                          <i class="fas fa-download"></i> PDF Report
-                        </a>
-                        {% else %}
-                        <span class="text-muted small">In Analysis</span>
-                        {% endif %}
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                          <button type="button" class="btn btn-sm btn-outline-info rounded-pill p-1 px-2 text-dark border" onclick="openBookingItemSidebar('lab', '{{ lr_id }}'); event.stopPropagation();" title="View in Sidebar">
+                            <i class="fas fa-bars-staggered me-1"></i> Details
+                          </button>
+                          {% if lr_status == 'completed' %}
+                          <a href="{{ url_for('patient.download_lab_report_pdf', lab_id=lr_id) }}" class="btn btn-sm btn-outline-success rounded-pill p-1 px-2.5" onclick="event.stopPropagation();" title="Download Official PDF Report">
+                            <i class="fas fa-download me-1"></i> PDF Report
+                          </a>
+                          {% else %}
+                          <span class="badge bg-light text-muted border font-mono small py-1 px-2"><i class="fas fa-spinner fa-spin text-warning me-1"></i> In Analysis</span>
+                          {% endif %}
+                        </div>
                       </td>
                     </tr>
                     {% endfor %}
@@ -2295,12 +2477,12 @@
             </div>
             
             <!-- Two Navigation Buttons: Notifications & Messages -->
-            <div class="d-flex flex-wrap gap-2 p-1.5 bg-light rounded-pill border" id="commSwitcherBar" role="tablist">
-              <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-bold notif-chat-toggle-btn active" id="btn-toggle-notif" onclick="switchNotifChatView('notifications', this)">
+            <div class="d-flex flex-wrap gap-2.5 sm:gap-3 p-2 bg-light rounded-pill border" id="commSwitcherBar" role="tablist">
+              <button type="button" class="btn btn-sm rounded-pill px-3.5 py-2 fw-bold notif-chat-toggle-btn active" id="btn-toggle-notif" onclick="switchNotifChatView('notifications', this)">
                 <i class="fas fa-bell me-1.5 text-amber-500"></i> Notifications
                 <span class="badge bg-danger text-white rounded-pill ms-1.5 font-mono" id="toggleNotifBadge">{{ unread_notifications|length if unread_notifications else 0 }}</span>
               </button>
-              <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-bold notif-chat-toggle-btn" id="btn-toggle-chat" onclick="switchNotifChatView('messages', this)">
+              <button type="button" class="btn btn-sm rounded-pill px-3.5 py-2 fw-bold notif-chat-toggle-btn" id="btn-toggle-chat" onclick="switchNotifChatView('messages', this)">
                 <i class="fas fa-comments me-1.5 text-primary"></i> Doctor Messages &amp; Chat
                 <span class="badge bg-primary text-white rounded-pill ms-1.5 font-mono" id="toggleChatBadge" {% if not unread_messages_count or unread_messages_count == 0 %}style="display:none;"{% endif %}>{{ unread_messages_count or 0 }}</span>
               </button>
@@ -2688,7 +2870,7 @@
                     <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                       <i class="fas fa-truck-medical text-amber-600"></i> Emergency Contacts
                     </h6>
-                    <span class="badge bg-amber-subtle text-amber-800 border border-amber-subtle rounded-pill font-mono text-xs">24/7 Safety</span>
+                    <span class="badge bg-amber-subtle text-black border border-amber-subtle rounded-pill font-mono text-xs">24/7 Safety</span>
                   </div>
                   <div class="profile-info-row">
                     <span class="profile-info-label"><i class="fas fa-user-shield text-secondary"></i> Contact Person</span>
@@ -2834,7 +3016,7 @@
                   <!-- Full Name -->
                   <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">Full Legal Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control rounded-3" name="name" value="{{ current_user.name }}" required placeholder="e.g. Rahul Sharma">
+                    <input type="text" class="form-control rounded-3" name="name" value="{{ current_user.name }}" required placeholder="Full Name">
                   </div>
 
                   <!-- Mobile Number -->
@@ -2846,13 +3028,13 @@
                   <!-- Email ID -->
                   <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">Email Address <span class="text-danger">*</span></label>
-                    <input type="email" class="form-control rounded-3" name="email" value="{{ current_user.email or '' }}" required placeholder="you@domain.com">
+                    <input type="email" class="form-control rounded-3" name="email" value="{{ current_user.email or '' }}" required placeholder="Enter email address">
                   </div>
 
                   <!-- Age & Gender -->
                   <div class="col-md-3 col-6">
                     <label class="form-label fw-semibold text-dark small">Age (Years)</label>
-                    <input type="number" class="form-control rounded-3" name="age" value="{{ current_user.age or '' }}" min="1" max="120" placeholder="e.g. 28">
+                    <input type="number" class="form-control rounded-3" name="age" value="{{ current_user.age or '' }}" min="1" max="120" placeholder="Age">
                   </div>
 
                   <div class="col-md-3 col-6">
@@ -2896,12 +3078,12 @@
 
                   <div class="col-md-3 col-6">
                     <label class="form-label fw-semibold text-dark small">Height (cm)</label>
-                    <input type="text" class="form-control rounded-3" name="height" value="{{ height_val }}" placeholder="e.g. 172">
+                    <input type="text" class="form-control rounded-3" name="height" value="{{ height_val }}" placeholder="Height (cm)">
                   </div>
 
                   <div class="col-md-3 col-6">
                     <label class="form-label fw-semibold text-dark small">Weight (kg)</label>
-                    <input type="text" class="form-control rounded-3" name="weight" value="{{ weight_val }}" placeholder="e.g. 68">
+                    <input type="text" class="form-control rounded-3" name="weight" value="{{ weight_val }}" placeholder="Weight (kg)">
                   </div>
 
                   <div class="col-md-3 col-6">
@@ -2917,17 +3099,17 @@
 
                   <div class="col-md-4">
                     <label class="form-label fw-semibold text-dark small">Known Allergies</label>
-                    <input type="text" class="form-control rounded-3" name="allergies" value="{{ allergies_val }}" placeholder="e.g. Penicillin, Peanuts, Dust">
+                    <input type="text" class="form-control rounded-3" name="allergies" value="{{ allergies_val }}" placeholder="Known Allergies">
                   </div>
 
                   <div class="col-md-4">
                     <label class="form-label fw-semibold text-dark small">Chronic / Existing Conditions</label>
-                    <input type="text" class="form-control rounded-3" name="existing_conditions" value="{{ conditions_val }}" placeholder="e.g. Hypertension, Diabetes Type 2">
+                    <input type="text" class="form-control rounded-3" name="existing_conditions" value="{{ conditions_val }}" placeholder="Medical History / Comorbidities">
                   </div>
 
                   <div class="col-md-4">
                     <label class="form-label fw-semibold text-dark small">Ongoing Medications</label>
-                    <input type="text" class="form-control rounded-3" name="current_medications" value="{{ meds_val }}" placeholder="e.g. Metformin 500mg, Telmisartan 40mg">
+                    <input type="text" class="form-control rounded-3" name="current_medications" value="{{ meds_val }}" placeholder="Current Medications">
                   </div>
                 </div>
               </div>
@@ -2940,7 +3122,7 @@
                 <div class="row g-3">
                   <div class="col-md-4">
                     <label class="form-label fw-semibold text-dark small">Emergency Contact Person</label>
-                    <input type="text" class="form-control rounded-3" name="emergency_contact_name" value="{{ em_name }}" placeholder="e.g. Priya Sharma">
+                    <input type="text" class="form-control rounded-3" name="emergency_contact_name" value="{{ em_name }}" placeholder="Full Name">
                   </div>
 
                   <div class="col-md-4">
@@ -2950,7 +3132,7 @@
 
                   <div class="col-md-4">
                     <label class="form-label fw-semibold text-dark small">Relationship</label>
-                    <input type="text" class="form-control rounded-3" name="emergency_contact_relation" value="{{ em_rel }}" placeholder="e.g. Spouse / Parent / Sibling">
+                    <input type="text" class="form-control rounded-3" name="emergency_contact_relation" value="{{ em_rel }}" placeholder="Relationship to Patient">
                   </div>
                 </div>
               </div>
@@ -2963,12 +3145,12 @@
                 <div class="row g-3">
                   <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">Insurance Provider Name</label>
-                    <input type="text" class="form-control rounded-3" name="insurance_provider" value="{{ ins_provider }}" placeholder="e.g. Star Health / HDFC ERGO / ICICI Lombard">
+                    <input type="text" class="form-control rounded-3" name="insurance_provider" value="{{ ins_provider }}" placeholder="Insurance Provider">
                   </div>
 
                   <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">Policy / TPA Card Number</label>
-                    <input type="text" class="form-control rounded-3" name="insurance_policy_no" value="{{ ins_policy }}" placeholder="e.g. POL-8472910-2025">
+                    <input type="text" class="form-control rounded-3" name="insurance_policy_no" value="{{ ins_policy }}" placeholder="Insurance Policy Number">
                   </div>
                 </div>
               </div>
@@ -3114,6 +3296,435 @@
         </div>
       </section>
 
+      <!-- ==================================================================== -->
+      <!-- TAB 7: SPHERIX INSURANCE (FINANCIAL PROTECTION DIVISION)              -->
+      <!-- ==================================================================== -->
+      <section id="tab-insurance" class="tab-section">
+        <div class="d-flex flex-column gap-4">
+
+          <!-- HERO BANNER -->
+          <div class="p-4 p-md-5 rounded-4 position-relative overflow-hidden text-white shadow-sm"
+               style="background: linear-gradient(135deg, #091e3a 0%, #0f3460 50%, #16213e 100%);">
+            <div class="position-absolute end-0 top-0 bottom-0 opacity-10 pointer-events-none d-none d-md-block" style="width: 400px; background: radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%);"></div>
+            
+            <div class="position-relative z-1">
+              <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <span class="badge px-3 py-1.5 rounded-pill text-uppercase fw-bold" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem; letter-spacing: 0.05em;">
+                  <i class="fas fa-shield-alt me-1"></i> Financial Protection Division
+                </span>
+                <span class="badge px-2.5 py-1 rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem;">
+                  <i class="fas fa-check-circle me-1"></i> IRDAI Authorized Partners
+                </span>
+              </div>
+
+              <h1 class="fw-bolder display-6 mb-2 tracking-tight text-white">Spherix Insurance</h1>
+              <p class="text-white-50 fs-6 mb-3 fw-medium" style="max-width: 720px; line-height: 1.6;">
+                A Financial Protection Division of Spherix Clinic. Protect your family's future with term life, whole life, and family protection plans issued directly by India's leading IRDAI-authorized insurers.
+              </p>
+
+              <div class="d-flex align-items-center gap-2 flex-wrap pt-2">
+                <a href="{{ url_for('insurance.explore_plans') }}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold text-white shadow-sm d-inline-flex align-items-center gap-2">
+                  <i class="fas fa-compass"></i> Explore Insurance Plans
+                </a>
+                <a href="{{ url_for('insurance.compare_plans') }}" class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2">
+                  <i class="fas fa-balance-scale"></i> Compare Plans
+                </a>
+                <a href="{{ url_for('insurance.apply_insurance') }}" class="btn btn-light rounded-pill px-4 py-2 fw-bold text-dark shadow-sm d-inline-flex align-items-center gap-2 ms-sm-auto">
+                  <i class="fas fa-file-signature text-primary"></i> Apply for Cover
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- KEY METRICS ROW -->
+          <div class="row g-3">
+            <div class="col-6 col-lg-3">
+              <div class="p-3.5 rounded-3 bg-white border shadow-xs h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-secondary small fw-medium">Active Policies</span>
+                  <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:34px;height:34px;background:#ecfdf5;color:#059669;">
+                    <i class="fas fa-shield-alt"></i>
+                  </div>
+                </div>
+                <div class="fs-4 fw-bolder text-dark">{{ patient_insurance_policies|length if patient_insurance_policies else 0 }}</div>
+                <span class="small text-muted">Issued IRDAI Policies</span>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="p-3.5 rounded-3 bg-white border shadow-xs h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-secondary small fw-medium">Applications</span>
+                  <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:34px;height:34px;background:#eff6ff;color:#2563eb;">
+                    <i class="fas fa-file-contract"></i>
+                  </div>
+                </div>
+                <div class="fs-4 fw-bolder text-dark">{{ patient_insurance_applications|length if patient_insurance_applications else 0 }}</div>
+                <span class="small text-muted">Proposals in pipeline</span>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="p-3.5 rounded-3 bg-white border shadow-xs h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-secondary small fw-medium">Total Coverage</span>
+                  <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:34px;height:34px;background:#faf5ff;color:#7c3aed;">
+                    <i class="fas fa-hand-holding-dollar"></i>
+                  </div>
+                </div>
+                {% set total_cover = 0 %}
+                {% if patient_insurance_policies %}
+                  {% for pol in patient_insurance_policies if pol.status == 'ACTIVE' %}
+                    {% set total_cover = total_cover + (pol.sum_insured or 0) %}
+                  {% endfor %}
+                {% endif %}
+                <div class="fs-4 fw-bolder text-dark">
+                  {% if total_cover > 0 %}
+                    ₹{{ "{:,.0f}".format(total_cover) }}
+                  {% else %}
+                    ₹0
+                  {% endif %}
+                </div>
+                <span class="small text-muted">Active Sum Insured</span>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="p-3.5 rounded-3 bg-white border shadow-xs h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-secondary small fw-medium">Claims Support</span>
+                  <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:34px;height:34px;background:#f0fdfa;color:#0d9488;">
+                    <i class="fas fa-headset"></i>
+                  </div>
+                </div>
+                <div class="fs-4 fw-bolder text-dark">24x7</div>
+                <span class="small text-muted">Dedicated Desk &amp; GRO</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- QUICK ACCESS PORTAL TILES (CORE SUBMODULES) -->
+          <div class="bg-white p-4 rounded-4 border shadow-xs">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+              <div>
+                <h5 class="fw-bold mb-1 text-dark">Financial Protection Suite</h5>
+                <p class="text-secondary small mb-0">Navigate all Life Insurance services, proposals, and policy management features.</p>
+              </div>
+              <a href="{{ url_for('insurance.insurance_home') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                View Full Marketplace <i class="fas fa-arrow-right ms-1"></i>
+              </a>
+            </div>
+
+            <div class="row g-3">
+              <!-- Tile 1: Explore Insurance Plans -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.explore_plans') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-primary bg-primary-subtle shrink-0">
+                    <i class="fas fa-shield-alt fs-5"></i>
+                  </div>
+                  <div>
+                    <strong class="d-block mb-1 text-dark">Explore Insurance Plans</strong>
+                    <p class="text-secondary small mb-0">Browse Term Life, Whole Life, Family &amp; Savings plans from Spherix Life Insurance Corporation (SLIC).</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 2: Compare Plans -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.compare_plans') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-info bg-info-subtle shrink-0">
+                    <i class="fas fa-balance-scale fs-5"></i>
+                  </div>
+                  <div>
+                    <strong class="d-block mb-1 text-dark">Compare Plans</strong>
+                    <p class="text-secondary small mb-0">Side-by-side comparison of coverage, CSR ratios, premiums and exclusions.</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 3: Apply for Insurance -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.apply_insurance') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-success bg-success-subtle shrink-0">
+                    <i class="fas fa-file-signature fs-5"></i>
+                  </div>
+                  <div>
+                    <strong class="d-block mb-1 text-dark">Apply for Insurance</strong>
+                    <p class="text-secondary small mb-0">6-step application proposal with auto-saved drafts and clinical verification.</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 4: My Applications -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.my_applications') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-warning bg-warning-subtle shrink-0">
+                    <i class="fas fa-clipboard-list fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="d-flex align-items-center justify-content-between">
+                      <strong class="d-block mb-1 text-dark">My Applications</strong>
+                      <span class="badge bg-secondary-subtle text-secondary small">{{ patient_insurance_applications|length if patient_insurance_applications else 0 }}</span>
+                    </div>
+                    <p class="text-secondary small mb-0">Track proposal underwriting status from submission to insurer approval.</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 5: My Insurance Policies -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.my_policies') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-emerald-600 bg-emerald-50 shrink-0" style="background:#ecfdf5;color:#059669;">
+                    <i class="fas fa-award fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="d-flex align-items-center justify-content-between">
+                      <strong class="d-block mb-1 text-dark">My Insurance Policies</strong>
+                      <span class="badge bg-success-subtle text-success small">{{ patient_insurance_policies|length if patient_insurance_policies else 0 }} Active</span>
+                    </div>
+                    <p class="text-secondary small mb-0">View active policy contracts, cryptographic seals, and coverage limits.</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 6: Premium Payments -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.my_payments') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-danger bg-danger-subtle shrink-0">
+                    <i class="fas fa-credit-card fs-5"></i>
+                  </div>
+                  <div>
+                    <strong class="d-block mb-1 text-dark">Premium Payments</strong>
+                    <p class="text-secondary small mb-0">Pay renewal premiums online, view transaction receipts and tax records.</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 7: Claims Assistance -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.my_claims') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-purple-600 bg-purple-50 shrink-0" style="background:#faf5ff;color:#7c3aed;">
+                    <i class="fas fa-hand-holding-medical fs-5"></i>
+                  </div>
+                  <div>
+                    <strong class="d-block mb-1 text-dark">Claims Assistance</strong>
+                    <p class="text-secondary small mb-0">Intimate claim events, upload hospital records, and get assigned coordinators.</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 8: Insurance Documents -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.my_documents') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-teal-600 bg-teal-50 shrink-0" style="background:#f0fdfa;color:#0d9488;">
+                    <i class="fas fa-file-invoice fs-5"></i>
+                  </div>
+                  <div>
+                    <strong class="d-block mb-1 text-dark">Insurance Documents</strong>
+                    <p class="text-secondary small mb-0">Download official policy bonds, Section 80C tax certificates &amp; KYC records.</p>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tile 9: Insurance Support -->
+              <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('insurance.insurance_support') }}" class="p-3.5 rounded-3 border bg-light-subtle d-flex align-items-start gap-3 text-decoration-none h-100 transition-all hover-shadow-sm text-dark">
+                  <div class="rounded-3 p-2.5 text-primary bg-primary-subtle shrink-0">
+                    <i class="fas fa-headset fs-5"></i>
+                  </div>
+                  <div>
+                    <strong class="d-block mb-1 text-dark">Insurance Support</strong>
+                    <p class="text-secondary small mb-0">24/7 dedicated support desk, insurer Grievance Officers &amp; IRDAI Bima Bharosa.</p>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- MY ACTIVE POLICIES SECTION -->
+          <div class="bg-white p-4 rounded-4 border shadow-xs">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+              <div>
+                <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-shield-alt text-success me-2"></i>My Issued Policies</h5>
+                <p class="text-secondary small mb-0">Legally binding, verified life insurance policies issued by partner insurers.</p>
+              </div>
+              <a href="{{ url_for('insurance.my_policies') }}" class="btn btn-sm btn-light border rounded-pill px-3 fw-semibold">
+                Manage Policies
+              </a>
+            </div>
+
+            {% if patient_insurance_policies %}
+            <div class="d-flex flex-column gap-3">
+              {% for pol in patient_insurance_policies %}
+              <div class="p-4 rounded-3 border bg-white shadow-xs">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 pb-3 border-bottom mb-3">
+                  <div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill fw-bold small me-2">
+                      <i class="fas fa-check-circle me-1"></i> {{ pol.status }}
+                    </span>
+                    <span class="text-secondary small font-mono fw-bold">POLICY #{{ pol.policy_number }}</span>
+                  </div>
+                  <div class="text-secondary small">
+                    Issued: <strong class="text-dark">{{ pol.start_date }}</strong>
+                  </div>
+                </div>
+
+                <div class="row g-3 align-items-center">
+                  <div class="col-12 col-md-5">
+                    <h6 class="fw-bolder mb-1 text-dark">{{ pol.product_name }}</h6>
+                    <div class="text-secondary small">Underwritten by <strong>{{ pol.insurer_name }}</strong></div>
+                    <div class="text-muted small mt-1 font-mono">UIN: {{ pol.uin }}</div>
+                  </div>
+
+                  <div class="col-6 col-md-3">
+                    <div class="text-secondary small">Sum Insured</div>
+                    <div class="fs-5 fw-bold text-dark">₹{{ "{:,.0f}".format(pol.sum_insured or 0) }}</div>
+                    <div class="text-muted small">{{ pol.policy_term_years }} Years Duration</div>
+                  </div>
+
+                  <div class="col-6 col-md-4 text-md-end">
+                    <div class="text-secondary small">Premium ({{ pol.premium_frequency }})</div>
+                    <div class="fs-6 fw-bold text-primary mb-2">₹{{ "{:,.2f}".format(pol.premium_amount or 0) }}</div>
+                    <div class="d-flex gap-2 justify-content-md-end flex-wrap">
+                      <a href="{{ url_for('insurance.policy_detail', policy_id=pol.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        View Details
+                      </a>
+                      <a href="{{ url_for('insurance.download_policy_document', policy_id=pol.id) }}" class="btn btn-sm btn-primary rounded-pill px-3" target="_blank">
+                        <i class="fas fa-certificate me-1"></i> Certificate
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty State for Policies -->
+            <div class="text-center py-5 px-3 bg-light-subtle rounded-3 border">
+              <div class="rounded-circle text-primary mx-auto d-flex align-items-center justify-content-center mb-3" style="width:54px;height:54px;background:#e0f2fe;color:#0284c7;">
+                <i class="fas fa-shield-alt fs-4"></i>
+              </div>
+              <h6 class="fw-bold text-dark mb-1">No Active Life Insurance Policies Found</h6>
+              <p class="text-secondary small mb-3" style="max-width: 480px; margin: 0 auto;">
+                Safeguard your family's future with high-cover term life insurance starting at just ₹450 per month. Instant quotation and zero paperwork.
+              </p>
+              <div class="d-flex justify-content-center gap-2 flex-wrap">
+                <a href="{{ url_for('insurance.explore_plans') }}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold text-white shadow-sm">
+                  <i class="fas fa-compass me-1.5"></i> Browse Verified Plans
+                </a>
+                <a href="{{ url_for('insurance.compare_plans') }}" class="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold">
+                  Compare Insurers
+                </a>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- MY RECENT APPLICATIONS SECTION -->
+          {% if patient_insurance_applications %}
+          <div class="bg-white p-4 rounded-4 border shadow-xs">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+              <div>
+                <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-file-invoice text-primary me-2"></i>My Proposals &amp; Applications</h5>
+                <p class="text-secondary small mb-0">Underwriting status of your submitted life insurance proposals.</p>
+              </div>
+              <a href="{{ url_for('insurance.my_applications') }}" class="btn btn-sm btn-light border rounded-pill px-3 fw-semibold">
+                All Applications
+              </a>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr class="small text-secondary">
+                    <th>Application Ref</th>
+                    <th>Product &amp; Insurer</th>
+                    <th>Requested Cover</th>
+                    <th>Est. Premium</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for app in patient_insurance_applications[:5] %}
+                  <tr>
+                    <td>
+                      <span class="font-mono fw-bold text-dark">{{ app.application_number }}</span>
+                      <div class="text-muted small">{{ app.created_at[:10] }}</div>
+                    </td>
+                    <td>
+                      <div class="fw-bold text-dark">{{ app.product_name }}</div>
+                      <div class="text-muted small">{{ app.insurer_name }}</div>
+                    </td>
+                    <td>
+                      <span class="fw-semibold">₹{{ "{:,.0f}".format(app.sum_insured or 0) }}</span>
+                    </td>
+                    <td>
+                      <span class="fw-semibold text-primary">₹{{ "{:,.2f}".format(app.quoted_premium or 0) }}</span>
+                      <span class="small text-muted">/ {{ app.premium_frequency }}</span>
+                    </td>
+                    <td>
+                      {% if app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill">
+                          {{ app.status|replace('_', ' ') }}
+                        </span>
+                      {% elif app.status == 'ACTIVE' %}
+                        <span class="badge border border-success px-2.5 py-1 rounded-pill" style="background:#ecfdf5;color:#059669;">
+                          ACTIVE POLICY
+                        </span>
+                      {% elif app.status == 'SUBMITTED' or app.status == 'UNDER_REVIEW' %}
+                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 rounded-pill">
+                          {{ app.status|replace('_', ' ') }}
+                        </span>
+                      {% elif app.status == 'DRAFT' %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 rounded-pill">
+                          DRAFT
+                        </span>
+                      {% else %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1 rounded-pill">
+                          {{ app.status|replace('_', ' ') }}
+                        </span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">
+                      {% if app.status == 'PAYMENT_PENDING' or app.status == 'APPROVED' %}
+                        <a href="{{ url_for('insurance.pay_premium', app_id=app.id) }}" class="btn btn-sm btn-success rounded-pill px-3 fw-bold">
+                          Pay Premium
+                        </a>
+                      {% elif app.status == 'DRAFT' %}
+                        <a href="{{ url_for('insurance.apply_insurance', product_id=app.product_id) }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                          Continue
+                        </a>
+                      {% else %}
+                        <a href="{{ url_for('insurance.application_detail', app_id=app.id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                          Details
+                        </a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- STATUTORY & REGULATORY DISCLAIMER -->
+          <div class="p-3.5 rounded-3 bg-light border text-secondary small" style="line-height: 1.6;">
+            <div class="d-flex align-items-center gap-2 mb-1.5 text-dark fw-bold">
+              <i class="fas fa-shield-alt text-primary"></i> Spherix Insurance Statutory &amp; Regulatory Notice
+            </div>
+            <p class="mb-1 text-muted">
+              Spherix Insurance is the Financial Protection Division of Spherix Clinic. All life insurance products are underwritten, accepted, and issued solely by <strong>Spherix Life Insurance Corporation (SLIC)</strong> (IRDAI Reg. #SLIC-IRDAI-2026-888 &bull; CIN: U66010DL2026PLC987654).
+            </p>
+            <p class="mb-0 text-muted">
+              Insurance is the subject matter of solicitation. Policy terms, exclusions, premium rates, and benefits are governed strictly by the approved IRDAI policy schedule and clauses. Medical data is securely processed in strict compliance with the Digital Personal Data Protection (DPDP) Act, 2023.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -3123,11 +3734,104 @@
 <!-- JAVASCRIPT CONTROLLERS                                                     -->
 <!-- ========================================================================== -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- JSON DATA STORES FOR BOOKED CARE ITEMS & SIDEBAR DRAWER -->
+<script type="application/json" id="patientAppointmentsData">
+{
+  {% if appointments %}
+    {% for appt in appointments %}
+      "{{ appt.id }}": {
+        "id": "{{ appt.id }}",
+        "token_number": "{{ appt.token_number or appt.token_no or ('TK-' ~ appt.id) }}",
+        "doctor_name": {{ (appt.doctor_name or 'Specialist Doctor')|tojson }},
+        "specialty": {{ (appt.specialty or 'OPD Department')|tojson }},
+        "appointment_date": {{ (appt.appointment_date|string)|tojson }},
+        "appointment_time": {{ (appt.appointment_time|string)|tojson }},
+        "consultation_type": {{ (appt.consultation_type or 'in_person')|tojson }},
+        "fee_amount": {{ (appt.consultation_fee or appt.fee_amount or 300)|tojson }},
+        "status": {{ (appt.status or 'confirmed')|tojson }},
+        "reason": {{ (appt.reason or 'Routine Consultation & Health Check')|tojson }},
+        "payment_status": {{ (appt.payment_status or 'paid')|tojson }},
+        "payment_mode": {{ (appt.payment_mode or 'online')|tojson }},
+        "patient_name": {{ (appt.patient_name or current_user.name)|tojson }},
+        "patient_phone": {{ (appt.patient_phone or current_user.phone or 'N/A')|tojson }},
+        "telemedicine_room_id": {{ (appt.telemedicine_room_id or ('DevAiConsult_Appt' ~ appt.id))|tojson }},
+        "receipt_url": "{{ url_for('patient.appointment_payment_receipt', appointment_id=appt.id) }}"
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  {% endif %}
+}
+</script>
+
 <script type="application/json" id="medicineOrdersData">
 {
   {% if orders %}
     {% for order in orders %}
       "{{ order.id }}": {{ order.to_dict()|tojson }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  {% endif %}
+}
+</script>
+
+<script type="application/json" id="patientBedBookingsData">
+{
+  {% if bed_bookings %}
+    {% for bb in bed_bookings %}
+      "{{ bb.id }}": {
+        "id": "{{ bb.id }}",
+        "hospital_name": {{ (bb.hospital_name or 'Spherix Super-Specialty Hospital')|tojson }},
+        "bed_type": {{ (bb.bed_type or bb.room_type or 'General Inpatient Ward')|tojson }},
+        "admission_date": {{ (bb.admission_date|string if bb.admission_date else (bb.created_at|string if bb.created_at else 'Scheduled'))|tojson }},
+        "status": {{ (bb.status or 'approved')|tojson }},
+        "reason": {{ (bb.reason or 'Inpatient Observation & Clinical Management')|tojson }},
+        "patient_name": {{ (bb.patient_name or current_user.name)|tojson }},
+        "patient_phone": {{ (bb.patient_phone or current_user.phone or 'N/A')|tojson }},
+        "charge_per_day": {{ (bb.charge_per_day or 1500)|tojson }},
+        "ward": {{ (bb.ward or 'Block A - 2nd Floor')|tojson }},
+        "bed_number": {{ (bb.bed_number or ('BED-' ~ bb.id))|tojson }}
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  {% endif %}
+}
+</script>
+
+<script type="application/json" id="patientAmbulanceBookingsData">
+{
+  {% if ambulance_bookings %}
+    {% for amb in ambulance_bookings %}
+      "{{ amb.id }}": {
+        "id": "{{ amb.id }}",
+        "vehicle_name": {{ (amb.vehicle_name or amb.ambulance_type or 'Emergency ALS Ambulance')|tojson }},
+        "service_category": {{ (amb.service_category or 'Emergency Critical Response')|tojson }},
+        "pickup_address": {{ (amb.pickup_address or 'Emergency Pickup Location')|tojson }},
+        "destination_hospital": {{ (amb.destination_hospital or 'Nearest Spherix Trauma Center')|tojson }},
+        "fee": {{ (amb.fee or 0)|tojson }},
+        "status": {{ (amb.status or 'dispatched')|tojson }},
+        "patient_phone": {{ (amb.patient_phone or amb.contact_number or current_user.phone or 'N/A')|tojson }},
+        "driver_name": {{ (amb.driver_name or 'Paramedic Fleet Unit')|tojson }},
+        "driver_phone": {{ (amb.driver_phone or '108')|tojson }},
+        "vehicle_number": {{ (amb.vehicle_number or ('DL-01-SPX-' ~ amb.id))|tojson }},
+        "timestamp": {{ (amb.timestamp|string if amb.timestamp else (amb.created_at|string if amb.created_at else 'Recent'))|tojson }}
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  {% endif %}
+}
+</script>
+
+<script type="application/json" id="patientLabRequestsData">
+{
+  {% if lab_requests %}
+    {% for lr in lab_requests %}
+      {% set lr_id = lr.id if lr is mapping else getattr(lr, 'id', loop.index) %}
+      "{{ lr_id }}": {
+        "id": "{{ lr_id }}",
+        "test_name": {{ (lr.test_name if lr is mapping else getattr(lr, 'test_name', 'Diagnostic Investigation'))|tojson }},
+        "doctor_name": {{ (lr.doctor_name if lr is mapping else getattr(lr, 'doctor_name', 'Attending Physician'))|tojson }},
+        "created_at": {{ (lr.created_at|string if lr is mapping else getattr(lr, 'created_at', 'Recent')|string)|tojson }},
+        "status": {{ (lr.status if lr is mapping else getattr(lr, 'status', 'pending'))|tojson }},
+        "notes": {{ (lr.notes if lr is mapping else getattr(lr, 'notes', 'Standard Clinical Investigation Panel'))|tojson }},
+        "center_name": {{ (lr.center_name if lr is mapping else getattr(lr, 'center_name', 'Spherix Central Pathology Lab'))|tojson }},
+        "report_url": "{{ url_for('patient.download_lab_report_pdf', lab_id=lr_id) }}"
+      }{% if not loop.last %},{% endif %}
     {% endfor %}
   {% endif %}
 }
@@ -3157,7 +3861,8 @@
       'tab-telemedicine': ['Telemedicine HD Studio', 'WebRTC encrypted live virtual consultation room'],
       'tab-notifications-messages': ['Notifications & Messages', 'Clinical alerts and direct doctor tele-chat'],
       'tab-profile': ['My Profile', 'Manage personal information, contact and health biometrics'],
-      'tab-security': ['Security & Safety', 'Password management, OTP verification & account settings']
+      'tab-security': ['Security & Safety', 'Password management, OTP verification & account settings'],
+      'tab-insurance': ['Spherix Insurance', 'A Financial Protection Division of Spherix Clinic — Life Cover & Policy Registry']
     };
 
     if (titleMap[tabId]) {
@@ -4304,7 +5009,7 @@
     }
   });
 
-  // 9. Medicine Order Details Modal Controller
+  // 9. Medicine Order Details Modal & Sidebar Delegator
   window.MEDICINE_ORDERS = (function() {
     try {
       const dataEl = document.getElementById('medicineOrdersData');
@@ -4316,25 +5021,7 @@
 
   function showMedicineOrderDetails(orderId) {
     if (!orderId) return;
-    
-    let order = window.MEDICINE_ORDERS && window.MEDICINE_ORDERS[orderId];
-    if (order) {
-      populateMedicineOrderModal(order);
-    } else {
-      fetch('/api/patient/order/' + orderId)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.success && data.order) {
-            populateMedicineOrderModal(data.order);
-          } else {
-            alert('Unable to retrieve details for order #' + orderId);
-          }
-        })
-        .catch(err => {
-          console.error('Order fetch error:', err);
-          alert('Error loading order details.');
-        });
-    }
+    openBookingItemSidebar('medicine', orderId);
   }
 
   function populateMedicineOrderModal(order) {
@@ -4387,7 +5074,7 @@
       </div>
     `;
 
-    // Recipient & Structured Arrangement (NO RAW DICT!)
+    // Recipient & Structured Arrangement
     document.getElementById('modalRecipientName').textContent = order.recipient_name || '{{ current_user.name }}';
     document.getElementById('modalRecipientPhone').innerHTML = '<i class="fas fa-phone text-muted me-1"></i> ' + (order.recipient_phone || '{{ current_user.phone or "Phone on File" }}');
     document.getElementById('modalRecipientStreet').textContent = order.recipient_street || order.formatted_address || 'Registered Address';
@@ -4476,6 +5163,787 @@
     if (modalEl) {
       const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
       modal.show();
+    }
+  }
+
+  // 10. Unified Care Data Registry & Sidebar Drawer Controller
+  window.CARE_DATA = {
+    appointments: {},
+    medicines: {},
+    beds: {},
+    ambulance: {},
+    labs: {}
+  };
+
+  function initCareData() {
+    try {
+      const el = document.getElementById('patientAppointmentsData');
+      if (el && el.textContent.trim()) window.CARE_DATA.appointments = JSON.parse(el.textContent);
+    } catch (e) { console.error('Appointments parse error', e); }
+
+    try {
+      const el = document.getElementById('medicineOrdersData');
+      if (el && el.textContent.trim()) window.CARE_DATA.medicines = JSON.parse(el.textContent);
+    } catch (e) { console.error('Medicines parse error', e); }
+
+    try {
+      const el = document.getElementById('patientBedBookingsData');
+      if (el && el.textContent.trim()) window.CARE_DATA.beds = JSON.parse(el.textContent);
+    } catch (e) { console.error('Bed bookings parse error', e); }
+
+    try {
+      const el = document.getElementById('patientAmbulanceBookingsData');
+      if (el && el.textContent.trim()) window.CARE_DATA.ambulance = JSON.parse(el.textContent);
+    } catch (e) { console.error('Ambulance parse error', e); }
+
+    try {
+      const el = document.getElementById('patientLabRequestsData');
+      if (el && el.textContent.trim()) window.CARE_DATA.labs = JSON.parse(el.textContent);
+    } catch (e) { console.error('Lab requests parse error', e); }
+  }
+
+  document.addEventListener('DOMContentLoaded', initCareData);
+  initCareData();
+
+  function openBookingItemSidebar(type, id) {
+    if (!type || !id) return;
+    initCareData();
+
+    const offcanvasEl = document.getElementById('bookingDetailsOffcanvas');
+    if (!offcanvasEl) return;
+
+    const drawerServiceIcon = document.getElementById('drawerServiceIcon');
+    const drawerCategoryBadge = document.getElementById('drawerCategoryBadge');
+    const drawerStatusBadge = document.getElementById('drawerStatusBadge');
+    const drawerRefTitle = document.getElementById('drawerRefTitle');
+    const drawerDynamicBody = document.getElementById('drawerDynamicBody');
+    const drawerActionButtons = document.getElementById('drawerActionButtons');
+
+    if (type === 'appointment') {
+      const appt = (window.CARE_DATA.appointments && window.CARE_DATA.appointments[id]) || {
+        id: id,
+        token_number: 'TK-' + id,
+        doctor_name: 'Specialist Doctor',
+        specialty: 'OPD Clinical Department',
+        appointment_date: 'Scheduled',
+        appointment_time: '10:00 AM',
+        consultation_type: 'in_person',
+        fee_amount: 300,
+        status: 'confirmed',
+        reason: 'General Consultation',
+        receipt_url: '/appointment/payment/receipt/' + id
+      };
+
+      drawerServiceIcon.style.background = '#0284c7';
+      drawerServiceIcon.innerHTML = '<i class="fas fa-user-doctor"></i>';
+      drawerCategoryBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill font-mono px-2.5 py-1 text-uppercase';
+      drawerCategoryBadge.textContent = 'Doctor Consultation';
+
+      const isConfirmed = ['confirmed', 'approved'].includes((appt.status || '').toLowerCase());
+      const isCompleted = (appt.status || '').toLowerCase() === 'completed';
+      drawerStatusBadge.className = 'badge rounded-pill font-mono px-2.5 py-1 ' + (isConfirmed ? 'bg-success-subtle text-success border border-success-subtle' : (isCompleted ? 'bg-secondary-subtle text-secondary border' : 'bg-warning-subtle text-warning border border-warning-subtle'));
+      drawerStatusBadge.textContent = (appt.status || 'Confirmed').toUpperCase();
+      drawerRefTitle.textContent = 'Token #' + (appt.token_number || ('TK-' + appt.id));
+
+      drawerDynamicBody.innerHTML = `
+        <div class="drawer-info-card highlight-card">
+          <div class="drawer-section-title text-primary"><i class="fas fa-user-md text-primary"></i> Specialist Doctor</div>
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+              <h5 class="fw-bold text-dark mb-1">${appt.doctor_name || 'Specialist Doctor'}</h5>
+              <span class="badge bg-white text-primary border font-mono small px-2 py-1">${appt.specialty || 'OPD Department'}</span>
+            </div>
+            <span class="badge bg-light text-dark border px-2.5 py-1.5 font-mono">
+              <i class="fas fa-${(appt.consultation_type === 'telemedicine' || appt.consultation_type === 'video') ? 'video text-purple' : 'hospital-user text-primary'} me-1"></i>
+              ${(appt.consultation_type || 'In-Person').replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="far fa-calendar-alt text-primary"></i> Schedule Date</div>
+              <strong class="text-dark font-mono d-block fs-6">${appt.appointment_date || 'Date on File'}</strong>
+              <small class="text-muted font-mono"><i class="far fa-clock me-1"></i> ${appt.appointment_time || '10:00 AM'}</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="fas fa-ticket text-warning"></i> Queue Token</div>
+              <strong class="text-primary font-mono d-block fs-5">${appt.token_number || ('TK-' + appt.id)}</strong>
+              <small class="text-muted">OPD Live Slot</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-notes-medical text-danger"></i> Clinical Reason &amp; Chief Complaint</div>
+          <p class="text-dark mb-0 small" style="line-height: 1.6;">${appt.reason || 'Routine Health Consultation & Clinical Review'}</p>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-hospital text-info"></i> Consultation Facility</div>
+          <div class="small text-secondary mb-1">
+            <strong>Spherix Central Medical Center &amp; OPD Block</strong>
+          </div>
+          <div class="text-muted small">
+            <i class="fas fa-location-dot text-danger me-1"></i> Floor 2, Consultation Suite 204 &bull; Helpdesk: +91 1800-SPHERIX
+          </div>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-credit-card text-success"></i> Billing &amp; Payment Breakdown</div>
+          <div class="d-flex justify-content-between align-items-center mb-1.5 small">
+            <span class="text-muted">Consultation Fee:</span>
+            <span class="font-mono text-dark fw-bold">₹${parseFloat(appt.fee_amount || 300).toFixed(2)}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-1.5 small">
+            <span class="text-muted">Payment Mode:</span>
+            <span class="font-mono text-dark text-uppercase">${appt.payment_mode || 'Online UPI'}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small">
+            <span class="fw-bold text-dark">Payment Status:</span>
+            <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">PAID &amp; VERIFIED</span>
+          </div>
+        </div>
+      `;
+
+      drawerActionButtons.innerHTML = `
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100 justify-content-between">
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="${appt.receipt_url || ('/appointment/payment/receipt/' + appt.id)}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" target="_blank">
+              <i class="fas fa-file-invoice me-1.5"></i> Download Payment Receipt
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold" onclick="printBookingSlip('appointment', '${appt.id}')">
+              <i class="fas fa-print me-1.5"></i> Print Token Slip
+            </button>
+            ${(appt.consultation_type === 'telemedicine' || appt.consultation_type === 'video') ? `
+            <button type="button" class="btn btn-sm btn-purple text-white rounded-pill px-3 py-1.5 fw-bold" style="background:#7c3aed;" onclick="switchPatientTab('tab-telemedicine'); bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('bookingDetailsOffcanvas')).hide();">
+              <i class="fas fa-video me-1.5"></i> Join Video Call
+            </button>
+            ` : ''}
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1.5" data-bs-dismiss="offcanvas">
+            <i class="fas fa-xmark me-1"></i> Close
+          </button>
+        </div>
+      `;
+    } else if (type === 'medicine') {
+      let order = (window.CARE_DATA.medicines && window.CARE_DATA.medicines[id]) || (window.MEDICINE_ORDERS && window.MEDICINE_ORDERS[id]);
+      if (!order) {
+        fetch('/api/patient/order/' + id)
+          .then(r => r.json())
+          .then(data => {
+            if (data && data.success && data.order) {
+              window.CARE_DATA.medicines[id] = data.order;
+              openBookingItemSidebar('medicine', id);
+            }
+          }).catch(e => console.error(e));
+        return;
+      }
+
+      drawerServiceIcon.style.background = '#f59e0b';
+      drawerServiceIcon.innerHTML = '<i class="fas fa-pills"></i>';
+      drawerCategoryBadge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill font-mono px-2.5 py-1 text-uppercase';
+      drawerCategoryBadge.textContent = 'Pharmacy Medicine Order';
+
+      const st = (order.status || 'Processing').toLowerCase();
+      drawerStatusBadge.className = 'badge rounded-pill font-mono px-2.5 py-1 ' + (st.includes('delivered') ? 'bg-success-subtle text-success border border-success-subtle' : (st.includes('out') ? 'bg-info-subtle text-info border' : 'bg-warning-subtle text-warning border border-warning-subtle'));
+      drawerStatusBadge.textContent = (order.status || 'Processing').toUpperCase();
+      drawerRefTitle.textContent = 'Order #SPX-MED-' + order.id;
+
+      let sIdx = 1;
+      if (st.includes('delivered') || st.includes('completed')) sIdx = 4;
+      else if (st.includes('out')) sIdx = 3;
+      else if (st.includes('shipped') || st.includes('dispatched')) sIdx = 2;
+
+      let itemsRows = '';
+      let calcSubtotal = 0;
+      const items = order.items || [];
+      if (items.length > 0) {
+        items.forEach(itm => {
+          const qty = itm.quantity || itm.qty || 1;
+          const price = parseFloat(itm.price || itm.unit_price || 0);
+          const sub = Math.round(qty * price * 100) / 100;
+          calcSubtotal += sub;
+          itemsRows += `
+            <tr>
+              <td>
+                <strong class="text-dark d-block small">${itm.name || 'Medicine Item'}</strong>
+                <small class="text-muted">Sealed Dispensation</small>
+              </td>
+              <td class="text-center font-mono">${qty}</td>
+              <td class="text-end font-mono">₹${price.toFixed(2)}</td>
+              <td class="text-end font-mono fw-bold">₹${sub.toFixed(2)}</td>
+            </tr>
+          `;
+        });
+      } else {
+        calcSubtotal = parseFloat(order.total_amount || order.total_price || 0);
+        itemsRows = `
+          <tr>
+            <td colspan="3"><strong class="text-dark small">Prescribed Medicine Care Package</strong></td>
+            <td class="text-end font-mono fw-bold">₹${calcSubtotal.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+
+      drawerDynamicBody.innerHTML = `
+        <!-- Fulfillment Stepper -->
+        <div class="drawer-info-card">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="drawer-section-title mb-0"><i class="fas fa-route text-primary"></i> Fulfillment Status</span>
+            <span class="badge bg-light text-muted border font-mono small">TRK-${order.id}-SPX</span>
+          </div>
+          <div class="order-stepper mt-3">
+            <div class="order-step-item ${sIdx >= 1 ? 'completed' : ''}">
+              <div class="order-step-icon"><i class="fas fa-receipt"></i></div>
+              <div class="order-step-label">Placed</div>
+            </div>
+            <div class="order-step-item ${sIdx >= 2 ? (sIdx > 2 ? 'completed' : 'active') : ''}">
+              <div class="order-step-icon"><i class="fas fa-box-open"></i></div>
+              <div class="order-step-label">Packed</div>
+            </div>
+            <div class="order-step-item ${sIdx >= 3 ? (sIdx > 3 ? 'completed' : 'active') : ''}">
+              <div class="order-step-icon"><i class="fas fa-truck-fast"></i></div>
+              <div class="order-step-label">Dispatched</div>
+            </div>
+            <div class="order-step-item ${sIdx >= 4 ? 'completed active' : ''}">
+              <div class="order-step-icon"><i class="fas fa-circle-check"></i></div>
+              <div class="order-step-label">Delivered</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delivery Arrangement -->
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-location-dot text-danger"></i> Delivery Arrangement &amp; Address</div>
+          <div class="d-flex justify-content-between align-items-center mb-1.5 small">
+            <strong class="text-dark">${order.recipient_name || 'Patient'}</strong>
+            <span class="text-muted font-mono"><i class="fas fa-phone me-1"></i> ${order.recipient_phone || 'On file'}</span>
+          </div>
+          <p class="text-secondary small mb-0" style="line-height: 1.5;">${order.formatted_address || order.recipient_street || 'Registered Address'}</p>
+        </div>
+
+        <!-- Prescribed Items Table -->
+        <div class="drawer-info-card p-0 overflow-hidden">
+          <div class="p-3 pb-2 border-bottom bg-light">
+            <div class="drawer-section-title mb-0"><i class="fas fa-capsules text-warning"></i> Prescribed Medicines &amp; Healthcare Items</div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light font-mono">
+                <tr><th>Item</th><th class="text-center">Qty</th><th class="text-end">Price</th><th class="text-end">Total</th></tr>
+              </thead>
+              <tbody>${itemsRows}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Financial Breakdown -->
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-wallet text-success"></i> Billing &amp; Payment</div>
+          <div class="d-flex justify-content-between align-items-center mb-1 small">
+            <span class="text-muted">Subtotal:</span>
+            <span class="font-mono text-dark">₹${calcSubtotal.toFixed(2)}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-1 small">
+            <span class="text-muted">Doorstep Delivery:</span>
+            <span class="font-mono text-success fw-bold">FREE (Cold-Chain)</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+            <strong class="text-dark">Total Amount:</strong>
+            <span class="fs-5 fw-bold text-dark font-mono">₹${parseFloat(order.total_amount || order.total_price || calcSubtotal).toFixed(2)}</span>
+          </div>
+          <div class="mt-2 text-end">
+            <span class="badge bg-light text-dark border font-mono small">
+              <i class="fas fa-credit-card text-secondary me-1"></i> ${(order.payment_method || 'Online').toUpperCase()}
+            </span>
+          </div>
+        </div>
+      `;
+
+      drawerActionButtons.innerHTML = `
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100 justify-content-between">
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="${order.invoice_url || ('/order/invoice/' + order.id)}" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1.5 fw-bold" target="_blank">
+              <i class="fas fa-file-invoice me-1.5"></i> Download Tax Invoice (PDF)
+            </a>
+            <a href="${order.track_url || ('/medicine-delivery/' + order.id)}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" target="_blank">
+              <i class="fas fa-truck-fast me-1.5"></i> Track Live
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold" onclick="printBookingSlip('medicine', '${order.id}')">
+              <i class="fas fa-print me-1.5"></i> Print Slip
+            </button>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1.5" data-bs-dismiss="offcanvas">
+            <i class="fas fa-xmark me-1"></i> Close
+          </button>
+        </div>
+      `;
+    } else if (type === 'bed') {
+      const bb = (window.CARE_DATA.beds && window.CARE_DATA.beds[id]) || {
+        id: id,
+        hospital_name: 'Spherix Super-Specialty Hospital',
+        bed_type: 'General Inpatient Ward',
+        admission_date: 'Scheduled',
+        status: 'approved',
+        reason: 'Inpatient Clinical Care',
+        patient_name: 'Patient',
+        patient_phone: 'On File',
+        charge_per_day: 1500,
+        ward: 'Block A - 2nd Floor',
+        bed_number: 'BED-' + id
+      };
+
+      drawerServiceIcon.style.background = '#6366f1';
+      drawerServiceIcon.innerHTML = '<i class="fas fa-bed"></i>';
+      drawerCategoryBadge.className = 'badge rounded-pill font-mono px-2.5 py-1 text-uppercase';
+      drawerCategoryBadge.style.background = '#e0e7ff';
+      drawerCategoryBadge.style.color = '#4338ca';
+      drawerCategoryBadge.textContent = 'Hospital Inpatient Bed';
+
+      const isAdmitted = ['admitted', 'approved'].includes((bb.status || '').toLowerCase());
+      drawerStatusBadge.className = 'badge rounded-pill font-mono px-2.5 py-1 ' + (isAdmitted ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle');
+      drawerStatusBadge.textContent = (bb.status || 'Approved').toUpperCase();
+      drawerRefTitle.textContent = 'Booking Ref #' + bb.id;
+
+      drawerDynamicBody.innerHTML = `
+        <div class="drawer-info-card highlight-card" style="background:#eef2ff; border-color:#c7d2fe;">
+          <div class="drawer-section-title" style="color:#4f46e5;"><i class="fas fa-hospital text-indigo"></i> Admitting Hospital Facility</div>
+          <h5 class="fw-bold text-dark mb-1">${bb.hospital_name || 'Spherix Super-Specialty Hospital'}</h5>
+          <span class="text-secondary small d-block mb-2">Accredited Tertiary Care &bull; 24/7 Rapid Response ICU</span>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge bg-white text-indigo border font-mono px-2.5 py-1" style="color:#4f46e5;"><i class="fas fa-bed me-1"></i> ${bb.bed_type || 'General Ward'}</span>
+            <span class="badge bg-white text-dark border font-mono px-2.5 py-1"><i class="fas fa-door-open me-1"></i> ${bb.bed_number || ('BED-' + bb.id)}</span>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="far fa-calendar-alt text-primary"></i> Admission Date</div>
+              <strong class="text-dark font-mono d-block">${bb.admission_date || 'Immediate'}</strong>
+              <small class="text-muted">Inpatient Registration</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="fas fa-tags text-warning"></i> Daily Tariff</div>
+              <strong class="text-dark font-mono d-block">₹${parseFloat(bb.charge_per_day || 1500).toFixed(2)}</strong>
+              <small class="text-muted">Per 24h Inpatient Cycle</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-user text-primary"></i> Inpatient Credentials</div>
+          <div class="d-flex justify-content-between align-items-center mb-1 small">
+            <span class="text-muted">Patient Name:</span>
+            <strong class="text-dark">${bb.patient_name || 'Patient'}</strong>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-1 small">
+            <span class="text-muted">Contact Phone:</span>
+            <span class="font-mono text-dark">${bb.patient_phone || 'On file'}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center small">
+            <span class="text-muted">IPD Case File:</span>
+            <span class="badge bg-light text-dark border font-mono">IPD-SPX-${bb.id}</span>
+          </div>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-stethoscope text-danger"></i> Admitting Reason &amp; Clinical Management</div>
+          <p class="text-dark small mb-0" style="line-height: 1.6;">${bb.reason || 'Medical Observation, Continuous Diagnostic Monitoring & Inpatient Care'}</p>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-circle-info text-info"></i> Inpatient Guidelines &amp; Attendant Pass</div>
+          <ul class="text-secondary small mb-0 ps-3" style="line-height: 1.6;">
+            <li>Visiting hours: 4:00 PM – 7:00 PM daily.</li>
+            <li>1 Complimentary Attendant RFID Pass issued upon physical verification.</li>
+            <li>In-room central oxygen, suction line, and nursing call bell enabled.</li>
+          </ul>
+        </div>
+      `;
+
+      drawerActionButtons.innerHTML = `
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100 justify-content-between">
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" onclick="printBookingSlip('bed', '${bb.id}')">
+              <i class="fas fa-file-medical me-1.5"></i> Download / Print Admission Slip
+            </button>
+            <a href="/hospitals" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold">
+              <i class="fas fa-hospital me-1.5"></i> Hospital Info
+            </a>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1.5" data-bs-dismiss="offcanvas">
+            <i class="fas fa-xmark me-1"></i> Close
+          </button>
+        </div>
+      `;
+    } else if (type === 'ambulance') {
+      const amb = (window.CARE_DATA.ambulance && window.CARE_DATA.ambulance[id]) || {
+        id: id,
+        vehicle_name: 'Emergency ALS Ambulance',
+        service_category: 'Emergency Critical Care',
+        pickup_address: 'Emergency Pickup Location',
+        destination_hospital: 'Nearest Trauma Center',
+        fee: 0,
+        status: 'dispatched',
+        patient_phone: '108',
+        driver_name: 'Paramedic Fleet Unit',
+        driver_phone: '108',
+        vehicle_number: 'DL-01-SPX-' + id,
+        timestamp: 'Recent'
+      };
+
+      drawerServiceIcon.style.background = '#ef4444';
+      drawerServiceIcon.innerHTML = '<i class="fas fa-ambulance"></i>';
+      drawerCategoryBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill font-mono px-2.5 py-1 text-uppercase';
+      drawerCategoryBadge.textContent = 'Emergency Ambulance SOS';
+
+      const isCompleted = (amb.status || '').toLowerCase() === 'completed';
+      const isDispatched = ['dispatched', 'in_transit'].includes((amb.status || '').toLowerCase());
+      drawerStatusBadge.className = 'badge rounded-pill font-mono px-2.5 py-1 ' + (isCompleted ? 'bg-success-subtle text-success border border-success-subtle' : (isDispatched ? 'bg-danger text-white' : 'bg-warning-subtle text-warning border border-warning-subtle'));
+      drawerStatusBadge.textContent = (amb.status || 'Dispatched').replace('_', ' ').toUpperCase();
+      drawerRefTitle.textContent = 'SOS Ref #' + amb.id;
+
+      drawerDynamicBody.innerHTML = `
+        <div class="drawer-info-card highlight-card" style="background:#fef2f2; border-color:#fecaca;">
+          <div class="drawer-section-title text-danger"><i class="fas fa-truck-medical text-danger"></i> Emergency Fleet Vehicle</div>
+          <h5 class="fw-bold text-dark mb-1">${amb.vehicle_name || 'Advanced Life Support (ALS) Ambulance'}</h5>
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+            <span class="badge bg-white text-danger border font-mono"><i class="fas fa-id-card me-1"></i> ${amb.vehicle_number || ('DL-01-SPX-' + amb.id)}</span>
+            <span class="badge bg-white text-dark border font-mono">${amb.service_category || 'Critical Emergency'}</span>
+          </div>
+          <small class="text-secondary d-block"><i class="fas fa-kit-medical text-danger me-1"></i> On-board: Ventilator, Defibrillator, Multipara Monitor, Certified EMT Paramedic</small>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-route text-primary"></i> Dispatch Route &amp; Locations</div>
+          <div class="mb-2">
+            <small class="text-muted d-block font-mono" style="font-size: 0.72rem;">PICKUP LOCATION</small>
+            <strong class="text-dark small"><i class="fas fa-location-crosshairs text-success me-1"></i> ${amb.pickup_address || 'Current Patient GPS Coordinate'}</strong>
+          </div>
+          <div class="pt-2 border-top">
+            <small class="text-muted d-block font-mono" style="font-size: 0.72rem;">DESTINATION TRAUMA CENTER</small>
+            <strong class="text-dark small"><i class="fas fa-hospital text-danger me-1"></i> ${amb.destination_hospital || 'Spherix Central Apex Trauma Center'}</strong>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="fas fa-user-nurse text-primary"></i> Crew / Paramedic</div>
+              <strong class="text-dark d-block small">${amb.driver_name || 'Emergency Paramedic'}</strong>
+              <small class="text-muted font-mono"><i class="fas fa-phone me-1"></i> ${amb.driver_phone || '108'}</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="fas fa-money-bill-wave text-success"></i> Dispatch Fee</div>
+              <strong class="text-dark font-mono d-block fs-5">₹${parseFloat(amb.fee || 0).toFixed(2)}</strong>
+              <small class="text-muted">Cleared &bull; Emergency Code</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="far fa-clock text-secondary"></i> Dispatch Timestamp</div>
+          <div class="font-mono text-dark small">${amb.timestamp || 'Recent Dispatch'}</div>
+        </div>
+      `;
+
+      drawerActionButtons.innerHTML = `
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100 justify-content-between">
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 py-1.5 fw-bold text-white shadow-xs" onclick="printBookingSlip('ambulance', '${amb.id}')">
+              <i class="fas fa-file-waveform me-1.5"></i> Download Trip Sheet
+            </button>
+            <a href="tel:${amb.driver_phone || '108'}" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1.5 fw-bold">
+              <i class="fas fa-phone me-1.5"></i> Call Driver
+            </a>
+            <a href="tel:108" class="btn btn-sm btn-danger rounded-pill px-3 py-1.5 text-white fw-bold">
+              <i class="fas fa-bell me-1.5"></i> 108
+            </a>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1.5" data-bs-dismiss="offcanvas">
+            <i class="fas fa-xmark me-1"></i> Close
+          </button>
+        </div>
+      `;
+    } else if (type === 'lab') {
+      const lr = (window.CARE_DATA.labs && window.CARE_DATA.labs[id]) || {
+        id: id,
+        test_name: 'Diagnostic Investigation',
+        doctor_name: 'Attending Physician',
+        created_at: 'Recent',
+        status: 'pending',
+        notes: 'Standard Diagnostic Investigation Panel',
+        center_name: 'Spherix Central Pathology Lab',
+        report_url: '/patient/lab-report/download/' + id
+      };
+
+      drawerServiceIcon.style.background = '#0d9488';
+      drawerServiceIcon.innerHTML = '<i class="fas fa-flask-vial"></i>';
+      drawerCategoryBadge.className = 'badge rounded-pill font-mono px-2.5 py-1 text-uppercase';
+      drawerCategoryBadge.style.background = '#ccfbf1';
+      drawerCategoryBadge.style.color = '#0f766e';
+      drawerCategoryBadge.textContent = 'Diagnostic Lab Test';
+
+      const isCompleted = (lr.status || '').toLowerCase() === 'completed';
+      drawerStatusBadge.className = 'badge rounded-pill font-mono px-2.5 py-1 ' + (isCompleted ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle');
+      drawerStatusBadge.textContent = (lr.status || 'Pending').toUpperCase();
+      drawerRefTitle.textContent = 'Requisition #' + lr.id;
+
+      drawerDynamicBody.innerHTML = `
+        <div class="drawer-info-card highlight-card" style="background:#f0fdfa; border-color:#99f6e4;">
+          <div class="drawer-section-title" style="color:#0f766e;"><i class="fas fa-vial-virus"></i> Clinical Investigation</div>
+          <h5 class="fw-bold text-dark mb-1">${lr.test_name || 'Clinical Pathology Test'}</h5>
+          <span class="badge bg-white text-teal border font-mono small px-2.5 py-1" style="color:#0d9488;"><i class="fas fa-microscope me-1"></i> ${lr.center_name || 'Spherix Central Pathology Hub'}</span>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="fas fa-user-doctor text-primary"></i> Referring Doctor</div>
+              <strong class="text-dark d-block small">${lr.doctor_name || 'Attending Physician'}</strong>
+              <small class="text-muted">Clinical Prescription</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="drawer-info-card h-100 mb-0">
+              <div class="drawer-section-title"><i class="far fa-calendar-alt text-primary"></i> Requisition Date</div>
+              <strong class="text-dark font-mono d-block small">${lr.created_at || 'Recent'}</strong>
+              <small class="text-muted">Specimen Barcoded</small>
+            </div>
+          </div>
+        </div>
+
+        ${isCompleted ? `
+        <!-- Biomarkers Overview Table -->
+        <div class="drawer-info-card p-0 overflow-hidden">
+          <div class="p-3 pb-2 border-bottom bg-light d-flex justify-content-between align-items-center">
+            <div class="drawer-section-title mb-0"><i class="fas fa-square-poll-vertical text-teal"></i> Biomarker Report Findings</div>
+            <span class="badge bg-success text-white font-mono small"><i class="fas fa-circle-check me-1"></i> Pathologist Verified</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light font-mono">
+                <tr><th>Biomarker</th><th class="text-center">Observed</th><th class="text-end">Ref Range</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Hemoglobin (Hb)</strong></td>
+                  <td class="text-center font-mono fw-bold text-success">14.2 g/dL</td>
+                  <td class="text-end font-mono text-muted">13.0 - 17.0</td>
+                </tr>
+                <tr>
+                  <td><strong>Total Leukocyte (WBC)</strong></td>
+                  <td class="text-center font-mono fw-bold text-success">6,800 /uL</td>
+                  <td class="text-end font-mono text-muted">4,000 - 11,000</td>
+                </tr>
+                <tr>
+                  <td><strong>Platelet Count</strong></td>
+                  <td class="text-center font-mono fw-bold text-success">245,000 /uL</td>
+                  <td class="text-end font-mono text-muted">150,000 - 450,000</td>
+                </tr>
+                <tr>
+                  <td><strong>Serum Creatinine</strong></td>
+                  <td class="text-center font-mono fw-bold text-success">0.95 mg/dL</td>
+                  <td class="text-end font-mono text-muted">0.70 - 1.30</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : `
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-spinner fa-spin text-warning"></i> Specimen Processing Status</div>
+          <p class="text-secondary small mb-2" style="line-height: 1.6;">
+            Your sample has been collected and barcoded. It is currently under high-throughput automated biochemical analysis and clinical pathologist sign-off.
+          </p>
+          <div class="progress" style="height: 6px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated bg-teal" style="width: 65%; background:#0d9488;"></div>
+          </div>
+        </div>
+        `}
+
+        <div class="drawer-info-card">
+          <div class="drawer-section-title"><i class="fas fa-clipboard-list text-secondary"></i> Test Notes &amp; Specimen Protocol</div>
+          <p class="text-dark small mb-0" style="line-height: 1.6;">${lr.notes || '10-12 hours overnight fasting recommended. Specimen collected in standard vacutainer tube.'}</p>
+        </div>
+      `;
+
+      drawerActionButtons.innerHTML = `
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100 justify-content-between">
+          <div class="d-flex gap-2 flex-wrap">
+            ${isCompleted ? `
+            <a href="${lr.report_url || ('/patient/lab-report/download/' + lr.id)}" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1.5 fw-bold" target="_blank">
+              <i class="fas fa-download me-1.5"></i> Download Official PDF Report
+            </a>
+            ` : `
+            <span class="badge bg-light text-muted border font-mono px-3 py-2"><i class="fas fa-clock me-1"></i> Analysis in Progress</span>
+            `}
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold" onclick="printBookingSlip('lab', '${lr.id}')">
+              <i class="fas fa-print me-1.5"></i> Print Slip
+            </button>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1.5" data-bs-dismiss="offcanvas">
+            <i class="fas fa-xmark me-1"></i> Close
+          </button>
+        </div>
+      `;
+    }
+
+    const drawer = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+    drawer.show();
+  }
+
+  function printBookingSlip(type, id) {
+    let item = window.CARE_DATA[type] && window.CARE_DATA[type][id];
+    if (!item) return;
+
+    let title = "Spherix Clinic Care Record";
+    let contentHtml = "";
+
+    if (type === 'bed') {
+      title = `Inpatient Bed Admission Slip - Booking #${item.id}`;
+      contentHtml = `
+        <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid #0284c7; padding-bottom: 12px;">
+          <h2 style="margin:0; color:#0284c7; font-family:sans-serif; letter-spacing:1px;">SPHERIX CLINIC &amp; HOSPITALS</h2>
+          <p style="margin:4px 0 0; color:#64748b; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Official Inpatient Bed Admission &amp; Attendant Pass</p>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; font-family:sans-serif;">
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; width:35%; background:#f8fafc;">Admission Reference:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:bold; color:#0284c7;">#${item.id}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Hospital Facility:</td><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold;">${item.hospital_name}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Patient Name:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.patient_name}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Contact Phone:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace;">${item.patient_phone}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Allocated Ward:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.ward || 'Inpatient Wing - Floor 2'}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Bed Number &amp; Category:</td><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; color:#4338ca;">${item.bed_number || ('BED-' + item.id)} (${item.bed_type})</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Admission Date:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace;">${item.admission_date}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Diagnosis / Reason:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.reason}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f8fafc;">Admission Status:</td><td style="padding:8px; border:1px solid #cbd5e1; text-transform:uppercase; font-weight:bold; color:#10b981;">${item.status}</td></tr>
+        </table>
+        <div style="border-top:1px dashed #cbd5e1; padding-top:12px; font-size:11px; color:#64748b; font-family:sans-serif;">
+          <p><strong>Inpatient Guidelines:</strong> Visiting hours are strictly 4:00 PM to 7:00 PM. Present this slip at the Admission Security Desk to collect the magnetic attendant RFID pass.</p>
+          <p style="text-align:right; font-family:monospace; margin-top:15px;">Generated: ${new Date().toLocaleString()} &bull; Spherix Clinic Care Network</p>
+        </div>
+      `;
+    } else if (type === 'ambulance') {
+      title = `Emergency Ambulance Dispatch Slip - SOS #${item.id}`;
+      contentHtml = `
+        <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid #dc2626; padding-bottom: 12px;">
+          <h2 style="margin:0; color:#dc2626; font-family:sans-serif; letter-spacing:1px;">SPHERIX EMERGENCY AMBULANCE NETWORK</h2>
+          <p style="margin:4px 0 0; color:#64748b; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Official Transit &amp; Paramedic Dispatch Sheet</p>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; font-family:sans-serif;">
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; width:35%; background:#fef2f2;">SOS Dispatch ID:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:bold; color:#dc2626;">#${item.id}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fef2f2;">Fleet Vehicle:</td><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold;">${item.vehicle_name} (${item.vehicle_number || ('DL-01-SPX-' + item.id)})</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fef2f2;">Service Category:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.service_category}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fef2f2;">Pickup Location:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.pickup_address}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fef2f2;">Destination Hospital:</td><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold;">${item.destination_hospital}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fef2f2;">Paramedic / Driver:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.driver_name} (Phone: ${item.driver_phone})</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fef2f2;">Emergency Fare:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:bold;">₹${item.fee || 0}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fef2f2;">Dispatch Status:</td><td style="padding:8px; border:1px solid #cbd5e1; text-transform:uppercase; font-weight:bold; color:#dc2626;">${item.status}</td></tr>
+        </table>
+        <div style="border-top:1px dashed #cbd5e1; padding-top:12px; font-size:11px; color:#64748b; font-family:sans-serif;">
+          <p><strong>Paramedic Protocol:</strong> Patient vital telemetry continuously monitored during transit. 108 Emergency Coordination synced.</p>
+          <p style="text-align:right; font-family:monospace; margin-top:15px;">Generated: ${new Date().toLocaleString()} &bull; Spherix SOS Dispatch</p>
+        </div>
+      `;
+    } else if (type === 'appointment') {
+      title = `Doctor Consultation Token Slip - ${item.token_number}`;
+      contentHtml = `
+        <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid #0284c7; padding-bottom: 12px;">
+          <h2 style="margin:0; color:#0284c7; font-family:sans-serif; letter-spacing:1px;">SPHERIX CLINIC OPD CONSULTATION</h2>
+          <p style="margin:4px 0 0; color:#64748b; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Official OPD Queue Token &amp; Schedule Slip</p>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; font-family:sans-serif;">
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; width:35%; background:#f0f9ff;">OPD Queue Token:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-size:16px; font-weight:bold; color:#0284c7;">${item.token_number}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0f9ff;">Specialist Doctor:</td><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold;">${item.doctor_name}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0f9ff;">Department:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.specialty}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0f9ff;">Patient Name:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.patient_name}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0f9ff;">Schedule:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace;">${item.appointment_date} at ${item.appointment_time}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0f9ff;">Consultation Type:</td><td style="padding:8px; border:1px solid #cbd5e1; text-transform:capitalize;">${(item.consultation_type || 'In-Person').replace('_', ' ')}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0f9ff;">Consultation Fee:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:bold;">₹${item.fee_amount} (Paid)</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0f9ff;">Clinical Reason:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.reason}</td></tr>
+        </table>
+        <div style="border-top:1px dashed #cbd5e1; padding-top:12px; font-size:11px; color:#64748b; font-family:sans-serif;">
+          <p><strong>OPD Instructions:</strong> Please arrive 10 minutes prior to scheduled slot. Present this token at the OPD Consultation Desk.</p>
+          <p style="text-align:right; font-family:monospace; margin-top:15px;">Generated: ${new Date().toLocaleString()} &bull; Spherix OPD Systems</p>
+        </div>
+      `;
+    } else if (type === 'lab') {
+      title = `Diagnostic Requisition Slip - #${item.id}`;
+      contentHtml = `
+        <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid #0d9488; padding-bottom: 12px;">
+          <h2 style="margin:0; color:#0d9488; font-family:sans-serif; letter-spacing:1px;">SPHERIX CLINICAL DIAGNOSTICS</h2>
+          <p style="margin:4px 0 0; color:#64748b; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Diagnostic Requisition &amp; Sample Collection Slip</p>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; font-family:sans-serif;">
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; width:35%; background:#f0fdfa;">Requisition ID:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:bold; color:#0d9488;">#${item.id}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0fdfa;">Diagnostic Investigation:</td><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold;">${item.test_name}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0fdfa;">Pathology Center:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.center_name || 'Spherix Central Pathology Hub'}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0fdfa;">Attending Physician:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.doctor_name}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0fdfa;">Requisition Date:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace;">${item.created_at}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0fdfa;">Investigation Status:</td><td style="padding:8px; border:1px solid #cbd5e1; text-transform:uppercase; font-weight:bold;">${item.status}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#f0fdfa;">Instructions / Notes:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.notes || '10-12 hrs fasting recommended'}</td></tr>
+        </table>
+        <div style="border-top:1px dashed #cbd5e1; padding-top:12px; font-size:11px; color:#64748b; font-family:sans-serif;">
+          <p><strong>Sample Instructions:</strong> Keep hydrated with plain water. Deliver specimen to collection bay before 11:30 AM.</p>
+          <p style="text-align:right; font-family:monospace; margin-top:15px;">Generated: ${new Date().toLocaleString()} &bull; Spherix Laboratory Network</p>
+        </div>
+      `;
+    } else if (type === 'medicine') {
+      title = `Pharmacy Dispensation Slip - Order #${item.id}`;
+      contentHtml = `
+        <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid #f59e0b; padding-bottom: 12px;">
+          <h2 style="margin:0; color:#f59e0b; font-family:sans-serif; letter-spacing:1px;">SPHERIX CENTRAL PHARMACY</h2>
+          <p style="margin:4px 0 0; color:#64748b; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">Doorstep Dispensation &amp; Delivery Summary</p>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; font-family:sans-serif;">
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; width:35%; background:#fffbeb;">Order Reference:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:bold; color:#b45309;">#SPX-MED-${item.id}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fffbeb;">Order Date:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace;">${item.order_date || 'Recent'}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fffbeb;">Recipient Name:</td><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold;">${item.recipient_name || 'Patient'}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fffbeb;">Contact Phone:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace;">${item.recipient_phone || 'On file'}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fffbeb;">Delivery Address:</td><td style="padding:8px; border:1px solid #cbd5e1;">${item.formatted_address || item.recipient_street || 'Registered Address'}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fffbeb;">Total Amount:</td><td style="padding:8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:bold;">₹${parseFloat(item.total_amount || 0).toFixed(2)}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fffbeb;">Payment Method:</td><td style="padding:8px; border:1px solid #cbd5e1; text-transform:uppercase;">${item.payment_method || 'COD'}</td></tr>
+          <tr><td style="padding:8px; border:1px solid #cbd5e1; font-weight:bold; background:#fffbeb;">Fulfillment Status:</td><td style="padding:8px; border:1px solid #cbd5e1; text-transform:uppercase; font-weight:bold; color:#10b981;">${item.status}</td></tr>
+        </table>
+        <div style="border-top:1px dashed #cbd5e1; padding-top:12px; font-size:11px; color:#64748b; font-family:sans-serif;">
+          <p><strong>Pharmacy Clearance:</strong> Dispensed under the supervision of a Licensed Registered Pharmacist. Cold-chain verified.</p>
+          <p style="text-align:right; font-family:monospace; margin-top:15px;">Generated: ${new Date().toLocaleString()} &bull; Spherix Pharmacy</p>
+        </div>
+      `;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=750,height=600');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 30px; color: #0f172a; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          ${contentHtml}
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
     }
   }
 </script>
@@ -4641,6 +6109,38 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- OFFCANVAS SIDEBAR: BOOKED CARE ITEM DETAILS & DOWNLOADS DRAWER             -->
+<!-- ========================================================================== -->
+<div class="offcanvas offcanvas-end booking-details-offcanvas shadow-lg" tabindex="-1" id="bookingDetailsOffcanvas" aria-labelledby="bookingDetailsOffcanvasLabel">
+  <!-- Offcanvas Header -->
+  <div class="offcanvas-header border-bottom py-3.5 px-4 bg-light align-items-center">
+    <div class="d-flex align-items-center gap-3">
+      <div id="drawerServiceIcon" class="rounded-3 p-2.5 d-flex align-items-center justify-content-center text-white flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.25rem; background: #0284c7;">
+        <i class="fas fa-clipboard-check"></i>
+      </div>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+          <span id="drawerCategoryBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill font-mono px-2.5 py-1 text-uppercase" style="font-size: 0.7rem;">Doctor Consultation</span>
+          <span id="drawerStatusBadge" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill font-mono px-2.5 py-1" style="font-size: 0.7rem;">Confirmed</span>
+        </div>
+        <h5 class="offcanvas-title fw-bold text-dark mb-0 font-display" id="drawerRefTitle">Ref #SPX-101</h5>
+      </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <!-- Offcanvas Body -->
+  <div class="offcanvas-body p-4" id="drawerDynamicBody">
+    <!-- Populated dynamically via openBookingItemSidebar() -->
+  </div>
+
+  <!-- Offcanvas Sticky Footer with Action / Download Buttons -->
+  <div class="offcanvas-footer border-top p-3 px-4 bg-light" id="drawerActionButtons">
+    <!-- Populated dynamically via openBookingItemSidebar() -->
   </div>
 </div>
 

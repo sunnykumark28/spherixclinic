@@ -74,7 +74,7 @@ LAST_API_CALL_TIME = {}  # Track last API call time per user
 def get_cache_key(symptoms_query, age, gender, height=None, weight=None):
     """Generate a hash-based cache key from symptoms and patient info."""
     cache_str = f"{symptoms_query}:{age}:{gender}:{height}:{weight}"
-    return hashlib.md5(cache_str.encode()).hexdigest()
+    return hashlib.sha256(cache_str.encode()).hexdigest()
 
 
 def _extract_json_payload(text):
@@ -592,6 +592,12 @@ Output only the formatted SOAP note in HTML format (using Tailwind CSS class lab
         resp.raise_for_status()
         payload_json = resp.json()
         text = _extract_groq_text_response(payload_json)
+        if text:
+            text = re.sub(r'^```html\s*', '', text.strip(), flags=re.IGNORECASE)
+            text = re.sub(r'^```\s*', '', text)
+            text = re.sub(r'```$', '', text.strip())
+            text = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', text)
+            text = text.replace('**', '')
         return text
     except Exception as e:
         print(f"⚠️ Groq SOAP generation failed: {e}")
@@ -691,15 +697,22 @@ Required keys:
         if not parsed or not isinstance(parsed, dict):
             raise ValueError('Groq response could not be parsed as JSON')
 
+        def _clean_s(s):
+            if isinstance(s, str):
+                return re.sub(r'\*\*([^*]+)\*\*', r'\1', s).replace('**', '').strip()
+            elif isinstance(s, list):
+                return [_clean_s(x) for x in s]
+            return s
+
         return {
-            'drug_name': parsed.get('drug_name', drug_name),
-            'description': parsed.get('description', 'No description available.'),
-            'primary_use': parsed.get('primary_use', 'General medication use.'),
-            'common_side_effects': parsed.get('common_side_effects') if isinstance(parsed.get('common_side_effects'), list) else [],
-            'caution': parsed.get('caution', 'Consult a healthcare professional before use.'),
-            'clinical_notes': parsed.get('clinical_notes', ''),
-            'usage_instructions': parsed.get('usage_instructions', 'Refer to packaging or professional advice.'),
-            'dosage_interval': parsed.get('dosage_interval', 'Consult a healthcare professional for exact dosage intervals.'),
+            'drug_name': _clean_s(parsed.get('drug_name', drug_name)),
+            'description': _clean_s(parsed.get('description', 'No description available.')),
+            'primary_use': _clean_s(parsed.get('primary_use', 'General medication use.')),
+            'common_side_effects': _clean_s(parsed.get('common_side_effects')) if isinstance(parsed.get('common_side_effects'), list) else [],
+            'caution': _clean_s(parsed.get('caution', 'Consult a healthcare professional before use.')),
+            'clinical_notes': _clean_s(parsed.get('clinical_notes', '')),
+            'usage_instructions': _clean_s(parsed.get('usage_instructions', 'Refer to packaging or professional advice.')),
+            'dosage_interval': _clean_s(parsed.get('dosage_interval', 'Consult a healthcare professional for exact dosage intervals.')),
             'source': 'ai'
         }
     except Exception as e:
@@ -989,6 +1002,16 @@ Ensure the output is 100% valid JSON."""
         parsed = _extract_json_payload(output_text)
         if not parsed or not isinstance(parsed, dict):
             raise ValueError('Groq response could not be parsed as JSON')
+
+        def _clean_s(o):
+            if isinstance(o, str):
+                return re.sub(r'\*\*([^*]+)\*\*', r'\1', o).replace('**', '').strip()
+            elif isinstance(o, list):
+                return [_clean_s(x) for x in o]
+            elif isinstance(o, dict):
+                return {k: _clean_s(v) for k, v in o.items()}
+            return o
+        parsed = _clean_s(parsed)
 
         # Populate legacy & helper keys for seamless template rendering
         parsed['condition_name'] = condition_name

@@ -1,0 +1,345 @@
+{% extends "layout.html" %}
+
+{% block title %}My Life Insurance &amp; Financial Protection — Spherix Insurance{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] text-slate-900 pb-20 w-full">
+
+  <!-- Header -->
+  <section class="bg-gradient-to-r from-[#002f5e] to-[#004b87] text-white py-10 px-4 sm:px-6 lg:px-12 shadow-md">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-200 mb-1">
+          <a href="{{ url_for('patient_dashboard') }}?tab=tab-insurance" class="hover:underline flex items-center gap-1">
+            <i class="fas fa-arrow-left text-xxs"></i> Patient Dashboard
+          </a>
+          <span>/</span>
+          <span>Financial Protection Division</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black font-heading tracking-tight flex items-center gap-2.5">
+          <span>My Life Insurance Portfolio</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-sky-100 mt-1">
+          Manage your active policies, track submitted applications, verify premium payments, and request claims assistance.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('insurance.explore_plans') }}" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black shadow-sm transition-all flex items-center gap-1.5">
+          <i class="fas fa-plus"></i>
+          <span>Explore New Plans</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation Tabs & Content -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mt-8">
+    
+    <!-- Tab Navigation Pills -->
+    <div class="flex items-center gap-2.5 sm:gap-3.5 overflow-x-auto pb-3 mb-6 border-b border-slate-200">
+      <a href="{{ url_for('insurance.my_policies') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 {% if active_tab == 'policies' %}bg-[#004b87] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        <i class="fas fa-file-shield"></i>
+        <span>My Insurance Policies</span>
+      </a>
+
+      <a href="{{ url_for('insurance.my_applications') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 {% if active_tab == 'applications' %}bg-[#004b87] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        <i class="fas fa-file-signature"></i>
+        <span>My Applications</span>
+      </a>
+
+      <a href="{{ url_for('insurance.my_payments') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 {% if active_tab == 'payments' %}bg-[#004b87] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        <i class="fas fa-receipt"></i>
+        <span>Premium Payments</span>
+      </a>
+
+      <a href="{{ url_for('insurance.my_claims') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 {% if active_tab == 'claims' %}bg-[#004b87] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        <i class="fas fa-hand-holding-heart"></i>
+        <span>Claims Assistance</span>
+      </a>
+
+      <a href="{{ url_for('insurance.my_documents') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 {% if active_tab == 'documents' %}bg-[#004b87] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        <i class="fas fa-folder-open"></i>
+        <span>Insurance Documents</span>
+      </a>
+
+      <a href="{{ url_for('insurance.insurance_support') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">
+        <i class="fas fa-headset text-indigo-600"></i>
+        <span>Support &amp; Grievance</span>
+      </a>
+    </div>
+
+    <!-- ================= TAB: POLICIES ================= -->
+    {% if active_tab == 'policies' %}
+    <div>
+      {% if policies %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for pol in policies %}
+        <div class="bg-white rounded-2xl border-2 border-slate-200 hover:border-[#004b87] hover:shadow-lg transition-all p-6 flex flex-col justify-between">
+          <div>
+            <!-- Top Badges -->
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold {% if pol.status == 'ACTIVE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
+                <span class="w-2 h-2 rounded-full {% if pol.status == 'ACTIVE' %}bg-emerald-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                <span>{{ pol.status }}</span>
+              </span>
+              <span class="text-xs font-mono font-bold text-slate-500">
+                #{{ pol.policy_number }}
+              </span>
+            </div>
+
+            <h3 class="text-base font-black text-slate-900 font-heading">{{ pol.product_name }}</h3>
+            <p class="text-xs font-semibold text-slate-500 mt-0.5">
+              Issued by <strong>{{ pol.partner_name }}</strong> &bull; IRDAI #{{ pol.irda_reg_no }}
+            </p>
+
+            <!-- Specifications Grid -->
+            <div class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span class="text-xxs uppercase font-bold text-slate-400 block">Sum Insured (Cover)</span>
+                <span class="text-base font-black text-[#004b87]">₹{{ '%.0f'|format(pol.sum_insured) }}</span>
+              </div>
+              <div>
+                <span class="text-xxs uppercase font-bold text-slate-400 block">Premium Mode</span>
+                <span class="text-sm font-bold text-slate-800">₹{{ '%.0f'|format(pol.premium_amount) }} / {{ pol.premium_frequency|lower }}</span>
+              </div>
+              <div>
+                <span class="text-xxs uppercase font-bold text-slate-400 block">Policy Inception</span>
+                <span class="text-xs font-bold text-slate-700">{{ pol.policy_start_date }}</span>
+              </div>
+              <div>
+                <span class="text-xxs uppercase font-bold text-slate-400 block">Next Premium Due</span>
+                <span class="text-xs font-bold text-emerald-700">{{ pol.next_premium_due_date }}</span>
+              </div>
+            </div>
+
+            <!-- Nominee info -->
+            <div class="mt-3 flex items-center justify-between text-xs text-slate-600 bg-sky-50/50 p-2.5 rounded-lg border border-sky-100">
+              <span><i class="fas fa-user-shield text-sky-600 me-1"></i> Nominee: <strong>{{ pol.nominee_name or 'Primary Nominee' }}</strong> ({{ pol.nominee_relation or 'Spouse' }})</span>
+              <span class="font-mono text-xxs font-bold text-slate-500">100% Share</span>
+            </div>
+          </div>
+
+          <!-- Actions Footer -->
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+            <a href="{{ url_for('insurance.download_policy_document', policy_id=pol.id) }}" class="px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5">
+              <i class="fas fa-file-pdf text-rose-500"></i>
+              <span>Download Schedule</span>
+            </a>
+            <div class="flex items-center gap-2">
+              <a href="{{ url_for('insurance.request_claim') }}?policy_id={{ pol.id }}" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+                Claim Help
+              </a>
+              <a href="{{ url_for('insurance.policy_detail', policy_id=pol.id) }}" class="px-4 py-2 rounded-lg bg-[#004b87] hover:bg-[#002f5e] text-white text-xs font-black shadow-xs transition-all">
+                View Policy &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="bg-white rounded-2xl p-12 text-center border border-slate-200">
+        <i class="fas fa-shield-halved text-4xl text-slate-300 mb-3"></i>
+        <h3 class="text-base font-bold text-slate-900">No active insurance policies yet</h3>
+        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Explore life insurance plans from authorized insurers and protect your family today.</p>
+        <a href="{{ url_for('insurance.explore_plans') }}" class="mt-4 inline-block px-5 py-2.5 rounded-lg bg-[#004b87] hover:bg-[#002f5e] text-white text-xs font-black shadow-xs transition-all">
+          Explore Insurance Plans &rarr;
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ================= TAB: APPLICATIONS ================= -->
+    {% if active_tab == 'applications' %}
+    <div>
+      {% if applications %}
+      <div class="space-y-4">
+        {% for app in applications %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono font-bold text-slate-500">Ref: {{ app.application_number }}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-xxs font-black uppercase tracking-wider {% if app.status == 'ACTIVE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% elif app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' %}bg-blue-50 text-[#004b87] border border-blue-200{% elif app.status == 'UNDER_REVIEW' %}bg-amber-50 text-amber-800 border border-amber-200{% elif app.status == 'DRAFT' %}bg-slate-100 text-slate-600 border border-slate-200{% else %}bg-purple-50 text-purple-800 border border-purple-200{% endif %}">
+                {{ app.status|replace('_', ' ') }}
+              </span>
+            </div>
+            <h4 class="text-base font-black text-slate-900 font-heading">{{ app.product_name }}</h4>
+            <p class="text-xs text-slate-500">
+              Partner: <strong>{{ app.partner_name }}</strong> &bull; Sum Insured: <strong>₹{{ '%.0f'|format(app.insurance_details.get('sum_insured', 10000000)) }}</strong> &bull; Step {{ app.current_step }}/6
+            </p>
+            {% if app.insurer_remarks %}
+            <p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-2">
+              <i class="fas fa-stethoscope text-indigo-600 me-1"></i> Underwriting Remark: {{ app.insurer_remarks }}
+            </p>
+            {% endif %}
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0">
+            {% if app.status == 'DRAFT' %}
+            <a href="{{ url_for('insurance.apply_insurance', product_id=app.product_id, app_id=app.id, step=app.current_step) }}" class="px-4 py-2 rounded-lg bg-[#004b87] hover:bg-[#002f5e] text-white text-xs font-bold transition-all">
+              Resume Application &rarr;
+            </a>
+            {% elif app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' %}
+            <a href="{{ url_for('insurance.pay_premium', app_id=app.id) }}" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition-all flex items-center gap-1.5">
+              <i class="fas fa-credit-card"></i> Pay Premium
+            </a>
+            {% else %}
+            <a href="{{ url_for('insurance.application_detail', app_id=app.id) }}" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+              View Application
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="bg-white rounded-2xl p-12 text-center border border-slate-200">
+        <i class="fas fa-file-signature text-4xl text-slate-300 mb-3"></i>
+        <h3 class="text-base font-bold text-slate-900">No applications on file</h3>
+        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Start a proposal to view quotation, nominee designation, and instant underwriting progress.</p>
+        <a href="{{ url_for('insurance.explore_plans') }}" class="mt-4 inline-block px-5 py-2.5 rounded-lg bg-[#004b87] text-white text-xs font-bold">
+          Start Application &rarr;
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ================= TAB: PAYMENTS ================= -->
+    {% if active_tab == 'payments' %}
+    <div>
+      {% if payments %}
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+              <tr>
+                <th class="p-3.5">Payment Ref</th>
+                <th class="p-3.5">Policy / Product</th>
+                <th class="p-3.5">Amount</th>
+                <th class="p-3.5">Method</th>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5">Date</th>
+                <th class="p-3.5 text-right">Receipt</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for p in payments %}
+              <tr class="hover:bg-slate-50/50">
+                <td class="p-3.5 font-mono font-bold text-slate-700">{{ p.transaction_ref }}</td>
+                <td class="p-3.5 font-medium text-slate-900">{{ p.product_name }}</td>
+                <td class="p-3.5 font-black text-slate-900">₹{{ '%.2f'|format(p.total_amount) }}</td>
+                <td class="p-3.5 font-semibold text-slate-600">{{ p.payment_method }}</td>
+                <td class="p-3.5">
+                  <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase {% if p.status == 'SUCCESS' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-amber-50 text-amber-800{% endif %}">
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td class="p-3.5 text-slate-500">{{ p.paid_at or p.created_at }}</td>
+                <td class="p-3.5 text-right font-mono font-bold text-[#004b87]">
+                  {{ p.receipt_number or 'Verified' }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-white rounded-2xl p-12 text-center border border-slate-200">
+        <i class="fas fa-receipt text-4xl text-slate-300 mb-3"></i>
+        <h3 class="text-base font-bold text-slate-900">No premium transactions recorded</h3>
+        <p class="text-xs text-slate-500 mt-1">Receipts and tax exemption certificates will appear here once premium payments are completed.</p>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ================= TAB: CLAIMS ================= -->
+    {% if active_tab == 'claims' %}
+    <div>
+      <div class="flex items-center justify-between gap-4 mb-4">
+        <div>
+          <h3 class="font-black text-base text-slate-900">Claims Assistance Helpdesk</h3>
+          <p class="text-xs text-slate-500">Dedicated support to file, document, and track insurance claims with authorized partner insurers.</p>
+        </div>
+        <a href="{{ url_for('insurance.request_claim') }}" class="px-4 py-2 rounded-lg bg-[#004b87] hover:bg-[#002f5e] text-white text-xs font-bold transition-all flex items-center gap-1.5">
+          <i class="fas fa-file-medical"></i> File Claim Assistance
+        </a>
+      </div>
+
+      {% if claims %}
+      <div class="space-y-3">
+        {% for clm in claims %}
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono font-bold text-slate-600">Ticket: {{ clm.claim_number }}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-xxs font-black uppercase bg-blue-50 text-[#004b87] border border-blue-200">
+                {{ clm.status }}
+              </span>
+            </div>
+            <h4 class="font-bold text-sm text-slate-900">Policy #{{ clm.policy_number }} &bull; Claimant: {{ clm.claimant_name }} ({{ clm.claimant_relation }})</h4>
+            <p class="text-xs text-slate-500">Incident Date: <strong>{{ clm.incident_date }}</strong> &bull; Type: <strong>{{ clm.claim_type }}</strong></p>
+            {% if clm.tracking_notes %}
+            <p class="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+              <i class="fas fa-circle-info text-blue-600 me-1"></i> {{ clm.tracking_notes }}
+            </p>
+            {% endif %}
+          </div>
+          <span class="text-xs font-mono font-bold text-slate-500">
+            Insurer Ref: {{ clm.insurer_claim_ref or 'Coordinator Assigned' }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="bg-white rounded-2xl p-10 text-center border border-slate-200">
+        <i class="fas fa-hand-holding-heart text-4xl text-slate-300 mb-3"></i>
+        <h4 class="text-sm font-bold text-slate-800">No active claim assistance tickets</h4>
+        <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">In the unfortunate event of a medical hospitalization, terminal diagnosis, or bereavement, our claims coordinators assist with hospital records and insurer liaison free of charge.</p>
+        <a href="{{ url_for('insurance.request_claim') }}" class="mt-4 inline-block px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+          Request Claims Assistance
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ================= TAB: DOCUMENTS ================= -->
+    {% if active_tab == 'documents' %}
+    <div>
+      {% if documents %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {% for doc in documents %}
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex items-start gap-3">
+          <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 text-lg shrink-0">
+            <i class="fas fa-file-pdf text-rose-500"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h5 class="font-bold text-xs text-slate-900 truncate">{{ doc.original_name or doc.file_name }}</h5>
+            <span class="text-xxs font-mono uppercase text-slate-500 block">{{ doc.doc_type }}</span>
+            <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+              {{ doc.verification_status }}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="bg-white rounded-2xl p-10 text-center border border-slate-200">
+        <i class="fas fa-folder-open text-4xl text-slate-300 mb-3"></i>
+        <h4 class="text-sm font-bold text-slate-800">No uploaded documents on record</h4>
+        <p class="text-xs text-slate-500 mt-1">KYC documents and policy schedules will be securely stored here.</p>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </section>
+
+</div>
+{% endblock %}
+

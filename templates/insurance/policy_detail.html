@@ -1,0 +1,167 @@
+{% extends "layout.html" %}
+
+{% block title %}Policy #{{ policy.policy_number }} — Spherix Insurance{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] text-slate-900 pb-20 w-full">
+
+  <!-- Header -->
+  <section class="bg-gradient-to-r from-[#002f5e] to-[#004b87] text-white py-10 px-4 sm:px-6 lg:px-12 shadow-md">
+    <div class="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-200 mb-1">
+          <a href="{{ url_for('insurance.my_policies') }}" class="hover:underline flex items-center gap-1">
+            <i class="fas fa-arrow-left text-xxs"></i> My Policies
+          </a>
+          <span>/</span>
+          <span>Policy Schedule</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black font-heading tracking-tight flex items-center gap-2.5">
+          <span>Policy #{{ policy.policy_number }}</span>
+          <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500 text-slate-950">
+            {{ policy.status }}
+          </span>
+        </h1>
+        <p class="text-xs sm:text-sm text-sky-100 mt-1">
+          {{ policy.product_name }} &bull; Underwritten &amp; Issued by <strong>{{ policy.partner_name }}</strong> (IRDAI #{{ policy.irda_reg_no }})
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('insurance.download_policy_document', policy_id=policy.id) }}" class="px-4 py-2.5 rounded-xl bg-white text-[#004b87] hover:bg-sky-50 text-xs font-black shadow-md transition-all flex items-center gap-1.5">
+          <i class="fas fa-file-pdf text-rose-600"></i>
+          <span>Official Certificate</span>
+        </a>
+        <a href="{{ url_for('insurance.request_claim') }}?policy_id={{ policy.id }}" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5">
+          <i class="fas fa-hand-holding-heart text-sky-300"></i>
+          <span>Claims Help</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Content Container -->
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+
+    <!-- Cryptographic Seal Banner -->
+    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 font-bold">
+          <i class="fas fa-certificate text-base"></i>
+        </div>
+        <div>
+          <span class="text-xxs font-black uppercase text-emerald-700 tracking-wider">Statutory Verification Seal</span>
+          <div class="font-mono text-xxs text-slate-600 truncate max-w-md">SHA256: {{ policy.verification_hash }}</div>
+        </div>
+      </div>
+      <div class="text-right text-xxs font-semibold text-slate-500">
+        IRDA UIN: <strong>{{ policy.uin_number }}</strong>
+      </div>
+    </div>
+
+    <!-- Policy Specs Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Box 1: Core Schedule -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 text-xs">
+        <h3 class="font-black text-slate-900 font-heading text-sm border-b border-slate-100 pb-2">
+          Coverage &amp; Term Specifications
+        </h3>
+
+        <div class="space-y-2.5">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Life Coverage Sum Insured:</span>
+            <strong class="text-base font-black text-[#004b87]">₹{{ '%.0f'|format(policy.sum_insured) }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Policy Inception Date:</span>
+            <strong class="text-slate-800">{{ policy.policy_start_date }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Maturity / Expiry Date:</span>
+            <strong class="text-slate-800">{{ policy.policy_expiry_date }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Premium Installment:</span>
+            <strong class="text-slate-900 font-bold">₹{{ '%.2f'|format(policy.premium_amount) }} / {{ policy.premium_frequency|lower }}</strong>
+          </div>
+          <div class="flex justify-between border-t border-slate-100 pt-2">
+            <span class="text-slate-500">Next Premium Due Date:</span>
+            <span class="text-emerald-700 font-extrabold">{{ policy.next_premium_due_date }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Box 2: Nominee & Beneficiary -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 text-xs">
+        <h3 class="font-black text-slate-900 font-heading text-sm border-b border-slate-100 pb-2">
+          Designated Nominee (Section 39)
+        </h3>
+
+        <div class="space-y-2.5">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Nominee Name:</span>
+            <strong class="text-slate-900">{{ policy.nominee_name or 'Primary Nominee' }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Relationship with Insured:</span>
+            <strong class="text-slate-800">{{ policy.nominee_relation or 'Spouse' }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Beneficial Entitlement:</span>
+            <strong class="text-emerald-700 font-bold">100% Death Benefit Payout</strong>
+          </div>
+          <div class="flex justify-between border-t border-slate-100 pt-2">
+            <span class="text-slate-500">Free-Look Cancellation Period:</span>
+            <span class="text-slate-700 font-semibold">30 Days from Issuance</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Payment Ledger for this policy -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+      <h3 class="font-black text-slate-900 font-heading text-sm border-b border-slate-100 pb-2">
+        Premium Payment History &amp; Tax Invoices
+      </h3>
+
+      {% if payments %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-50 text-slate-500 uppercase text-xxs">
+            <tr>
+              <th class="p-3">Receipt No</th>
+              <th class="p-3">Amount</th>
+              <th class="p-3">Payment Method</th>
+              <th class="p-3">Status</th>
+              <th class="p-3">Date Paid</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for pay in payments %}
+            <tr>
+              <td class="p-3 font-mono font-bold text-[#004b87]">{{ pay.receipt_number or pay.payment_number }}</td>
+              <td class="p-3 font-black text-slate-900">₹{{ '%.2f'|format(pay.total_amount) }}</td>
+              <td class="p-3 font-semibold text-slate-700">{{ pay.payment_method }}</td>
+              <td class="p-3">
+                <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {{ pay.status }}
+                </span>
+              </td>
+              <td class="p-3 text-slate-500">{{ pay.paid_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-xs text-slate-500">No premium installment payments recorded yet.</p>
+      {% endif %}
+    </div>
+
+  </section>
+
+</div>
+{% endblock %}
+

@@ -1,0 +1,229 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}AI Cancer Companion | 24/7 Oncology Intelligence{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">AI Cancer Companion</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-10 space-y-8">
+
+    <!-- PAGE HEADER -->
+    <div class="text-center max-w-2xl mx-auto space-y-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200 uppercase tracking-wider">
+            <i class="fas fa-robot text-rose-600"></i> Clinical Oncology Intelligence
+        </span>
+        <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+            AI Cancer Care Companion
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+            Ask questions regarding pathology terms, TNM staging, molecular biomarkers, chemotherapy side effects, and evidence-based nutrition protocols.
+        </p>
+    </div>
+
+    <!-- MAIN CHAT INTERACTION CARD -->
+    <div class="max-w-5xl mx-auto space-y-8 w-full">
+        <div class="rounded-2xl bg-white border border-slate-200 shadow-md overflow-hidden flex flex-col h-[700px]">
+        
+        <!-- Chat Header -->
+        <div class="p-4 sm:px-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 to-pink-500 flex items-center justify-center text-white text-base shadow-sm">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-bold leading-tight">Spherix Oncology AI Assistant</div>
+                    <div class="text-[11px] text-emerald-400 flex items-center gap-1.5 font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Active • NCCN Knowledge Engine
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="clearChatHistory()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors">
+                    <i class="fas fa-rotate-left mr-1"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages Viewport -->
+        <div id="companion-chat-messages" class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/50 custom-scrollbar">
+            
+            <!-- Welcome System Message -->
+            <div class="flex items-start gap-3 max-w-2xl">
+                <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+                    <i class="fas fa-ribbon"></i>
+                </div>
+                <div class="p-4 rounded-2xl rounded-tl-none bg-white border border-slate-200 shadow-2xs text-xs sm:text-sm text-slate-800 space-y-2 leading-relaxed">
+                    <p class="m-0 font-medium">
+                        Hello. I am Spherix Clinic's Senior Oncology Intelligence Companion. I can assist you with:
+                    </p>
+                    <ul class="space-y-1 pl-4 list-disc text-xs text-slate-600 m-0">
+                        <li>Explaining complex biopsy findings (e.g. HER2, EGFR, Gleason scores)</li>
+                        <li>Understanding AJCC TNM clinical staging and what it signifies</li>
+                        <li>Navigating chemotherapy, immunotherapy, and radiotherapy side-effect management</li>
+                        <li>Pre-appointment questions to discuss with your oncologist</li>
+                    </ul>
+                    <p class="text-[11px] text-slate-400 m-0 pt-1 border-t border-slate-100">
+                        Educational support only. For acute clinical changes or fever during chemo, alert your care team immediately.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Suggested Prompt Pills -->
+        <div class="p-3 bg-white border-t border-slate-100 flex items-center gap-2 overflow-x-auto whitespace-nowrap text-xs">
+            <span class="text-[11px] font-black uppercase text-slate-400 shrink-0">Common Inquiries:</span>
+            <button type="button" onclick="askQuickPrompt('Explain what HER2-positive breast cancer means')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-semibold transition-colors shrink-0">
+                HER2-Positive Meaning
+            </button>
+            <button type="button" onclick="askQuickPrompt('How does immunotherapy differ from traditional chemotherapy?')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-semibold transition-colors shrink-0">
+                Immunotherapy vs Chemo
+            </button>
+            <button type="button" onclick="askQuickPrompt('Explain Gleason Score 7 in prostate cancer')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-semibold transition-colors shrink-0">
+                Gleason Score 7
+            </button>
+            <button type="button" onclick="askQuickPrompt('What are evidence-based tips to manage chemotherapy nausea and fatigue?')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-semibold transition-colors shrink-0">
+                Chemo Nausea Relief
+            </button>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="p-4 bg-white border-t border-slate-200">
+            <form id="companion-chat-form" onsubmit="event.preventDefault(); sendCompanionMessage();" class="flex items-center gap-3">
+                <input type="text" id="companion-input" placeholder="Type your oncology or pathology question..." autocomplete="off" class="flex-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-medium text-slate-900 shadow-2xs">
+                <button type="submit" id="btn-send-companion" class="px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center gap-2 cursor-pointer shrink-0">
+                    <span>Send</span>
+                    <i class="fas fa-paper-plane text-xs"></i>
+                </button>
+            </form>
+        </div>
+
+    </div>
+    </div>
+
+</div>
+
+<script>
+function cleanAiText(text) {
+    if (!text) return '';
+    // Strip raw ** asterisks and replace with bold tags, bullet points
+    let formatted = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\s*[-•]\s+(.*)$/gm, '<li class="ml-4 list-disc">$1</li>')
+        .replace(/\n\n/g, '<br><br>');
+    return formatted;
+}
+
+function askQuickPrompt(promptText) {
+    const input = document.getElementById('companion-input');
+    if (input) {
+        input.value = promptText;
+        sendCompanionMessage();
+    }
+}
+
+async function sendCompanionMessage() {
+    const input = document.getElementById('companion-input');
+    const query = (input?.value || '').trim();
+    if (!query) return;
+
+    input.value = '';
+    const messages = document.getElementById('companion-chat-messages');
+
+    // Append User Message
+    const userBubble = document.createElement('div');
+    userBubble.className = 'flex justify-end';
+    userBubble.innerHTML = `
+        <div class="p-3.5 sm:p-4 rounded-2xl rounded-tr-none bg-rose-600 text-white text-xs sm:text-sm font-medium max-w-xl shadow-xs leading-relaxed">
+            ${query}
+        </div>
+    `;
+    messages.appendChild(userBubble);
+    messages.scrollTop = messages.scrollHeight;
+
+    // Append Loading Indicator
+    const loadingId = 'ai-loading-' + Date.now();
+    const loadingBubble = document.createElement('div');
+    loadingBubble.id = loadingId;
+    loadingBubble.className = 'flex items-start gap-3 max-w-2xl';
+    loadingBubble.innerHTML = `
+        <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="p-3 rounded-2xl rounded-tl-none bg-white border border-slate-200 shadow-2xs text-xs text-slate-500 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
+            <span>Synthesizing clinical knowledge...</span>
+        </div>
+    `;
+    messages.appendChild(loadingBubble);
+    messages.scrollTop = messages.scrollHeight;
+
+    try {
+        const resp = await fetch('/api/cancer/ai-consult', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query })
+        });
+        const data = await resp.json();
+        const loadEl = document.getElementById(loadingId);
+        if (loadEl) loadEl.remove();
+
+        const answerText = data.answer || "I could not retrieve an answer at this time. Please consult your oncology specialist.";
+        const cleanedHtml = cleanAiText(answerText);
+
+        const aiBubble = document.createElement('div');
+        aiBubble.className = 'flex items-start gap-3 max-w-2xl';
+        aiBubble.innerHTML = `
+            <div class="w-8 h-8 rounded-lg bg-slate-900 text-rose-400 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="p-4 rounded-2xl rounded-tl-none bg-white border border-slate-200 shadow-2xs text-xs sm:text-sm text-slate-800 space-y-2 leading-relaxed">
+                <div>${cleanedHtml}</div>
+                <div class="text-[10px] text-slate-400 pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span>Clinical Intelligence Engine</span>
+                    <span>${data.timestamp || 'Just now'}</span>
+                </div>
+            </div>
+        `;
+        messages.appendChild(aiBubble);
+        messages.scrollTop = messages.scrollHeight;
+    } catch (err) {
+        const loadEl = document.getElementById(loadingId);
+        if (loadEl) loadEl.remove();
+
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'flex items-start gap-3 max-w-2xl';
+        errorBubble.innerHTML = `
+            <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+                <i class="fas fa-triangle-exclamation"></i>
+            </div>
+            <div class="p-4 rounded-2xl rounded-tl-none bg-rose-50 border border-rose-200 text-xs text-rose-900">
+                Unable to reach the clinical AI service. Please verify your connection or ask your oncology coordinator.
+            </div>
+        `;
+        messages.appendChild(errorBubble);
+        messages.scrollTop = messages.scrollHeight;
+    }
+}
+
+function clearChatHistory() {
+    const messages = document.getElementById('companion-chat-messages');
+    if (messages) {
+        messages.innerHTML = `
+            <div class="flex items-start gap-3 max-w-2xl">
+                <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+                    <i class="fas fa-ribbon"></i>
+                </div>
+                <div class="p-4 rounded-2xl rounded-tl-none bg-white border border-slate-200 shadow-2xs text-xs sm:text-sm text-slate-800 space-y-2 leading-relaxed">
+                    <p class="m-0 font-medium">Session reset. How may I assist your oncology journey today?</p>
+                </div>
+            </div>
+        `;
+    }
+}
+</script>
+{% endblock %}
+

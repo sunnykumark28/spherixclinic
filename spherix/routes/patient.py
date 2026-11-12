@@ -23,6 +23,7 @@ from flask import (
     send_from_directory, Response, current_app
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from spherix.security import hash_password, validate_password_strength
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_login import login_user, login_required, logout_user, current_user
@@ -319,6 +320,11 @@ def patient_create_account():
             flash("Passwords do not match.", "error")
             return redirect(url_for('patient_create_account'))
 
+        pwd_valid, pwd_msg = validate_password_strength(password)
+        if not pwd_valid:
+            flash(pwd_msg, "error")
+            return redirect(url_for('patient_create_account'))
+
         if any(p.email == email for p in TEMP_DATA['patients'].values()):
             flash("An account with this email already exists.", "error")
             return redirect(url_for('patient_create_account'))
@@ -331,7 +337,7 @@ def patient_create_account():
         session['signup_data'] = {
             'name': name,
             'email': email,
-            'password': generate_password_hash(password, method='pbkdf2:sha256:260000'),
+            'password': hash_password(password),
             'age': int(age) if age and age.isdigit() else None,
             'gender': gender,
             'phone': phone,
@@ -893,6 +899,16 @@ def patient_dashboard():
 
     diagnostic_data = {'bookings': [], 'referrals': [], 'reports': [], 'categories': [], 'tests': []}
 
+    # Fetch Spherix Insurance summary for current patient
+    patient_insurance_policies = []
+    patient_insurance_applications = []
+    try:
+        from spherix.services.insurance_db import get_patient_insurance_policies, get_patient_insurance_applications
+        patient_insurance_policies = get_patient_insurance_policies(str(current_user.id))
+        patient_insurance_applications = get_patient_insurance_applications(str(current_user.id))
+    except Exception as ins_err:
+        pass
+
     return render_template('patient_dashboard.html', 
                            patient=current_user, 
                            today=today, 
@@ -908,6 +924,12 @@ def patient_dashboard():
                            all_registered_doctors=all_registered_doctors,
                            medical_records=patient_medical_records,
                            lab_requests=patient_lab_requests,
+                           insurance_policies=patient_insurance_policies,
+                           insurance_policies_count=len(patient_insurance_policies),
+                           patient_insurance_policies=patient_insurance_policies,
+                           insurance_applications=patient_insurance_applications,
+                           insurance_applications_count=len(patient_insurance_applications),
+                           patient_insurance_applications=patient_insurance_applications,
                            diagnostic_bookings=diagnostic_data.get('bookings', []),
                            diagnostic_referrals=diagnostic_data.get('referrals', []),
                            diagnostic_reports=diagnostic_data.get('reports', []),

@@ -1,0 +1,210 @@
+{% extends "layout.html" %}
+
+{% block title %}Application #{{ app.application_number }} — Spherix Insurance{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] text-slate-900 pb-20 w-full">
+
+  <!-- Header -->
+  <section class="bg-gradient-to-r from-[#002f5e] to-[#004b87] text-white py-10 px-4 sm:px-6 lg:px-12 shadow-md">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-200 mb-1">
+          <a href="{{ url_for('insurance.my_applications') }}" class="hover:underline flex items-center gap-1">
+            <i class="fas fa-arrow-left text-xxs"></i> My Applications
+          </a>
+          <span>/</span>
+          <span>Application Summary</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-black font-heading tracking-tight flex items-center gap-2.5">
+          <span>Proposal #{{ app.application_number }}</span>
+          <span class="px-2.5 py-0.5 rounded-full text-xxs font-black uppercase tracking-wider {% if app.status == 'ACTIVE' %}bg-emerald-500 text-slate-950{% elif app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' %}bg-sky-400 text-slate-950{% elif app.status == 'UNDER_REVIEW' %}bg-amber-400 text-slate-950{% else %}bg-slate-200 text-slate-800{% endif %}">
+            {{ app.status|replace('_', ' ') }}
+          </span>
+        </h1>
+        <p class="text-xs text-sky-100 mt-1">
+          Plan: <strong>{{ app.product_name }}</strong> &bull; Partner Insurer: <strong>{{ app.partner_name }}</strong> (IRDAI #{{ app.irda_reg_no }})
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        {% if app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' %}
+        <a href="{{ url_for('insurance.pay_premium', app_id=app.id) }}" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-black shadow-lg transition-all flex items-center gap-1.5">
+          <i class="fas fa-credit-card"></i>
+          <span>Pay Premium Now</span>
+        </a>
+        {% elif app.status == 'UNDER_REVIEW' %}
+        <button onclick="syncUnderwritingStatus('{{ app.id }}')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+          <i class="fas fa-arrows-rotate text-sky-300"></i> Sync Status
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Details Card -->
+  <section class="max-w-4xl mx-auto px-4 sm:px-6 mt-8 space-y-6">
+
+    <!-- Underwriting Status Banner -->
+    <div class="p-4 rounded-2xl {% if app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' %}bg-emerald-50 border border-emerald-200 text-emerald-900{% elif app.status == 'UNDER_REVIEW' %}bg-amber-50 border border-amber-200 text-amber-900{% elif app.status == 'ACTIVE' %}bg-blue-50 border border-blue-200 text-blue-900{% else %}bg-slate-100 border border-slate-200 text-slate-800{% endif %} flex items-start gap-3 text-xs leading-relaxed">
+      <i class="fas {% if app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' or app.status == 'ACTIVE' %}fa-circle-check text-emerald-600{% elif app.status == 'UNDER_REVIEW' %}fa-clock text-amber-600{% else %}fa-circle-info text-slate-500{% endif %} text-base mt-0.5 shrink-0"></i>
+      <div>
+        <h4 class="font-extrabold text-sm mb-0.5">Insurer Underwriting Assessment: {{ app.underwriting_decision or 'Standard Evaluation' }}</h4>
+        <p>{{ app.insurer_remarks or 'Your proposal is being evaluated according to authorized partner insurer mortality tables and medical guidelines.' }}</p>
+        {% if app.insurer_application_ref %}
+        <span class="font-mono text-xxs font-bold block mt-1">Partner Insurer Gateway Reference: {{ app.insurer_application_ref }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Application Metadata Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Box 1: Plan & Cover -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3 text-xs">
+        <h3 class="font-black text-slate-900 font-heading text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
+          <span>Coverage &amp; Premium</span>
+          <span class="text-xxs uppercase font-mono text-slate-400">Section 2</span>
+        </h3>
+
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Life Cover (Sum Insured):</span>
+            <strong class="text-slate-900 font-black">₹{{ '%.0f'|format(app.insurance_details.get('sum_insured', 10000000)) }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Policy Term:</span>
+            <strong class="text-slate-800">{{ app.insurance_details.get('policy_term_years', 30) }} Years</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Payment Frequency:</span>
+            <strong class="text-slate-800">{{ app.insurance_details.get('premium_frequency', 'ANNUAL') }}</strong>
+          </div>
+          <div class="flex justify-between border-t border-slate-100 pt-2">
+            <span class="text-slate-500">Base Premium:</span>
+            <span class="text-slate-800 font-bold">₹{{ '%.2f'|format(app.insurance_details.get('base_premium', 9500)) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">GST (18% Statutory):</span>
+            <span class="text-slate-800 font-bold">₹{{ '%.2f'|format(app.insurance_details.get('gst_amount', 1710)) }}</span>
+          </div>
+          <div class="flex justify-between border-t border-slate-200 pt-2 text-sm">
+            <span class="font-black text-slate-900">Total Period Premium:</span>
+            <strong class="font-black text-[#004b87]">₹{{ '%.2f'|format(app.insurance_details.get('total_premium', 11210)) }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Box 2: Applicant Information -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3 text-xs">
+        <h3 class="font-black text-slate-900 font-heading text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
+          <span>Insured Person Details</span>
+          <span class="text-xxs uppercase font-mono text-slate-400">Section 1</span>
+        </h3>
+
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Full Name:</span>
+            <strong class="text-slate-800">{{ app.personal_info.get('full_name', current_user.name) }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Date of Birth:</span>
+            <strong class="text-slate-800">{{ app.personal_info.get('date_of_birth', '1995-05-15') }} (Age {{ app.personal_info.get('age', 30) }})</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Gender &amp; Tobacco:</span>
+            <strong class="text-slate-800">{{ app.personal_info.get('gender', 'Male') }} &bull; {{ 'Smoker' if app.insurance_details.get('is_smoker') else 'Non-Smoker' }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">PAN Number:</span>
+            <strong class="font-mono text-slate-800">{{ app.personal_info.get('pan_number', 'ABCDE1234F') }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Contact Number:</span>
+            <strong class="text-slate-800">{{ app.personal_info.get('contact_phone', current_user.phone) }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Box 3: Designated Nominee -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3 text-xs">
+        <h3 class="font-black text-slate-900 font-heading text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
+          <span>Registered Nominee</span>
+          <span class="text-xxs uppercase font-mono text-slate-400">Section 3</span>
+        </h3>
+
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Nominee Name:</span>
+            <strong class="text-slate-800">{{ app.nominee_info.get('full_name', 'Sunita Kushwaha') }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Relationship:</span>
+            <strong class="text-slate-800">{{ app.nominee_info.get('relationship', 'Spouse') }}</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Share Entitlement:</span>
+            <strong class="text-emerald-700 font-bold">100% Beneficial Payout</strong>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Nominee Phone:</span>
+            <strong class="text-slate-800">{{ app.nominee_info.get('contact_phone', '+91 9811002233') }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Box 4: KYC Documents & Actions -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3 text-xs">
+        <h3 class="font-black text-slate-900 font-heading text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
+          <span>Verification Documents</span>
+          <span class="text-xxs uppercase font-mono text-slate-400">Section 5</span>
+        </h3>
+
+        {% if documents %}
+        <div class="space-y-2">
+          {% for doc in documents %}
+          <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
+            <span class="font-semibold text-slate-700 truncate max-w-[200px]">{{ doc.original_name }}</span>
+            <span class="text-xxs font-black uppercase text-emerald-700">{{ doc.verification_status }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-slate-500 text-xxs">No external document files attached. Digital Aadhaar/PAN authentication completed.</p>
+        {% endif %}
+
+        {% if app.status == 'APPROVED' or app.status == 'PAYMENT_PENDING' %}
+        <div class="pt-2">
+          <a href="{{ url_for('insurance.pay_premium', app_id=app.id) }}" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition-colors flex items-center justify-center gap-2">
+            <i class="fas fa-credit-card"></i> Proceed to Premium Payment
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+<script>
+function syncUnderwritingStatus(appId) {
+  fetch(`/api/insurance/application/${appId}/sync`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        alert(`Underwriting status synced: ${data.status}\n${data.remarks}`);
+        window.location.reload();
+      } else {
+        alert(data.error || "Could not sync underwriting status.");
+      }
+    })
+    .catch(e => {
+      console.error(e);
+      window.location.reload();
+    });
+}
+</script>
+{% endblock %}
+

@@ -238,7 +238,7 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
         <div>
           <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">City / Region</label>
           <div class="flex items-center gap-2">
-            <input type="text" name="city" value="{{ selected_city }}" placeholder="Enter City (e.g. Delhi, Patna)..." class="w-full text-xs border border-slate-200 rounded-lg px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:outline-[#004b87]">
+            <input type="text" name="city" value="{{ selected_city }}" placeholder="Enter City..." class="w-full text-xs border border-slate-200 rounded-lg px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:outline-[#004b87]">
             <button type="submit" class="px-4 py-2.5 rounded-lg bg-[#002f5e] hover:bg-[#004b87] text-white text-xs font-bold">
               Filter
             </button>
@@ -408,7 +408,7 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
       <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
         <span class="text-xxs uppercase font-black text-slate-400 tracking-wider shrink-0 me-1">Filter by Area:</span>
         <a href="{{ url_for('diagnostic.centers_directory') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold {% if not selected_city %}bg-indigo-600 text-white shadow-xs{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %} whitespace-nowrap transition-all">
-          All Areas ({{ centers|length }})
+          All Areas ({{ registered_areas|sum(attribute='count') if registered_areas else centers|length }})
         </a>
         {% for a in registered_areas %}
         <a href="{{ url_for('diagnostic.centers_directory', city=a.city) }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold {% if selected_city and selected_city.lower() == a.city.lower() %}bg-indigo-600 text-white shadow-xs{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %} whitespace-nowrap transition-all">
@@ -450,7 +450,7 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
           <!-- Top Badges -->
           <div class="flex items-center justify-between mb-3">
             <span class="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-              <i class="fas fa-check-circle text-emerald-600"></i> Spherix Verified
+              <i class="fas fa-shield-check text-emerald-600"></i> Registered Pathology Center
             </span>
             <span class="text-xs font-bold text-amber-500 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
               <i class="fas fa-star text-amber-400"></i> {{ c.rating }} ({{ c.review_count }})
@@ -461,6 +461,11 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
             {{ c.center_name }}
           </h3>
           <p class="text-xs font-semibold text-slate-500 mt-0.5">{{ c.branch_name }} &bull; {{ c.org_legal_name }}</p>
+          {% if c.org_reg_number or c.license_number or c.reg_number %}
+          <p class="text-[11px] font-mono text-indigo-700 font-bold mt-1 flex items-center gap-1">
+            <i class="fas fa-certificate text-[10px]"></i> Reg No: {{ c.org_reg_number or c.license_number or c.reg_number }}
+          </p>
+          {% endif %}
           
           <p class="text-xs text-slate-600 mt-3 flex items-start gap-1.5 leading-relaxed">
             <i class="fas fa-location-dot text-indigo-600 text-xs mt-0.5 shrink-0"></i>
@@ -1019,7 +1024,7 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
   </section>
 
   <!-- 6. ACCREDITED PATHOLOGY CENTERS IN SELECTED AREA (FULL SCREEN) -->
-  <section class="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 mt-16">
+  <section id="pathology-centers-section" class="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 mt-16 scroll-mt-24">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
       <div>
         <div class="flex items-center gap-2">
@@ -1039,13 +1044,19 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
 
     <!-- Area Filter Pills -->
     {% if registered_areas %}
-    <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-6 custom-scrollbar">
+    <div id="pathologyAreaPillsContainer" class="flex items-center gap-2 overflow-x-auto pb-3 mb-6 custom-scrollbar">
       <span class="text-xxs uppercase font-black text-slate-400 tracking-wider shrink-0 me-1">Select Area:</span>
-      <a href="{{ url_for('diagnostic.diagnostic_home') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold {% if not selected_city %}bg-[#004b87] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %} whitespace-nowrap transition-all">
-        All Areas ({{ centers|length }})
+      <a href="{{ url_for(request.endpoint or 'diagnostic.medical_lab') }}#pathology-centers-section" 
+         onclick="filterPathologyCentersByArea('all', this, event)"
+         data-area="all"
+         class="pathology-area-pill px-3.5 py-1.5 rounded-lg text-xs font-bold {% if not selected_city %}bg-[#004b87] text-white shadow-xs border-[#004b87]{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %} whitespace-nowrap transition-all border cursor-pointer">
+        All Areas ({{ registered_areas|sum(attribute='count') if registered_areas else (all_centers|length if all_centers else centers|length) }})
       </a>
       {% for a in registered_areas %}
-      <a href="{{ url_for('diagnostic.diagnostic_home', city=a.city) }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold {% if selected_city and selected_city.lower() == a.city.lower() %}bg-[#004b87] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %} whitespace-nowrap transition-all">
+      <a href="{{ url_for(request.endpoint or 'diagnostic.medical_lab', city=a.city) }}#pathology-centers-section" 
+         onclick="filterPathologyCentersByArea('{{ a.city }}', this, event)"
+         data-area="{{ a.city|lower }}"
+         class="pathology-area-pill px-3.5 py-1.5 rounded-lg text-xs font-bold {% if selected_city and selected_city.lower() == a.city.lower() %}bg-[#004b87] text-white shadow-xs border-[#004b87]{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %} whitespace-nowrap transition-all border cursor-pointer">
         {{ a.city }} ({{ a.count }})
       </a>
       {% endfor %}
@@ -1053,9 +1064,16 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
     {% endif %}
 
     <!-- Centers Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {% for c in centers[:6] %}
-      <div class="bg-white rounded-lg p-6 border-2 border-slate-200 hover:border-[#004b87] hover:shadow-xl transition-all flex flex-col justify-between group">
+    {% set displayed_centers = all_centers if all_centers else centers %}
+    {% set ns = namespace(has_matching=false) %}
+    <div id="pathologyCentersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for c in displayed_centers %}
+      {% set is_match = (not selected_city) or (selected_city.lower() in c.city.lower()) or (c.city.lower() in selected_city.lower()) %}
+      {% if is_match %}
+        {% set ns.has_matching = true %}
+      {% endif %}
+      <div data-city="{{ c.city|lower }}"
+           class="pathology-center-card bg-white rounded-lg p-6 border-2 border-slate-200 hover:border-[#004b87] hover:shadow-xl transition-all flex flex-col justify-between group {% if not is_match %}hidden{% endif %}">
         <div>
           <div class="flex items-center justify-between mb-3">
             <span class="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
@@ -1082,8 +1100,8 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
               <strong class="text-slate-800">{% if c.home_collection_enabled %}Active ({{ c.home_collection_radius_km }} km){% else %}Walk-in Only{% endif %}</strong>
             </div>
             <div class="flex items-center justify-between">
-              <span><i class="fas fa-indian-rupee-sign text-emerald-600 me-1"></i> Collection Fee:</span>
-              <strong class="text-slate-900">₹{{ '%.0f'|format(c.home_collection_fee) }}</strong>
+              <span><i class="fas fa-money-bill-wave text-emerald-600 me-1"></i> Collection Fee:</span>
+              <strong class="text-slate-900">{{ '$' if c.currency == 'USD' else '₹' }}{{ '%.0f'|format(c.home_collection_fee) }}</strong>
             </div>
           </div>
         </div>
@@ -1099,6 +1117,18 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
         </div>
       </div>
       {% endfor %}
+
+      <!-- No Centers Empty State -->
+      <div id="noPathologyCentersNotice" class="{% if ns.has_matching %}hidden{% endif %} col-span-full py-12 px-6 text-center bg-slate-50 rounded-xl border border-slate-200">
+        <div class="w-14 h-14 bg-indigo-50 text-[#004b87] rounded-full flex items-center justify-center mx-auto mb-3">
+          <i class="fas fa-hospital-user text-2xl"></i>
+        </div>
+        <h4 class="text-base font-bold text-slate-800">No Pathology Centers Found in this Area</h4>
+        <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">There are currently no verified partner diagnostic labs registered in this location. Browse all accredited centers or select a different area.</p>
+        <button type="button" onclick="filterPathologyCentersByArea('all', this, event)" class="mt-4 px-4 py-2 bg-[#004b87] hover:bg-[#002f5e] text-white text-xs font-bold rounded-lg transition-colors shadow-xs cursor-pointer">
+          View All Registered Centers
+        </button>
+      </div>
     </div>
   </section>
 
@@ -1781,7 +1811,7 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
           <div class="flex items-center gap-2">
             <div class="relative flex-1">
               <i class="fas fa-barcode absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
-              <input type="text" id="reportSearchInput" placeholder="e.g. ORD-6F6E9555, REP-DX-4444, or 9876543210" required class="w-full text-xs sm:text-sm pl-9 pr-3.5 py-3 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-[#004b87] font-mono font-semibold">
+              <input type="text" id="reportSearchInput" placeholder="Order ID, Report ID, or Phone Number" required class="w-full text-xs sm:text-sm pl-9 pr-3.5 py-3 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-[#004b87] font-mono font-semibold">
             </div>
             <button type="submit" id="reportSearchBtn" class="px-5 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer">
               <i class="fas fa-search"></i>
@@ -2188,9 +2218,9 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
               </button>
             </div>
             <select name="center_id" id="bookingModalCenterSelect" onchange="calculateBookingTotal()" class="w-full text-xs font-bold border border-slate-200 rounded-lg px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:outline-[#004b87]">
-              {% for c in centers %}
+              {% for c in (all_centers if all_centers else centers) %}
               <option value="{{ c.id }}" data-fee="{{ c.home_collection_fee }}" data-name="{{ c.center_name }}">
-                {{ c.center_name }} ({{ c.city }}) — Home Fee: ₹{{ '%.0f'|format(c.home_collection_fee) }}
+                {{ c.center_name }} ({{ c.city }}) — Home Fee: {{ '$' if c.currency == 'USD' else '₹' }}{{ '%.0f'|format(c.home_collection_fee) }}
               </option>
               {% endfor %}
             </select>
@@ -2296,6 +2326,63 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
   const dateStr = tomorrow.toISOString().split('T')[0];
   const dateInput = document.getElementById('bookingModalDate');
   if (dateInput) dateInput.value = dateStr;
+
+  function filterPathologyCentersByArea(targetArea, pillEl, evt) {
+    if (evt) {
+      evt.preventDefault();
+    }
+    const normalizedTarget = (targetArea || 'all').toLowerCase().trim();
+    const grid = document.getElementById('pathologyCentersGrid');
+    if (!grid) return;
+
+    const cards = grid.querySelectorAll('.pathology-center-card');
+    const emptyNotice = document.getElementById('noPathologyCentersNotice');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+      const cardCity = (card.getAttribute('data-city') || '').toLowerCase().trim();
+      if (normalizedTarget === 'all' || cardCity.includes(normalizedTarget) || normalizedTarget.includes(cardCity)) {
+        card.classList.remove('hidden');
+        visibleCount++;
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+
+    if (emptyNotice) {
+      if (visibleCount === 0) {
+        emptyNotice.classList.remove('hidden');
+      } else {
+        emptyNotice.classList.add('hidden');
+      }
+    }
+
+    // Update pills active styling
+    const pillsContainer = document.getElementById('pathologyAreaPillsContainer');
+    if (pillsContainer) {
+      const allPills = pillsContainer.querySelectorAll('.pathology-area-pill');
+      allPills.forEach(p => {
+        const pArea = (p.getAttribute('data-area') || '').toLowerCase().trim();
+        if (pArea === normalizedTarget) {
+          p.className = 'pathology-area-pill px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#004b87] text-white shadow-xs border-[#004b87] whitespace-nowrap transition-all border cursor-pointer';
+        } else {
+          p.className = 'pathology-area-pill px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 whitespace-nowrap transition-all border cursor-pointer';
+        }
+      });
+    }
+
+    // Smoothly update URL query parameter without page jump/reload
+    if (window.history && window.history.replaceState) {
+      const currentUrl = new URL(window.location.href);
+      if (normalizedTarget === 'all') {
+        currentUrl.searchParams.delete('city');
+      } else {
+        currentUrl.searchParams.set('city', targetArea);
+      }
+      currentUrl.hash = 'pathology-centers-section';
+      window.history.replaceState({}, '', currentUrl.toString());
+    }
+  }
 
   function handleBookClick(code, type, name, price, centerId) {
     if (!isUserAuthenticated) {
@@ -2562,7 +2649,12 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
       .then(data => {
         if (data.success && data.insights) {
           const ins = data.insights;
-          document.getElementById('aiModalOverview').innerText = ins.overview || '';
+          function stripPathStars(str) {
+            if (!str) return '';
+            return String(str).replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*\*/g, '').trim();
+          }
+
+          document.getElementById('aiModalOverview').innerText = stripPathStars(ins.overview || '');
           
           const whyContainer = document.getElementById('aiModalWhyPrescribed');
           whyContainer.innerHTML = '';
@@ -2570,18 +2662,18 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
             ins.why_prescribed.forEach(r => {
               const el = document.createElement('div');
               el.className = 'p-2 rounded-lg bg-white border border-slate-200 flex items-start gap-1.5';
-              el.innerHTML = `<i class="fas fa-check-circle text-emerald-500 text-xs mt-0.5 shrink-0"></i> <span>${r}</span>`;
+              el.innerHTML = `<i class="fas fa-check-circle text-emerald-500 text-xs mt-0.5 shrink-0"></i> <span>${stripPathStars(r)}</span>`;
               whyContainer.appendChild(el);
             });
           }
 
           const prep = ins.preparation_guide || {};
-          document.getElementById('aiModalPrepInstructions').innerText = prep.instructions || 'Standard routine preparation.';
-          document.getElementById('aiModalMedAdvice').innerText = prep.medication_advice ? `Note: ${prep.medication_advice}` : '';
+          document.getElementById('aiModalPrepInstructions').innerText = stripPathStars(prep.instructions || 'Standard routine preparation.');
+          document.getElementById('aiModalMedAdvice').innerText = prep.medication_advice ? `Note: ${stripPathStars(prep.medication_advice)}` : '';
 
           const interp = ins.interpretation_guide || {};
-          document.getElementById('aiModalHighLevels').innerText = interp.high_levels || 'Clinical correlation advised.';
-          document.getElementById('aiModalLowLevels').innerText = interp.low_levels || 'Clinical correlation advised.';
+          document.getElementById('aiModalHighLevels').innerText = stripPathStars(interp.high_levels || 'Clinical correlation advised.');
+          document.getElementById('aiModalLowLevels').innerText = stripPathStars(interp.low_levels || 'Clinical correlation advised.');
 
           const faqContainer = document.getElementById('aiModalFaqs');
           faqContainer.innerHTML = '';
@@ -2589,7 +2681,7 @@ Spherix Diagnostics — Certified Blood Tests, SwasthFit Health Packages &amp; H
             ins.clinical_faqs.forEach(f => {
               const fEl = document.createElement('div');
               fEl.className = 'p-3 rounded-lg bg-slate-50 border border-slate-200 text-xxs';
-              fEl.innerHTML = `<strong class="text-slate-900 block mb-0.5">Q: ${f.q}</strong><p class="text-slate-600">${f.a}</p>`;
+              fEl.innerHTML = `<strong class="text-slate-900 block mb-0.5">Q: ${stripPathStars(f.q)}</strong><p class="text-slate-600">${stripPathStars(f.a)}</p>`;
               faqContainer.appendChild(fEl);
             });
           }

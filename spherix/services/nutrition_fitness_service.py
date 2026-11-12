@@ -680,42 +680,54 @@ def generate_grocery_list(diet_pref='balanced', days=7):
 # 5. GROQ AI ADAPTIVE CONSULTANT
 # ==========================================
 
+def _clean_markdown_stars(val):
+    """Recursively strips raw markdown asterisks (**text**) from strings, lists, and dicts."""
+    if isinstance(val, str):
+        cleaned = re.sub(r'\*\*([^*]+)\*\*', r'\1', val)
+        return cleaned.replace('**', '').strip()
+    elif isinstance(val, list):
+        return [_clean_markdown_stars(item) for item in val]
+    elif isinstance(val, dict):
+        return {k: _clean_markdown_stars(v) for k, v in val.items()}
+    return val
+
+
 def _generate_clinical_fallback_advice(user_question):
     """Fallback intelligent clinical response when LLM is unavailable."""
     q_lower = user_question.lower()
     if 'substitute' in q_lower or 'swap' in q_lower:
         return (
-            "**Clinical Nutrition Substitution Guide:**\n"
-            "- **Eggs (Baking/Binding):** 1 tbsp chia or flaxseeds soaked in 3 tbsp water (per egg), or 1/4 cup unsweetened applesauce.\n"
-            "- **Eggs (Protein):** 100g low-fat paneer, firm tofu, or 30g scoop whey/plant protein isolate.\n"
-            "- **Dairy Milk:** Unsweetened almond milk (low calorie), soy milk (high protein 7g/cup), or oat milk.\n"
-            "- **White Rice:** Quinoa (complete amino acid profile), cauliflower rice (ultra low-carb), or brown basmati.\n"
-            "- **Peanut Butter (Nut Allergy):** Sunflower seed butter (SunButter) or tahini.\n"
-            "\n*Tip:* Always maintain your total target protein and calorie balance when swapping items."
+            "Clinical Nutrition Substitution Guide:\n\n"
+            "• Eggs (Baking/Binding): 1 tbsp chia or flaxseeds soaked in 3 tbsp water (per egg), or 1/4 cup unsweetened applesauce.\n"
+            "• Eggs (Protein): 100g low-fat paneer, firm tofu, or 30g scoop whey/plant protein isolate.\n"
+            "• Dairy Milk: Unsweetened almond milk (low calorie), soy milk (high protein 7g/cup), or oat milk.\n"
+            "• White Rice: Quinoa (complete amino acid profile), cauliflower rice (ultra low-carb), or brown basmati.\n"
+            "• Peanut Butter (Nut Allergy): Sunflower seed butter (SunButter) or tahini.\n\n"
+            "Clinical Tip: Always maintain your total target protein and calorie balance when swapping items."
         )
     elif 'workout' in q_lower or 'sore' in q_lower or 'injury' in q_lower or 'pain' in q_lower:
         return (
-            "**Clinical Sports Medicine Guidance:**\n"
-            "- **Muscle Soreness (DOMS):** Normal 24-48 hours post-workout. Focus on active recovery (light walking), 35ml/kg hydration, and 8+ hours sleep.\n"
-            "- **Joint Pain / Sharp Pain:** Stop the provocative exercise immediately. If knee pain occurs during squats, substitute with box squats, glute bridges, or leg presses with feet higher on the platform.\n"
-            "- **Warmup Protocol:** Always complete 5 minutes of dynamic joint mobilization (hip openers, band pull-aparts) before lifting heavy weights.\n"
-            "\n*Disclaimer:* If pain is acute or accompanied by swelling, consult a Spherix orthopedic specialist."
+            "Clinical Sports Medicine Guidance:\n\n"
+            "• Muscle Soreness (DOMS): Normal 24-48 hours post-workout. Focus on active recovery (light walking), 35ml/kg hydration, and 8+ hours sleep.\n"
+            "• Joint Pain / Sharp Pain: Stop the provocative exercise immediately. If knee pain occurs during squats, substitute with box squats, glute bridges, or leg presses with feet higher on the platform.\n"
+            "• Warmup Protocol: Always complete 5 minutes of dynamic joint mobilization (hip openers, band pull-aparts) before lifting heavy weights.\n\n"
+            "Clinical Disclaimer: If pain is acute or accompanied by swelling, consult a Spherix orthopedic specialist."
         )
     elif 'water' in q_lower or 'hydrate' in q_lower:
         return (
-            "**Clinical Hydration Protocol:**\n"
-            "- **Baseline:** 35ml per kilogram of body weight.\n"
-            "- **Workout Addition:** Add 500ml - 750ml for every 45-60 minutes of sweat-inducing exercise.\n"
-            "- **Electrolytes:** Add a pinch of pink Himalayan salt and fresh lemon juice to your intra-workout water during hot weather or heavy HIIT sessions."
+            "Clinical Hydration Protocol:\n\n"
+            "• Baseline: 35ml per kilogram of body weight.\n"
+            "• Workout Addition: Add 500ml - 750ml for every 45-60 minutes of sweat-inducing exercise.\n"
+            "• Electrolytes: Add a pinch of pink Himalayan salt and fresh lemon juice to your intra-workout water during hot weather or heavy HIIT sessions."
         )
     else:
         return (
-            "**Spherix Nutrition & Fitness Clinical Insights:**\n"
-            "1. **Energy Balance is King:** Calorie deficit governs fat loss, while protein intake (1.6 - 2.2g/kg) governs muscle preservation.\n"
-            "2. **Meal Timing:** Spread protein evenly across 3-4 meals (25-40g per meal) to maximize Muscle Protein Synthesis (MPS).\n"
-            "3. **Sleep & Recovery:** 7-9 hours of restorative sleep regulates ghrelin and leptin (hunger hormones) and spikes natural growth hormone.\n"
-            "4. **Progressive Overload:** Track your repetitions and weights weekly to signal ongoing muscle adaptation.\n"
-            "\nFeel free to ask specific questions about your customized meal plan, recipes, or workout routine!"
+            "Spherix Nutrition & Fitness Clinical Insights:\n\n"
+            "1. Energy Balance: Calorie deficit governs fat loss, while protein intake (1.6 - 2.2g/kg) governs muscle preservation.\n"
+            "2. Meal Timing: Spread protein evenly across 3-4 meals (25-40g per meal) to maximize Muscle Protein Synthesis (MPS).\n"
+            "3. Sleep & Recovery: 7-9 hours of restorative sleep regulates ghrelin and leptin (hunger hormones) and spikes natural growth hormone.\n"
+            "4. Progressive Overload: Track your repetitions and weights weekly to signal ongoing muscle adaptation.\n\n"
+            "Feel free to ask specific questions about your customized meal plan, recipes, or workout routine!"
         )
 
 
@@ -968,6 +980,9 @@ Return a valid JSON object with the following exact keys:
             health_conditions=health_conditions, allergies=allergies,
             equipment=equipment, experience=experience
         )
+
+    # Clean all markdown asterisks so no raw ** ever leaks to frontend
+    ai_evaluation = _clean_markdown_stars(ai_evaluation)
 
     return {
         'biometrics': biometrics,

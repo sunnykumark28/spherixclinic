@@ -1,0 +1,192 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}Medical Report Management | Secure Oncology Vault{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">Medical Reports</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-10 space-y-10">
+
+    <!-- PAGE HEADER -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
+        <div class="space-y-2 max-w-2xl">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 text-sky-800 text-xs font-bold border border-sky-200 uppercase tracking-wider">
+                <i class="fas fa-lock text-sky-600"></i> HIPAA & ISO 27001 Secure
+            </span>
+            <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+                Medical Report Management Vault
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 font-normal m-0 leading-relaxed">
+                Securely store, organize, and grant authorized oncologists access to your biopsy histopathology, PET-CT scans, NGS genomic reports, and treatment summaries.
+            </p>
+        </div>
+
+        <button type="button" onclick="document.getElementById('upload-report-card').scrollIntoView({behavior: 'smooth'})" class="px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2 shrink-0">
+            <i class="fas fa-file-arrow-up"></i> Upload New Report
+        </button>
+    </div>
+
+    <!-- REPORT VAULT METRICS -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+            <div class="text-2xl font-black text-slate-900 font-display">{{ reports|length }}</div>
+            <div class="text-xs text-slate-500 font-medium">Archived Records</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+            <div class="text-2xl font-black text-rose-600 font-display">
+                {{ reports|selectattr('record_type', 'equalto', 'Biopsy / Histopathology')|list|length }}
+            </div>
+            <div class="text-xs text-slate-500 font-medium">Biopsy & Pathology</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+            <div class="text-2xl font-black text-indigo-600 font-display">
+                {{ reports|selectattr('record_type', 'equalto', 'Radiology & Scans')|list|length }}
+            </div>
+            <div class="text-xs text-slate-500 font-medium">PET-CT & MRI Scans</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+            <div class="text-2xl font-black text-emerald-600 font-display">Encrypted</div>
+            <div class="text-xs text-slate-500 font-medium">AES-256 Storage</div>
+        </div>
+    </div>
+
+    <!-- REPORTS LIST TABLE -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-xs p-6 space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <h3 class="text-base font-bold text-slate-900 m-0">Confidential Medical Records</h3>
+            <span class="text-xs text-slate-400 font-semibold">Strict Role-Based Patient Consent</span>
+        </div>
+
+        {% if reports %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200 text-slate-400 font-black uppercase tracking-wider">
+                        <th class="py-3 px-4">Document Title</th>
+                        <th class="py-3 px-4">Type</th>
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Facility / Doctor</th>
+                        <th class="py-3 px-4">Doctor Access</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for r in reports %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="py-4 px-4 font-bold text-slate-900">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-file-medical text-rose-600 text-sm"></i>
+                                <span>{{ r.title }}</span>
+                            </div>
+                        </td>
+                        <td class="py-4 px-4">
+                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[11px]">
+                                {{ r.record_type }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-4 font-mono text-slate-500">{{ r.record_date }}</td>
+                        <td class="py-4 px-4">{{ r.facility_name or r.doctor_name or 'Spherix Central Pathology' }}</td>
+                        <td class="py-4 px-4">
+                            <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                <i class="fas fa-shield-halved text-[10px]"></i> Authorized MDT
+                            </span>
+                        </td>
+                        <td class="py-4 px-4 text-right space-x-2">
+                            {% if r.file_path %}
+                            <a href="{{ r.file_path }}" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs inline-flex items-center gap-1 text-decoration-none">
+                                <i class="fas fa-download text-[10px]"></i> View
+                            </a>
+                            {% else %}
+                            <span class="text-slate-400 font-medium">Digital Record</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-12 text-center space-y-3">
+            <i class="fas fa-folder-open text-4xl text-slate-300"></i>
+            <h4 class="text-sm font-bold text-slate-800 m-0">No medical reports uploaded yet</h4>
+            <p class="text-xs text-slate-500 m-0">Upload your biopsy, radiology scans, or genomic test results below.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- UPLOAD NEW REPORT CARD -->
+    <div id="upload-report-card" class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+        <div class="border-b border-slate-100 pb-4">
+            <span class="text-xs font-black uppercase tracking-wider text-rose-600">Secure Document Ingestion</span>
+            <h2 class="text-xl font-display font-extrabold text-slate-900 tracking-tight">Upload Confidential Medical Report</h2>
+            <p class="text-xs text-slate-500 font-normal m-0">Records uploaded here are restricted to your account and oncologists you authorize.</p>
+        </div>
+
+        <form action="{{ url_for('cancer_care.reports') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label for="report_title" class="text-xs font-bold text-slate-700">Document Title <span class="text-rose-600">*</span></label>
+                    <input type="text" id="report_title" name="title" required placeholder="Enter descriptive report title" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 text-xs sm:text-sm font-semibold text-slate-900">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="record_type" class="text-xs font-bold text-slate-700">Report Category <span class="text-rose-600">*</span></label>
+                    <select id="record_type" name="record_type" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                        <option value="Biopsy / Histopathology" selected>Biopsy / Histopathology</option>
+                        <option value="Radiology & Scans">Radiology & Scans (PET-CT / MRI / CT)</option>
+                        <option value="Genomics & Biomarkers">Genomics & NGS Biomarkers</option>
+                        <option value="Blood & Tumor Markers">Blood & Tumor Markers (CBC / CEA / CA-125 / PSA)</option>
+                        <option value="Surgical Discharge Summary">Surgical / Hospital Discharge Summary</option>
+                        <option value="Chemotherapy Flowsheet">Chemotherapy Infusion Flowsheet</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="record_date" class="text-xs font-bold text-slate-700">Report Date <span class="text-rose-600">*</span></label>
+                    <input type="date" id="record_date" name="record_date" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 text-xs sm:text-sm font-semibold text-slate-900">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="facility_name" class="text-xs font-bold text-slate-700">Diagnostic Facility / Hospital</label>
+                    <input type="text" id="facility_name" name="facility_name" placeholder="Enter diagnostic laboratory or hospital name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 text-xs sm:text-sm font-semibold text-slate-900">
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label for="report_file" class="text-xs font-bold text-slate-700">Select Document File (PDF, PNG, JPG) <span class="text-rose-600">*</span></label>
+                <input type="file" id="report_file" name="file" required accept=".pdf,.png,.jpg,.jpeg" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100">
+            </div>
+
+            <!-- Patient Consent & Authorization Checkbox -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <label class="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer">
+                    <input type="checkbox" name="doctor_consent" value="yes" checked class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                    <span>
+                        <strong>Explicit Patient Consent:</strong> I authorize verified Spherix Clinic oncologists and Multidisciplinary Tumor Board specialists to review this confidential medical record for clinical assessment and staging purposes.
+                    </span>
+                </label>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button type="submit" class="px-8 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2 cursor-pointer">
+                    <i class="fas fa-lock"></i> Encrypt & Upload Report
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const d = document.getElementById('record_date');
+    if (d) d.value = new Date().toISOString().split('T')[0];
+});
+</script>
+{% endblock %}
+

@@ -81,11 +81,87 @@ def _categorize_disease(name, overview_text, symptoms_text):
     return 'General Clinical Medicine'
 
 def load_all_diseases():
-    """Parses and aggregates all 16,412 QA pairs across 5,126 conditions from medquad.csv."""
+    """Parses and aggregates all 16,412 QA pairs across 5,126 conditions from medquad.csv or database."""
     global ALL_DISEASES, DISEASES_BY_ID, DISEASES_BY_NAME, DISEASES_BY_CATEGORY, TOP_CURATED_DISEASES
     
     if ALL_DISEASES:
         return ALL_DISEASES
+
+    # 1. Attempt loading from SQLite database (spherixclinic.db)
+    try:
+        db_candidates = [
+            os.getenv('SQLITE_DB_PATH'),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db'),
+            'spherixclinic.db'
+        ]
+        for db_file in db_candidates:
+            if db_file and os.path.exists(db_file):
+                import sqlite3
+                import json
+                conn = sqlite3.connect(db_file)
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='diseases_catalog'")
+                if cursor.fetchone():
+                    cursor.execute("SELECT data_json FROM diseases_catalog")
+                    rows = cursor.fetchall()
+                    if rows and len(rows) > 0:
+                        compiled_list = []
+                        by_cat = defaultdict(list)
+                        by_id = {}
+                        by_name = {}
+                        for r in rows:
+                            if r[0]:
+                                d = json.loads(r[0])
+                                # Ensure backward-compatibility keys
+                                d.setdefault('symptoms_text', d.get('symptoms', ''))
+                                d.setdefault('causes_text', d.get('causes', ''))
+                                d.setdefault('treatments_text', d.get('treatments', ''))
+                                d.setdefault('diagnoses_text', d.get('diagnoses', ''))
+                                d.setdefault('preventions_text', d.get('preventions', ''))
+                                d.setdefault('qa_count', len(d.get('all_qa', [])))
+                                d.setdefault('source_label', d.get('sources', 'NIH / CDC MedQuAD') if isinstance(d.get('sources'), str) else ', '.join(d.get('sources', [])))
+                                compiled_list.append(d)
+                                by_id[d['id']] = d
+                                by_name[d['name'].lower()] = d
+                                by_cat[d['category']].append(d)
+
+                        ALL_DISEASES.clear()
+                        ALL_DISEASES.extend(compiled_list)
+                        DISEASES_BY_ID.clear()
+                        DISEASES_BY_ID.update(by_id)
+                        DISEASES_BY_NAME.clear()
+                        DISEASES_BY_NAME.update(by_name)
+                        DISEASES_BY_CATEGORY.clear()
+                        DISEASES_BY_CATEGORY.update(by_cat)
+
+                        flagship_names = [
+                            'Glaucoma', 'High Blood Pressure', 'Diabetes', 'Asthma', 'Heart Attack', 'Migraine',
+                            'Alzheimer\'s Disease', 'Eczema', 'Stroke', 'Depression', 'Pneumonia', 'Lupus',
+                            'Chronic Kidney Disease', 'Osteoarthritis', 'Gout', 'Anemia', 'Hepatitis B',
+                            'Thyroid Diseases', 'Crohn\'s Disease', 'Multiple Sclerosis', 'Parkinson\'s Disease',
+                            'Celiac Disease', 'Psoriasis', 'Sleep Apnea', 'Tuberculosis', 'Dengue', 'Measles',
+                            'Arrhythmia', 'Coronary Artery Disease', 'Rheumatoid Arthritis', 'Endometriosis',
+                            'Cystic Fibrosis', 'Skin Cancer', 'Breast Cancer', 'Prostate Cancer', 'Colon Cancer'
+                        ]
+                        curated = []
+                        for fn in flagship_names:
+                            matched = next((d for d in compiled_list if fn.lower() in d['name'].lower() or d['name'].lower() in fn.lower()), None)
+                            if matched and matched not in curated:
+                                curated.append(matched)
+                        if len(curated) < 36:
+                            sorted_by_qa = sorted(compiled_list, key=lambda x: -x.get('qa_count', 0))
+                            for item in sorted_by_qa:
+                                if item not in curated:
+                                    curated.append(item)
+                                    if len(curated) >= 36:
+                                        break
+                        TOP_CURATED_DISEASES = curated
+                        print(f"✅ MedQuAD Disease Catalog Loaded from database: {len(ALL_DISEASES)} conditions indexed (Curated {len(TOP_CURATED_DISEASES)} flagship diseases)")
+                        conn.close()
+                        return ALL_DISEASES
+                conn.close()
+    except Exception as db_err:
+        pass
         
     if not os.path.exists(MEDQUAD_CSV_PATH):
         print(f"⚠️ medquad.csv not found at {MEDQUAD_CSV_PATH}")

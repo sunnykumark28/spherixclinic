@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+
+{% block title %}Premium Payment — Proposal #{{ app.application_number }} — Spherix Insurance{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] text-slate-900 pb-20 w-full">
+
+  <!-- Header -->
+  <section class="bg-gradient-to-r from-[#002f5e] to-[#004b87] text-white py-10 px-4 sm:px-6 lg:px-12 shadow-md">
+    <div class="max-w-3xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-200 mb-1">
+          <a href="{{ url_for('insurance.application_detail', app_id=app.id) }}" class="hover:underline flex items-center gap-1">
+            <i class="fas fa-arrow-left text-xxs"></i> Application Details
+          </a>
+          <span>/</span>
+          <span>Payment Gateway</span>
+        </div>
+        <h1 class="text-2xl font-black font-heading tracking-tight flex items-center gap-2">
+          <span>Authorize Premium Payment</span>
+        </h1>
+        <p class="text-xs text-sky-100 mt-1">
+          Proposal: <strong>{{ app.application_number }}</strong> &bull; Partner Insurer: <strong>{{ app.partner_name }}</strong>
+        </p>
+      </div>
+
+      <div class="text-right">
+        <span class="text-xxs uppercase font-extrabold text-sky-200 block">Total Due</span>
+        <span class="text-2xl font-black text-emerald-400">₹{{ '%.2f'|format(amount) }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Checkout Container -->
+  <section class="max-w-3xl mx-auto px-4 sm:px-6 mt-8">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6 sm:p-8 space-y-6">
+
+      <!-- Approved Banner -->
+      <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-lg shrink-0">
+            <i class="fas fa-shield-check"></i>
+          </div>
+          <div>
+            <h4 class="font-extrabold text-sm">Underwriting Approved by {{ app.partner_name }}</h4>
+            <p class="text-slate-600">Your proposal has passed all risk clearances. Completing payment instantly issues your policy schedule.</p>
+          </div>
+        </div>
+        <span class="px-2.5 py-1 rounded bg-emerald-200/60 font-black text-[10px] text-emerald-900 uppercase">Pre-Approved</span>
+      </div>
+
+      <!-- Payment Breakdown -->
+      <div class="space-y-2 border-b border-slate-100 pb-4 text-xs">
+        <div class="flex justify-between text-slate-600">
+          <span>Plan Name:</span>
+          <strong class="text-slate-800">{{ app.product_name }}</strong>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Life Coverage Sum Insured:</span>
+          <strong class="text-slate-800">₹{{ '%.0f'|format(app.insurance_details.get('sum_insured', 10000000)) }}</strong>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Policy Term:</span>
+          <span class="text-slate-800 font-semibold">{{ app.insurance_details.get('policy_term_years', 30) }} Years</span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Frequency Mode:</span>
+          <span class="text-slate-800 font-semibold">{{ app.insurance_details.get('premium_frequency', 'ANNUAL') }}</span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Base Premium:</span>
+          <span class="text-slate-800 font-bold">₹{{ '%.2f'|format(app.insurance_details.get('base_premium', 9500)) }}</span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Statutory GST (18%):</span>
+          <span class="text-slate-800 font-bold">₹{{ '%.2f'|format(app.insurance_details.get('gst_amount', 1710)) }}</span>
+        </div>
+        <div class="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-200">
+          <span>Total Payable:</span>
+          <span class="text-[#004b87]">₹{{ '%.2f'|format(amount) }}</span>
+        </div>
+      </div>
+
+      <!-- Payment Form -->
+      <form method="POST" action="{{ url_for('insurance.pay_premium', app_id=app.id) }}" class="space-y-5 text-xs">
+        <div>
+          <label class="block font-black text-slate-800 mb-2 uppercase text-xxs">Select Payment Method</label>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="border-2 border-slate-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all flex flex-col justify-between peer-checked:border-[#004b87] peer-checked:bg-blue-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <input type="radio" name="payment_method" value="UPI" checked class="text-[#004b87]">
+                <i class="fas fa-qrcode text-indigo-600 text-base"></i>
+              </div>
+              <span class="font-extrabold text-slate-900 text-xs">Instant UPI</span>
+              <span class="text-xxs text-slate-500">GPay, PhonePe, Paytm, BHIM</span>
+            </label>
+
+            <label class="border-2 border-slate-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <input type="radio" name="payment_method" value="CREDIT_CARD" class="text-[#004b87]">
+                <i class="fas fa-credit-card text-emerald-600 text-base"></i>
+              </div>
+              <span class="font-extrabold text-slate-900 text-xs">Credit / Debit Card</span>
+              <span class="text-xxs text-slate-500">Visa, Mastercard, RuPay</span>
+            </label>
+
+            <label class="border-2 border-slate-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 transition-all flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <input type="radio" name="payment_method" value="NET_BANKING" class="text-[#004b87]">
+                <i class="fas fa-building-columns text-sky-600 text-base"></i>
+              </div>
+              <span class="font-extrabold text-slate-900 text-xs">Net Banking</span>
+              <span class="text-xxs text-slate-500">All Indian Banks</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xxs flex items-center gap-2">
+          <i class="fas fa-lock text-emerald-600 text-xs"></i>
+          <span>256-Bit SSL Encrypted Banking Channel. Server-verified payment token required for policy issuance.</span>
+        </div>
+
+        <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fas fa-shield-check"></i>
+          <span>Verify &amp; Pay ₹{{ '%.2f'|format(amount) }}</span>
+        </button>
+      </form>
+
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+

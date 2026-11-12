@@ -32,6 +32,11 @@ def create_app(config_object=None):
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 2592000  # 30 days browser caching for static assets
 
+    # Session Cookie Enterprise Hardening (NIST SP 800-63B / OWASP)
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = bool(os.getenv('FLASK_ENV') == 'production' or os.getenv('ENABLE_HTTPS_COOKIES'))
+
     app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200 MB
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
     app.config['JWT_DECODE_AUDIENCE'] = None
@@ -73,6 +78,13 @@ def create_app(config_object=None):
         'style-src': ["'self'", "'unsafe-inline'", "https:", "http:"]
     }
     talisman.init_app(app, content_security_policy=csp, force_https=False)
+
+    # Reverse proxy support (Render, Railway, Fly.io, Heroku, AWS ELB)
+    try:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    except Exception:
+        pass
 
     # SocketIO
     if socketio:
@@ -201,10 +213,52 @@ def create_app(config_object=None):
             return None
         return None
 
-    # Before Request Check
+    # Before Request Check & Enterprise Security Firewall
     @app.before_request
-    def check_blocked_status():
+    def security_firewall_and_session_guard():
+        # 1. Enterprise WAF Inspection (Blocks SQLi, Path Traversal, Scanners, Script injection)
+        try:
+            from spherix.security.firewall import inspect_incoming_request
+            waf_block = inspect_incoming_request()
+            if waf_block:
+                code, reason = waf_block
+                try:
+                    from spherix.security.audit import log_security_event
+                    log_security_event(
+                        event_type="WAF_BLOCKED_REQUEST",
+                        severity="HIGH",
+                        details=f"{reason} - Path: {request.path}",
+                        metadata={'target_path': request.path}
+                    )
+                except Exception:
+                    pass
+                if request.is_json or request.path.startswith('/api/'):
+                    return jsonify({'error': 'Security Exception', 'message': reason}), code
+                return (
+                    f"<!DOCTYPE html><html><head><title>403 Forbidden</title>"
+                    f"<style>body{{font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:50px;background:#f8fafc;color:#0f172a;}}"
+                    f".card{{background:white;padding:32px;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,0.05);max-width:540px;margin:auto;border-top:4px solid #ef4444;}}"
+                    f"h2{{color:#b91c1c;margin-bottom:12px;font-size:20px;}}p{{color:#475569;font-size:14px;}}</style></head>"
+                    f"<body><div class='card'><h2>Access Denied by Spherix Security Guard</h2>"
+                    f"<p>{reason}</p><p style='font-size:12px;color:#94a3b8;margin-top:20px;'>Incident logged to Spherix Clinic Security Telemetry.</p>"
+                    f"</div></body></html>",
+                    code
+                )
+        except Exception:
+            pass
+
+        # 2. Authenticated Session Validity & Inactivity Guard
         if current_user and current_user.is_authenticated:
+            try:
+                from spherix.security.session_manager import validate_active_session
+                if not validate_active_session():
+                    logout_user()
+                    session.clear()
+                    flash('Your session has expired or was terminated from another device.', 'info')
+                    return redirect(url_for('auth.login_landing'))
+            except Exception:
+                pass
+
             auth_session_id = session.get('auth_session_id')
             if auth_session_id in TEMP_DATA.get('terminated_auth_sessions', {}):
                 role = (session.get('user_role') or '').lower()
@@ -322,6 +376,12 @@ def create_app(config_object=None):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
+
+        try:
+            from spherix.security.firewall import apply_enterprise_security_headers
+            response = apply_enterprise_security_headers(response)
+        except Exception:
+            pass
         return response
 
     # Error handler for payload too large
@@ -407,6 +467,25 @@ def create_app(config_object=None):
             get_currency_symbol=get_currency_symbol
         )
 
+    def safe_round(val, precision=0, method='common'):
+        if val is None or val == '':
+            return 0 if precision == 0 else 0.0
+        try:
+            val = float(val)
+        except (ValueError, TypeError):
+            return 0 if precision == 0 else 0.0
+        if method == 'ceil':
+            import math
+            factor = 10 ** precision
+            res = math.ceil(val * factor) / factor
+            return int(res) if precision == 0 else res
+        elif method == 'floor':
+            import math
+            factor = 10 ** precision
+            res = math.floor(val * factor) / factor
+            return int(res) if precision == 0 else res
+        return round(val) if precision == 0 else round(val, precision)
+
     # Register essential Python builtins into Jinja environment
     app.jinja_env.globals.update(
         hasattr=hasattr,
@@ -422,14 +501,22 @@ def create_app(config_object=None):
         list=list,
         min=min,
         max=max,
-        round=round
+        round=safe_round
     )
+
+    # Safe round filter and global
+    @app.template_filter('round')
+    def render_round_filter(val, precision=0, method='common'):
+        return safe_round(val, precision=precision, method=method)
 
     # Markdown template filter
     import markdown
     @app.template_filter('markdown')
     def render_markdown_filter(text):
-        return markdown.markdown(text or '', extensions=['fenced_code', 'tables', 'nl2br'])
+        if not text:
+            return ''
+        rendered = markdown.markdown(text, extensions=['fenced_code', 'tables', 'nl2br'])
+        return rendered.replace('**', '')
 
     # Safe strftime template filter
     @app.template_filter('strftime')

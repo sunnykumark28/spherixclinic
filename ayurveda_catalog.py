@@ -50,7 +50,59 @@ def load_ayurveda_catalog():
     ALL_AYUR_DISEASES = []
     AYUR_DISEASES_BY_ID = {}
     AYUR_DISEASES_BY_DOSHA = {}
-    
+    TOP_FEATURED_AYUR_CONDITIONS = []
+
+    # 1. Attempt loading from SQLite database (spherixclinic.db)
+    try:
+        db_candidates = [
+            os.getenv('SQLITE_DB_PATH'),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db'),
+            'spherixclinic.db'
+        ]
+        for db_file in db_candidates:
+            if db_file and os.path.exists(db_file):
+                import sqlite3
+                import json
+                conn = sqlite3.connect(db_file)
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ayurveda_remedies'")
+                if cursor.fetchone():
+                    cursor.execute("SELECT data_json FROM ayurveda_remedies")
+                    rows = cursor.fetchall()
+                    if rows:
+                        for r in rows:
+                            if r[0]:
+                                item = json.loads(r[0])
+                                ALL_AYUR_DISEASES.append(item)
+                                AYUR_DISEASES_BY_ID[item['id']] = item
+                                AYUR_DISEASES_BY_ID[item['name'].lower()] = item
+                                doshas = item.get('doshas', 'Tridoshic')
+                                for d_token in ['Vata', 'Pitta', 'Kapha']:
+                                    if d_token.lower() in doshas.lower():
+                                        AYUR_DISEASES_BY_DOSHA.setdefault(d_token, []).append(item)
+
+                        flagship_names = [
+                            'acidity', 'cough', 'arthritis', 'anxiety', 'diabetes', 'insomnia',
+                            'hypertension', 'asthma', 'migraine', 'acne', 'obesity', 'pcos',
+                            'constipation', 'allergies', 'back pain', 'jaundice', 'hypothyroidism',
+                            'anemia', 'alopecia', 'gerd', 'gout', 'sciatica', 'depression', 'sinusitis'
+                        ]
+                        for item in ALL_AYUR_DISEASES:
+                            if any(fn in item['name'].lower() for fn in flagship_names):
+                                TOP_FEATURED_AYUR_CONDITIONS.append(item)
+                                if len(TOP_FEATURED_AYUR_CONDITIONS) >= 36:
+                                    break
+                        if len(TOP_FEATURED_AYUR_CONDITIONS) < 36:
+                            TOP_FEATURED_AYUR_CONDITIONS = ALL_AYUR_DISEASES[:36]
+
+                        print(f"✅ AyurGenixAI Dataset Loaded from database: {len(ALL_AYUR_DISEASES)} Ayurvedic conditions indexed across 10 clinical domains.")
+                        conn.close()
+                        return
+                conn.close()
+    except Exception as db_err:
+        pass
+
+    # 2. Fallback to CSV parsing
     if not os.path.exists(CSV_PATH):
         print(f"⚠️ Warning: AyurGenixAI_Dataset.csv not found at {CSV_PATH}")
         return

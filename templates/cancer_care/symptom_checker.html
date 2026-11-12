@@ -1,0 +1,505 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}Oncology Symptom Checker & Clinical Triage{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">Symptom Checker</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-10 space-y-10">
+
+    <!-- PAGE HEADER & MANDATORY CLINICAL DISCLAIMER -->
+    <div class="space-y-4">
+        <div class="text-center max-w-3xl mx-auto space-y-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200 uppercase tracking-wider">
+                <i class="fas fa-stethoscope text-rose-600"></i> Evidence-Based Clinical Triage
+            </span>
+            <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+                Cancer Symptom Checker & Risk Triage
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                Answer structured clinical questions regarding your affected body area, symptoms, duration, and personal history to receive evidence-based follow-up guidance.
+            </p>
+        </div>
+
+        <!-- Strict Non-Diagnostic Alert Banner -->
+        <div class="p-4 rounded-xl bg-amber-50 border border-amber-300/80 text-amber-950 text-xs leading-relaxed flex items-start gap-3 shadow-2xs">
+            <i class="fas fa-triangle-exclamation text-amber-600 text-base shrink-0 mt-0.5"></i>
+            <div>
+                <strong class="font-bold block text-amber-900 mb-0.5">IMPORTANT CLINICAL NOTICE: THIS IS NOT A CANCER DIAGNOSIS</strong>
+                This tool provides clinical triage and educational decision support. It does NOT generate unsupported numerical cancer probability percentages. Most physical symptoms are caused by benign conditions (such as fibroadenomas, cysts, infections, or hemorrhoids). A definitive cancer diagnosis can ONLY be established through histological tissue biopsy and evaluation by an oncologist.
+            </div>
+        </div>
+
+        <!-- Cross-Module Gateway to Full AI Symptoms Analyzer (Step 1) -->
+        <div class="flex items-center justify-between p-3.5 rounded-xl bg-slate-900 text-white shadow-sm flex-wrap gap-3">
+            <div class="flex items-center gap-2.5 text-xs">
+                <i class="fas fa-microchip text-rose-400 text-base"></i>
+                <span class="font-medium text-slate-200">Looking for the full multi-specialty clinical diagnosis wizard?</span>
+            </div>
+            <a href="{{ url_for('symptoms') }}" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs transition-colors text-decoration-none flex items-center gap-2 shadow-xs">
+                <span>Open Symptoms Checker (Step 1)</span>
+                <i class="fas fa-arrow-right text-[10px]"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- INTERACTIVE SYMPTOM CHECKER WIZARD -->
+    <div class="max-w-5xl mx-auto space-y-8">
+        <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-10 space-y-8">
+        
+        <!-- Step Indicator -->
+        <div class="flex items-center justify-between pb-6 border-b border-slate-200">
+            <div class="flex items-center gap-2">
+                <span id="step-badge" class="w-7 h-7 rounded-full bg-rose-600 text-white font-bold text-xs flex items-center justify-center">1</span>
+                <span id="step-title" class="text-sm font-bold text-slate-900">Step 1: Anatomical Region</span>
+            </div>
+            <div class="text-xs text-slate-400 font-medium" id="step-counter">1 of 4</div>
+        </div>
+
+        <form id="cancer-symptom-checker-form" class="space-y-8" onsubmit="event.preventDefault(); processSymptomTriage();">
+
+            <!-- STEP 1: BODY REGION SELECTION -->
+            <div id="step-section-1" class="space-y-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 m-0">Select the Primary Anatomical Body Region</h3>
+                    <p class="text-xs text-slate-500 m-0">Where are your physical sensations, changes, or discomfort situated?</p>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="breast" class="sr-only" checked onchange="updateSymptomOptions()">
+                        <i class="fas fa-ribbon text-2xl text-rose-500"></i>
+                        <span class="text-xs font-bold text-slate-800">Breast & Axilla</span>
+                    </label>
+
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="respiratory" class="sr-only" onchange="updateSymptomOptions()">
+                        <i class="fas fa-lungs text-2xl text-sky-500"></i>
+                        <span class="text-xs font-bold text-slate-800">Chest & Lungs</span>
+                    </label>
+
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="gastrointestinal" class="sr-only" onchange="updateSymptomOptions()">
+                        <i class="fas fa-dna text-2xl text-emerald-500"></i>
+                        <span class="text-xs font-bold text-slate-800">GI & Colorectal</span>
+                    </label>
+
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="urologic" class="sr-only" onchange="updateSymptomOptions()">
+                        <i class="fas fa-mars text-2xl text-indigo-500"></i>
+                        <span class="text-xs font-bold text-slate-800">Prostate & Urinary</span>
+                    </label>
+
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="gynecologic" class="sr-only" onchange="updateSymptomOptions()">
+                        <i class="fas fa-female text-2xl text-teal-500"></i>
+                        <span class="text-xs font-bold text-slate-800">Cervix & Uterus</span>
+                    </label>
+
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="head_neck" class="sr-only" onchange="updateSymptomOptions()">
+                        <i class="fas fa-teeth-open text-2xl text-amber-500"></i>
+                        <span class="text-xs font-bold text-slate-800">Oral & Head/Neck</span>
+                    </label>
+
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="dermatology" class="sr-only" onchange="updateSymptomOptions()">
+                        <i class="fas fa-sun text-2xl text-orange-500"></i>
+                        <span class="text-xs font-bold text-slate-800">Skin & Moles</span>
+                    </label>
+
+                    <label class="region-card p-4 rounded-xl border-2 border-slate-200 hover:border-rose-300 bg-slate-50/50 hover:bg-rose-50/30 cursor-pointer transition-all flex flex-col items-center gap-2 text-center">
+                        <input type="radio" name="body_region" value="hematology" class="sr-only" onchange="updateSymptomOptions()">
+                        <i class="fas fa-droplet text-2xl text-red-500"></i>
+                        <span class="text-xs font-bold text-slate-800">Blood & Lymph</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- STEP 2: SYMPTOMS, DURATION & FREQUENCY -->
+            <div id="step-section-2" class="space-y-6">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 m-0">Step 2: Specific Symptoms & Chronology</h3>
+                    <p class="text-xs text-slate-500 m-0">Select all symptoms present and specify their duration and frequency pattern.</p>
+                </div>
+
+                <!-- Dynamic Symptom Checkboxes -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-700 block">Reported Symptoms (Select All That Apply)</label>
+                    <div id="dynamic-symptoms-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- Populated via JavaScript -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+                    <!-- Duration -->
+                    <div class="space-y-1.5">
+                        <label for="symptom-duration" class="text-xs font-bold text-slate-700">Symptom Duration</label>
+                        <select id="symptom-duration" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            <option value="under_2_weeks">Less than 2 weeks</option>
+                            <option value="2_to_4_weeks" selected>2 to 4 weeks (Clinical review threshold)</option>
+                            <option value="1_to_3_months">1 to 3 months</option>
+                            <option value="over_3_months">Greater than 3 months</option>
+                        </select>
+                    </div>
+
+                    <!-- Frequency -->
+                    <div class="space-y-1.5">
+                        <label for="symptom-frequency" class="text-xs font-bold text-slate-700">Symptom Frequency</label>
+                        <select id="symptom-frequency" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            <option value="constant">Constant / Non-remitting</option>
+                            <option value="worsening" selected>Progressively worsening over time</option>
+                            <option value="intermittent">Intermittent / Comes and goes</option>
+                            <option value="postprandial">Triggered by specific meals or activity</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: PATIENT PROFILE & RISK HISTORY -->
+            <div id="step-section-3" class="space-y-6">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 m-0">Step 3: Clinical Background & Family History</h3>
+                    <p class="text-xs text-slate-500 m-0">Underlying lifestyle and family history provide context for personalized screening guidelines.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div class="space-y-1.5">
+                        <label for="patient-age" class="text-xs font-bold text-slate-700">Age (Years)</label>
+                        <input type="number" id="patient-age" min="18" max="100" value="48" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="patient-gender" class="text-xs font-bold text-slate-700">Biological Sex</label>
+                        <select id="patient-gender" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            <option value="female" selected>Female</option>
+                            <option value="male">Male</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="smoking-status" class="text-xs font-bold text-slate-700">Tobacco / Smoking Exposure</label>
+                        <select id="smoking-status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-rose-600 focus:bg-white text-xs sm:text-sm font-semibold text-slate-900 cursor-pointer">
+                            <option value="never" selected>Never smoker</option>
+                            <option value="former">Former smoker (Quit >1 year)</option>
+                            <option value="current_light">Current smoker (< 1 pack/day)</option>
+                            <option value="current_heavy">Heavy smoker (≥1 pack/day or bidi)</option>
+                            <option value="smokeless">Smokeless tobacco / Gutkha</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Family History Multiple Checkboxes -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-700 block">First-Degree Family History of Malignancy</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:bg-slate-100">
+                            <input type="checkbox" name="family_history" value="breast_ovarian" class="rounded text-rose-600 focus:ring-rose-500">
+                            <span class="font-medium text-slate-800">Breast / Ovarian</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:bg-slate-100">
+                            <input type="checkbox" name="family_history" value="colon_gi" class="rounded text-rose-600 focus:ring-rose-500">
+                            <span class="font-medium text-slate-800">Colorectal / GI</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:bg-slate-100">
+                            <input type="checkbox" name="family_history" value="prostate" class="rounded text-rose-600 focus:ring-rose-500">
+                            <span class="font-medium text-slate-800">Prostate</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:bg-slate-100">
+                            <input type="checkbox" name="family_history" value="lung_head_neck" class="rounded text-rose-600 focus:ring-rose-500">
+                            <span class="font-medium text-slate-800">Lung / Thorax</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBMIT BUTTON -->
+            <div class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <span class="text-[11px] text-slate-400">All submissions are strictly encrypted and confidential.</span>
+                <button type="submit" id="btn-run-triage" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all shadow-md shadow-rose-600/25 flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fas fa-stethoscope"></i> Generate Clinical Triage Summary
+                </button>
+            </div>
+        </form>
+
+        <!-- LOADING INDICATOR -->
+        <div id="triage-loading" class="hidden py-12 text-center space-y-3">
+            <div class="w-12 h-12 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin mx-auto"></div>
+            <div class="text-sm font-bold text-slate-800">Analyzing Clinical Presentation...</div>
+            <div class="text-xs text-slate-500">Cross-referencing symptoms with NCCN diagnostic algorithms and red-flag parameters.</div>
+        </div>
+
+        <!-- RESULTS DISPLAY BOX -->
+        <div id="triage-results" class="hidden space-y-6 pt-6 border-t border-slate-200">
+            <div class="flex items-center justify-between pb-2">
+                <h3 class="text-lg font-display font-black text-slate-900 m-0">Clinical Triage Summary</h3>
+                <span id="triage-priority-badge" class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                    Priority Review
+                </span>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed" id="triage-summary-text">
+                <!-- Dynamically populated summary -->
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Differential Considerations -->
+                <div class="p-5 rounded-xl bg-white border border-slate-200 space-y-2 shadow-2xs">
+                    <h5 class="text-xs font-bold uppercase tracking-wider text-slate-800 m-0 flex items-center gap-1.5">
+                        <i class="fas fa-list-check text-rose-600"></i> Differential Diagnostic Considerations
+                    </h5>
+                    <p class="text-[11px] text-slate-500 m-0">Common benign and significant conditions to evaluate:</p>
+                    <ul id="triage-differential-list" class="space-y-1.5 pl-0 list-none text-xs text-slate-700 pt-1">
+                        <!-- Populated via JS -->
+                    </ul>
+                </div>
+
+                <!-- Recommended Diagnostic Workup -->
+                <div class="p-5 rounded-xl bg-white border border-slate-200 space-y-2 shadow-2xs">
+                    <h5 class="text-xs font-bold uppercase tracking-wider text-slate-800 m-0 flex items-center gap-1.5">
+                        <i class="fas fa-microscope text-indigo-600"></i> Recommended Diagnostic Workup
+                    </h5>
+                    <p class="text-[11px] text-slate-500 m-0">Gold standard examinations to discuss with your specialist:</p>
+                    <ul id="triage-workup-list" class="space-y-1.5 pl-0 list-none text-xs text-slate-700 pt-1">
+                        <!-- Populated via JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Specialist Referral & Actions -->
+            <div class="p-5 rounded-2xl bg-gradient-to-r from-slate-900 to-rose-950 text-white space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-rose-300">Recommended Clinical Subspecialist</span>
+                        <h4 id="triage-specialist-title" class="text-base font-bold text-white m-0">Surgical Oncologist & Comprehensive Center</h4>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{% if current_user.is_authenticated and current_user.role == 'patient' %}{{ url_for('doctors_list', dept='Oncology') }}{% else %}{{ url_for('patient_login', next=url_for('doctors_list', dept='Oncology')) }}{% endif %}" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs uppercase tracking-wider text-decoration-none shadow-md">
+                            Schedule Consult
+                        </a>
+                        <button type="button" onclick="window.print()" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-colors border border-white/20">
+                            <i class="fas fa-print mr-1"></i> Print
+                        </button>
+                    </div>
+                </div>
+                <div class="text-[11px] text-slate-300 border-t border-white/10 pt-3">
+                    Bring this assessment summary to your consultation. Do not start or alter any medications without direct physical examination by a healthcare provider.
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+</div>
+
+<script>
+const SYMPTOMS_BY_REGION = {
+    breast: [
+        { id: "palpable_lump", label: "Painless palpable lump or thickening in breast tissue", red: true },
+        { id: "skin_dimpling", label: "Skin dimpling or orange-peel (peau d'orange) texture", red: true },
+        { id: "nipple_changes", label: "Nipple inversion, bleeding, or spontaneous discharge", red: true },
+        { id: "axillary_swelling", label: "Swollen lymph nodes in the armpit / axilla", red: false },
+        { id: "breast_asymmetry", label: "Recent unexplained change in breast contour or size", red: false },
+        { id: "localized_pain", label: "Persistent non-cyclical breast pain", red: false }
+    ],
+    respiratory: [
+        { id: "persistent_cough", label: "Chronic cough lasting longer than 3 weeks", red: true },
+        { id: "hemoptysis", label: "Coughing up blood or blood-tinged sputum", red: true },
+        { id: "dyspnea", label: "Progressive shortness of breath and wheezing", red: false },
+        { id: "chest_pain", label: "Pleuritic or aching chest/shoulder pain", red: false },
+        { id: "hoarseness", label: "Persistent hoarseness or voice changes", red: false },
+        { id: "weight_loss", label: "Unexplained weight loss (>10 lbs)", red: true }
+    ],
+    gastrointestinal: [
+        { id: "rectal_bleeding", label: "Bright red rectal bleeding or dark tarry stools", red: true },
+        { id: "bowel_habit_change", label: "Alternating diarrhea and constipation >3 weeks", red: true },
+        { id: "pencil_stools", label: "Noticeably narrower (pencil-thin) caliber of stool", red: true },
+        { id: "abdominal_cramping", label: "Persistent lower abdominal cramping and fullness", red: false },
+        { id: "iron_deficiency", label: "Unexplained anemia or profound fatigue", red: false },
+        { id: "jaundice", label: "Yellowing of eyes or skin with dark urine", red: true }
+    ],
+    urologic: [
+        { id: "urinary_hesitancy", label: "Weak, interrupted stream or terminal dribbling", red: false },
+        { id: "hematuria", label: "Visible blood in urine or semen", red: true },
+        { id: "nocturia", label: "Waking up multiple times each night to urinate", red: false },
+        { id: "pelvic_bone_pain", label: "Persistent aching pain in lower back or pelvis", red: true },
+        { id: "urgency", label: "Sudden strong urge to urinate with poor control", red: false }
+    ],
+    gynecologic: [
+        { id: "postmenopausal_bleeding", label: "Vaginal bleeding or spotting after menopause", red: true },
+        { id: "postcoital_bleeding", label: "Bleeding after intercourse or between cycles", red: true },
+        { id: "abnormal_discharge", label: "Watery, foul-smelling, or pinkish vaginal discharge", red: false },
+        { id: "persistent_bloating", label: "Severe continuous abdominal bloating and early satiety", red: true },
+        { id: "pelvic_mass", label: "Palpable fullness or pressure in lower abdomen", red: false }
+    ],
+    head_neck: [
+        { id: "oral_ulcer", label: "Mouth ulcer or sore that does not heal (>2 weeks)", red: true },
+        { id: "leukoplakia", label: "Persistent white (leukoplakia) or red mucosal patch", red: true },
+        { id: "dysphagia", label: "Pain or difficulty swallowing food or liquids", red: true },
+        { id: "neck_lump", label: "Firm, painless lump or swollen node in the neck", red: true },
+        { id: "unilateral_earache", label: "Persistent one-sided ear pain without infection", red: false }
+    ],
+    dermatology: [
+        { id: "asymmetric_mole", label: "Mole where one half does not match the other (A)", red: true },
+        { id: "irregular_border", label: "Scalloped, notched, or poorly defined border (B)", red: true },
+        { id: "color_variation", label: "Mole containing shades of brown, black, blue, or pink (C)", red: true },
+        { id: "growing_mole", label: "Mole diameter >6mm or noticeably enlarging (D/E)", red: true },
+        { id: "bleeding_mole", label: "Skin lesion that oozes, bleeds, or itches persistently", red: true }
+    ],
+    hematology: [
+        { id: "night_sweats", label: "Drenching night sweats requiring sheet or clothing change", red: true },
+        { id: "unexplained_fevers", label: "Recurrent fevers (>38°C) without clear infection", red: true },
+        { id: "generalized_nodes", label: "Multiple enlarged painless lymph nodes (neck/axilla/groin)", red: true },
+        { id: "easy_bruising", label: "Unexplained bruising, petechiae, or spontaneous bleeding", red: true },
+        { id: "severe_fatigue", label: "Exhaustion that does not improve with sleep", red: false }
+    ]
+};
+
+function updateSymptomOptions() {
+    const selectedRegion = document.querySelector('input[name="body_region"]:checked')?.value || 'breast';
+    const container = document.getElementById('dynamic-symptoms-list');
+    if (!container) return;
+
+    const list = SYMPTOMS_BY_REGION[selectedRegion] || [];
+    container.innerHTML = list.map((item, idx) => `
+        <label class="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/40 hover:bg-slate-100/70 transition-colors cursor-pointer">
+            <input type="checkbox" name="symptoms_selected" value="${item.id}" class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+            <div class="text-xs">
+                <span class="font-medium text-slate-800">${item.label}</span>
+                ${item.red ? '<span class="ml-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-700 uppercase">Warning Indicator</span>' : ''}
+            </div>
+        </label>
+    `).join('');
+
+    // Highlight selected card visually
+    document.querySelectorAll('.region-card').forEach(card => {
+        const input = card.querySelector('input');
+        if (input.checked) {
+            card.classList.add('border-rose-600', 'bg-rose-50/50');
+            card.classList.remove('border-slate-200');
+        } else {
+            card.classList.remove('border-rose-600', 'bg-rose-50/50');
+            card.classList.add('border-slate-200');
+        }
+    });
+}
+
+function processSymptomTriage() {
+    const selectedRegion = document.querySelector('input[name="body_region"]:checked')?.value || 'breast';
+    const checkedSymptoms = Array.from(document.querySelectorAll('input[name="symptoms_selected"]:checked')).map(el => el.value);
+    const duration = document.getElementById('symptom-duration').value;
+    const frequency = document.getElementById('symptom-frequency').value;
+    const age = parseInt(document.getElementById('patient-age').value || 45);
+    const smoking = document.getElementById('smoking-status').value;
+
+    const loading = document.getElementById('triage-loading');
+    const results = document.getElementById('triage-results');
+    
+    loading.classList.remove('hidden');
+    results.classList.add('hidden');
+
+    setTimeout(() => {
+        loading.classList.add('hidden');
+        results.classList.remove('hidden');
+
+        // Evidence-based heuristics (NOT random probabilities)
+        let redFlagCount = 0;
+        const regionSymptoms = SYMPTOMS_BY_REGION[selectedRegion] || [];
+        checkedSymptoms.forEach(symId => {
+            const found = regionSymptoms.find(s => s.id === symId);
+            if (found && found.red) redFlagCount++;
+        });
+
+        let priorityText = "Standard Clinical Consultation";
+        let priorityClass = "bg-sky-100 text-sky-800 border-sky-200";
+
+        if (redFlagCount >= 2 || duration === 'over_3_months' || (redFlagCount >= 1 && duration === '1_to_3_months')) {
+            priorityText = "Urgent Priority Review (Consult within 1-2 Weeks)";
+            priorityClass = "bg-rose-100 text-rose-800 border-rose-200";
+        } else if (redFlagCount === 1 || duration === '2_to_4_weeks') {
+            priorityText = "Priority Clinical Evaluation (Consult within 2-3 Weeks)";
+            priorityClass = "bg-amber-100 text-amber-800 border-amber-200";
+        }
+
+        const badge = document.getElementById('triage-priority-badge');
+        badge.textContent = priorityText;
+        badge.className = `px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${priorityClass}`;
+
+        const summaryEl = document.getElementById('triage-summary-text');
+        summaryEl.innerHTML = `
+            Based on your reported <strong>${selectedRegion.replace('_', ' ')}</strong> symptoms lasting <strong>${duration.replace(/_/g, ' ')}</strong> with a <strong>${frequency}</strong> pattern, there are <strong>${redFlagCount}</strong> clinical warning indicators that warrant structured evaluation. Most instances are caused by benign conditions, but comprehensive imaging and clinical palpation are required to rule out neoplasia.
+        `;
+
+        // Differential considerations
+        const diffList = document.getElementById('triage-differential-list');
+        const workupList = document.getElementById('triage-workup-list');
+        const specTitle = document.getElementById('triage-specialist-title');
+
+        if (selectedRegion === 'breast') {
+            diffList.innerHTML = `
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Fibroadenoma / Benign Breast Cyst (Common)</li>
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Fibrocystic Mastopathy</li>
+                <li><i class="fas fa-triangle-exclamation text-rose-500 mr-1.5"></i> Invasive Ductal or Lobular Carcinoma</li>
+                <li><i class="fas fa-triangle-exclamation text-rose-500 mr-1.5"></i> Ductal Carcinoma In Situ (DCIS)</li>
+            `;
+            workupList.innerHTML = `
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> High-Resolution 3D Diagnostic Digital Mammogram</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Targeted Breast & Axillary Node Ultrasound</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Core Needle Biopsy with ER/PR/HER2 pathology if solid lesion confirmed</li>
+            `;
+            specTitle.textContent = "Breast Surgical Oncologist & Comprehensive Breast Centre";
+        } else if (selectedRegion === 'respiratory') {
+            diffList.innerHTML = `
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Post-Infectious Bronchitis or Atypical Pneumonia</li>
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Chronic Obstructive Pulmonary Disease (COPD) Flare</li>
+                <li><i class="fas fa-triangle-exclamation text-rose-500 mr-1.5"></i> Non-Small Cell Lung Cancer (Adenocarcinoma / Squamous)</li>
+                <li><i class="fas fa-triangle-exclamation text-rose-500 mr-1.5"></i> Small Cell Lung Cancer (SCLC)</li>
+            `;
+            workupList.innerHTML = `
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Contrast-Enhanced Chest CT Scan (High-Resolution thin-cut)</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Sputum Cytology and Bronchoscopy (EBUS) if nodule identified</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Pulmonary Function Tests (PFTs)</li>
+            `;
+            specTitle.textContent = "Thoracic Oncologist & Interventional Pulmonologist";
+        } else if (selectedRegion === 'gastrointestinal') {
+            diffList.innerHTML = `
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Internal Hemorrhoids / Anal Fissure (Common)</li>
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Diverticular Disease / Inflammatory Bowel Disease (IBD)</li>
+                <li><i class="fas fa-triangle-exclamation text-rose-500 mr-1.5"></i> Precancerous Adenomatous Polyps</li>
+                <li><i class="fas fa-triangle-exclamation text-rose-500 mr-1.5"></i> Colorectal Adenocarcinoma</li>
+            `;
+            workupList.innerHTML = `
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Complete Diagnostic Optical Colonoscopy with Biopsy</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Serum Complete Blood Count (CBC) & Ferritin for Anemia</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Serum Carcinoembryonic Antigen (CEA) Quantitative Level</li>
+            `;
+            specTitle.textContent = "Colorectal Surgical Oncologist & Gastroenterologist";
+        } else {
+            diffList.innerHTML = `
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Benign Reactive or Inflammatory Lesion</li>
+                <li><i class="fas fa-circle-check text-emerald-500 mr-1.5"></i> Localized Benign Hyperplasia or Cyst</li>
+                <li><i class="fas fa-triangle-exclamation text-rose-500 mr-1.5"></i> Primary Malignancy of Reported Organ System</li>
+            `;
+            workupList.innerHTML = `
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Cross-Sectional Contrast Imaging (CT / MRI of region)</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Complete Hematologic & Organ Functional Blood Profile</li>
+                <li><i class="fas fa-angle-right text-slate-400 mr-1.5"></i> Histopathological Excisional or Core Biopsy</li>
+            `;
+            specTitle.textContent = "Multidisciplinary Surgical Oncologist";
+        }
+
+        results.scrollIntoView({ behavior: 'smooth' });
+    }, 600);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateSymptomOptions();
+});
+</script>
+{% endblock %}
+

@@ -270,13 +270,41 @@ def home():
     }
     
     # Fetch all verified doctors to showcase in the loop, sorted by top rating (max 100)
+    def _parse_experience(val):
+        if not val:
+            return 0.0
+        if isinstance(val, (int, float)):
+            return float(val)
+        import re
+        match = re.search(r'[-+]?\d*\.?\d+', str(val))
+        if match:
+            try:
+                return float(match.group(0))
+            except (ValueError, TypeError):
+                return 0.0
+        return 0.0
+
+    def _safe_float(val, default=0.0):
+        if val is None or val == '':
+            return default
+        if isinstance(val, (int, float)):
+            return float(val)
+        import re
+        match = re.search(r'[-+]?\d*\.?\d+', str(val))
+        if match:
+            try:
+                return float(match.group(0))
+            except (ValueError, TypeError):
+                return default
+        return default
+
     all_doctors = list(TEMP_DATA.get('doctors', {}).values())
     verified_doctors = deduplicate_entities([d for d in all_doctors if getattr(d, 'is_verified', True) and not getattr(d, 'is_hidden', False) and not getattr(d, 'is_blocked', False)])
     verified_doctors = sorted(
         verified_doctors,
         key=lambda d: (
-            float(getattr(d, 'average_rating', 0) or 0),
-            float(getattr(d, 'experience', 0) or 0)
+            _safe_float(getattr(d, 'average_rating', 0)),
+            _parse_experience(getattr(d, 'experience', 0))
         ),
         reverse=True
     )[:100]
@@ -1152,7 +1180,18 @@ def api_disease_info(disease_identifier):
         # Full MedQuAD Q&A archive
         'medquad_qa': medquad_entry.get('all_qa', []) if medquad_entry else []
     }
-    
+
+    def _strip_stars_recursively(val):
+        if isinstance(val, str):
+            return re.sub(r'\*\*([^*]+)\*\*', r'\1', val).replace('**', '').strip()
+        elif isinstance(val, list):
+            return [_strip_stars_recursively(x) for x in val]
+        elif isinstance(val, dict):
+            return {k: _strip_stars_recursively(v) for k, v in val.items()}
+        return val
+
+    structured_monograph = _strip_stars_recursively(structured_monograph)
+
     return jsonify({
         'success': True,
         'disease': structured_monograph

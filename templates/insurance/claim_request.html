@@ -1,0 +1,127 @@
+{% extends "layout.html" %}
+
+{% block title %}Request Claims Assistance — Spherix Insurance{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f8fafc] text-slate-900 pb-20 w-full">
+
+  <!-- Header -->
+  <section class="bg-gradient-to-r from-[#002f5e] to-[#004b87] text-white py-10 px-4 sm:px-6 lg:px-12 shadow-md">
+    <div class="max-w-3xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-200 mb-1">
+          <a href="{{ url_for('insurance.my_claims') }}" class="hover:underline flex items-center gap-1">
+            <i class="fas fa-arrow-left text-xxs"></i> Claims Helpdesk
+          </a>
+          <span>/</span>
+          <span>Assistance Form</span>
+        </div>
+        <h1 class="text-2xl font-black font-heading tracking-tight flex items-center gap-2">
+          <span>Life Insurance Claims Assistance</span>
+        </h1>
+        <p class="text-xs text-sky-100 mt-1">
+          Our dedicated claims coordinators will assist you with hospital records, documentation, and partner insurer liaison.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Form Container -->
+  <section class="max-w-3xl mx-auto px-4 sm:px-6 mt-8">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6 sm:p-8 space-y-6">
+
+      <div class="p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-start gap-3">
+        <i class="fas fa-hand-holding-heart text-blue-600 text-base mt-0.5 shrink-0"></i>
+        <div>
+          <h4 class="font-extrabold text-sm">Free Dedicated Claims Coordination</h4>
+          <p class="text-slate-600">Spherix Clinic offers zero-fee claims assistance for all policies issued through our platform. A coordinator will be assigned to your ticket within 2 business hours.</p>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('insurance.request_claim') }}" class="space-y-4 text-xs">
+        
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Select Active Policy *</label>
+          <select name="policy_id" required class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+            {% for pol in policies %}
+            <option value="{{ pol.id }}" {% if selected_policy_id == pol.id %}selected{% endif %}>
+              #{{ pol.policy_number }} — {{ pol.product_name }} (₹{{ '%.0f'|format(pol.sum_insured) }} Cover) &bull; {{ pol.partner_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Claim Type *</label>
+            <select name="claim_type" class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+              <option value="CRITICAL_ILLNESS">Critical Illness Accelerated Rider Claim</option>
+              <option value="TERMINAL_ILLNESS">Terminal Illness Palliative Benefit Claim</option>
+              <option value="DEATH_CLAIM">Life Death Benefit Claim (Filed by Nominee)</option>
+              <option value="ACCIDENTAL_DISABILITY">Permanent Total Disability Claim</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Incident / Diagnosis Date *</label>
+            <input type="date" name="incident_date" required class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Claimant Full Name *</label>
+            <input type="text" name="claimant_name" value="{{ current_user.name }}" required class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Claimant Relationship with Insured *</label>
+            <select name="claimant_relation" class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+              <option value="Self">Self (Policyholder)</option>
+              <option value="Spouse">Spouse (Nominee)</option>
+              <option value="Child">Child (Nominee)</option>
+              <option value="Parent">Parent (Nominee)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Claimant Phone Number *</label>
+            <input type="tel" name="claimant_phone" value="{{ current_user.phone or '+91 933 4325 920' }}" required class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Claimant Email Address *</label>
+            <input type="email" name="claimant_email" value="{{ current_user.email }}" required class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Hospital / Clinic Facility Name</label>
+          <input type="text" name="hospital_name" value="Spherix Clinic & Hospital Complex" class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-semibold text-slate-800">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Brief Medical Summary / Diagnosis Notes *</label>
+          <textarea name="diagnosis_summary" rows="3" required placeholder="Describe the medical condition, diagnosis, admission dates or incident details..." class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 font-medium"></textarea>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <a href="{{ url_for('insurance.my_claims') }}" class="text-xs font-bold text-slate-500 hover:underline">
+            Cancel
+          </a>
+          <button type="submit" class="px-6 py-2.5 rounded-xl bg-[#004b87] hover:bg-[#002f5e] text-white font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer">
+            <i class="fas fa-paper-plane"></i>
+            <span>Submit Claim Assistance Request</span>
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+

@@ -1,0 +1,138 @@
+{% extends "cancer_care/base_cancer.html" %}
+
+{% block cancer_title %}Oncology Hospital Directory | Accredited Cancer Treatment Hubs{% endblock %}
+
+{% block breadcrumbs %}
+<span class="text-slate-300">/</span>
+<span class="text-rose-600 font-semibold">Hospital Directory</span>
+{% endblock %}
+
+{% block cancer_content %}
+<div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-10 space-y-10">
+
+    <!-- PAGE HEADER -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-8">
+        <div class="space-y-2 max-w-2xl">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 uppercase tracking-wider">
+                <i class="fas fa-hospital text-purple-600"></i> Accredited Cancer Infrastructure
+            </span>
+            <h1 class="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight">
+                Oncology Hospital Directory & Treatment Hubs
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 font-normal m-0 leading-relaxed">
+                Discover accredited cancer centers equipped with TrueBeam LINAC radiation bunkers, PET-CT imaging suites, da Vinci robotic operating theaters, and positive-pressure BMT units.
+            </p>
+        </div>
+
+        <div class="w-full md:w-80 shrink-0">
+            <label for="hospital-search-input" class="sr-only">Search Hospitals</label>
+            <div class="relative">
+                <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="hospital-search-input" placeholder="Search hospital name or city..." oninput="filterHospitals()" class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-300 focus:border-rose-600 text-xs sm:text-sm font-semibold text-slate-900 shadow-2xs">
+            </div>
+        </div>
+    </div>
+
+    <!-- HOSPITALS GRID -->
+    <div id="hospitals-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for hosp in oncology_hospitals %}
+        <div class="hospital-card rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-xs cancer-card-hover flex flex-col justify-between"
+             data-name="{{ hosp.name|lower }}"
+             data-city="{{ (hosp.city or hosp.location or '')|lower }}">
+            
+            <div>
+                <div class="relative h-48 overflow-hidden bg-slate-900">
+                    <img src="{{ hosp.image or 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' }}" alt="{{ hosp.name }}" class="w-full h-full object-cover">
+                    <span class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-950/80 text-rose-300 backdrop-blur-md border border-rose-500/30">
+                        {{ hosp.type or 'Comprehensive Cancer Institute' }}
+                    </span>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-600 text-white shadow-xs">
+                        NABH & CAP Accredited
+                    </span>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <div class="space-y-1">
+                        <h2 class="text-base font-bold text-slate-900 leading-snug m-0">{{ hosp.name }}</h2>
+                        <div class="text-xs text-slate-500 flex items-center gap-1.5">
+                            <i class="fas fa-location-dot text-rose-600 text-[11px]"></i>
+                            <span>{{ hosp.address or hosp.city or 'Main Medical Enclave' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Facility Badges -->
+                    <div class="space-y-1.5 pt-2 border-t border-slate-100">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Oncology Infrastructure</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">TrueBeam LINAC</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">PET-CT Unit</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">Robotic da Vinci</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">BMT Isolation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 pt-0 space-y-2">
+                <a href="{% if current_user.is_authenticated and current_user.role == 'patient' %}{{ url_for('cancer_care.book_appointment') }}?hospital_id={{ hosp.id }}{% else %}{{ url_for('patient_login', next=url_for('cancer_care.book_appointment', hospital_id=hosp.id)) }}{% endif %}" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs uppercase tracking-wider text-center block transition-colors text-decoration-none shadow-sm">
+                    Book Oncology Consult at Hub
+                </a>
+                <div class="flex items-center gap-2">
+                    <a href="tel:{{ hosp.emergency_phone or hosp.phone or '18007743749' }}" class="flex-1 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] text-center transition-colors text-decoration-none flex items-center justify-center gap-1">
+                        <i class="fas fa-phone-volume text-rose-600 text-[10px]"></i> Emergency Line
+                    </a>
+                    <a href="{{ url_for('hospitals_list', specialty='Oncology') }}" class="flex-1 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] text-center transition-colors text-decoration-none border border-slate-300">
+                        Hospital Details
+                    </a>
+                </div>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Empty State -->
+    <div id="no-hospitals-found" class="hidden py-16 text-center space-y-3">
+        <i class="fas fa-hospital text-4xl text-slate-300"></i>
+        <h3 class="text-base font-bold text-slate-800 m-0">No matching cancer hospitals found</h3>
+        <p class="text-xs text-slate-500 m-0">Try clearing your search query or broadening your location parameters.</p>
+        <button type="button" onclick="resetHospitalFilters()" class="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold">
+            Reset Filters
+        </button>
+    </div>
+
+</div>
+
+<script>
+function filterHospitals() {
+    const q = (document.getElementById('hospital-search-input')?.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.hospital-card');
+    let visible = 0;
+
+    cards.forEach(card => {
+        const name = card.getAttribute('data-name') || '';
+        const city = card.getAttribute('data-city') || '';
+        if (!q || name.includes(q) || city.includes(q)) {
+            card.classList.remove('hidden');
+            visible++;
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+
+    const empty = document.getElementById('no-hospitals-found');
+    if (visible === 0) {
+        empty.classList.remove('hidden');
+    } else {
+        empty.classList.add('hidden');
+    }
+}
+
+function resetHospitalFilters() {
+    const input = document.getElementById('hospital-search-input');
+    if (input) input.value = '';
+    filterHospitals();
+}
+</script>
+{% endblock %}
+

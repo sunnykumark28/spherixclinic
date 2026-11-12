@@ -808,7 +808,7 @@ def seed_diagnostic_demo_data(cursor=None):
     pw_hash = generate_password_hash("Pathology@2026!", method="pbkdf2:sha256:260000")
     
     staff_members = [
-        # Center 1 Staff
+        # Center 1 Staff (Delhi)
         ("STF-DELHI-01", center1_id, org1_id, "pathology@spherixclinic.com", pw_hash, "Dr. Rajeshwar Verma, MD", "pathologist", "+91 9811002211", "MD (Pathology), DNB, FICP", "MCI-48291"),
         ("STF-DELHI-02", center1_id, org1_id, "manager.delhi@spherixclinic.com", pw_hash, "Pooja Sharma", "lab_manager", "+91 9811002212", "M.Sc (Medical Biochemistry)", "LABM-102"),
         ("STF-DELHI-03", center1_id, org1_id, "tech.delhi@spherixclinic.com", pw_hash, "Anil Sengupta", "technician", "+91 9811002213", "B.Sc (MLT)", "MLT-9041"),
@@ -845,7 +845,7 @@ def seed_diagnostic_demo_data(cursor=None):
                 turnaround_hours, price, currency, home_collection_eligible, walkin_eligible, parameters_json, is_active
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, (
-                test_id, center_id_val, org1_id if "DELHI" in center_id_val or "BIHAR" in center_id_val else org2_id,
+                test_id, center_id_val, (org2_id if center_id_val == center3_id else org1_id),
                 t['name'], t['code'], f"CAT-{t['category_code']}", t['category_name'], t['description'],
                 t['sample_type'], t['container_type'], t['required_quantity'], t['preparation_instructions'],
                 1 if t['fasting_required'] else 0, t['fasting_hours'], t['turnaround_hours'], price, curr,
@@ -870,7 +870,7 @@ def seed_diagnostic_demo_data(cursor=None):
                 home_collection_eligible, walkin_eligible, is_active
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, (
-                pkg_id, center_id_val, org1_id if "DELHI" in center_id_val or "BIHAR" in center_id_val else org2_id,
+                pkg_id, center_id_val, (org2_id if center_id_val == center3_id else org1_id),
                 pkg['name'], pkg['code'], pkg['description'], pkg['preparation_instructions'],
                 1 if pkg['fasting_required'] else 0, pkg['turnaround_hours'], orig_p, pkg_p, pkg['discount_percent'], curr,
                 1 if pkg['home_collection_eligible'] else 0, 1 if pkg['walkin_eligible'] else 0
@@ -935,10 +935,12 @@ def find_matching_pathology_centers(
         cursor = conn.cursor()
 
         query = """
-        SELECT c.*, o.legal_name as org_legal_name, o.tax_rate_percent
+        SELECT c.*, o.legal_name as org_legal_name, o.reg_number as org_reg_number, o.license_number as org_license_number, o.accreditation as org_accreditation, o.tax_rate_percent
         FROM pathology_centers c
         JOIN pathology_organizations o ON c.organization_id = o.id
-        WHERE c.verification_status = 'VERIFIED' AND c.is_active = 1
+        WHERE c.verification_status IN ('VERIFIED', 'REGISTERED', 'APPROVED')
+          AND c.is_active = 1
+          AND (o.status IS NULL OR o.status IN ('VERIFIED', 'REGISTERED', 'APPROVED'))
         """
         params = []
 
@@ -986,17 +988,27 @@ def find_matching_pathology_centers(
 
             if test_ids or test_codes:
                 if test_ids:
-                    placeholders = ','.join(['?'] * len(test_ids))
-                    cursor.execute(f"""
-                    SELECT test_code, price FROM diagnostic_tests
-                    WHERE center_id = ? AND (id IN ({placeholders}) OR test_code IN ({placeholders})) AND is_active = 1
-                    """, [c['id']] + test_ids + test_ids)
+                    clean_test_ids = [str(x).strip() for x in test_ids if str(x).strip().replace('-', '').replace('_', '').isalnum()]
+                    if clean_test_ids:
+                        placeholders = ','.join(['?'] * len(clean_test_ids))
+                        q = (
+                            "SELECT test_code, price FROM diagnostic_tests "
+                            f"WHERE center_id = ? AND (id IN ({placeholders}) OR test_code IN ({placeholders})) AND is_active = 1"
+                        )
+                        cursor.execute(q, [c['id']] + clean_test_ids + clean_test_ids)
+                    else:
+                        cursor.execute("SELECT test_code, price FROM diagnostic_tests WHERE 1=0")
                 else:
-                    placeholders = ','.join(['?'] * len(test_codes))
-                    cursor.execute(f"""
-                    SELECT test_code, price FROM diagnostic_tests
-                    WHERE center_id = ? AND test_code IN ({placeholders}) AND is_active = 1
-                    """, [c['id']] + test_codes)
+                    clean_test_codes = [str(x).strip() for x in test_codes if str(x).strip().replace('-', '').replace('_', '').isalnum()]
+                    if clean_test_codes:
+                        placeholders = ','.join(['?'] * len(clean_test_codes))
+                        q = (
+                            "SELECT test_code, price FROM diagnostic_tests "
+                            f"WHERE center_id = ? AND test_code IN ({placeholders}) AND is_active = 1"
+                        )
+                        cursor.execute(q, [c['id']] + clean_test_codes)
+                    else:
+                        cursor.execute("SELECT test_code, price FROM diagnostic_tests WHERE 1=0")
 
                 t_rows = cursor.fetchall()
                 available_tests_count = len(t_rows)
@@ -1016,6 +1028,23 @@ def find_matching_pathology_centers(
             matched_centers.append(c)
     finally:
         conn.close()
+
+    # Deduplicate: ensure only registered pathology centers appear and no duplicate records are shown
+    seen_ids = set()
+    seen_facilities = set()
+    unique_centers = []
+    for c in matched_centers:
+        cid = str(c.get('id', '')).strip()
+        name_key = (
+            re.sub(r'[^a-z0-9]', '', (c.get('center_name') or '').lower()),
+            re.sub(r'[^a-z0-9]', '', (c.get('city') or '').lower())
+        )
+        if cid in seen_ids or name_key in seen_facilities:
+            continue
+        seen_ids.add(cid)
+        seen_facilities.add(name_key)
+        unique_centers.append(c)
+    matched_centers = unique_centers
 
     # Sort results
     if sort_by == 'price':
@@ -1220,6 +1249,11 @@ def register_pathology_organization_and_center(
         if cursor.fetchone():
             conn.close()
             return False, "A staff user with this administrator email already exists.", {}
+
+        cursor.execute("SELECT id FROM pathology_centers WHERE LOWER(center_name) = LOWER(?) AND LOWER(city) = LOWER(?)", (center_data['center_name'], center_data['city']))
+        if cursor.fetchone():
+            conn.close()
+            return False, "A pathology center with this name is already registered in this city.", {}
 
         # 2. Insert Organization
         org_id = f"ORG-DX-{secrets.token_hex(4).upper()}"

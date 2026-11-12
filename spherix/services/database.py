@@ -218,7 +218,8 @@ def get_db_connection(database_name=None):
                             autocommit=True
                         )
                         m_cursor = master_conn.cursor()
-                        m_cursor.execute(f"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{target_db}') CREATE DATABASE {target_db};")
+                        clean_target_db = re.sub(r'[^a-zA-Z0-9_]', '', str(target_db))
+                        m_cursor.execute(f"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{clean_target_db}') CREATE DATABASE {clean_target_db};")
                         master_conn.close()
                         return pyodbc.connect(f'DRIVER={active_driver};SERVER={SERVER};DATABASE={target_db};UID={USERNAME};PWD={PASSWORD};TrustServerCertificate=yes;Autocommit=True', autocommit=True)
                     except Exception as create_err:
@@ -311,7 +312,27 @@ def ensure_sqlite_columns(cursor):
         ('blood_stock', 'TEXT'), ('president_ceo', 'TEXT'), ('superintendent_name', 'TEXT'), ('zip_code', 'TEXT'),
         ('hospital_type_id', 'INTEGER'), ('hospital_type', 'TEXT'), ('specialties', 'TEXT'), ('facilities', 'TEXT'),
         ('emergency_services', 'INTEGER DEFAULT 1'), ('about', 'TEXT'), ('latitude', 'REAL'), ('longitude', 'REAL'),
-        ('emergency_phone', 'TEXT'), ('ambulance_phone', 'TEXT')
+        ('emergency_phone', 'TEXT'), ('ambulance_phone', 'TEXT'),
+        ('cover_image_url', 'TEXT'), ('establishment_year', "TEXT DEFAULT '1998'"), ('website', 'TEXT'),
+        ('google_maps_url', 'TEXT'), ('infrastructure', 'TEXT'),
+        ('general_beds', 'INTEGER DEFAULT 0'), ('available_general_beds', 'INTEGER DEFAULT 0'),
+        ('private_beds', 'INTEGER DEFAULT 0'), ('available_private_beds', 'INTEGER DEFAULT 0'),
+        ('nicu_beds', 'INTEGER DEFAULT 0'), ('available_nicu_beds', 'INTEGER DEFAULT 0'),
+        ('picu_beds', 'INTEGER DEFAULT 0'), ('available_picu_beds', 'INTEGER DEFAULT 0'),
+        ('emergency_beds', 'INTEGER DEFAULT 0'), ('available_emergency_beds', 'INTEGER DEFAULT 0'),
+        ('operation_theatres', 'INTEGER DEFAULT 0'), ('available_ot', 'INTEGER DEFAULT 0'),
+        ('medical_equipment', 'TEXT'), ('diagnostic_services', 'TEXT'), ('laboratory_facilities', 'TEXT'),
+        ('blood_bank_available', 'INTEGER DEFAULT 1'), ('pharmacy_available', 'INTEGER DEFAULT 1'),
+        ('pharmacy_hours', "TEXT DEFAULT '24/7 In-House Pharmacy'"),
+        ('ambulance_services', 'INTEGER DEFAULT 1'), ('ambulance_count', 'INTEGER DEFAULT 3'),
+        ('consultation_fee', 'REAL DEFAULT 500.0'), ('private_bed_fee', 'REAL DEFAULT 3000.0'),
+        ('admission_charge', 'REAL DEFAULT 500.0'), ('insurance_cashless', 'TEXT'), ('certifications', 'TEXT'),
+        ('gallery_urls', 'TEXT'), ('video_urls', 'TEXT'),
+        ('visiting_hours', "TEXT DEFAULT 'Morning: 10:00 AM - 12:00 PM | Evening: 04:30 PM - 07:00 PM'"),
+        ('patient_support_phone', 'TEXT'), ('patient_support_email', 'TEXT'),
+        ('patient_guidelines', 'TEXT'), ('faqs', 'TEXT'), ('social_links', 'TEXT'),
+        ('departments_custom', 'TEXT'), ('publishing_status', "TEXT DEFAULT 'published'"),
+        ('slug', 'TEXT'), ('updated_at', 'TEXT'), ('created_at', 'TEXT'), ('license_number', 'TEXT')
     ]
     for col, col_def in hosp_cols:
         try:
@@ -340,7 +361,28 @@ def ensure_sqlite_columns(cursor):
         ('district', 'TEXT'), ('pincode', 'TEXT'), ('country', 'TEXT DEFAULT "India"'),
         ('qualification', 'TEXT'), ('license_number', 'TEXT'), ('experience', 'TEXT'),
         ('consultation_type', 'TEXT DEFAULT "Video & In-Person"'), ('working_hours', 'TEXT'),
-        ('languages_spoken', 'TEXT'), ('social_links', 'TEXT')
+        ('languages_spoken', 'TEXT'), ('social_links', 'TEXT'),
+        ('title', 'TEXT DEFAULT "Dr."'), ('gender', 'TEXT'), ('dob', 'TEXT'),
+        ('secondary_specialization', 'TEXT'), ('mbbs_degree', 'TEXT'), ('higher_degree', 'TEXT'),
+        ('medical_degrees', 'TEXT'), ('university_name', 'TEXT'), ('college_name', 'TEXT'),
+        ('graduation_year', 'TEXT'), ('medical_council_reg', 'TEXT'), ('certifications', 'TEXT'),
+        ('fellowships', 'TEXT'), ('medical_training', 'TEXT'), ('previous_hospitals', 'TEXT'),
+        ('previous_employment', 'TEXT'), ('professional_experience', 'TEXT'), ('areas_of_expertise', 'TEXT'),
+        ('sub_specializations', 'TEXT'), ('conditions_treated', 'TEXT'), ('diseases_diagnosed', 'TEXT'),
+        ('treatments_offered', 'TEXT'), ('medical_procedures', 'TEXT'), ('preventive_healthcare', 'TEXT'),
+        ('patient_counselling', 'TEXT'), ('diagnostic_services', 'TEXT'), ('clinic_name', 'TEXT'),
+        ('clinic_address', 'TEXT'), ('hospital_affiliations', 'TEXT'), ('consultation_location', 'TEXT'),
+        ('follow_up_fee', 'TEXT DEFAULT "300"'), ('video_fee', 'TEXT DEFAULT "500"'),
+        ('appointment_duration', 'TEXT DEFAULT "25 Mins"'), ('weekly_availability', 'TEXT'),
+        ('available_slots', 'TEXT'), ('opd_schedule', 'TEXT'), ('gallery_urls', 'TEXT'),
+        ('clinic_photos', 'TEXT'), ('hospital_photos', 'TEXT'), ('event_photos', 'TEXT'),
+        ('certificate_urls', 'TEXT'), ('video_urls', 'TEXT'), ('awards', 'TEXT'),
+        ('achievements', 'TEXT'), ('publications', 'TEXT'), ('research_papers', 'TEXT'),
+        ('medical_conferences', 'TEXT'), ('healthcare_contributions', 'TEXT'), ('honours', 'TEXT'),
+        ('memberships', 'TEXT'), ('patient_instructions', 'TEXT'), ('faqs_custom', 'TEXT'),
+        ('whatsapp_number', 'TEXT'), ('publishing_status', 'TEXT DEFAULT "published"'),
+        ('slug', 'TEXT'), ('created_at', 'TEXT'), ('updated_at', 'TEXT'),
+        ('cover_image_url', 'TEXT')
     ]:
         try:
             cursor.execute(f"ALTER TABLE doctors ADD COLUMN {col} {col_def}")
@@ -1011,6 +1053,45 @@ def save_data():
                     cursor.execute("UPDATE doctors SET is_blocked=?, is_hidden=? WHERE id=?", (getattr(doc, 'is_blocked', False), getattr(doc, 'is_hidden', False), doc_id_str))
                 except pyodbc.Error:
                     pass
+                try:
+                    cursor.execute("""
+                        UPDATE doctors SET
+                            title=?, gender=?, dob=?, secondary_specialization=?, mbbs_degree=?, higher_degree=?,
+                            medical_degrees=?, university_name=?, college_name=?, graduation_year=?, medical_council_reg=?,
+                            certifications=?, fellowships=?, medical_training=?, previous_hospitals=?, previous_employment=?,
+                            professional_experience=?, areas_of_expertise=?, sub_specializations=?, conditions_treated=?,
+                            diseases_diagnosed=?, treatments_offered=?, medical_procedures=?, preventive_healthcare=?,
+                            patient_counselling=?, diagnostic_services=?, clinic_name=?, clinic_address=?, hospital_affiliations=?,
+                            consultation_location=?, follow_up_fee=?, video_fee=?, appointment_duration=?, weekly_availability=?,
+                            available_slots=?, opd_schedule=?, gallery_urls=?, clinic_photos=?, hospital_photos=?, event_photos=?,
+                            certificate_urls=?, video_urls=?, awards=?, achievements=?, publications=?, research_papers=?,
+                            medical_conferences=?, healthcare_contributions=?, honours=?, memberships=?, patient_instructions=?,
+                            faqs_custom=?, whatsapp_number=?, publishing_status=?, slug=?, updated_at=?, cover_image_url=?
+                        WHERE id=?
+                    """, (
+                        getattr(doc, 'title', 'Dr.'), getattr(doc, 'gender', ''), getattr(doc, 'dob', ''),
+                        getattr(doc, 'secondary_specialization', ''), getattr(doc, 'mbbs_degree', 'MBBS'), getattr(doc, 'higher_degree', 'MD'),
+                        getattr(doc, 'medical_degrees', ''), getattr(doc, 'university_name', ''), getattr(doc, 'college_name', ''),
+                        getattr(doc, 'graduation_year', ''), getattr(doc, 'medical_council_reg', ''), getattr(doc, 'certifications', ''),
+                        getattr(doc, 'fellowships', ''), getattr(doc, 'medical_training', ''), getattr(doc, 'previous_hospitals', ''),
+                        getattr(doc, 'previous_employment', ''), getattr(doc, 'professional_experience', ''), getattr(doc, 'areas_of_expertise', ''),
+                        getattr(doc, 'sub_specializations', ''), getattr(doc, 'conditions_treated', ''), getattr(doc, 'diseases_diagnosed', ''),
+                        getattr(doc, 'treatments_offered', ''), getattr(doc, 'medical_procedures', ''), getattr(doc, 'preventive_healthcare', ''),
+                        getattr(doc, 'patient_counselling', ''), getattr(doc, 'diagnostic_services', ''), getattr(doc, 'clinic_name', ''),
+                        getattr(doc, 'clinic_address', ''), getattr(doc, 'hospital_affiliations', ''), getattr(doc, 'consultation_location', ''),
+                        getattr(doc, 'follow_up_fee', '300'), getattr(doc, 'video_fee', '500'), getattr(doc, 'appointment_duration', '25 Mins'),
+                        getattr(doc, 'weekly_availability', ''), getattr(doc, 'available_slots', ''), getattr(doc, 'opd_schedule', ''),
+                        getattr(doc, 'gallery_urls', ''), getattr(doc, 'clinic_photos', ''), getattr(doc, 'hospital_photos', ''), getattr(doc, 'event_photos', ''),
+                        getattr(doc, 'certificate_urls', ''), getattr(doc, 'video_urls', ''), getattr(doc, 'awards', ''), getattr(doc, 'achievements', ''),
+                        getattr(doc, 'publications', ''), getattr(doc, 'research_papers', ''), getattr(doc, 'medical_conferences', ''),
+                        getattr(doc, 'healthcare_contributions', ''), getattr(doc, 'honours', ''), getattr(doc, 'memberships', ''),
+                        getattr(doc, 'patient_instructions', ''), getattr(doc, 'faqs_custom', ''), getattr(doc, 'whatsapp_number', ''),
+                        getattr(doc, 'publishing_status', 'published'), doc.slug, getattr(doc, 'updated_at', utcnow().isoformat()),
+                        getattr(doc, 'cover_image_url', None),
+                        doc_id_str
+                    ))
+                except Exception:
+                    pass
             except Exception as e:
                 pass
 
@@ -1249,6 +1330,70 @@ def save_data():
                 if h_lic:
                     cursor.execute("UPDATE hospitals SET license_number=? WHERE id=?", (h_lic, h_id_str))
             except Exception:
+                pass
+
+            # Sync extended hospital profile specifications (cover, beds breakdown, equipment, fees, etc.)
+            try:
+                cursor.execute("""
+                    UPDATE hospitals SET 
+                        cover_image_url=?, establishment_year=?, website=?, google_maps_url=?,
+                        infrastructure=?, general_beds=?, available_general_beds=?,
+                        private_beds=?, available_private_beds=?, nicu_beds=?, available_nicu_beds=?,
+                        picu_beds=?, available_picu_beds=?, emergency_beds=?, available_emergency_beds=?,
+                        operation_theatres=?, available_ot=?, medical_equipment=?, diagnostic_services=?,
+                        laboratory_facilities=?, blood_bank_available=?, pharmacy_available=?, pharmacy_hours=?,
+                        ambulance_services=?, ambulance_count=?, consultation_fee=?, private_bed_fee=?,
+                        admission_charge=?, insurance_cashless=?, certifications=?, gallery_urls=?,
+                        video_urls=?, visiting_hours=?, patient_support_phone=?, patient_support_email=?,
+                        patient_guidelines=?, faqs=?, social_links=?, departments_custom=?,
+                        publishing_status=?, slug=?, updated_at=?
+                    WHERE id=?
+                """, (
+                    getattr(h, 'cover_image_url', None),
+                    str(getattr(h, 'establishment_year', '1998')),
+                    getattr(h, 'website', None),
+                    getattr(h, 'google_maps_url', None),
+                    getattr(h, 'infrastructure', None),
+                    int(getattr(h, 'general_beds', 0) or 0),
+                    int(getattr(h, 'available_general_beds', 0) or 0),
+                    int(getattr(h, 'private_beds', 0) or 0),
+                    int(getattr(h, 'available_private_beds', 0) or 0),
+                    int(getattr(h, 'nicu_beds', 0) or 0),
+                    int(getattr(h, 'available_nicu_beds', 0) or 0),
+                    int(getattr(h, 'picu_beds', 0) or 0),
+                    int(getattr(h, 'available_picu_beds', 0) or 0),
+                    int(getattr(h, 'emergency_beds', 0) or 0),
+                    int(getattr(h, 'available_emergency_beds', 0) or 0),
+                    int(getattr(h, 'operation_theatres', 0) or 0),
+                    int(getattr(h, 'available_ot', 0) or 0),
+                    getattr(h, 'medical_equipment', None),
+                    getattr(h, 'diagnostic_services', None),
+                    getattr(h, 'laboratory_facilities', None),
+                    1 if getattr(h, 'blood_bank_available', True) else 0,
+                    1 if getattr(h, 'pharmacy_available', True) else 0,
+                    getattr(h, 'pharmacy_hours', '24/7 In-House Pharmacy'),
+                    1 if getattr(h, 'ambulance_services', True) else 0,
+                    int(getattr(h, 'ambulance_count', 3) or 3),
+                    float(getattr(h, 'consultation_fee', 500.0) or 500.0),
+                    float(getattr(h, 'private_bed_fee', 3000.0) or 3000.0),
+                    float(getattr(h, 'admission_charge', 500.0) or 500.0),
+                    getattr(h, 'insurance_cashless', None),
+                    getattr(h, 'certifications', None),
+                    json_safe(getattr(h, 'gallery_urls', None)),
+                    json_safe(getattr(h, 'video_urls', None)),
+                    getattr(h, 'visiting_hours', None),
+                    getattr(h, 'patient_support_phone', None),
+                    getattr(h, 'patient_support_email', None),
+                    getattr(h, 'patient_guidelines', None),
+                    json_safe(getattr(h, 'faqs', None)),
+                    json_safe(getattr(h, 'social_links', None)),
+                    getattr(h, 'departments_custom', None),
+                    getattr(h, 'publishing_status', 'published'),
+                    getattr(h, 'slug', None),
+                    str(getattr(h, 'updated_at', utcnow().isoformat())),
+                    h_id_str
+                ))
+            except Exception as ext_err:
                 pass
 
         # 3b. Sync Hospital Types
@@ -1692,12 +1837,20 @@ def save_data():
             if 'blood_requests' in TEMP_DATA:
                 TEMP_DATA['settings']['blood_requests'] = json.dumps(TEMP_DATA['blood_requests'])
 
-            for key, val in TEMP_DATA.get('settings', {}).items():
-                cursor.execute(f"SELECT 1 FROM settings WHERE [{key_col}] = ?", (key,))
-                if cursor.fetchone():
-                    cursor.execute(f"UPDATE settings SET [{val_col}] = ? WHERE [{key_col}] = ?", (val, key))
-                else:
-                    cursor.execute(f"INSERT INTO settings ([{key_col}], [{val_col}]) VALUES (?, ?)", (key, val))
+            if key_col == 'setting_key' and val_col == 'setting_value':
+                for key, val in TEMP_DATA.get('settings', {}).items():
+                    cursor.execute("SELECT 1 FROM settings WHERE [setting_key] = ?", (key,))
+                    if cursor.fetchone():
+                        cursor.execute("UPDATE settings SET [setting_value] = ? WHERE [setting_key] = ?", (val, key))
+                    else:
+                        cursor.execute("INSERT INTO settings ([setting_key], [setting_value]) VALUES (?, ?)", (key, val))
+            else:
+                for key, val in TEMP_DATA.get('settings', {}).items():
+                    cursor.execute("SELECT 1 FROM settings WHERE [key] = ?", (key,))
+                    if cursor.fetchone():
+                        cursor.execute("UPDATE settings SET [value] = ? WHERE [key] = ?", (val, key))
+                    else:
+                        cursor.execute("INSERT INTO settings ([key], [value]) VALUES (?, ?)", (key, val))
         except Exception as e:
             print(f"⚠️ Skipping settings sync: {e}")
 
@@ -2446,6 +2599,12 @@ def load_data():
             init_diagnostic_schema()
         except Exception as diag_err:
             print(f"⚠️ Diagnostic init note: {diag_err}")
+
+        try:
+            from spherix.services.insurance_db import init_insurance_schema
+            init_insurance_schema()
+        except Exception as ins_err:
+            print(f"⚠️ Insurance init note: {ins_err}")
 
         def fetch_dict(query):
             cursor.execute(query)
@@ -4140,11 +4299,13 @@ def reset_factory_database():
         conn = get_db_connection()
         if conn:
             cursor = conn.cursor()
+            ALLOWED_RESET_TABLES = set(tables_to_clear)
             for tbl in tables_to_clear:
-                try:
-                    cursor.execute(f"DELETE FROM {tbl}")
-                except Exception:
-                    pass
+                if tbl in ALLOWED_RESET_TABLES:
+                    try:
+                        cursor.execute(f"DELETE FROM {tbl}")  # nosec B608
+                    except Exception:
+                        pass
             conn.commit()
             conn.close()
             print("  ✓ Cleared all operational tables in DB connection.")
@@ -4158,10 +4319,11 @@ def reset_factory_database():
             s_conn = sqlite3.connect(sqlite_path)
             s_cur = s_conn.cursor()
             for tbl in tables_to_clear:
-                try:
-                    s_cur.execute(f"DELETE FROM {tbl}")
-                except Exception:
-                    pass
+                if tbl in ALLOWED_RESET_TABLES:
+                    try:
+                        s_cur.execute(f"DELETE FROM {tbl}")  # nosec B608
+                    except Exception:
+                        pass
             s_conn.commit()
             s_conn.close()
             print("  ✓ Cleared tables in SQLite file.")
@@ -4508,7 +4670,9 @@ def filter_hospitals_advanced(
     """
     all_hospitals = deduplicate_entities([
         h for h in TEMP_DATA.get('hospitals', {}).values() 
-        if not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)
+        if getattr(h, 'is_publicly_visible', True)
+        and not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)
+        and getattr(h, 'publishing_status', 'published') in ['published', 'approved']
     ])
     
     q_clean = (search_query or '').lower().strip()

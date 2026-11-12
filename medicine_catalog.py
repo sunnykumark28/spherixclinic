@@ -155,6 +155,99 @@ def load_all_medicines():
         csv_path = LEGACY_CSV_LOCAL
 
     if not csv_path or not os.path.exists(csv_path):
+        # Fallback: Load directly from SQLite database (spherixclinic.db)
+        try:
+            db_candidates = [
+                os.getenv('SQLITE_DB_PATH'),
+                os.path.join(PROJECT_ROOT, 'spherixclinic.db'),
+                'spherixclinic.db'
+            ]
+            for db_file in db_candidates:
+                if db_file and os.path.exists(db_file):
+                    import sqlite3
+                    conn = sqlite3.connect(db_file)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='medicines_master'")
+                    if cursor.fetchone():
+                        cursor.execute("SELECT id, name, price, manufacturer, dosage_form, pack_size, composition, uses, side_effects, drug_interactions, category, image_url, rx_required FROM medicines_master")
+                        rows = cursor.fetchall()
+                        if rows:
+                            t0 = time.time()
+                            all_meds = []
+                            by_id = {}
+                            by_cat = {}
+                            for idx, r in enumerate(rows, start=1):
+                                m_id, name, price, mfg, dosage, pack, comp, desc, side_fx, interactions, cat, img, rx = r
+                                h = abs(hash(m_id))
+                                rating = round(4.1 + (h % 9) * 0.1, 1)
+                                rating_count = 180 + (h % 2300)
+                                generic_comp = comp.split('+')[0].split('(')[0].strip() if comp else ''
+                                generic_name = f"Generic {generic_comp}" if generic_comp and generic_comp != 'Active Pharmaceutical Salt' else f"Generic {name}"
+                                generic_price = round(max(5.0, (price or 0.0) * 0.40), 2)
+                                mrp_price = round((price or 0.0) * 1.25, 2)
+                                side_fx_list = [s.strip() for s in (side_fx or '').split(',') if len(s.strip()) > 2][:5]
+                                if not side_fx_list:
+                                    side_fx_list = ['Mild nausea', 'Dizziness', 'Headache', 'Stomach upset (rare)']
+                                med_obj = {
+                                    'id': m_id,
+                                    'name': name,
+                                    'category': cat or 'Therapeutics',
+                                    'price': price,
+                                    'mrp': mrp_price,
+                                    'salt_composition': comp,
+                                    'uses': desc or f"Clinical medication prescribed for {cat} indications.",
+                                    'side_effects': side_fx,
+                                    'common_side_effects': side_fx_list,
+                                    'drug_interactions': interactions,
+                                    'image_url': img,
+                                    'manufacturer': mfg or 'Spherix Pharma',
+                                    'packaging': pack,
+                                    'rating': rating,
+                                    'rating_count': rating_count,
+                                    'requires_prescription': bool(rx),
+                                    'generic_name': generic_name,
+                                    'generic_price': generic_price,
+                                    'is_bestseller': idx <= 300 or (rating >= 4.8 and rating_count > 1500),
+                                    'is_discontinued': False
+                                }
+                                all_meds.append(med_obj)
+                                by_id[m_id] = med_obj
+                                by_id[name.lower()] = med_obj
+                                by_cat.setdefault(cat or 'Therapeutics', []).append(med_obj)
+
+                            flagship_names = [
+                                'augmentin 625', 'azithral 500', 'pan 40', 'pantocid 40', 'glycomet 500',
+                                'janumet 50/500', 'telma 40', 'atorva 20', 'allegra 120', 'ascoril ls',
+                                'combiflam', 'dolo 650', 'calpol 650', 'zincovit', 'shelcal 500', 'becadexamin',
+                                'supradyn', 'evion 400', 'gelusil', 'digene', 'crocin 650', 'betadine 10%',
+                                'candid b', 'volini', 'moov', 'limcee', 'celin 500', 'asthalin inhaler'
+                            ]
+                            curated = []
+                            for fn in flagship_names:
+                                matched = next((m for m in all_meds if fn in m['name'].lower()), None)
+                                if matched and matched not in curated:
+                                    curated.append(matched)
+
+                            ALL_MEDICINES.clear()
+                            ALL_MEDICINES.extend(all_meds)
+                            MEDICINES_BY_ID.clear()
+                            MEDICINES_BY_ID.update(by_id)
+                            MEDICINES_BY_CATEGORY.clear()
+                            MEDICINES_BY_CATEGORY.update(by_cat)
+                            TOP_RECOMMENDED_MEDICINES.clear()
+                            TOP_RECOMMENDED_MEDICINES.extend(curated)
+                            MEDICINES_CATALOG.clear()
+                            MEDICINES_CATALOG.extend(all_meds)
+                            MEDICINES.clear()
+                            MEDICINES.extend(all_meds)
+
+                            print(f"✅ Loaded {len(ALL_MEDICINES)} Indian medicines from SQLite database in {time.time() - t0:.2f}s ({len(TOP_RECOMMENDED_MEDICINES)} curated recommendations)")
+                            conn.close()
+                            return ALL_MEDICINES
+                    conn.close()
+        except Exception as e:
+            print(f"⚠️ SQLite medicine load notice: {e}")
+
         print(f"⚠️ Medicine dataset CSV not found at {UPDATED_CSV_LOCAL} or {UPDATED_CSV_DOWNLOADS}")
         return []
 

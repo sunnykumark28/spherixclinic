@@ -7,12 +7,14 @@ expiring challenge verification.
 
 import os
 import io
+import time
 import math
 import hmac
 import random
 import secrets
 import hashlib
 import logging
+import threading
 from typing import Optional, Tuple, Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -107,13 +109,131 @@ def get_captcha_ttl() -> int:
 
 
 # ==============================================================================
-# REDIS STORAGE & CONNECTION ENGINE
+# REDIS & IN-MEMORY STORAGE ENGINE
 # ==============================================================================
+
+class InMemoryCaptchaStore:
+    """
+    Thread-safe, TTL-aware in-memory key-value store providing Redis-compatible
+    methods (set, get, delete, getdel, eval, pipeline, ping) for zero-dependency operation.
+    Guarantees atomic single-use challenge consumption even when external Redis is unavailable.
+    """
+    def __init__(self):
+        self._data = {}  # key -> (value: bytes, expire_at: Optional[float])
+        self._lock = threading.Lock()
+
+    def _purge_expired(self, now: float):
+        expired = [k for k, (_, exp) in self._data.items() if exp is not None and exp < now]
+        for k in expired:
+            self._data.pop(k, None)
+
+    def set(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
+        with self._lock:
+            now = time.time()
+            self._purge_expired(now)
+            expire_at = (now + ex) if ex is not None else None
+            val_bytes = value.encode('utf-8') if isinstance(value, str) else bytes(value)
+            self._data[key] = (val_bytes, expire_at)
+            return True
+
+    def get(self, key: str) -> Optional[bytes]:
+        with self._lock:
+            now = time.time()
+            self._purge_expired(now)
+            item = self._data.get(key)
+            if item is None:
+                return None
+            val, exp = item
+            if exp is not None and exp < now:
+                self._data.pop(key, None)
+                return None
+            return val
+
+    def delete(self, *keys: str) -> int:
+        with self._lock:
+            count = 0
+            for k in keys:
+                if self._data.pop(k, None) is not None:
+                    count += 1
+            return count
+
+    def getdel(self, key: str) -> Optional[bytes]:
+        """Atomically retrieves and deletes a key from store (Single-use)."""
+        with self._lock:
+            now = time.time()
+            self._purge_expired(now)
+            item = self._data.pop(key, None)
+            if item is None:
+                return None
+            val, exp = item
+            if exp is not None and exp < now:
+                return None
+            return val
+
+    def eval(self, script: str, numkeys: int, *keys: str) -> Optional[bytes]:
+        """Supports LUA_ATOMIC_CONSUME script compatibility."""
+        if keys:
+            return self.getdel(keys[0])
+        return None
+
+    def pipeline(self):
+        return _InMemoryPipeline(self)
+
+    def ping(self) -> bool:
+        return True
+
+
+class _InMemoryPipeline:
+    def __init__(self, store: InMemoryCaptchaStore):
+        self._store = store
+        self._ops = []
+
+    def get(self, key: str):
+        self._ops.append(('get', key))
+        return self
+
+    def delete(self, key: str):
+        self._ops.append(('delete', key))
+        return self
+
+    def execute(self):
+        results = []
+        with self._store._lock:
+            now = time.time()
+            self._store._purge_expired(now)
+            for op, key in self._ops:
+                if op == 'get':
+                    item = self._store._data.get(key)
+                    if item is None:
+                        results.append(None)
+                    else:
+                        val, exp = item
+                        if exp is not None and exp < now:
+                            self._store._data.pop(key, None)
+                            results.append(None)
+                        else:
+                            results.append(val)
+                elif op == 'delete':
+                    res = 1 if self._store._data.pop(key, None) is not None else 0
+                    results.append(res)
+        self._ops.clear()
+        return results
+
+
+def _create_memory_fallback():
+    """Returns a FakeRedis instance if available, otherwise pure Python InMemoryCaptchaStore."""
+    try:
+        import fakeredis
+        return fakeredis.FakeRedis()
+    except Exception:
+        return InMemoryCaptchaStore()
+
 
 def get_redis_client():
     """
     Returns configured Redis client with connection pooling and timeouts.
-    Supports real Redis in production and isolated FakeRedis/memory during test mode.
+    Supports real Redis in production and isolated FakeRedis/InMemoryCaptchaStore
+    during test mode, serverless deployment, or local development.
     """
     global _redis_client_instance, _redis_init_attempted
 
@@ -123,21 +243,25 @@ def get_redis_client():
     is_testing = os.getenv('FLASK_ENV') == 'testing' or os.getenv('TESTING', 'False').lower() == 'true'
     store_mode = os.getenv('SPHERIX_CAPTCHA_STORE', '').lower()
 
-    # Isolated memory store for testing
-    if is_testing or store_mode == 'memory':
-        try:
-            import fakeredis
-            _redis_client_instance = fakeredis.FakeRedis()
-            _redis_init_attempted = True
-            logger.info("Spherix CAPTCHA initialized with FakeRedis in-memory store.")
-            return _redis_client_instance
-        except ImportError:
-            pass
+    # Isolated memory store for testing or explicit in-memory store configuration
+    if is_testing or store_mode in ('memory', 'fakeredis', 'local', 'test'):
+        _redis_client_instance = _create_memory_fallback()
+        _redis_init_attempted = True
+        logger.info("Spherix CAPTCHA initialized with in-memory store.")
+        return _redis_client_instance
 
     redis_url = os.getenv('REDIS_URL')
     redis_host = os.getenv('REDIS_HOST', 'localhost')
     redis_port = int(os.getenv('REDIS_PORT', 6379))
     redis_password = os.getenv('REDIS_PASSWORD', None)
+
+    # In serverless environments (Vercel) without external REDIS_URL, default to in-memory store
+    is_serverless = os.getenv('VERCEL') == '1' or os.getenv('SERVERLESS') == '1'
+    if is_serverless and not redis_url:
+        _redis_client_instance = _create_memory_fallback()
+        _redis_init_attempted = True
+        logger.info("Serverless environment without REDIS_URL: initialized in-memory CAPTCHA store.")
+        return _redis_client_instance
 
     try:
         import redis
@@ -153,8 +277,8 @@ def get_redis_client():
                 host=redis_host,
                 port=redis_port,
                 password=redis_password,
-                socket_timeout=2.0,
-                socket_connect_timeout=2.0,
+                socket_timeout=1.0,
+                socket_connect_timeout=1.0,
                 decode_responses=False
             )
         client = redis.Redis(connection_pool=pool)
@@ -166,19 +290,16 @@ def get_redis_client():
         return _redis_client_instance
     except Exception as e:
         logger.warning(f"Could not connect to Redis: {e}")
-        # In non-production environments, gracefully fall back to in-memory FakeRedis
-        # to ensure zero socket connection delays and instantaneous local development reloads
-        is_production = os.getenv('FLASK_ENV') == 'production' or os.getenv('ENV') == 'production'
-        if not is_production or is_testing or store_mode in ('test', 'fakeredis', 'memory'):
-            try:
-                import fakeredis
-                _redis_client_instance = fakeredis.FakeRedis()
-                _redis_init_attempted = True
-                logger.info("Local development: initialized in-memory FakeRedis store.")
-                return _redis_client_instance
-            except Exception:
-                pass
-        return None
+        strict_mode = os.getenv('SPHERIX_CAPTCHA_STRICT', 'false').lower() == 'true'
+        if strict_mode:
+            logger.critical("SPHERIX_CAPTCHA_STRICT is enabled; refusing in-memory fallback.")
+            return None
+
+        # Seamless graceful fallback so users and admins are never locked out
+        _redis_client_instance = _create_memory_fallback()
+        _redis_init_attempted = True
+        logger.info("Graceful fallback: initialized in-memory CAPTCHA store.")
+        return _redis_client_instance
 
 
 def set_custom_redis_client(client):
@@ -192,8 +313,13 @@ def set_custom_redis_client(client):
 # ==============================================================================
 
 def generate_captcha_text(length: int = CAPTCHA_LENGTH) -> str:
-    """Generates a cryptographically random, unambiguous 6-character code."""
-    return "".join(secrets.choice(CAPTCHA_CHARSET) for _ in range(length))
+    """Generates a cryptographically random, unambiguous 6-character code with letters and digits."""
+    letters = "ABCDEFGHJKMNPQRSTUVWXYZ"
+    digits = "23456789"
+    while True:
+        code = "".join(secrets.choice(CAPTCHA_CHARSET) for _ in range(length))
+        if any(c in letters for c in code) and any(c in digits for c in code):
+            return code
 
 
 def compute_captcha_digest(text: str, secret: Optional[str] = None) -> str:
