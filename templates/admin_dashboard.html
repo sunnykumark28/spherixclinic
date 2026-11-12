@@ -6148,7 +6148,7 @@
         <!-- ================= SECTION: SECURITY COMMAND CENTER ================= -->
         <div id="security_center" class="content-section">
             <div class="card-box">
-                <!-- 1. Header & Live Indicator -->
+                <!-- 1. Header & Live WAF Status Controls -->
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom border-light">
                     <div>
                         <h4 class="fw-bold text-dark m-0 d-flex align-items-center gap-2 flex-wrap">
@@ -6156,27 +6156,60 @@
                                 <i class="fas fa-shield-halved"></i>
                             </span>
                             <span>Security Command Center</span>
-                            <span class="badge bg-danger rounded-pill px-2.5 py-1 text-uppercase font-mono" style="font-size: 0.68rem; letter-spacing: 0.04em;">Active Shield</span>
+                            {% if security_telemetry and security_telemetry.waf_mode == 'LOCKDOWN_MODE' %}
+                                <span class="badge bg-danger rounded-pill px-2.5 py-1 text-uppercase font-mono animate-pulse" style="font-size: 0.68rem; letter-spacing: 0.04em;">EMERGENCY LOCKDOWN</span>
+                            {% elif security_telemetry and security_telemetry.waf_mode == 'MONITOR_ONLY' %}
+                                <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 text-uppercase font-mono" style="font-size: 0.68rem; letter-spacing: 0.04em;">MONITOR ONLY</span>
+                            {% else %}
+                                <span class="badge bg-success rounded-pill px-2.5 py-1 text-uppercase font-mono" style="font-size: 0.68rem; letter-spacing: 0.04em;">ACTIVE DEFENSE</span>
+                            {% endif %}
                         </h4>
                         <p class="text-muted small m-0 mt-1">
-                            Enterprise-grade cybersecurity monitoring, threat mitigation, Argon2id authentication, and real-time medical data protection.
+                            Enterprise-grade cybersecurity monitoring, real-time threat mitigation, dynamic firewall rules, and zero-trust data protection.
                         </p>
                     </div>
+
+                    <!-- Dynamic WAF Mode Selector & Core Operations -->
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill fw-bold d-flex align-items-center gap-1.5 shadow-2xs">
-                            <i class="fas fa-circle text-success" style="font-size: 0.55rem;"></i>
-                            <span>WAF &amp; Firewalls: Active Defense</span>
-                        </span>
+                        <!-- WAF Mode Dropdown Switcher -->
+                        <form method="POST" action="{{ url_for('admin.admin_security_toggle_waf_mode') }}" class="d-inline m-0">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted fw-bold" style="font-size: 0.75rem;">
+                                    <i class="fas fa-satellite-dish me-1 text-primary"></i> WAF Mode
+                                </span>
+                                <select name="waf_mode" class="form-select form-select-sm fw-bold" style="font-size: 0.78rem;" onchange="this.form.submit()">
+                                    <option value="ACTIVE_DEFENSE" {% if not security_telemetry or security_telemetry.waf_mode == 'ACTIVE_DEFENSE' %}selected{% endif %}>🛡️ Active Defense (Strict Blocking)</option>
+                                    <option value="MONITOR_ONLY" {% if security_telemetry and security_telemetry.waf_mode == 'MONITOR_ONLY' %}selected{% endif %}>👁️ Monitor Only (Passive Audit)</option>
+                                    <option value="LOCKDOWN_MODE" {% if security_telemetry and security_telemetry.waf_mode == 'LOCKDOWN_MODE' %}selected{% endif %}>🚨 Emergency Lockdown (Admin Only)</option>
+                                </select>
+                            </div>
+                        </form>
+
+                        <!-- Live Diagnostic Button -->
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-3 shadow-2xs d-inline-flex align-items-center gap-1.5 fw-bold" onclick="openSecurityDiagnosticModal()">
+                            <i class="fas fa-microscope text-primary"></i>
+                            <span>Run Diagnostic</span>
+                        </button>
+
+                        <!-- Encrypted Backup Button -->
                         <form method="POST" action="{{ url_for('admin.admin_security_backup_now') }}" class="m-0">
                             <button type="submit" class="btn btn-sm btn-primary rounded-3 px-3 shadow-2xs d-inline-flex align-items-center gap-1.5 fw-bold">
                                 <i class="fas fa-vault"></i>
-                                <span>Create Encrypted Backup</span>
+                                <span>Encrypted Backup</span>
+                            </button>
+                        </form>
+
+                        <!-- Purge Stale Sessions -->
+                        <form method="POST" action="{{ url_for('admin.admin_security_purge_sessions') }}" class="m-0" onsubmit="return confirm('Purge all revoked and stale sessions from the session database?')">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary rounded-3 px-2.5 shadow-2xs d-inline-flex align-items-center gap-1" title="Purge Revoked Sessions">
+                                <i class="fas fa-broom"></i>
+                                <span class="d-none d-md-inline">Purge Sessions</span>
                             </button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Module A: Security Overview Metrics -->
+                <!-- Module A: Security Overview Metrics (Row of 4 Cards) -->
                 <div class="row g-3 mb-4">
                     <!-- Total Security Events -->
                     <div class="col-xl-3 col-md-6 col-12">
@@ -6187,7 +6220,7 @@
                                     <i class="fas fa-database"></i>
                                 </div>
                             </div>
-                            <div class="fs-3 fw-bold text-dark my-1">{{ security_telemetry.total_events if security_telemetry else 0 }}</div>
+                            <div class="fs-3 fw-bold text-dark my-1" id="stat-total-events">{{ security_telemetry.total_events if security_telemetry else 0 }}</div>
                             <div class="small text-muted" style="font-size: 0.72rem;">
                                 <i class="fas fa-check text-success me-1"></i>Stored in immutable SQLite audit ledger
                             </div>
@@ -6203,7 +6236,7 @@
                                     <i class="fas fa-triangle-exclamation"></i>
                                 </div>
                             </div>
-                            <div class="fs-3 fw-bold text-dark my-1">{{ security_telemetry.failed_logins_24h if security_telemetry else 0 }}</div>
+                            <div class="fs-3 fw-bold text-dark my-1" id="stat-failed-logins">{{ security_telemetry.failed_logins_24h if security_telemetry else 0 }}</div>
                             <div class="small text-muted" style="font-size: 0.72rem;">
                                 <i class="fas fa-shield text-primary me-1"></i>Protected by rate limiter &amp; Argon2id
                             </div>
@@ -6219,33 +6252,35 @@
                                     <i class="fas fa-bell"></i>
                                 </div>
                             </div>
-                            <div class="fs-3 fw-bold text-dark my-1">{{ security_telemetry.critical_incidents if security_telemetry else 0 }}</div>
+                            <div class="fs-3 fw-bold text-dark my-1" id="stat-critical-incidents">{{ security_telemetry.critical_incidents if security_telemetry else 0 }}</div>
                             <div class="small text-muted" style="font-size: 0.72rem;">
                                 <i class="fas fa-lock text-danger me-1"></i>Immediate incident containment ready
                             </div>
                         </div>
                     </div>
 
-                    <!-- Unauthorized Attempts -->
+                    <!-- Blocked WAF Attacks & Banned IPs -->
                     <div class="col-xl-3 col-md-6 col-12">
                         <div class="card border border-slate-200 shadow-2xs bg-white rounded-3 p-3.5 h-100 border-start border-3 border-success">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Blocked WAF Attacks</span>
+                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Blocked Threats &amp; IP Rules</span>
                                 <div class="w-8 h-8 rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.8rem;">
                                     <i class="fas fa-shield-virus"></i>
                                 </div>
                             </div>
-                            <div class="fs-3 fw-bold text-dark my-1">{{ security_telemetry.unauthorized_attempts if security_telemetry else 0 }}</div>
+                            <div class="fs-3 fw-bold text-dark my-1" id="stat-blocked-attacks">
+                                {{ (security_telemetry.unauthorized_attempts if security_telemetry else 0) + (security_telemetry.blocked_ips_count if security_telemetry else 0) }}
+                            </div>
                             <div class="small text-muted" style="font-size: 0.72rem;">
-                                <i class="fas fa-check-double text-success me-1"></i>Path traversal, SQLi, and bot blocks
+                                <i class="fas fa-ban text-danger me-1"></i>{{ security_telemetry.blocked_ips_count if security_telemetry else 0 }} active firewall IP bans
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Module B & Module C: Threat Monitoring & User Security -->
+                <!-- Module B: Dynamic Firewall IP Blocklist & Threat Monitoring (Row of 2 Cards) -->
                 <div class="row g-4 mb-4">
-                    <!-- Module B: Suspicious IP Addresses & Threat Monitoring -->
+                    <!-- Left: Threat Monitoring — Suspicious IP Entities -->
                     <div class="col-xl-6 col-12">
                         <div class="card border border-slate-200 shadow-2xs bg-white rounded-3 p-4 h-100">
                             <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-light">
@@ -6262,7 +6297,7 @@
                                             <th>IP Address</th>
                                             <th>Incidents</th>
                                             <th>Last Seen</th>
-                                            <th>Risk Tier</th>
+                                            <th>Firewall Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -6272,7 +6307,25 @@
                                                     <td class="font-mono fw-bold text-dark">{{ ip_item.ip }}</td>
                                                     <td><span class="badge bg-warning text-dark">{{ ip_item.count }} events</span></td>
                                                     <td class="text-muted font-mono" style="font-size: 0.75rem;">{{ ip_item.last_seen[:19] }}</td>
-                                                    <td><span class="badge bg-danger">Elevated Risk</span></td>
+                                                    <td>
+                                                        {% if ip_item.is_banned %}
+                                                            <span class="badge bg-danger me-1">Blocked</span>
+                                                            <form method="POST" action="{{ url_for('admin.admin_security_unban_ip') }}" class="d-inline m-0">
+                                                                <input type="hidden" name="ip" value="{{ ip_item.ip }}">
+                                                                <button type="submit" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 0.72rem;">
+                                                                    Unban
+                                                                </button>
+                                                            </form>
+                                                        {% else %}
+                                                            <form method="POST" action="{{ url_for('admin.admin_security_ban_ip') }}" class="d-inline m-0">
+                                                                <input type="hidden" name="ip" value="{{ ip_item.ip }}">
+                                                                <input type="hidden" name="reason" value="Suspicious incident activity in security telemetry">
+                                                                <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2 fw-bold" style="font-size: 0.72rem;" onclick="return confirm('Blacklist IP {{ ip_item.ip }} on firewall?')">
+                                                                    <i class="fas fa-shield-virus me-1"></i>Ban IP
+                                                                </button>
+                                                            </form>
+                                                        {% endif %}
+                                                    </td>
                                                 </tr>
                                             {% endfor %}
                                         {% else %}
@@ -6289,7 +6342,79 @@
                         </div>
                     </div>
 
-                    <!-- Module C: Privileged User Security & MFA Enrollment -->
+                    <!-- Right: Active Firewall IP Blocklist & Add Rule -->
+                    <div class="col-xl-6 col-12">
+                        <div class="card border border-slate-200 shadow-2xs bg-white rounded-3 p-4 h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-light">
+                                <h6 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
+                                    <i class="fas fa-shield-halved text-danger"></i>
+                                    <span>Firewall IP Blocklist ({{ security_telemetry.blocked_ips_count if security_telemetry else 0 }})</span>
+                                </h6>
+                                <span class="badge bg-danger bg-opacity-10 text-danger small">0-Microsecond Enforcement</span>
+                            </div>
+
+                            <!-- Add Rule Quick Form -->
+                            <form method="POST" action="{{ url_for('admin.admin_security_ban_ip') }}" class="mb-3">
+                                <div class="row g-2">
+                                    <div class="col-sm-5 col-12">
+                                        <input type="text" name="ip" class="form-control form-control-sm font-mono" placeholder="IP Address (IPv4 or IPv6)" required>
+                                    </div>
+                                    <div class="col-sm-5 col-12">
+                                        <input type="text" name="reason" class="form-control form-control-sm" placeholder="Incident reason or attack pattern">
+                                    </div>
+                                    <div class="col-sm-2 col-12">
+                                        <button type="submit" class="btn btn-sm btn-danger w-100 fw-bold">
+                                            <i class="fas fa-ban me-1"></i>Block
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+                                <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                                    <thead class="bg-light text-muted sticky-top">
+                                        <tr>
+                                            <th>Blocked IP</th>
+                                            <th>Reason</th>
+                                            <th>Date Banned</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if security_telemetry and security_telemetry.blocked_ips %}
+                                            {% for b in security_telemetry.blocked_ips %}
+                                                <tr>
+                                                    <td class="font-mono fw-bold text-danger">{{ b.ip }}</td>
+                                                    <td class="text-truncate" style="max-width: 140px;" title="{{ b.reason }}">{{ b.reason }}</td>
+                                                    <td class="text-muted font-mono" style="font-size: 0.72rem;">{{ b.banned_at[:16] }}</td>
+                                                    <td>
+                                                        <form method="POST" action="{{ url_for('admin.admin_security_unban_ip') }}" class="m-0">
+                                                            <input type="hidden" name="ip" value="{{ b.ip }}">
+                                                            <button type="submit" class="btn btn-outline-success btn-sm py-0 px-2 fw-semibold" style="font-size: 0.72rem;" onclick="return confirm('Unblock IP {{ b.ip }}?')">
+                                                                <i class="fas fa-unlock me-1"></i>Unban
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="4" class="text-center py-4 text-muted">
+                                                    <i class="fas fa-check-double text-success fs-5 mb-2 d-block"></i>
+                                                    No IPs currently blacklisted. All legitimate clinical traffic allowed.
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module C: Privileged User Security (Left) & Emergency Controls (Right) -->
+                <div class="row g-4 mb-4">
+                    <!-- Left: Root Admin Account Security & MFA -->
                     <div class="col-xl-6 col-12">
                         <div class="card border border-slate-200 shadow-2xs bg-white rounded-3 p-4 h-100">
                             <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-light">
@@ -6348,6 +6473,85 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Right: Emergency Account Containment & Suspended Users -->
+                    <div class="col-xl-6 col-12">
+                        <div class="card border border-danger border-opacity-30 shadow-2xs bg-white rounded-3 p-4 h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-danger border-opacity-20">
+                                <h6 class="fw-bold m-0 text-danger d-flex align-items-center gap-2">
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    <span>Emergency Incident Controls &amp; Containment</span>
+                                </h6>
+                                <span class="badge bg-danger text-white">Super Admin Only</span>
+                            </div>
+
+                            <!-- Row of Controls -->
+                            <div class="row g-2 mb-3">
+                                <!-- Global Killswitch Form -->
+                                <div class="col-12">
+                                    <form method="POST" action="{{ url_for('admin.admin_security_revoke_user') }}">
+                                        <label class="small text-muted fw-bold mb-1"><i class="fas fa-power-off text-warning me-1"></i>Global Killswitch: Revoke All Sessions</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="user_id" class="form-control" placeholder="Target User Account ID or Registered Email" required>
+                                            <button type="submit" class="btn btn-warning fw-bold">
+                                                <i class="fas fa-ban me-1"></i>Revoke Sessions
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- Emergency Suspension Form -->
+                                <div class="col-12 mt-2">
+                                    <form method="POST" action="{{ url_for('admin.admin_security_suspend_account') }}" onsubmit="return confirm('Emergency Lockout: Are you sure you want to suspend this account and terminate its active sessions?')">
+                                        <label class="small text-muted fw-bold mb-1"><i class="fas fa-lock text-danger me-1"></i>Emergency Account Lockout &amp; Suspension</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="user_id" class="form-control" placeholder="Account ID or Email to Suspend" required>
+                                            <button type="submit" class="btn btn-danger fw-bold">
+                                                <i class="fas fa-user-slash me-1"></i>Suspend Account
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Suspended Accounts Table -->
+                            <div class="pt-2 border-top">
+                                <span class="text-muted small fw-bold text-uppercase d-block mb-1.5" style="font-size: 0.72rem;">
+                                    Currently Suspended Accounts ({{ suspended_accounts|length if suspended_accounts else 0 }})
+                                </span>
+                                <div class="table-responsive" style="max-height: 140px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.78rem;">
+                                        <tbody>
+                                            {% if suspended_accounts %}
+                                                {% for acc in suspended_accounts %}
+                                                    <tr>
+                                                        <td><span class="badge bg-secondary">{{ acc.role }}</span></td>
+                                                        <td class="fw-bold text-dark">{{ acc.name }}</td>
+                                                        <td class="text-muted font-mono" style="font-size: 0.72rem;">{{ acc.email }}</td>
+                                                        <td class="text-end">
+                                                            <form method="POST" action="{{ url_for('admin.admin_security_unsuspend_account') }}" class="m-0 d-inline">
+                                                                <input type="hidden" name="user_id" value="{{ acc.id }}">
+                                                                <button type="submit" class="btn btn-xs btn-outline-success py-0 px-2 fw-semibold" style="font-size: 0.72rem;">
+                                                                    <i class="fas fa-unlock me-1"></i>Unsuspend
+                                                                </button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="4" class="text-center py-2 text-muted small">
+                                                        <i class="fas fa-check text-success me-1"></i>No accounts currently locked out. All active.
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Module D: Database Security & PHI Protection -->
@@ -6402,8 +6606,38 @@
                             </h6>
                             <p class="text-muted small m-0 mt-0.5">Real-time log of logins, access control events, permissions, and security exceptions.</p>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="text" id="securityAuditSearch" class="form-control form-control-sm" placeholder="Filter audit events..." style="width: 220px;" onkeyup="filterAuditLogs()">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- Severity Filter Pills -->
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Severity Filter">
+                                <button type="button" class="btn btn-outline-secondary active fw-bold" onclick="filterAuditSeverity('ALL', this)">All</button>
+                                <button type="button" class="btn btn-outline-danger fw-bold" onclick="filterAuditSeverity('CRITICAL', this)">Critical</button>
+                                <button type="button" class="btn btn-outline-warning text-dark fw-bold" onclick="filterAuditSeverity('HIGH', this)">High</button>
+                                <button type="button" class="btn btn-outline-info fw-bold" onclick="filterAuditSeverity('MEDIUM', this)">Medium</button>
+                                <button type="button" class="btn btn-outline-secondary fw-bold" onclick="filterAuditSeverity('INFO', this)">Info</button>
+                            </div>
+
+                            <!-- Live Text Filter -->
+                            <input type="text" id="securityAuditSearch" class="form-control form-control-sm" placeholder="Filter audit events..." style="width: 180px;" onkeyup="filterAuditLogs()">
+
+                            <!-- Export CSV / JSON -->
+                            <a href="{{ url_for('admin.admin_security_export_audit_logs', format='csv') }}" class="btn btn-sm btn-outline-secondary rounded-3" title="Export Audit Log CSV">
+                                <i class="fas fa-file-csv me-1 text-success"></i>CSV
+                            </a>
+                            <a href="{{ url_for('admin.admin_security_export_audit_logs', format='json') }}" class="btn btn-sm btn-outline-secondary rounded-3" title="Export Audit Log JSON">
+                                <i class="fas fa-file-code me-1 text-info"></i>JSON
+                            </a>
+
+                            <!-- Rotate Logs (>30d) -->
+                            <form method="POST" action="{{ url_for('admin.admin_security_prune_audit_logs') }}" class="d-inline m-0" onsubmit="return confirm('Rotate and prune audit logs older than 30 days?')">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary rounded-3" title="Prune records older than 30 days">
+                                    <i class="fas fa-clock-rotate-left me-1"></i>Prune (>30d)
+                                </button>
+                            </form>
+
+                            <!-- Live Telemetry Refresh -->
+                            <button type="button" class="btn btn-sm btn-primary rounded-3" onclick="refreshSecurityAuditTable(this)" title="Refresh Security Telemetry">
+                                <i class="fas fa-arrows-rotate me-1"></i>Live Refresh
+                            </button>
                         </div>
                     </div>
 
@@ -6423,7 +6657,7 @@
                             <tbody>
                                 {% if security_telemetry and security_telemetry.recent_audit_logs %}
                                     {% for log in security_telemetry.recent_audit_logs %}
-                                        <tr>
+                                        <tr data-severity="{{ log.severity }}">
                                             <td class="font-mono text-muted text-nowrap" style="font-size: 0.75rem;">{{ log.timestamp[:19] }}</td>
                                             <td>
                                                 <span class="fw-bold text-dark font-mono" style="font-size: 0.78rem;">{{ log.event_type }}</span>
@@ -6443,7 +6677,18 @@
                                                 <span class="text-dark fw-semibold">{{ log.actor_id }}</span>
                                                 <small class="text-muted d-block" style="font-size: 0.7rem;">{{ log.actor_role }}</small>
                                             </td>
-                                            <td class="font-mono" style="font-size: 0.75rem;">{{ log.ip }}</td>
+                                            <td class="font-mono text-nowrap" style="font-size: 0.75rem;">
+                                                {{ log.ip }}
+                                                {% if log.ip and log.ip not in ['127.0.0.1', '::1', 'localhost', 'Internal'] %}
+                                                    <form method="POST" action="{{ url_for('admin.admin_security_ban_ip') }}" class="d-inline ms-1" onsubmit="return confirm('Blacklist IP {{ log.ip }}?')">
+                                                        <input type="hidden" name="ip" value="{{ log.ip }}">
+                                                        <input type="hidden" name="reason" value="Suspicious incident in audit trail: {{ log.event_type }}">
+                                                        <button type="submit" class="btn btn-xs btn-outline-danger p-0 px-1 border-0" title="Ban this IP" style="font-size: 0.65rem;">
+                                                            <i class="fas fa-ban"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </td>
                                             <td class="font-mono text-muted" style="font-size: 0.75rem;">{{ log.endpoint }}</td>
                                             <td class="text-wrap" style="max-width: 280px; font-size: 0.78rem;">{{ log.details }}</td>
                                         </tr>
@@ -6460,78 +6705,232 @@
                     </div>
                 </div>
 
-                <!-- Module F: Emergency Controls & Incident Containment -->
-                <div class="card border border-danger border-opacity-30 shadow-2xs rounded-3 p-4" style="background: rgba(254, 242, 242, 0.4);">
-                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-danger border-opacity-20">
-                        <h6 class="fw-bold m-0 text-danger d-flex align-items-center gap-2">
-                            <i class="fas fa-triangle-exclamation"></i>
-                            <span>Emergency Incident Controls &amp; Account Containment</span>
-                        </h6>
-                        <span class="badge bg-danger text-white">Super Admin Only</span>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: LIVE SECURITY DIAGNOSTIC ================= -->
+        <div class="modal fade" id="securityDiagnosticModal" tabindex="-1" aria-labelledby="securityDiagnosticModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="modal-header bg-slate-900 text-white border-0 px-4 py-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-primary rounded-circle" style="width: 32px; height: 32px;">
+                                <i class="fas fa-microscope text-white"></i>
+                            </span>
+                            <h5 class="modal-title fw-bold m-0" id="securityDiagnosticModalLabel">Cybersecurity Posture Diagnostic</h5>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-
-                    <div class="row g-3">
-                        <!-- Control 1: Global User Killswitch -->
-                        <div class="col-md-6 col-12">
-                            <div class="bg-white p-3.5 rounded-3 border border-slate-200 h-100">
-                                <h6 class="fw-bold text-dark small mb-1">
-                                    <i class="fas fa-power-off text-warning me-1"></i>
-                                    Global Killswitch: Revoke All User Sessions
-                                </h6>
-                                <p class="text-muted small mb-3" style="font-size: 0.78rem;">
-                                    Immediately terminates active sessions across all devices for an account suspected of compromise.
-                                </p>
-                                <form method="POST" onsubmit="event.preventDefault(); var uid=document.getElementById('killswitch_uid').value.trim(); if(uid){ this.action='/admin/security/revoke-user/' + encodeURIComponent(uid); this.submit(); } else { alert('Enter User ID'); }">
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" id="killswitch_uid" class="form-control" placeholder="Enter Target User ID" required>
-                                        <button type="submit" class="btn btn-warning fw-bold">
-                                            <i class="fas fa-ban me-1"></i> Revoke All Sessions
-                                        </button>
+                    <div class="modal-body p-4 bg-light">
+                        <!-- Score Header -->
+                        <div class="card border-0 shadow-2xs rounded-3 p-3.5 mb-3 bg-white">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                <div>
+                                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Enterprise Defense Health Score</span>
+                                    <div class="d-flex align-items-baseline gap-2 mt-1">
+                                        <span class="fs-2 fw-black font-display text-primary" id="diagScoreVal">--%</span>
+                                        <span class="badge bg-success rounded-pill px-2.5 py-1" id="diagGradeBadge">Grade A+</span>
+                                        <span class="small text-muted" id="diagPassingCount">Checking controls...</span>
                                     </div>
-                                </form>
+                                </div>
+                                <div class="text-end">
+                                    <span class="text-muted small d-block" id="diagTimeVal">Timestamp: Live</span>
+                                    <span class="text-muted font-mono small" id="diagLatencyVal">Latency: --ms</span>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Control 2: Emergency Account Suspension -->
-                        <div class="col-md-6 col-12">
-                            <div class="bg-white p-3.5 rounded-3 border border-slate-200 h-100">
-                                <h6 class="fw-bold text-dark small mb-1">
-                                    <i class="fas fa-lock text-danger me-1"></i>
-                                    Emergency Account Lockout &amp; Containment
-                                </h6>
-                                <p class="text-muted small mb-3" style="font-size: 0.78rem;">
-                                    Immediately locks an account from signing in and revokes all active session tokens.
-                                </p>
-                                <form method="POST" onsubmit="event.preventDefault(); var uid=document.getElementById('suspend_uid').value.trim(); if(uid && confirm('Are you sure you want to suspend this account?')){ this.action='/admin/security/suspend-account/' + encodeURIComponent(uid); this.submit(); }">
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" id="suspend_uid" class="form-control" placeholder="User ID to Suspend" required>
-                                        <button type="submit" class="btn btn-danger fw-bold">
-                                            <i class="fas fa-user-slash me-1"></i> Suspend Account
-                                        </button>
-                                    </div>
-                                </form>
+                        <!-- Itemized Checks List -->
+                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white">
+                            <div class="fw-bold text-dark small mb-2 pb-2 border-bottom">System Controls Evaluated</div>
+                            <div id="diagChecksList" class="space-y-2">
+                                <div class="text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                    <span>Running cryptographic benchmarks and security tests...</span>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="modal-footer bg-white border-top px-4 py-2.5">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-3" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-sm btn-primary rounded-3 fw-bold" onclick="runSecurityDiagnosticLive()">
+                            <i class="fas fa-arrows-rotate me-1"></i>Re-run Diagnostic
+                        </button>
                     </div>
                 </div>
-
             </div>
         </div>
 
         <script>
+        let currentAuditSeverityFilter = 'ALL';
+
         function filterAuditLogs() {
-            var input = document.getElementById("securityAuditSearch");
-            var filter = input.value.toUpperCase();
-            var table = document.getElementById("securityAuditTable");
-            var tr = table.getElementsByTagName("tr");
-            for (var i = 1; i < tr.length; i++) {
-                var txtValue = tr[i].textContent || tr[i].innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
+            const input = document.getElementById("securityAuditSearch");
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById("securityAuditTable");
+            const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const severity = row.getAttribute("data-severity") || "";
+                const text = row.textContent || row.innerText;
+                const matchesText = text.toUpperCase().indexOf(filter) > -1;
+                const matchesSeverity = (currentAuditSeverityFilter === 'ALL') || (severity === currentAuditSeverityFilter);
+
+                if (matchesText && matchesSeverity) {
+                    row.style.display = "";
                 } else {
-                    tr[i].style.display = "none";
+                    row.style.display = "none";
                 }
             }
+        }
+
+        function filterAuditSeverity(severity, btn) {
+            currentAuditSeverityFilter = severity;
+            if (btn && btn.parentElement) {
+                btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            filterAuditLogs();
+        }
+
+        function openSecurityDiagnosticModal() {
+            const modalEl = document.getElementById('securityDiagnosticModal');
+            if (!modalEl) return;
+            let bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (!bsModal) {
+                bsModal = new bootstrap.Modal(modalEl);
+            }
+            bsModal.show();
+            runSecurityDiagnosticLive();
+        }
+
+        function runSecurityDiagnosticLive() {
+            const scoreEl = document.getElementById('diagScoreVal');
+            const gradeEl = document.getElementById('diagGradeBadge');
+            const passingEl = document.getElementById('diagPassingCount');
+            const timeEl = document.getElementById('diagTimeVal');
+            const latencyEl = document.getElementById('diagLatencyVal');
+            const listEl = document.getElementById('diagChecksList');
+
+            if (listEl) {
+                listEl.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        <span>Evaluating SQLite PRAGMA integrity, AES-256 field encryption, Argon2id hasher & WAF firewalls...</span>
+                    </div>
+                `;
+            }
+
+            fetch('/admin/security/run-diagnostic?json=1', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (scoreEl) scoreEl.innerText = data.score + '%';
+                if (gradeEl) {
+                    gradeEl.innerText = 'Grade ' + data.grade;
+                    gradeEl.className = 'badge rounded-pill px-2.5 py-1 ' + (data.score >= 90 ? 'bg-success' : (data.score >= 75 ? 'bg-primary' : 'bg-warning text-dark'));
+                }
+                if (passingEl) passingEl.innerText = `${data.passing} of ${data.total} controls passing`;
+                if (timeEl) timeEl.innerText = 'Timestamp: ' + data.timestamp;
+                if (latencyEl) latencyEl.innerText = 'Benchmark: ' + data.elapsed_ms + 'ms';
+
+                if (listEl && data.checks) {
+                    let html = '';
+                    data.checks.forEach(chk => {
+                        const isPass = chk.status === 'PASS';
+                        const isWarn = chk.status === 'WARN';
+                        const badgeClass = isPass ? 'bg-success' : (isWarn ? 'bg-warning text-dark' : 'bg-danger');
+                        const iconClass = isPass ? 'fa-check text-success' : (isWarn ? 'fa-triangle-exclamation text-warning' : 'fa-times text-danger');
+
+                        html += `
+                            <div class="p-2.5 rounded-2 border d-flex align-items-center justify-content-between gap-3 ${isPass ? 'bg-light border-slate-100' : 'bg-rose-50 border-rose-200'}">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <i class="fas ${iconClass} fs-6"></i>
+                                    <div>
+                                        <div class="fw-bold text-dark small leading-tight">${chk.name}</div>
+                                        <div class="text-muted" style="font-size: 0.72rem;">${chk.details}</div>
+                                    </div>
+                                </div>
+                                <span class="badge ${badgeClass} text-uppercase font-mono" style="font-size: 0.7rem;">${chk.status}</span>
+                            </div>
+                        `;
+                    });
+                    listEl.innerHTML = html;
+                }
+            })
+            .catch(err => {
+                if (listEl) {
+                    listEl.innerHTML = `<div class="alert alert-danger small mb-0"><i class="fas fa-triangle-exclamation me-1"></i>Diagnostic scan error: ${err.message}</div>`;
+                }
+            });
+        }
+
+        function refreshSecurityAuditTable(btn) {
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+
+            fetch('/admin/security/telemetry', {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Update Metric Stat Counters
+                const evEl = document.getElementById('stat-total-events');
+                const flEl = document.getElementById('stat-failed-logins');
+                const crEl = document.getElementById('stat-critical-incidents');
+                const blEl = document.getElementById('stat-blocked-attacks');
+
+                if (evEl) evEl.innerText = data.total_events || 0;
+                if (flEl) flEl.innerText = data.failed_logins_24h || 0;
+                if (crEl) crEl.innerText = data.critical_incidents || 0;
+                if (blEl) blEl.innerText = (data.unauthorized_attempts || 0) + (data.blocked_ips_count || 0);
+
+                // Update Audit Table
+                const tbody = document.getElementById('securityAuditTable')?.getElementsByTagName('tbody')[0];
+                if (tbody && data.recent_audit_logs && data.recent_audit_logs.length > 0) {
+                    let html = '';
+                    data.recent_audit_logs.forEach(log => {
+                        let badgeHtml = '<span class="badge bg-info text-white">INFO</span>';
+                        if (log.severity === 'CRITICAL') badgeHtml = '<span class="badge bg-danger">CRITICAL</span>';
+                        else if (log.severity === 'HIGH') badgeHtml = '<span class="badge bg-danger bg-opacity-75">HIGH</span>';
+                        else if (log.severity === 'MEDIUM') badgeHtml = '<span class="badge bg-warning text-dark">MEDIUM</span>';
+
+                        const banBtn = (log.ip && !['127.0.0.1', '::1', 'localhost', 'Internal'].includes(log.ip))
+                            ? `<form method="POST" action="/admin/security/ban-ip" class="d-inline ms-1" onsubmit="return confirm('Blacklist IP ${log.ip}?')">
+                                 <input type="hidden" name="ip" value="${log.ip}">
+                                 <input type="hidden" name="reason" value="Suspicious incident in audit trail: ${log.event_type}">
+                                 <button type="submit" class="btn btn-xs btn-outline-danger p-0 px-1 border-0" title="Ban this IP" style="font-size: 0.65rem;">
+                                   <i class="fas fa-ban"></i>
+                                 </button>
+                               </form>`
+                            : '';
+
+                        html += `
+                            <tr data-severity="${log.severity}">
+                                <td class="font-mono text-muted text-nowrap" style="font-size: 0.75rem;">${(log.timestamp || '').slice(0, 19)}</td>
+                                <td><span class="fw-bold text-dark font-mono" style="font-size: 0.78rem;">${log.event_type}</span></td>
+                                <td>${badgeHtml}</td>
+                                <td><span class="text-dark fw-semibold">${log.actor_id}</span><small class="text-muted d-block" style="font-size: 0.7rem;">${log.actor_role}</small></td>
+                                <td class="font-mono text-nowrap" style="font-size: 0.75rem;">${log.ip || '127.0.0.1'}${banBtn}</td>
+                                <td class="font-mono text-muted" style="font-size: 0.75rem;">${log.endpoint || '-'}</td>
+                                <td class="text-wrap" style="max-width: 280px; font-size: 0.78rem;">${log.details || ''}</td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                    filterAuditLogs();
+                }
+
+                if (btn) btn.innerHTML = '<i class="fas fa-check me-1 text-success"></i>Refreshed!';
+                setTimeout(() => { if (btn) btn.innerHTML = originalHtml; }, 2000);
+            })
+            .catch(err => {
+                if (btn) btn.innerHTML = originalHtml;
+                alert('Telemetry refresh error: ' + err.message);
+            });
         }
         </script>
 

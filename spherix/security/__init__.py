@@ -47,19 +47,27 @@ from spherix.security.rbac import (
 )
 from spherix.security.audit import (
     log_security_event,
-    get_security_command_center_telemetry
+    get_security_command_center_telemetry,
+    prune_audit_logs
 )
 from spherix.security.session_manager import (
     register_new_session,
     validate_active_session,
     revoke_session,
     revoke_all_user_sessions,
-    get_user_active_sessions
+    get_user_active_sessions,
+    purge_expired_sessions
 )
 from spherix.security.firewall import (
     inspect_incoming_request,
     is_safe_external_url,
-    apply_enterprise_security_headers
+    apply_enterprise_security_headers,
+    ban_ip,
+    unban_ip,
+    get_blocked_ips,
+    is_ip_banned,
+    get_waf_mode,
+    set_waf_mode
 )
 from spherix.security.file_guard import (
     validate_medical_upload,
@@ -106,14 +114,22 @@ __all__ = [
     'verify_hospital_ownership',
     'log_security_event',
     'get_security_command_center_telemetry',
+    'prune_audit_logs',
     'register_new_session',
     'validate_active_session',
     'revoke_session',
     'revoke_all_user_sessions',
     'get_user_active_sessions',
+    'purge_expired_sessions',
     'inspect_incoming_request',
     'is_safe_external_url',
     'apply_enterprise_security_headers',
+    'ban_ip',
+    'unban_ip',
+    'get_blocked_ips',
+    'is_ip_banned',
+    'get_waf_mode',
+    'set_waf_mode',
     'validate_medical_upload',
     'generate_secure_storage_filename',
     'store_private_medical_document',

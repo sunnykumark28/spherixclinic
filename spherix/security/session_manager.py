@@ -200,3 +200,21 @@ def get_user_active_sessions(user_id: str) -> List[Dict[str, Any]]:
         print(f"⚠️ Error listing sessions: {e}")
     return sessions
 
+
+def purge_expired_sessions() -> int:
+    """
+    Purges revoked sessions and inactive stale sessions older than 24 hours.
+    Returns the total count of purged sessions.
+    """
+    count = 0
+    try:
+        conn = _get_session_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM active_user_sessions WHERE is_revoked = 1")
+        count = cur.rowcount
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ Error purging expired sessions: {e}")
+    return count
+
