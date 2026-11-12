@@ -169,7 +169,7 @@ def load_all_medicines():
                     cursor = conn.cursor()
                     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='medicines_master'")
                     if cursor.fetchone():
-                        cursor.execute("SELECT id, name, price, manufacturer, dosage_form, pack_size, composition, uses, side_effects, drug_interactions, category, image_url, rx_required FROM medicines_master")
+                        cursor.execute("SELECT id, name, price, manufacturer, dosage_form, pack_size, composition, uses, side_effects, drug_interactions, category, image_url, rx_required FROM medicines_master LIMIT 3500")
                         rows = cursor.fetchall()
                         if rows:
                             t0 = time.time()
@@ -626,19 +626,81 @@ def search_medicines(query="", category="all", page=1, limit=32):
     }
 
 def find_medicine_by_name_or_id(identifier):
-    """Finds exact medicine from 11,825 catalog by ID or name."""
+    """Finds exact medicine from catalog by ID or name with SQLite on-demand fallback."""
     if not ALL_MEDICINES:
         load_all_medicines()
         
-    clean_id = str(identifier).strip().lower()
+    clean_id = str(identifier).strip()
+    clean_lower = clean_id.lower()
     if clean_id in MEDICINES_BY_ID:
         return MEDICINES_BY_ID[clean_id]
+    if clean_lower in MEDICINES_BY_ID:
+        return MEDICINES_BY_ID[clean_lower]
         
-    # Substring search
+    # Substring search in memory
     for m in ALL_MEDICINES:
-        if clean_id in m['name'].lower() or m['name'].lower() in clean_id:
+        if clean_lower in m['name'].lower() or m['name'].lower() in clean_lower:
             return m
             
+    # On-demand query against SQLite database across all 253,973 medicines
+    try:
+        import sqlite3
+        db_candidates = [
+            os.getenv('SQLITE_DB_PATH'),
+            os.path.join(PROJECT_ROOT, 'spherixclinic.db'),
+            'spherixclinic.db'
+        ]
+        for db_file in db_candidates:
+            if db_file and os.path.exists(db_file):
+                conn = sqlite3.connect(db_file)
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id, name, price, manufacturer, dosage_form, pack_size, composition, uses, side_effects, drug_interactions, category, image_url, rx_required "
+                    "FROM medicines_master WHERE id = ? OR LOWER(name) = ? OR LOWER(name) LIKE ? LIMIT 1",
+                    (clean_id, clean_lower, f"%{clean_lower}%")
+                )
+                r = cursor.fetchone()
+                conn.close()
+                if r:
+                    m_id, name, price, mfg, dosage, pack, comp, desc, side_fx, interactions, cat, img, rx = r
+                    h = abs(hash(m_id))
+                    rating = round(4.1 + (h % 9) * 0.1, 1)
+                    rating_count = 180 + (h % 2300)
+                    generic_comp = comp.split('+')[0].split('(')[0].strip() if comp else ''
+                    generic_name = f"Generic {generic_comp}" if generic_comp and generic_comp != 'Active Pharmaceutical Salt' else f"Generic {name}"
+                    generic_price = round(max(5.0, (price or 0.0) * 0.40), 2)
+                    mrp_price = round((price or 0.0) * 1.25, 2)
+                    side_fx_list = [s.strip() for s in (side_fx or '').split(',') if len(s.strip()) > 2][:5]
+                    if not side_fx_list:
+                        side_fx_list = ['Mild nausea', 'Dizziness', 'Headache', 'Stomach upset (rare)']
+                    obj = {
+                        'id': m_id,
+                        'name': name,
+                        'category': cat or 'Therapeutics',
+                        'price': price,
+                        'mrp': mrp_price,
+                        'salt_composition': comp,
+                        'uses': desc or f"Clinical medication prescribed for {cat} indications.",
+                        'side_effects': side_fx,
+                        'common_side_effects': side_fx_list,
+                        'drug_interactions': interactions,
+                        'image_url': img,
+                        'manufacturer': mfg or 'Spherix Pharma',
+                        'packaging': pack,
+                        'rating': rating,
+                        'rating_count': rating_count,
+                        'requires_prescription': bool(rx),
+                        'generic_name': generic_name,
+                        'generic_price': generic_price,
+                        'is_bestseller': False,
+                        'is_discontinued': False
+                    }
+                    MEDICINES_BY_ID[m_id] = obj
+                    MEDICINES_BY_ID[name.lower()] = obj
+                    return obj
+    except Exception:
+        pass
+
     return None
 
 def find_substitutes(identifier_or_salt, limit=12):

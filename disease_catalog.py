@@ -102,7 +102,7 @@ def load_all_diseases():
                 cursor = conn.cursor()
                 cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='diseases_catalog'")
                 if cursor.fetchone():
-                    cursor.execute("SELECT data_json FROM diseases_catalog")
+                    cursor.execute("SELECT data_json FROM diseases_catalog LIMIT 250")
                     rows = cursor.fetchall()
                     if rows and len(rows) > 0:
                         compiled_list = []
@@ -371,11 +371,41 @@ def find_disease_by_name_or_id(identifier):
     if clean in DISEASES_BY_NAME:
         return DISEASES_BY_NAME[clean]
         
-    # Substring search
+    # Substring search in memory
     for d in ALL_DISEASES:
         if clean in d['name'].lower() or d['name'].lower() in clean:
             return d
             
+    # On-demand fallback to SQLite database across all 5,125 conditions
+    try:
+        import sqlite3, json
+        db_candidates = [
+            os.getenv('SQLITE_DB_PATH'),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spherixclinic.db'),
+            'spherixclinic.db'
+        ]
+        for db_file in db_candidates:
+            if db_file and os.path.exists(db_file):
+                conn = sqlite3.connect(db_file)
+                c = conn.cursor()
+                c.execute("SELECT data_json FROM diseases_catalog WHERE id = ? OR LOWER(disease_name) = ? OR LOWER(disease_name) LIKE ? LIMIT 1", (clean, clean, f"%{clean}%"))
+                row = c.fetchone()
+                conn.close()
+                if row and row[0]:
+                    d = json.loads(row[0])
+                    d.setdefault('symptoms_text', d.get('symptoms', ''))
+                    d.setdefault('causes_text', d.get('causes', ''))
+                    d.setdefault('treatments_text', d.get('treatments', ''))
+                    d.setdefault('diagnoses_text', d.get('diagnoses', ''))
+                    d.setdefault('preventions_text', d.get('preventions', ''))
+                    d.setdefault('qa_count', len(d.get('all_qa', [])))
+                    d.setdefault('source_label', d.get('sources', 'NIH / CDC MedQuAD') if isinstance(d.get('sources'), str) else ', '.join(d.get('sources', [])))
+                    DISEASES_BY_ID[d['id']] = d
+                    DISEASES_BY_NAME[d['name'].lower()] = d
+                    return d
+    except Exception:
+        pass
+
     return None
 
 # Export alias for backwards compatibility
