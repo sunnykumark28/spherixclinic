@@ -337,8 +337,65 @@ def admin_dashboard():
                     'type': col
                 })
 
+    # Advanced Chart Visualizations & Deep Analysis Datasets
+    # 1. Department Load Distribution
+    department_counts = {}
+    for appt in all_appointments:
+        doc = TEMP_DATA.get('doctors', {}).get(getattr(appt, 'doctor_id', ''))
+        dept = getattr(doc, 'department', '') if doc else ''
+        if not dept:
+            dept = getattr(appt, 'department', 'General Medicine')
+        department_counts[dept] = department_counts.get(dept, 0) + 1
+    if not department_counts:
+        for doc in all_doctors:
+            dept = getattr(doc, 'department', 'General Medicine')
+            department_counts[dept] = department_counts.get(dept, 0) + 1
+    dept_sorted = sorted(department_counts.items(), key=lambda x: x[1], reverse=True)[:8]
+    dept_load_labels = [k for k, v in dept_sorted] or ['General Medicine', 'Cardiology', 'Oncology', 'Neurology', 'Orthopedics', 'Pediatrics']
+    dept_load_counts = [v for k, v in dept_sorted] or [1, 1, 1, 1, 1, 1]
+
+    # 2. Appointment Status Lifecycle Throughput
+    cancelled_appt_count = len([a for a in all_appointments if str(getattr(a, 'status', '')).lower() in ['cancelled', 'rejected', 'declined']])
+    appt_status_labels = ['Completed', 'Confirmed', 'Pending Triage', 'Cancelled']
+    appt_status_counts = [
+        completed_appointments_count,
+        confirmed_appointments_count,
+        pending_appointments_count,
+        cancelled_appt_count
+    ]
+
+    # 3. Pharmacy Therapeutics Category Distribution
+    pharmacy_cats = {}
+    for m in admin_medicines:
+        cat = m.get('category', 'General Medicine') or 'General Medicine'
+        pharmacy_cats[cat] = pharmacy_cats.get(cat, 0) + 1
+    if not pharmacy_cats:
+        pharmacy_cats = {'Cardiology': 8, 'Oncology': 6, 'Antibiotics': 12, 'Diabetes': 7, 'Analgesics': 10, 'Respiratory': 5}
+    top_cats = sorted(pharmacy_cats.items(), key=lambda x: x[1], reverse=True)[:7]
+    pharmacy_cat_labels = [c[0] for c in top_cats]
+    pharmacy_cat_counts = [c[1] for c in top_cats]
+
+    # 4. Cybersecurity & WAF Threat Defense Breakdown
+    sec_telemetry = get_security_command_center_telemetry()
+    threat_event_labels = ['Failed Logins', 'Blocked WAF Attacks', 'Blacklisted IPs', 'Incident Audits', 'Active Sessions']
+    threat_event_counts = [
+        sec_telemetry.get('failed_logins_24h', 0),
+        sec_telemetry.get('unauthorized_attempts', 0),
+        sec_telemetry.get('blocked_ips_count', 0),
+        sec_telemetry.get('critical_incidents', 0),
+        sec_telemetry.get('total_active_sessions', 1)
+    ]
+
     return render_template('admin_dashboard.html', 
                            suspended_accounts=suspended_accounts,
+                           dept_load_labels=dept_load_labels,
+                           dept_load_counts=dept_load_counts,
+                           appt_status_labels=appt_status_labels,
+                           appt_status_counts=appt_status_counts,
+                           pharmacy_cat_labels=pharmacy_cat_labels,
+                           pharmacy_cat_counts=pharmacy_cat_counts,
+                           threat_event_labels=threat_event_labels,
+                           threat_event_counts=threat_event_counts,
                            pharmacy_low_stock=pharmacy_low_stock,
                            pharmacy_oos_count=pharmacy_oos_count,
                            pharmacy_est_value=pharmacy_est_value,

@@ -552,6 +552,49 @@
                 display: none !important;
             }
         }
+
+        /* Interactive Analytics Cards & Fullscreen Deep Analysis */
+        .interactive-chart-card {
+            transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+        }
+        .interactive-chart-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+            border-color: #cbd5e1;
+        }
+        .chart-expand-btn {
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .chart-expand-btn:hover {
+            transform: scale(1.05);
+        }
+        .chart-clickable-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        .interactive-chart-card:hover .chart-clickable-hint {
+            opacity: 1;
+        }
+        #chartAnalysisModal .modal-fullscreen {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+        }
+        #chartAnalysisModal .modal-fullscreen .modal-content {
+            height: 100vh !important;
+            border-radius: 0 !important;
+        }
     </style>
 {% endblock %}
 
@@ -1090,21 +1133,28 @@
             <div class="row">
                 <!-- 1. Daily Revenue Chart -->
                 <div class="col-lg-8 mb-4">
-                    <div class="card-box h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                             <div>
-                                <h6 class="fw-bold m-0 fs-5">Revenue & Earnings Trend</h6>
-                                <small class="text-muted">Real aggregate financial telemetry from consultations & pharmacy</small>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold m-0 fs-5">Revenue &amp; Earnings Trend</h6>
+                                    <span class="badge bg-green-soft small fw-semibold"><i class="fas fa-coins me-1"></i>Financial</span>
+                                </div>
+                                <small class="text-muted">Real aggregate financial telemetry from consultations &amp; pharmacy</small>
                             </div>
-                            <div class="d-flex gap-2">
-                                <span class="badge bg-success bg-opacity-10 text-success fw-bold px-3 py-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success bg-opacity-10 text-success fw-bold px-2.5 py-1.5">
                                     <i class="fas fa-wallet me-1"></i> Total: ₹{{ "%.2f"|format(total_earnings) }}
                                 </span>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('revenue')" title="Open Fullscreen Deep Analytics">
+                                    <i class="fas fa-expand-arrows-alt me-1"></i> Full Analysis
+                                </button>
                             </div>
                         </div>
-                        <div class="chart-container" style="height: 320px;">
+                        <div class="chart-container" style="height: 320px; cursor: pointer;" onclick="openChartAnalysis('revenue')" title="Click for Full Screen Analysis">
                             <canvas id="mainChart"></canvas>
                         </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Click chart to inspect deep telemetry</span>
                     </div>
                 </div>
 
@@ -1112,7 +1162,7 @@
                 <div class="col-lg-4 mb-4">
                     <div class="card-box h-100">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold m-0 fs-5">Bed & ICU Telemetry</h6>
+                            <h6 class="fw-bold m-0 fs-5">Bed &amp; ICU Telemetry</h6>
                             <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-bold" onclick="switchTab('bed_bookings', document.querySelector('[data-section=\'bed_bookings\']'))">Details</button>
                         </div>
                         <div class="p-3 bg-light rounded-3 mb-3 border">
@@ -1162,38 +1212,156 @@
                 </div>
             </div>
 
-            <!-- Visual Analytics Grid: 3 Real-Data Charts -->
+            <!-- Visual Analytics Grid: Facility, Specialists & Blood Bank -->
             <div class="row">
-                <!-- 1. Appointments by Hospital -->
+                <!-- 2. Appointments by Hospital -->
                 <div class="col-lg-4 mb-4">
-                    <div class="card-box h-100">
-                        <h6 class="fw-bold text-dark mb-3 fs-5">Appointments by Hospital</h6>
-                        <small class="text-muted d-block mb-3">Patient distribution across medical facilities</small>
-                        <div class="chart-container" style="height: 260px;">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold text-dark m-0 fs-5">Appointments by Hospital</h6>
+                                <small class="text-muted d-block">Facility load distribution</small>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('hospitals')" title="Open Fullscreen Deep Analytics">
+                                <i class="fas fa-expand-arrows-alt me-1"></i> Analysis
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 260px; cursor: pointer;" onclick="openChartAnalysis('hospitals')" title="Click for Full Screen Analysis">
                             <canvas id="hospitalChart"></canvas>
                         </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Inspect</span>
                     </div>
                 </div>
 
-                <!-- 2. Top Performing Doctors -->
+                <!-- 3. Top Performing Doctors -->
                 <div class="col-lg-4 mb-4">
-                    <div class="card-box h-100">
-                        <h6 class="fw-bold text-dark mb-3 fs-5">Top Earning Specialists</h6>
-                        <small class="text-muted d-block mb-3">Revenue generated by doctor consultations</small>
-                        <div class="chart-container" style="height: 260px;">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold text-dark m-0 fs-5">Top Earning Specialists</h6>
+                                <small class="text-muted d-block">Revenue generated by doctor</small>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('doctors')" title="Open Fullscreen Deep Analytics">
+                                <i class="fas fa-expand-arrows-alt me-1"></i> Analysis
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 260px; cursor: pointer;" onclick="openChartAnalysis('doctors')" title="Click for Full Screen Analysis">
                             <canvas id="doctorEarningsChart"></canvas>
                         </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Inspect</span>
                     </div>
                 </div>
 
-                <!-- 3. Blood Donor Registry Distribution -->
+                <!-- 4. Blood Donor Registry Distribution -->
                 <div class="col-lg-4 mb-4">
-                    <div class="card-box h-100">
-                        <h6 class="fw-bold text-dark mb-3 fs-5">Blood Bank Donor Groups</h6>
-                        <small class="text-muted d-block mb-3">Live donor count breakdown by blood type</small>
-                        <div class="chart-container" style="height: 260px;">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold text-dark m-0 fs-5">Blood Bank Donor Groups</h6>
+                                <small class="text-muted d-block">Live donor count by blood type</small>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('blood_bank')" title="Open Fullscreen Deep Analytics">
+                                <i class="fas fa-expand-arrows-alt me-1"></i> Analysis
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 260px; cursor: pointer;" onclick="openChartAnalysis('blood_bank')" title="Click for Full Screen Analysis">
                             <canvas id="bloodBankChart"></canvas>
                         </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Inspect</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Analytics Grid: Clinical Specialty Load & Appointment Throughput -->
+            <div class="row">
+                <!-- 5. Clinical Specialty & Department Workload -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold text-dark m-0 fs-5">Clinical Department Workload</h6>
+                                    <span class="badge bg-purple-soft small fw-semibold"><i class="fas fa-stethoscope me-1"></i>Specialties</span>
+                                </div>
+                                <small class="text-muted">Specialist staffing &amp; patient volume across departments</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('department_load')" title="Open Fullscreen Deep Analytics">
+                                <i class="fas fa-expand-arrows-alt me-1"></i> Full Analysis
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 280px; cursor: pointer;" onclick="openChartAnalysis('department_load')" title="Click for Full Screen Analysis">
+                            <canvas id="departmentLoadChart"></canvas>
+                        </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Click chart to inspect deep telemetry</span>
+                    </div>
+                </div>
+
+                <!-- 6. Consultation Lifecycle & Throughput -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold text-dark m-0 fs-5">Consultation Lifecycle Throughput</h6>
+                                    <span class="badge bg-green-soft small fw-semibold"><i class="fas fa-tasks me-1"></i>Operations</span>
+                                </div>
+                                <small class="text-muted">Patient intake throughput: Completed, Confirmed, Pending, Cancelled</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('appointment_status')" title="Open Fullscreen Deep Analytics">
+                                <i class="fas fa-expand-arrows-alt me-1"></i> Full Analysis
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 280px; cursor: pointer;" onclick="openChartAnalysis('appointment_status')" title="Click for Full Screen Analysis">
+                            <canvas id="appointmentStatusChart"></canvas>
+                        </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Click chart to inspect deep telemetry</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Analytics Grid: Pharmacy Formulary & Cybersecurity Threat Telemetry -->
+            <div class="row">
+                <!-- 7. Pharmacy Formulary Distribution -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold text-dark m-0 fs-5">Pharmacy Formulary Distribution</h6>
+                                    <span class="badge bg-yellow-soft small fw-semibold"><i class="fas fa-pills me-1"></i>Formulary</span>
+                                </div>
+                                <small class="text-muted">Therapeutic category distribution across active dispensary inventory</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('pharmacy_category')" title="Open Fullscreen Deep Analytics">
+                                <i class="fas fa-expand-arrows-alt me-1"></i> Full Analysis
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 280px; cursor: pointer;" onclick="openChartAnalysis('pharmacy_category')" title="Click for Full Screen Analysis">
+                            <canvas id="pharmacyCategoryChart"></canvas>
+                        </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Click chart to inspect deep telemetry</span>
+                    </div>
+                </div>
+
+                <!-- 8. Cybersecurity & WAF Threat Defense Telemetry -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card-box h-100 interactive-chart-card position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold text-dark m-0 fs-5">Cybersecurity &amp; Threat Defense</h6>
+                                    <span class="badge bg-red-soft small fw-semibold"><i class="fas fa-shield-alt me-1"></i>Security</span>
+                                </div>
+                                <small class="text-muted">WAF defense, blocked attacks, blacklisted IPs, and session metrics</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 chart-expand-btn" onclick="openChartAnalysis('cybersecurity_threats')" title="Open Fullscreen Deep Analytics">
+                                <i class="fas fa-expand-arrows-alt me-1"></i> Full Analysis
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 280px; cursor: pointer;" onclick="openChartAnalysis('cybersecurity_threats')" title="Click for Full Screen Analysis">
+                            <canvas id="cybersecurityThreatChart"></canvas>
+                        </div>
+                        <span class="chart-clickable-hint"><i class="fas fa-search-plus me-1"></i>Click chart to inspect deep telemetry</span>
                     </div>
                 </div>
             </div>
@@ -7890,6 +8058,181 @@
     </div>
 </div>
 
+<!-- ================= MODAL: CHART FULLSCREEN & DEEP ANALYTICS ================= -->
+<div class="modal fade" id="chartAnalysisModal" tabindex="-1" aria-labelledby="chartAnalysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" id="chartAnalysisModalDialog">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="modal-header bg-slate-900 text-white border-0 px-4 py-3">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="d-inline-flex align-items-center justify-content-center bg-primary rounded-circle shadow-sm" style="width: 40px; height: 40px;">
+                        <i id="analysisModalIcon" class="fas fa-chart-line text-white fs-5"></i>
+                    </span>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="modal-title fw-bold text-white m-0" id="analysisModalTitle">Analytics Deep Dive</h5>
+                            <span class="badge bg-primary text-white font-mono small" id="analysisModalBadge">Telemetric</span>
+                        </div>
+                        <small class="text-white-50" id="analysisModalSubtitle">High-definition telemetry and itemized cohort breakdown</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <!-- Scope Filter -->
+                    <div class="btn-group btn-group-sm bg-slate-800 p-0.5 rounded-2" role="group" aria-label="Scope Filter">
+                        <button type="button" class="btn btn-xs text-white px-2.5 py-1 btn-primary" id="scopeBtnAll" onclick="switchAnalysisTimeframe('all')">All Records</button>
+                        <button type="button" class="btn btn-xs text-white px-2.5 py-1" id="scopeBtnTop5" onclick="switchAnalysisTimeframe('top5')">Top 5 Focus</button>
+                        <button type="button" class="btn btn-xs text-white px-2.5 py-1" id="scopeBtnCumulative" onclick="switchAnalysisTimeframe('cumulative')">Cumulative</button>
+                    </div>
+
+                    <!-- Chart Type Switcher -->
+                    <div class="btn-group btn-group-sm bg-slate-800 p-0.5 rounded-2" role="group" aria-label="Chart Type Switcher">
+                        <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnBar" onclick="switchAnalysisChartType('bar')" title="Bar View"><i class="fas fa-chart-bar"></i></button>
+                        <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnLine" onclick="switchAnalysisChartType('line')" title="Line View"><i class="fas fa-chart-line"></i></button>
+                        <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnPie" onclick="switchAnalysisChartType('doughnut')" title="Doughnut / Distribution View"><i class="fas fa-chart-pie"></i></button>
+                    </div>
+
+                    <!-- Fullscreen Toggle Button -->
+                    <button type="button" class="btn btn-sm btn-outline-light rounded-2 px-2.5 py-1" id="analysisFullscreenBtn" onclick="toggleModalFullscreen()" title="Toggle Fullscreen Mode">
+                        <i class="fas fa-expand"></i>
+                    </button>
+
+                    <!-- Export Actions -->
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light dropdown-toggle rounded-2 px-2.5 py-1 fw-semibold" type="button" id="exportDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-download me-1 text-primary"></i> Export
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdownBtn">
+                            <li>
+                                <button class="dropdown-item small" type="button" onclick="exportAnalysisChartPNG()">
+                                    <i class="fas fa-file-image me-2 text-success"></i> Export High-Res PNG
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item small" type="button" onclick="exportAnalysisChartCSV()">
+                                    <i class="fas fa-file-csv me-2 text-info"></i> Export Dataset CSV
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4 bg-light">
+                <!-- 1. KPI Metric Strip -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-lg-3">
+                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-success">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Peak / Max Cohort</span>
+                                <span class="badge bg-success bg-opacity-10 text-success small"><i class="fas fa-arrow-up"></i> Peak</span>
+                            </div>
+                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiPeak">--</h4>
+                            <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiPeakLabel">--</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-warning">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Lowest Observation</span>
+                                <span class="badge bg-warning bg-opacity-10 text-warning small"><i class="fas fa-arrow-down"></i> Min</span>
+                            </div>
+                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiMin">--</h4>
+                            <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiMinLabel">--</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-primary">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Arithmetic Mean</span>
+                                <span class="badge bg-primary bg-opacity-10 text-primary small"><i class="fas fa-calculator"></i> Avg</span>
+                            </div>
+                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiMean">--</h4>
+                            <small class="text-muted text-truncate d-block mt-0.5">Average across active cohorts</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-info">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Total Aggregate</span>
+                                <span class="badge bg-info bg-opacity-10 text-info small"><i class="fas fa-layer-group"></i> Sum</span>
+                            </div>
+                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiTotal">--</h4>
+                            <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiTotalSub">All sampled units</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. High-Definition Visual Canvas Container -->
+                <div class="card border-0 shadow-2xs rounded-3 p-3 mb-4 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Interactive Telemetry Canvas</span>
+                        <span class="small text-muted"><i class="fas fa-mouse-pointer me-1 text-primary"></i>Hover over data points or bars for localized telemetry</span>
+                    </div>
+                    <div style="position: relative; height: 380px; width: 100%;">
+                        <canvas id="analysisModalCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- 3. AI & Telemetric Intelligence Observations -->
+                <div class="card border-0 shadow-2xs rounded-3 p-3 mb-4 bg-white border-start border-4 border-primary">
+                    <div class="d-flex align-items-center gap-2 mb-2 pb-2 border-bottom">
+                        <i class="fas fa-brain text-primary fs-5"></i>
+                        <div>
+                            <h6 class="fw-bold text-dark m-0">Algorithmic Telemetry &amp; Strategic Observations</h6>
+                            <small class="text-muted">Automated real-time analytical evaluation of this dataset</small>
+                        </div>
+                    </div>
+                    <div class="ps-2 pt-1">
+                        <ul class="mb-0 ps-3 small text-dark d-flex flex-column gap-1.5" id="analysisInsightsList">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 4. Itemized Data Breakdown Table -->
+                <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h6 class="fw-bold text-dark m-0">Itemized Cohort Breakdown</h6>
+                            <small class="text-muted">Direct metric values and fractional distribution</small>
+                        </div>
+                        <div class="input-group input-group-sm" style="max-width: 320px;">
+                            <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" id="analysisTableSearch" class="form-control border-start-0" placeholder="Filter cohorts by name or value..." oninput="filterAnalysisTable()">
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0" id="analysisTable">
+                            <thead class="table-light text-uppercase small text-muted" style="font-size: 0.72rem; position: sticky; top: 0; z-index: 1;">
+                                <tr>
+                                    <th style="width: 70px;">Rank</th>
+                                    <th>Cohort / Entity Name</th>
+                                    <th>Recorded Value</th>
+                                    <th style="width: 130px;">% Share</th>
+                                    <th style="min-width: 160px;">Volume Distribution</th>
+                                    <th style="width: 110px;">Classification</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analysisTableBody" class="small">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer bg-white border-top px-4 py-2.5 d-flex justify-content-between align-items-center">
+                <span class="small text-muted"><i class="fas fa-shield-alt text-success me-1"></i>Spherix Healthcare Telemetry Engine &bull; Validated Enterprise Data</span>
+                <button type="button" class="btn btn-secondary rounded-3 px-4 fw-bold" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Hidden Chart & Utility Data Source Scripts & Spans -->
 <script type="application/json" id="hospital-dropdown-json">{{ (all_hospitals or hospitals or []) | map(attribute='name') | list | tojson | safe }}</script>
 <script type="application/json" id="hospital-types-dropdown-json">[
@@ -7907,6 +8250,14 @@
 <span id="hospital-counts-data" data-counts="{{ hospital_counts | tojson | safe }}" class="d-none"></span>
 <span id="blood-group-labels-data" data-labels="{{ blood_group_labels | tojson | safe }}" class="d-none"></span>
 <span id="blood-group-values-data" data-values="{{ blood_group_donor_values | tojson | safe }}" class="d-none"></span>
+<span id="dept-load-labels-data" data-labels="{{ dept_load_labels | tojson | safe }}" class="d-none"></span>
+<span id="dept-load-counts-data" data-counts="{{ dept_load_counts | tojson | safe }}" class="d-none"></span>
+<span id="appt-status-labels-data" data-labels="{{ appt_status_labels | tojson | safe }}" class="d-none"></span>
+<span id="appt-status-counts-data" data-counts="{{ appt_status_counts | tojson | safe }}" class="d-none"></span>
+<span id="pharmacy-cat-labels-data" data-labels="{{ pharmacy_cat_labels | tojson | safe }}" class="d-none"></span>
+<span id="pharmacy-cat-counts-data" data-counts="{{ pharmacy_cat_counts | tojson | safe }}" class="d-none"></span>
+<span id="threat-event-labels-data" data-labels="{{ threat_event_labels | tojson | safe }}" class="d-none"></span>
+<span id="threat-event-counts-data" data-counts="{{ threat_event_counts | tojson | safe }}" class="d-none"></span>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -9528,14 +9879,27 @@
             }
         }
 
+        // ================= 7A. EXTRACT REAL TELEMETRY DATASETS =================
         const labels = getJsonData('earnings-dates-data', 'dates', []);
         const data = getJsonData('earnings-values-data', 'values', []);
         const doctorNames = getJsonData('doctor-names-data', 'names', []);
         const doctorEarnings = getJsonData('doctor-earnings-data', 'earnings', []);
         const hospitalNames = getJsonData('hospital-names-data', 'names', []);
         const hospitalCounts = getJsonData('hospital-counts-data', 'counts', []);
+        const bloodLabels = getJsonData('blood-group-labels-data', 'labels', ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
+        const bloodValues = getJsonData('blood-group-values-data', 'values', [0, 0, 0, 0, 0, 0, 0, 0]);
 
-        // 1. Main Earnings Overview Line Chart
+        const deptLoadLabels = getJsonData('dept-load-labels-data', 'labels', ['General Medicine', 'Cardiology', 'Oncology', 'Neurology', 'Orthopedics', 'Pediatrics']);
+        const deptLoadCounts = getJsonData('dept-load-counts-data', 'counts', [1, 1, 1, 1, 1, 1]);
+        const apptStatusLabels = getJsonData('appt-status-labels-data', 'labels', ['Completed', 'Confirmed', 'Pending Triage', 'Cancelled']);
+        const apptStatusCounts = getJsonData('appt-status-counts-data', 'counts', [0, 0, 0, 0]);
+        const pharmacyCatLabels = getJsonData('pharmacy-cat-labels-data', 'labels', ['Cardiology', 'Oncology', 'Antibiotics', 'Diabetes', 'Analgesics', 'Respiratory']);
+        const pharmacyCatCounts = getJsonData('pharmacy-cat-counts-data', 'counts', [0, 0, 0, 0, 0, 0]);
+        const threatEventLabels = getJsonData('threat-event-labels-data', 'labels', ['Failed Logins', 'Blocked Attacks', 'Blacklisted IPs', 'Incident Audits', 'Active Sessions']);
+        const threatEventCounts = getJsonData('threat-event-counts-data', 'counts', [0, 0, 0, 0, 1]);
+
+        // ================= 7B. INITIALIZE ALL 8 DASHBOARD CHARTS =================
+        // 1. Main Earnings Line Chart
         const mainCanvas = document.getElementById('mainChart');
         if (mainCanvas && typeof Chart !== 'undefined') {
             const ctx = mainCanvas.getContext('2d');
@@ -9587,18 +9951,40 @@
             });
         }
 
-        // 2. Doctor Earnings Bar Chart
+        // 2. Hospital Distribution Doughnut Chart
+        const hospCanvas = document.getElementById('hospitalChart');
+        if (hospCanvas && typeof Chart !== 'undefined') {
+            const ctxHospital = hospCanvas.getContext('2d');
+            new Chart(ctxHospital, {
+                type: 'doughnut',
+                data: {
+                    labels: hospitalNames.length ? hospitalNames : ['General Hospital'],
+                    datasets: [{
+                        data: hospitalCounts.length ? hospitalCounts : [0],
+                        backgroundColor: ['#4361ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9', '#ec4899', '#14b8a6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+
+        // 3. Doctor Earnings Bar Chart
         const docCanvas = document.getElementById('doctorEarningsChart');
         if (docCanvas && typeof Chart !== 'undefined') {
             const ctxDoctor = docCanvas.getContext('2d');
             new Chart(ctxDoctor, {
                 type: 'bar',
                 data: {
-                    labels: doctorNames.length ? doctorNames : ['No Data'],
+                    labels: doctorNames.length ? doctorNames : ['No Active Specialists'],
                     datasets: [{
                         label: 'Earnings (₹)',
                         data: doctorEarnings.length ? doctorEarnings : [0],
-                        backgroundColor: 'rgba(67, 97, 238, 0.6)',
+                        backgroundColor: 'rgba(67, 97, 238, 0.75)',
                         borderColor: '#4361ee',
                         borderWidth: 1,
                         borderRadius: 5
@@ -9620,33 +10006,8 @@
             });
         }
 
-        // 3. Hospital Distribution Doughnut Chart
-        const hospCanvas = document.getElementById('hospitalChart');
-        if (hospCanvas && typeof Chart !== 'undefined') {
-            const ctxHospital = hospCanvas.getContext('2d');
-            new Chart(ctxHospital, {
-                type: 'doughnut',
-                data: {
-                    labels: hospitalNames.length ? hospitalNames : ['General'],
-                    datasets: [{
-                        data: hospitalCounts.length ? hospitalCounts : [0],
-                        backgroundColor: ['#4361ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right' } }
-                }
-            });
-        }
-
         // 4. Blood Bank Donor Distribution Chart
         const bloodCanvas = document.getElementById('bloodBankChart');
-        const bloodLabels = getJsonData('blood-group-labels-data', 'labels', ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
-        const bloodValues = getJsonData('blood-group-values-data', 'values', [0, 0, 0, 0, 0, 0, 0, 0]);
-
         if (bloodCanvas && typeof Chart !== 'undefined') {
             const ctxBlood = bloodCanvas.getContext('2d');
             new Chart(ctxBlood, {
@@ -9686,6 +10047,757 @@
                 }
             });
         }
+
+        // 5. Clinical Specialty & Department Workload (Doughnut Chart)
+        const deptCanvas = document.getElementById('departmentLoadChart');
+        if (deptCanvas && typeof Chart !== 'undefined') {
+            const ctxDept = deptCanvas.getContext('2d');
+            new Chart(ctxDept, {
+                type: 'doughnut',
+                data: {
+                    labels: deptLoadLabels.length ? deptLoadLabels : ['General Medicine'],
+                    datasets: [{
+                        data: deptLoadCounts.length ? deptLoadCounts : [1],
+                        backgroundColor: ['#6366f1', '#06b6d4', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#3b82f6', '#14b8a6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.label + ': ' + context.parsed + ' specialists/intakes';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 6. Consultation Lifecycle Throughput (Bar Chart)
+        const apptStatusCanvas = document.getElementById('appointmentStatusChart');
+        if (apptStatusCanvas && typeof Chart !== 'undefined') {
+            const ctxApptStatus = apptStatusCanvas.getContext('2d');
+            new Chart(ctxApptStatus, {
+                type: 'bar',
+                data: {
+                    labels: apptStatusLabels,
+                    datasets: [{
+                        label: 'Consultations',
+                        data: apptStatusCounts,
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, precision: 0 },
+                            grid: { borderDash: [2, 4], color: '#f1f5f9' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // 7. Pharmacy Formulary Distribution (Bar Chart)
+        const pharmCatCanvas = document.getElementById('pharmacyCategoryChart');
+        if (pharmCatCanvas && typeof Chart !== 'undefined') {
+            const ctxPharmCat = pharmCatCanvas.getContext('2d');
+            new Chart(ctxPharmCat, {
+                type: 'bar',
+                data: {
+                    labels: pharmacyCatLabels,
+                    datasets: [{
+                        label: 'Indexed Medications',
+                        data: pharmacyCatCounts,
+                        backgroundColor: [
+                            'rgba(14, 165, 233, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(99, 102, 241, 0.8)',
+                            'rgba(20, 184, 166, 0.8)'
+                        ],
+                        borderColor: '#0ea5e9',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, precision: 0 },
+                            grid: { borderDash: [2, 4], color: '#f1f5f9' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // 8. Cybersecurity & WAF Threat Defense Telemetry (Bar Chart)
+        const threatCanvas = document.getElementById('cybersecurityThreatChart');
+        if (threatCanvas && typeof Chart !== 'undefined') {
+            const ctxThreat = threatCanvas.getContext('2d');
+            new Chart(ctxThreat, {
+                type: 'bar',
+                data: {
+                    labels: threatEventLabels,
+                    datasets: [{
+                        label: 'Recorded Events',
+                        data: threatEventCounts,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(249, 115, 22, 0.8)',
+                            'rgba(220, 38, 38, 0.8)',
+                            'rgba(234, 179, 8, 0.8)',
+                            'rgba(59, 130, 246, 0.8)'
+                        ],
+                        borderColor: '#ef4444',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, precision: 0 },
+                            grid: { borderDash: [2, 4], color: '#f1f5f9' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // ================= 7C. SPHERIX FULLSCREEN DEEP ANALYSIS ENGINE =================
+        let currentAnalysisChartKey = null;
+        let currentAnalysisTimeframe = 'all'; // 'all', 'top5', 'cumulative'
+        let currentAnalysisChartType = null; // 'line', 'bar', 'doughnut'
+        let modalChartInstance = null;
+        let currentAnalysisData = null;
+        let currentAnalysisConfig = null;
+
+        // Chart Registry with full telemetry metadata and algorithmic insights
+        window.SPHERIX_CHARTS_REGISTRY = {
+            revenue: {
+                id: 'revenue',
+                title: 'Revenue & Earnings Trend',
+                subtitle: 'Aggregate financial telemetry across consultations and pharmacy sales',
+                icon: 'fas fa-wallet',
+                category: 'Financial Telemetry',
+                badgeClass: 'bg-success',
+                type: 'line',
+                unit: '₹',
+                isCurrency: true,
+                canvasId: 'mainChart',
+                getLabels: () => (labels.length ? labels : ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Today']),
+                getData: () => (data.length ? data : [0, 0, 0, 0, 0, 0, 0]),
+                colors: ['#10b981'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const total = itemValues.reduce((a, b) => a + Number(b || 0), 0);
+                    const maxVal = Math.max(...itemValues, 0);
+                    const maxIdx = itemValues.indexOf(maxVal);
+                    const avg = itemValues.length ? (total / itemValues.length) : 0;
+                    return [
+                        `Aggregate revenue performance across recorded periods totals ₹${total.toLocaleString('en-IN', {maximumFractionDigits: 2})}.`,
+                        `Peak earnings period reached ₹${maxVal.toLocaleString('en-IN', {maximumFractionDigits: 2})} on ${itemLabels[maxIdx] || 'peak date'}.`,
+                        `Daily average baseline is ₹${avg.toLocaleString('en-IN', {maximumFractionDigits: 2})}, indicating consistent financial throughput.`,
+                        `Operational recommendation: Expand consultation slots during peak weekday windows to maximize billing capture.`
+                    ];
+                }
+            },
+            hospitals: {
+                id: 'hospitals',
+                title: 'Appointments by Hospital Facility',
+                subtitle: 'Patient volume and appointment load distributed across network hospitals',
+                icon: 'fas fa-hospital',
+                category: 'Facility Network',
+                badgeClass: 'bg-primary',
+                type: 'doughnut',
+                unit: 'Appointments',
+                isCurrency: false,
+                canvasId: 'hospitalChart',
+                getLabels: () => (hospitalNames.length ? hospitalNames : ['Main Campus']),
+                getData: () => (hospitalCounts.length ? hospitalCounts : [0]),
+                colors: ['#4361ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9', '#ec4899', '#14b8a6'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const total = itemValues.reduce((a, b) => a + Number(b || 0), 0);
+                    const maxVal = Math.max(...itemValues, 0);
+                    const maxIdx = itemValues.indexOf(maxVal);
+                    const peakShare = total > 0 ? ((maxVal / total) * 100).toFixed(1) : '0';
+                    return [
+                        `Network-wide appointment load totals ${total} consultations across ${itemLabels.length} facility nodes.`,
+                        `Highest patient intake is observed at "${itemLabels[maxIdx] || 'Primary Facility'}" accounting for ${peakShare}% (${maxVal} appointments) of network volume.`,
+                        `Facility balancing advice: Divert routine outpatient visits to partner branches with excess bed and physician headroom.`
+                    ];
+                }
+            },
+            doctors: {
+                id: 'doctors',
+                title: 'Specialist Doctor Revenue Performance',
+                subtitle: 'Consultation fee earnings aggregated per medical practitioner',
+                icon: 'fas fa-user-md',
+                category: 'Clinical Staffing',
+                badgeClass: 'bg-info',
+                type: 'bar',
+                unit: '₹',
+                isCurrency: true,
+                canvasId: 'doctorEarningsChart',
+                getLabels: () => (doctorNames.length ? doctorNames : ['No Active Specialists']),
+                getData: () => (doctorEarnings.length ? doctorEarnings : [0]),
+                colors: ['#4361ee'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const total = itemValues.reduce((a, b) => a + Number(b || 0), 0);
+                    const maxVal = Math.max(...itemValues, 0);
+                    const maxIdx = itemValues.indexOf(maxVal);
+                    return [
+                        `Total specialist consultation earnings aggregated across active roster: ₹${total.toLocaleString('en-IN', {maximumFractionDigits: 2})}.`,
+                        `Top revenue contributor is ${itemLabels[maxIdx] || 'Lead Specialist'} generating ₹${maxVal.toLocaleString('en-IN', {maximumFractionDigits: 2})}.`,
+                        `Specialist distribution: ${itemLabels.length} doctors currently tracked with active billing sessions.`
+                    ];
+                }
+            },
+            blood_bank: {
+                id: 'blood_bank',
+                title: 'Blood Bank Donor Registry Distribution',
+                subtitle: 'Active verified donor counts categorized by ABO/Rh blood groups',
+                icon: 'fas fa-tint',
+                category: 'Emergency / Triage',
+                badgeClass: 'bg-danger',
+                type: 'bar',
+                unit: 'Donors',
+                isCurrency: false,
+                canvasId: 'bloodBankChart',
+                getLabels: () => (bloodLabels.length ? bloodLabels : ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
+                getData: () => bloodValues,
+                colors: ['#ef4444', '#f87171', '#3b82f6', '#60a5fa', '#a855f7', '#c084fc', '#10b981', '#34d399'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const total = itemValues.reduce((a, b) => a + Number(b || 0), 0);
+                    const maxVal = Math.max(...itemValues, 0);
+                    const maxIdx = itemValues.indexOf(maxVal);
+                    const minVal = Math.min(...(itemValues.length ? itemValues : [0]));
+                    const minIdx = itemValues.indexOf(minVal);
+                    return [
+                        `Blood bank registry currently indexes ${total} registered voluntary blood donors across 8 standard blood cohorts.`,
+                        `Most abundant blood group on file is "${itemLabels[maxIdx]}" with ${maxVal} registered donors on standby.`,
+                        `Lowest inventory buffer is for "${itemLabels[minIdx]}" with ${minVal} registered donors. Urgent donor outreach campaign recommended for scarce groups.`
+                    ];
+                }
+            },
+            department_load: {
+                id: 'department_load',
+                title: 'Clinical Department Workload & Intake',
+                subtitle: 'Specialist distribution and patient consultation volume across medical departments',
+                icon: 'fas fa-stethoscope',
+                category: 'Clinical Specialties',
+                badgeClass: 'bg-purple',
+                type: 'doughnut',
+                unit: 'Specialists / Load',
+                isCurrency: false,
+                canvasId: 'departmentLoadChart',
+                getLabels: () => (deptLoadLabels.length ? deptLoadLabels : ['General Medicine', 'Cardiology', 'Oncology', 'Neurology', 'Orthopedics', 'Pediatrics']),
+                getData: () => (deptLoadCounts.length ? deptLoadCounts : [1, 1, 1, 1, 1, 1]),
+                colors: ['#6366f1', '#06b6d4', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#3b82f6', '#14b8a6'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const total = itemValues.reduce((a, b) => a + Number(b || 0), 0);
+                    const maxVal = Math.max(...itemValues, 0);
+                    const maxIdx = itemValues.indexOf(maxVal);
+                    const share = total > 0 ? ((maxVal / total) * 100).toFixed(1) : '0';
+                    return [
+                        `Total clinical staffing and intake capacity spans ${total} active medical specialty allocations across ${itemLabels.length} departments.`,
+                        `Department "${itemLabels[maxIdx]}" carries the largest clinical volume at ${share}% (${maxVal} specialist allocations).`,
+                        `Clinical recommendation: Maintain cross-department triage coordination to balance cardiology and emergency oncology workflows.`
+                    ];
+                }
+            },
+            appointment_status: {
+                id: 'appointment_status',
+                title: 'Consultation Lifecycle & Patient Throughput',
+                subtitle: 'Triage, confirmation, completion, and cancellation breakdown',
+                icon: 'fas fa-tasks',
+                category: 'Operations',
+                badgeClass: 'bg-teal',
+                type: 'bar',
+                unit: 'Appointments',
+                isCurrency: false,
+                canvasId: 'appointmentStatusChart',
+                getLabels: () => (apptStatusLabels.length ? apptStatusLabels : ['Completed', 'Confirmed', 'Pending Triage', 'Cancelled']),
+                getData: () => (apptStatusCounts.length ? apptStatusCounts : [0, 0, 0, 0]),
+                colors: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const total = itemValues.reduce((a, b) => a + Number(b || 0), 0);
+                    const completed = Number(itemValues[0] || 0);
+                    const cancelled = Number(itemValues[3] || 0);
+                    const compRate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0';
+                    const cancelRate = total > 0 ? ((cancelled / total) * 100).toFixed(1) : '0';
+                    return [
+                        `Consultation lifecycle telemetry tracks ${total} total patient bookings in the current cycle.`,
+                        `Successful completion rate is ${compRate}% (${completed} appointments resolved).`,
+                        `Cancellation rate is ${cancelRate}% (${cancelled} cancellations recorded). Standard healthcare benchmark targets under 8%.`
+                    ];
+                }
+            },
+            pharmacy_category: {
+                id: 'pharmacy_category',
+                title: 'Pharmacy Formulary Distribution',
+                subtitle: 'Pharmaceutical inventory and stock variety categorized by therapeutic indication',
+                icon: 'fas fa-pills',
+                category: 'Formulary & Dispensary',
+                badgeClass: 'bg-warning',
+                type: 'bar',
+                unit: 'Medications',
+                isCurrency: false,
+                canvasId: 'pharmacyCategoryChart',
+                getLabels: () => (pharmacyCatLabels.length ? pharmacyCatLabels : ['Cardiology', 'Oncology', 'Antibiotics', 'Diabetes', 'Analgesics', 'Respiratory']),
+                getData: () => (pharmacyCatCounts.length ? pharmacyCatCounts : [0, 0, 0, 0, 0, 0]),
+                colors: ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#14b8a6'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const total = itemValues.reduce((a, b) => a + Number(b || 0), 0);
+                    const maxVal = Math.max(...itemValues, 0);
+                    const maxIdx = itemValues.indexOf(maxVal);
+                    return [
+                        `Dispensary formulary indexes ${total} distinct pharmaceutical formulations across ${itemLabels.length} therapeutic classes.`,
+                        `Dominant category is "${itemLabels[maxIdx]}" with ${maxVal} indexed medications.`,
+                        `Supply chain protocol: Ensure critical oncology and antibiotic buffer stocks remain above the 20-unit reorder threshold.`
+                    ];
+                }
+            },
+            cybersecurity_threats: {
+                id: 'cybersecurity_threats',
+                title: 'Cybersecurity & Threat Defense Telemetry',
+                subtitle: 'Live security event distribution, blocked attack vectors, and session audit metrics',
+                icon: 'fas fa-shield-alt',
+                category: 'Security Telemetry',
+                badgeClass: 'bg-danger',
+                type: 'bar',
+                unit: 'Events / Records',
+                isCurrency: false,
+                canvasId: 'cybersecurityThreatChart',
+                getLabels: () => (threatEventLabels.length ? threatEventLabels : ['Failed Logins', 'Blocked Attacks', 'Blacklisted IPs', 'Incident Audits', 'Active Sessions']),
+                getData: () => (threatEventCounts.length ? threatEventCounts : [0, 0, 0, 0, 1]),
+                colors: ['#ef4444', '#f97316', '#dc2626', '#eab308', '#3b82f6'],
+                insightGenerator: (itemLabels, itemValues) => {
+                    const failedLogins = Number(itemValues[0] || 0);
+                    const blockedWaf = Number(itemValues[1] || 0);
+                    const blacklistedIps = Number(itemValues[2] || 0);
+                    const totalSecEvents = itemValues.slice(0, 4).reduce((a, b) => a + Number(b || 0), 0);
+                    return [
+                        `Total security perimeter defense events recorded in the current window: ${totalSecEvents}.`,
+                        `WAF automated edge shield intercepted ${blockedWaf} unauthorized penetration attempts and brute-force probes.`,
+                        `Active blacklisted IP address count stands at ${blacklistedIps}; zero breaches detected under ACTIVE_DEFENSE protocol.`
+                    ];
+                }
+            }
+        };
+
+        // Open Analysis Modal
+        window.openChartAnalysis = function(chartKey) {
+            const config = window.SPHERIX_CHARTS_REGISTRY[chartKey];
+            if (!config) return;
+
+            currentAnalysisChartKey = chartKey;
+            currentAnalysisConfig = config;
+            currentAnalysisTimeframe = 'all';
+            currentAnalysisChartType = config.type;
+
+            // Update Header Elements
+            const titleEl = document.getElementById('analysisModalTitle');
+            if (titleEl) titleEl.innerText = config.title;
+            const subtitleEl = document.getElementById('analysisModalSubtitle');
+            if (subtitleEl) subtitleEl.innerText = config.subtitle;
+            const badgeEl = document.getElementById('analysisModalBadge');
+            if (badgeEl) {
+                badgeEl.innerText = config.category;
+                badgeEl.className = `badge font-mono small ${config.badgeClass || 'bg-primary'} text-white`;
+            }
+            const iconEl = document.getElementById('analysisModalIcon');
+            if (iconEl) iconEl.className = `${config.icon || 'fas fa-chart-line'} text-white fs-5`;
+
+            // Reset Search Filter Input
+            const searchInput = document.getElementById('analysisTableSearch');
+            if (searchInput) searchInput.value = '';
+
+            // Reset Scope & Chart Type Buttons
+            updateScopeButtons();
+            updateChartTypeButtons();
+
+            // Render Chart & Data
+            renderAnalysisDataset();
+
+            // Open Modal via Bootstrap
+            const modalEl = document.getElementById('chartAnalysisModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        };
+
+        function getPreparedAnalysisData() {
+            if (!currentAnalysisConfig) return null;
+            let rawLabels = currentAnalysisConfig.getLabels();
+            let rawData = currentAnalysisConfig.getData();
+
+            // Pair into item objects
+            let items = rawLabels.map((lbl, idx) => ({
+                label: String(lbl),
+                value: Number(rawData[idx] || 0)
+            }));
+
+            // Handle Timeframe Filters
+            if (currentAnalysisTimeframe === 'top5') {
+                items = [...items].sort((a, b) => b.value - a.value).slice(0, 5);
+            } else if (currentAnalysisTimeframe === 'cumulative') {
+                let running = 0;
+                items = items.map(item => {
+                    running += item.value;
+                    return { label: item.label, value: running };
+                });
+            }
+
+            const total = items.reduce((acc, it) => acc + it.value, 0);
+            items = items.map((it, idx) => ({
+                ...it,
+                rank: idx + 1,
+                percent: total > 0 ? ((it.value / total) * 100).toFixed(1) : '0'
+            }));
+
+            return {
+                labels: items.map(i => i.label),
+                values: items.map(i => i.value),
+                items: items,
+                total: total
+            };
+        }
+
+        function formatMetricValue(val, isCurrency, unit) {
+            if (isCurrency) {
+                return '₹' + Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+            }
+            return Number(val).toLocaleString() + (unit ? ' ' + unit : '');
+        }
+
+        function renderAnalysisDataset() {
+            if (!currentAnalysisConfig) return;
+            const dataObj = getPreparedAnalysisData();
+            currentAnalysisData = dataObj;
+            if (!dataObj) return;
+
+            const { isCurrency, unit } = currentAnalysisConfig;
+            const values = dataObj.values;
+            const items = dataObj.items;
+
+            // 1. Update KPI Strip
+            const peakVal = values.length ? Math.max(...values) : 0;
+            const peakItem = items.find(i => i.value === peakVal);
+            const minVal = values.length ? Math.min(...values) : 0;
+            const minItem = items.find(i => i.value === minVal);
+            const sumVal = dataObj.total;
+            const meanVal = values.length ? (sumVal / values.length) : 0;
+
+            const kpiPeak = document.getElementById('analysisKpiPeak');
+            if (kpiPeak) kpiPeak.innerText = formatMetricValue(peakVal, isCurrency, unit);
+            const kpiPeakLabel = document.getElementById('analysisKpiPeakLabel');
+            if (kpiPeakLabel) kpiPeakLabel.innerText = peakItem ? peakItem.label : 'None';
+
+            const kpiMin = document.getElementById('analysisKpiMin');
+            if (kpiMin) kpiMin.innerText = formatMetricValue(minVal, isCurrency, unit);
+            const kpiMinLabel = document.getElementById('analysisKpiMinLabel');
+            if (kpiMinLabel) kpiMinLabel.innerText = minItem ? minItem.label : 'None';
+
+            const kpiMean = document.getElementById('analysisKpiMean');
+            if (kpiMean) kpiMean.innerText = formatMetricValue(meanVal, isCurrency, unit);
+
+            const kpiTotal = document.getElementById('analysisKpiTotal');
+            if (kpiTotal) kpiTotal.innerText = formatMetricValue(sumVal, isCurrency, unit);
+            const kpiTotalSub = document.getElementById('analysisKpiTotalSub');
+            if (kpiTotalSub) kpiTotalSub.innerText = `${items.length} Cohort Points Sampled`;
+
+            // 2. Render Algorithmic AI Insights
+            const insightsList = document.getElementById('analysisInsightsList');
+            if (insightsList && typeof currentAnalysisConfig.insightGenerator === 'function') {
+                const insights = currentAnalysisConfig.insightGenerator(dataObj.labels, dataObj.values);
+                insightsList.innerHTML = insights.map(txt => `
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="fas fa-check-circle text-success mt-1 small"></i>
+                        <span>${txt}</span>
+                    </li>
+                `).join('');
+            }
+
+            // 3. Render Itemized Data Table
+            renderAnalysisTable(items);
+
+            // 4. Render Chart Canvas
+            renderAnalysisChartCanvas(dataObj);
+        }
+
+        function renderAnalysisTable(items) {
+            const tbody = document.getElementById('analysisTableBody');
+            if (!tbody) return;
+            const { isCurrency, unit } = currentAnalysisConfig;
+
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No records match the current filter.</td></tr>';
+                return;
+            }
+
+            const maxVal = Math.max(...items.map(i => i.value), 1);
+
+            tbody.innerHTML = items.map((it, idx) => {
+                const pct = it.percent;
+                const barWidth = Math.max(4, Math.round((it.value / maxVal) * 100));
+                let tierBadge = '<span class="badge bg-secondary">Standard</span>';
+                if (parseFloat(pct) >= 30) {
+                    tierBadge = '<span class="badge bg-success">Major Cohort</span>';
+                } else if (parseFloat(pct) >= 15) {
+                    tierBadge = '<span class="badge bg-primary">Significant</span>';
+                } else if (parseFloat(pct) <= 5) {
+                    tierBadge = '<span class="badge bg-light text-muted border">Minor / Trace</span>';
+                }
+
+                return `
+                    <tr class="analysis-table-row">
+                        <td class="fw-bold text-muted">${idx + 1}</td>
+                        <td class="fw-semibold text-dark text-truncate" style="max-width: 220px;" title="${it.label}">${it.label}</td>
+                        <td class="fw-bold text-dark font-mono">${formatMetricValue(it.value, isCurrency, unit)}</td>
+                        <td class="text-muted"><span class="badge bg-light text-dark border">${pct}%</span></td>
+                        <td>
+                            <div class="progress" style="height: 6px; border-radius: 4px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: ${barWidth}%"></div>
+                            </div>
+                        </td>
+                        <td>${tierBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderAnalysisChartCanvas(dataObj) {
+            const canvas = document.getElementById('analysisModalCanvas');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            if (modalChartInstance) {
+                modalChartInstance.destroy();
+                modalChartInstance = null;
+            }
+
+            const ctx = canvas.getContext('2d');
+            const chartType = currentAnalysisChartType || currentAnalysisConfig.type || 'bar';
+            const { isCurrency, unit } = currentAnalysisConfig;
+
+            const palette = [
+                '#4361ee', '#10b981', '#f59e0b', '#ef4444', 
+                '#8b5cf6', '#0ea5e9', '#ec4899', '#14b8a6',
+                '#6366f1', '#84cc16', '#06b6d4', '#f97316'
+            ];
+
+            let bgColors = palette;
+            let borderColors = palette;
+            if (chartType === 'line') {
+                bgColors = 'rgba(67, 97, 238, 0.1)';
+                borderColors = '#4361ee';
+            } else if (chartType === 'bar') {
+                bgColors = dataObj.values.map((_, i) => palette[i % palette.length]);
+                borderColors = bgColors;
+            }
+
+            modalChartInstance = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: dataObj.labels,
+                    datasets: [{
+                        label: currentAnalysisConfig.title,
+                        data: dataObj.values,
+                        backgroundColor: bgColors,
+                        borderColor: borderColors,
+                        borderWidth: chartType === 'line' ? 2.5 : 1,
+                        borderRadius: chartType === 'bar' ? 6 : 0,
+                        fill: chartType === 'line',
+                        tension: 0.35,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#4361ee',
+                        pointRadius: chartType === 'line' ? 5 : 0,
+                        pointHoverRadius: chartType === 'line' ? 7 : 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 400 },
+                    plugins: {
+                        legend: {
+                            display: (chartType === 'doughnut' || chartType === 'pie'),
+                            position: 'right'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+                                    return ' ' + formatMetricValue(val, isCurrency, unit);
+                                }
+                            }
+                        }
+                    },
+                    scales: (chartType === 'doughnut' || chartType === 'pie') ? {} : {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [2, 4], color: '#f1f5f9' },
+                            ticks: {
+                                callback: function(val) {
+                                    return formatMetricValue(val, isCurrency, unit);
+                                }
+                            }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Scope Switcher
+        window.switchAnalysisTimeframe = function(mode) {
+            currentAnalysisTimeframe = mode;
+            updateScopeButtons();
+            renderAnalysisDataset();
+        };
+
+        function updateScopeButtons() {
+            ['all', 'top5', 'cumulative'].forEach(mode => {
+                const btn = document.getElementById('scopeBtn' + mode.charAt(0).toUpperCase() + mode.slice(1));
+                if (btn) {
+                    if (currentAnalysisTimeframe === mode) {
+                        btn.className = 'btn btn-xs text-white px-2.5 py-1 btn-primary fw-bold';
+                    } else {
+                        btn.className = 'btn btn-xs text-white px-2.5 py-1';
+                    }
+                }
+            });
+        }
+
+        // Chart Type Switcher
+        window.switchAnalysisChartType = function(type) {
+            currentAnalysisChartType = type;
+            updateChartTypeButtons();
+            if (currentAnalysisData) {
+                renderAnalysisChartCanvas(currentAnalysisData);
+            }
+        };
+
+        function updateChartTypeButtons() {
+            const types = { 'bar': 'chartTypeBtnBar', 'line': 'chartTypeBtnLine', 'doughnut': 'chartTypeBtnPie' };
+            Object.keys(types).forEach(t => {
+                const btn = document.getElementById(types[t]);
+                if (btn) {
+                    if (currentAnalysisChartType === t) {
+                        btn.classList.add('btn-primary');
+                    } else {
+                        btn.classList.remove('btn-primary');
+                    }
+                }
+            });
+        }
+
+        // Fullscreen Toggle
+        window.toggleModalFullscreen = function() {
+            const modalDialog = document.getElementById('chartAnalysisModalDialog');
+            const btn = document.getElementById('analysisFullscreenBtn');
+            if (!modalDialog || !btn) return;
+            const isFullscreen = modalDialog.classList.toggle('modal-fullscreen');
+            if (isFullscreen) {
+                btn.innerHTML = '<i class="fas fa-compress"></i>';
+                btn.title = 'Exit Fullscreen';
+            } else {
+                btn.innerHTML = '<i class="fas fa-expand"></i>';
+                btn.title = 'Enter Fullscreen';
+            }
+            setTimeout(() => {
+                if (modalChartInstance) {
+                    modalChartInstance.resize();
+                }
+            }, 150);
+        };
+
+        // Export PNG
+        window.exportAnalysisChartPNG = function() {
+            const canvas = document.getElementById('analysisModalCanvas');
+            if (!canvas) return;
+            const dataUrl = canvas.toDataURL('image/png', 1.0);
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `${(currentAnalysisChartKey || 'analytics')}_telemetry_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            if (typeof showAdminToast === 'function') {
+                showAdminToast('High-resolution chart image exported as PNG.', 'success');
+            }
+        };
+
+        // Export CSV
+        window.exportAnalysisChartCSV = function() {
+            if (!currentAnalysisData || !currentAnalysisData.items) return;
+            const { unit, isCurrency } = currentAnalysisConfig || {};
+            let csv = `"Rank","Cohort / Entity","Metric Value","Unit","Percentage Share"\n`;
+            currentAnalysisData.items.forEach((item, idx) => {
+                const safeLabel = `"${String(item.label).replace(/"/g, '""')}"`;
+                const val = item.value;
+                const u = isCurrency ? 'INR (₹)' : (unit || 'Count');
+                const pct = item.percent + '%';
+                csv += `${idx + 1},${safeLabel},${val},"${u}","${pct}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(currentAnalysisChartKey || 'analytics')}_dataset_${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            if (typeof showAdminToast === 'function') {
+                showAdminToast('Dataset exported as CSV successfully.', 'success');
+            }
+        };
+
+        // Search in Data Table
+        window.filterAnalysisTable = function() {
+            const searchInput = document.getElementById('analysisTableSearch');
+            const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const rows = document.querySelectorAll('#analysisTableBody tr.analysis-table-row');
+            rows.forEach(r => {
+                const text = r.innerText.toLowerCase();
+                r.style.display = text.includes(q) ? '' : 'none';
+            });
+        };
 
         // ================= PHARMACY & INVENTORY HELPERS =================
         window.previewMedicineImage = function(input, imgId, iconId) {
