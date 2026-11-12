@@ -45,6 +45,7 @@ from spherix.services.database import (
     sync_data_to_sql, load_data_from_sql, create_notification, get_temp_data_item,
     deduplicate_entities, setup_admin_user, setup_hospital_user,
     init_auth_telemetry, log_auth_activity, get_auth_telemetry_stats,
+    recalculate_live_auth_durations,
     reset_factory_database, get_hospital_types, get_hospital_type_by_id,
     add_hospital_type, update_hospital_type, toggle_hospital_type_status,
     delete_hospital_type, log_user_logout
@@ -121,6 +122,100 @@ def admin_portal():
         return redirect(url_for('admin.admin_dashboard'))
     return redirect(url_for('admin.admin_login'))
 
+
+
+def get_user_auth_telemetry_dataset():
+    """
+    Processes all auth logs to compute rich per-user metrics and itemized records:
+    - login tries (how many times user attempted login)
+    - forgot password tries (how many times user requested password reset)
+    - active session duration & state
+    - chronological audit trails per user
+    """
+    recalculate_live_auth_durations()
+    all_raw_logs = list(TEMP_DATA.get('auth_activity_logs', []))
+    
+    # 1. Aggregate per user
+    user_stats = {}
+    for log in all_raw_logs:
+        uid = str(log.get('user_id') or '').strip()
+        email = str(log.get('user_email') or '').strip().lower()
+        key = email if (email and email != 'n/a') else uid
+        if not key:
+            key = 'GUEST'
+            
+        if key not in user_stats:
+            user_stats[key] = {
+                'user_id': uid or key,
+                'name': log.get('user_name', 'User'),
+                'email': log.get('user_email', 'N/A'),
+                'role': log.get('role', 'User'),
+                'role_key': log.get('role_key', 'patient'),
+                'profile_picture_url': log.get('profile_picture_url'),
+                'total_logins': 0,
+                'total_logouts': 0,
+                'login_tries': 0,
+                'failed_login_tries': 0,
+                'forgot_password_tries': 0,
+                'password_changes': 0,
+                'is_active': False,
+                'active_session_id': None,
+                'active_duration': 'Offline',
+                'last_event_time': log.get('created_at') or log.get('login_time') or '—',
+                'last_ip': log.get('ip_address', '127.0.0.1'),
+                'last_location': log.get('location', 'Internal Network'),
+                'last_device': log.get('device', 'Web Browser'),
+                'events': []
+            }
+            
+        u = user_stats[key]
+        u['events'].append(dict(log))
+        
+        action = str(log.get('action', '')).lower()
+        status = str(log.get('status', ''))
+        
+        # Count login attempts & successes
+        if 'login' in action:
+            u['login_tries'] += 1
+            if 'failed' in action or status == 'Failed':
+                u['failed_login_tries'] += 1
+            else:
+                u['total_logins'] += 1
+        elif 'logout' in action:
+            u['total_logouts'] += 1
+            
+        # Count forgot password & reset attempts
+        if 'forgot' in action or 'otp' in action or 'reset request' in action:
+            u['forgot_password_tries'] += 1
+            
+        # Count password resets / changes
+        if 'password reset' in action or 'password change' in action:
+            u['password_changes'] += 1
+            
+        # Check active session
+        if status == 'Active':
+            u['is_active'] = True
+            u['active_session_id'] = log.get('id')
+            u['active_duration'] = log.get('duration', 'Active Now')
+
+    # 2. Enrich individual logs with pre-calculated user metric counters
+    enriched_logs = []
+    for log in all_raw_logs:
+        uid = str(log.get('user_id') or '').strip()
+        email = str(log.get('user_email') or '').strip().lower()
+        key = email if (email and email != 'n/a') else uid
+        stats = user_stats.get(key, {})
+        
+        enriched = dict(log)
+        enriched['user_login_tries'] = stats.get('login_tries', 1)
+        enriched['user_failed_login_tries'] = stats.get('failed_login_tries', 0)
+        enriched['user_forgot_password_tries'] = stats.get('forgot_password_tries', 0)
+        enriched['user_password_changes'] = stats.get('password_changes', 0)
+        enriched['user_is_active'] = stats.get('is_active', False)
+        enriched['user_active_duration'] = stats.get('active_duration', log.get('duration', '—'))
+        enriched_logs.append(enriched)
+        
+    return enriched_logs[:300], user_stats
 
 
 @admin_bp.route('/admin/dashboard')
@@ -386,6 +481,9 @@ def admin_dashboard():
         sec_telemetry.get('total_active_sessions', 1)
     ]
 
+    # 5. User Authentication & Login Telemetry Monitor
+    enriched_auth_logs, user_auth_summaries = get_user_auth_telemetry_dataset()
+
     return render_template('admin_dashboard.html', 
                            suspended_accounts=suspended_accounts,
                            dept_load_labels=dept_load_labels,
@@ -471,7 +569,8 @@ def admin_dashboard():
                            jobs=list(reversed(sorted(TEMP_DATA.get('jobs', {}).values(), key=lambda j: getattr(j, 'id', 0)))),
                            job_applications=list(reversed(sorted(TEMP_DATA.get('job_applications', {}).values(), key=lambda a: getattr(a, 'id', 0)))),
                            auth_stats=get_auth_telemetry_stats(),
-                           auth_logs=list(TEMP_DATA.get('auth_activity_logs', []))[-50:],
+                           auth_logs=enriched_auth_logs,
+                           user_auth_summaries=user_auth_summaries,
                            security_telemetry=get_security_command_center_telemetry())
 
 
@@ -479,6 +578,10 @@ def admin_dashboard():
 @admin_required
 def admin_terminate_auth_session():
     session_id = request.form.get('session_id')
+    if not session_id and request.is_json:
+        session_id = request.json.get('session_id')
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json
+
     session_terminated = False
     for log in TEMP_DATA.get('auth_activity_logs', []):
         if log.get('id') == session_id:
@@ -490,10 +593,38 @@ def admin_terminate_auth_session():
             break
     if session_terminated:
         save_data()
+        if is_ajax:
+            return jsonify({'success': True, 'message': 'Session terminated successfully.'})
         flash('The selected session was terminated. Its next request will require a new login.', 'success')
     else:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Session not found or already ended.'}), 404
         flash('The selected session no longer exists or has already ended.', 'error')
     return redirect(url_for('admin.admin_dashboard', tab='auth_telemetry'))
+
+
+@admin_bp.route('/api/admin/auth-user/<path:user_ref>')
+@admin_required
+def api_admin_auth_user_details(user_ref):
+    """Returns real-time auth and security telemetry for a specific user ID or email."""
+    _, user_summaries = get_user_auth_telemetry_dataset()
+    ref_clean = str(user_ref).strip()
+    ref_lower = ref_clean.lower()
+    
+    summary = user_summaries.get(ref_lower) or user_summaries.get(ref_clean)
+    if not summary:
+        for k, v in user_summaries.items():
+            if str(v.get('user_id')) == ref_clean or str(v.get('email', '')).lower() == ref_lower:
+                summary = v
+                break
+                
+    if not summary:
+        return jsonify({'success': False, 'error': f"User '{user_ref}' not found in telemetry store"}), 404
+        
+    return jsonify({
+        'success': True,
+        'user': summary
+    })
 
 
 

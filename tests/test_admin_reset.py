@@ -7,8 +7,12 @@ def test_admin_database_reset_multi_step_flow(client, app):
     # Setup admin user in TEMP_DATA
     admin_doc = next((d for d in TEMP_DATA.get('doctors', {}).values() if getattr(d, 'email', '').lower() == 'admin@spherixclinic.com'), None)
     if not admin_doc:
+        admin_doc = next((p for p in TEMP_DATA.get('patients', {}).values() if getattr(p, 'email', '').lower() == 'admin@spherixclinic.com'), None)
+    if not admin_doc:
         setup_admin_user()
         admin_doc = next((d for d in TEMP_DATA.get('doctors', {}).values() if getattr(d, 'email', '').lower() == 'admin@spherixclinic.com'), None)
+        if not admin_doc:
+            admin_doc = next((p for p in TEMP_DATA.get('patients', {}).values() if getattr(p, 'email', '').lower() == 'admin@spherixclinic.com'), None)
     
     admin_doc.password = generate_password_hash('AdminSecretPass!123')
 
@@ -17,8 +21,10 @@ def test_admin_database_reset_multi_step_flow(client, app):
     assert res.status_code == 302 or res.status_code == 401
 
     # Login as Admin
+    user_sess_id = f"doctor-{admin_doc.id}" if hasattr(admin_doc, 'first_name') else str(admin_doc.id)
     with client.session_transaction() as sess:
-        sess['_user_id'] = f"doctor-{admin_doc.id}"
+        sess['_user_id'] = user_sess_id
+        sess['is_admin'] = True
 
     # 2. Step 1: Wrong password -> 401
     res = client.post('/admin/system/reset/request-otp', json={'password': 'WrongPassword!'})

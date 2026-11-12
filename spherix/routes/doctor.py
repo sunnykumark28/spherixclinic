@@ -450,6 +450,19 @@ def doctor_dashboard():
 
             doctor.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
             save_data()
+            try:
+                from spherix.services.database import log_auth_activity
+                log_auth_activity(
+                    user_id=doctor.id,
+                    user_name=getattr(doctor, 'name', '') or doctor.email,
+                    user_email=doctor.email,
+                    role='Doctor',
+                    action='Password Change',
+                    status='Success',
+                    details='Clinician updated account password from settings console'
+                )
+            except Exception:
+                pass
             flash('Password changed successfully!', 'success')
             return redirect(url_for('doctor_dashboard', tab='settings'))
 

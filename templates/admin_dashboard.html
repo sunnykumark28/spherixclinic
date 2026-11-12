@@ -595,6 +595,53 @@
             height: 100vh !important;
             border-radius: 0 !important;
         }
+
+        /* Horizontal Scroll & Sticky Columns for Auth & Login Monitor */
+        .auth-table-wrapper {
+            position: relative;
+        }
+        .auth-table-scroll-container {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .auth-table-scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        .auth-table-scroll-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .auth-table-scroll-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .auth-table-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .auth-log-row {
+            transition: background-color 0.15s ease;
+            cursor: pointer;
+        }
+        .auth-log-row:hover {
+            background-color: #f8fafc !important;
+        }
+        .auth-sticky-col {
+            position: sticky;
+            left: 0;
+            background: #ffffff;
+            z-index: 2;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.03);
+        }
+        .auth-log-row:hover .auth-sticky-col {
+            background: #f8fafc !important;
+        }
+        #userAuthDrawer {
+            width: 700px !important;
+            max-width: 95vw !important;
+            z-index: 1085 !important;
+            background-color: #f8fafc !important;
+            box-shadow: -15px 0 45px rgba(15, 23, 42, 0.25) !important;
+        }
     </style>
 {% endblock %}
 
@@ -6112,192 +6159,260 @@
                     <button type="button" class="btn btn-xs btn-outline-primary rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Login', this)">🔑 Logins</button>
                     <button type="button" class="btn btn-xs btn-outline-secondary rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Logout', this)">🚪 Logouts</button>
                     <button type="button" class="btn btn-xs btn-outline-warning rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Failed Login', this)">⚠️ Failed Logins</button>
-                    <button type="button" class="btn btn-xs btn-outline-danger rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Suspicious Attempt', this)">🚨 Suspicious</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Password Change', this)">🔒 Password Changes</button>
+                    <button type="button" class="btn btn-xs btn-outline-info rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Forgot Password', this)">📧 Forgot Password Tries</button>
                     <button type="button" class="btn btn-xs btn-outline-secondary rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Password Reset', this)">🔄 Password Resets</button>
+                    <button type="button" class="btn btn-xs btn-outline-danger rounded-3 px-2.5 py-1 auth-action-btn fw-semibold shadow-2xs" onclick="filterAuthLogsByAction('Suspicious', this)">🚨 Suspicious / Blocked</button>
                 </div>
 
-                <!-- Logs Table -->
-                <div class="table-responsive border rounded-3 overflow-hidden shadow-2xs">
-                    <table class="table table-hover align-middle mb-0" id="authTelemetryTable" style="font-size: 0.84rem;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>User Profile &amp; Role</th>
-                                <th>Event Action</th>
-                                <th>Login Time</th>
-                                <th>Logout Time</th>
-                                <th>Session Duration</th>
-                                <th>IP Address &amp; Location</th>
-                                <th>Device / Client</th>
-                                <th class="text-end">Session Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="authLogsTableBody">
-                            {% if auth_logs and auth_logs|length > 0 %}
-                                {% for log in auth_logs %}
-                                <tr class="auth-log-row" 
-                                    data-role="{{ log.role_key }}" 
-                                    data-action="{{ log.action }}" 
-                                    data-status="{{ log.status }}"
-                                    data-search="{{ log.user_name }} {{ log.user_email }} {{ log.role }} {{ log.ip_address }} {{ log.location }} {{ log.action }} {{ log.duration }}">
-                                    <!-- User & Role -->
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2.5 cursor-pointer user-telemetry-item" 
-                                             onclick="showEntityDetails('{{ log.role_key }}', '{{ log.user_id }}')" 
-                                             title="Click to view full database profile for {{ log.user_name }}"
-                                             style="cursor: pointer;">
-                                            {% set role_class = log.role_key if log.role_key in ['doctor', 'staff', 'blood_donor', 'patient', 'hospital'] else 'default' %}
+                <!-- Logs Table with Horizontal Scroll Streaming & Sticky Identity Column -->
+                <div class="auth-table-wrapper">
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-1 text-muted" style="font-size: 0.76rem;">
+                        <span class="d-inline-flex align-items-center gap-1.5 text-primary fw-semibold">
+                            <i class="fas fa-arrows-left-right"></i> Horizontal Telemetry Stream &bull; Scroll left to right to inspect complete user security details
+                        </span>
+                        <span class="text-muted"><i class="fas fa-hand-pointer text-primary me-1"></i>Click any user row to open deep-dive telemetry sidebar</span>
+                    </div>
 
-                                            {% if log.profile_picture_url %}
-                                                {% if log.profile_picture_url.startswith('http://') or log.profile_picture_url.startswith('https://') %}
-                                                    <img src="{{ log.profile_picture_url }}" class="rounded-circle border shadow-2xs flex-shrink-0" style="width: 36px; height: 36px; object-fit: cover;" alt="{{ log.user_name }}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none'); this.nextElementSibling.classList.add('d-flex');">
-                                                {% elif log.profile_picture_url.startswith('images/') or log.profile_picture_url.startswith('uploads/') %}
-                                                    <img src="{{ url_for('static', filename=log.profile_picture_url) }}" class="rounded-circle border shadow-2xs flex-shrink-0" style="width: 36px; height: 36px; object-fit: cover;" alt="{{ log.user_name }}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none'); this.nextElementSibling.classList.add('d-flex');">
+                    <div class="table-responsive border rounded-3 shadow-2xs auth-table-scroll-container" style="overflow-x: auto; max-width: 100%;">
+                        <table class="table table-hover align-middle mb-0" id="authTelemetryTable" style="font-size: 0.84rem; min-width: 1480px;">
+                            <thead class="table-light text-nowrap">
+                                <tr>
+                                    <th class="auth-sticky-col" style="min-width: 250px;">User Profile &amp; Role</th>
+                                    <th style="min-width: 170px;">Event Action</th>
+                                    <th style="min-width: 110px;">Status</th>
+                                    <th style="min-width: 130px;">Login Tries</th>
+                                    <th style="min-width: 140px;">Forgot Pwd Tries</th>
+                                    <th style="min-width: 160px;">Session Active Duration</th>
+                                    <th style="min-width: 150px;">Event Timestamp</th>
+                                    <th style="min-width: 150px;">Logout Time</th>
+                                    <th style="min-width: 170px;">IP Address &amp; Location</th>
+                                    <th style="min-width: 160px;">Device / Client</th>
+                                    <th style="min-width: 140px;" class="text-end">Security Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="authLogsTableBody">
+                                {% if auth_logs and auth_logs|length > 0 %}
+                                    {% for log in auth_logs %}
+                                    <tr class="auth-log-row" 
+                                        data-role="{{ log.role_key }}" 
+                                        data-action="{{ log.action }}" 
+                                        data-status="{{ log.status }}"
+                                        data-user-key="{{ log.user_email or log.user_id }}"
+                                        data-search="{{ log.user_name }} {{ log.user_email }} {{ log.role }} {{ log.ip_address }} {{ log.location }} {{ log.action }} {{ log.duration }}"
+                                        onclick="openUserAuthDrawer('{{ log.user_email or log.user_id }}')"
+                                        title="Click to open comprehensive security sidebar for {{ log.user_name }}">
+                                        
+                                        <!-- 1. Sticky User Profile & Role -->
+                                        <td class="auth-sticky-col">
+                                            <div class="d-flex align-items-center gap-2.5">
+                                                {% set role_class = log.role_key if log.role_key in ['doctor', 'staff', 'blood_donor', 'patient', 'hospital'] else 'default' %}
+
+                                                {% if log.profile_picture_url %}
+                                                    {% if log.profile_picture_url.startswith('http://') or log.profile_picture_url.startswith('https://') %}
+                                                        <img src="{{ log.profile_picture_url }}" class="rounded-circle border shadow-2xs flex-shrink-0" style="width: 36px; height: 36px; object-fit: cover;" alt="{{ log.user_name }}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none'); this.nextElementSibling.classList.add('d-flex');">
+                                                    {% elif log.profile_picture_url.startswith('images/') or log.profile_picture_url.startswith('uploads/') %}
+                                                        <img src="{{ url_for('static', filename=log.profile_picture_url) }}" class="rounded-circle border shadow-2xs flex-shrink-0" style="width: 36px; height: 36px; object-fit: cover;" alt="{{ log.user_name }}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none'); this.nextElementSibling.classList.add('d-flex');">
+                                                    {% else %}
+                                                        <img src="{{ url_for('static', filename='uploads/' ~ log.profile_picture_url) }}" class="rounded-circle border shadow-2xs flex-shrink-0" style="width: 36px; height: 36px; object-fit: cover;" alt="{{ log.user_name }}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none'); this.nextElementSibling.classList.add('d-flex');">
+                                                    {% endif %}
+                                                    <div class="rounded-circle d-none align-items-center justify-content-center text-white fw-bold shadow-2xs role-avatar-{{ role_class }} flex-shrink-0" 
+                                                         style="width: 36px; height: 36px; font-size: 0.8rem;">
+                                                        {{ log.user_name[:2]|upper }}
+                                                    </div>
                                                 {% else %}
-                                                    <img src="{{ url_for('static', filename='uploads/' ~ log.profile_picture_url) }}" class="rounded-circle border shadow-2xs flex-shrink-0" style="width: 36px; height: 36px; object-fit: cover;" alt="{{ log.user_name }}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none'); this.nextElementSibling.classList.add('d-flex');">
+                                                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-2xs role-avatar-{{ role_class }} flex-shrink-0" 
+                                                         style="width: 36px; height: 36px; font-size: 0.8rem;">
+                                                        {{ log.user_name[:2]|upper }}
+                                                    </div>
                                                 {% endif %}
-                                                <div class="rounded-circle d-none align-items-center justify-content-center text-white fw-bold shadow-2xs role-avatar-{{ role_class }} flex-shrink-0" 
-                                                     style="width: 36px; height: 36px; font-size: 0.8rem;">
-                                                    {{ log.user_name[:2]|upper }}
+                                                <div class="min-w-0" style="max-width: 180px;">
+                                                    <div class="fw-bold text-dark d-flex align-items-center gap-1.5 text-truncate">
+                                                        <span class="text-truncate">{{ log.user_name }}</span>
+                                                        <i class="fas fa-arrow-right-from-bracket text-primary opacity-75" style="font-size: 0.65rem;" title="Open sidebar"></i>
+                                                    </div>
+                                                    <div class="text-muted text-truncate" style="font-size: 0.72rem; word-break: break-all;">{{ log.user_email }}</div>
+                                                    <span class="badge mt-0.5 role-badge-{{ role_class }}" style="font-size: 0.65rem;">
+                                                        {{ log.role }}
+                                                    </span>
                                                 </div>
-                                            {% else %}
-                                                <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-2xs role-avatar-{{ role_class }} flex-shrink-0" 
-                                                     style="width: 36px; height: 36px; font-size: 0.8rem;">
-                                                    {{ log.user_name[:2]|upper }}
-                                                </div>
-                                            {% endif %}
-                                            <div class="min-w-0" style="max-width: 200px;">
-                                                <div class="fw-bold text-dark d-flex align-items-center gap-1.5 text-truncate hover-text-primary">
-                                                    <span class="text-truncate">{{ log.user_name }}</span>
-                                                    <i class="fas fa-external-link-alt text-muted" style="font-size: 0.65rem;" title="View database profile"></i>
-                                                </div>
-                                                <div class="text-muted text-truncate" style="font-size: 0.72rem; word-break: break-all;">{{ log.user_email }}</div>
-                                                <span class="badge mt-0.5 role-badge-{{ role_class }}" style="font-size: 0.65rem;">
-                                                    {{ log.role }}
+                                            </div>
+                                        </td>
+
+                                        <!-- 2. Event Action -->
+                                        <td>
+                                            {% if log.action == 'Active Session' or log.status == 'Active' %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill fw-bold text-nowrap">
+                                                    <i class="fas fa-circle text-success me-1" style="font-size: 0.5rem;"></i> Active Session
                                                 </span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- Event Action -->
-                                    <td>
-                                        {% if log.action == 'Active Session' or log.status == 'Active' %}
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill fw-bold text-nowrap">
-                                                <i class="fas fa-circle text-success me-1" style="font-size: 0.5rem;"></i> Active Session
-                                            </span>
-                                        {% elif log.action == 'Successful Login' %}
-                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill text-nowrap">
-                                                <i class="fas fa-sign-in-alt me-1"></i> Login
-                                            </span>
-                                        {% elif log.action == 'Normal Logout' %}
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill text-nowrap">
-                                                <i class="fas fa-sign-out-alt me-1"></i> Logout
-                                            </span>
-                                        {% elif 'Failed' in log.action or log.status == 'Failed' %}
-                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1 rounded-pill fw-bold text-nowrap">
-                                                <i class="fas fa-exclamation-triangle me-1"></i> Failed Login
-                                            </span>
-                                        {% elif 'Suspicious' in log.action or log.status == 'Blocked' %}
-                                            <span class="badge bg-danger text-white px-2.5 py-1 rounded-pill fw-bold text-nowrap">
-                                                <i class="fas fa-ban me-1"></i> Suspicious IP
-                                            </span>
-                                        {% elif 'Password Reset' in log.action %}
-                                            <span class="badge bg-secondary bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill text-nowrap">
-                                                <i class="fas fa-key me-1 text-primary"></i> Password Reset
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-light text-dark border text-nowrap">{{ log.action }}</span>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Login Time -->
-                                    <td class="text-nowrap">
-                                        <div class="fw-semibold text-dark font-mono" style="font-size: 0.78rem;">
-                                            <i class="far fa-clock text-muted me-1"></i>{{ log.login_time }}
-                                        </div>
-                                    </td>
-
-                                    <!-- Logout Time -->
-                                    <td class="text-nowrap">
-                                        {% if log.logout_time %}
-                                            <div class="text-muted font-mono" style="font-size: 0.78rem;">
-                                                <i class="fas fa-door-open text-muted me-1"></i>{{ log.logout_time }}
-                                            </div>
-                                        {% else %}
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 rounded-pill" style="font-size: 0.7rem;">
-                                                🟢 Connected (Online)
-                                            </span>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Duration -->
-                                    <td class="text-nowrap">
-                                        {% if 'Active Now' in log.duration %}
-                                            <span class="badge bg-success text-white px-2.5 py-1 rounded-pill font-monospace" style="font-size: 0.75rem;">
-                                                <i class="fas fa-stopwatch me-1"></i>{{ log.duration }}
-                                            </span>
-                                        {% elif log.duration == '—' %}
-                                            <span class="text-muted small">—</span>
-                                        {% else %}
-                                            <span class="badge bg-light text-dark border font-monospace px-2.5 py-1 rounded-pill" style="font-size: 0.75rem;">
-                                                <i class="far fa-hourglass me-1 text-secondary"></i>{{ log.duration }}
-                                            </span>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- IP & Location -->
-                                    <td>
-                                        <div class="font-monospace text-dark fw-semibold text-nowrap" style="font-size: 0.75rem;">{{ log.ip_address }}</div>
-                                        <div class="text-muted small text-truncate" style="font-size: 0.7rem; max-width: 140px;">
-                                            <i class="fas fa-map-marker-alt text-danger me-1"></i>{{ log.location }}
-                                        </div>
-                                    </td>
-
-                                    <!-- Device / Client -->
-                                    <td>
-                                        <div class="small text-muted text-truncate" style="font-size: 0.75rem; max-width: 160px;">
-                                            {% if 'Mac' in log.device or 'Safari' in log.device or 'iPhone' in log.device %}
-                                                <i class="fab fa-apple me-1 text-dark"></i>
-                                            {% elif 'Windows' in log.device or 'Edge' in log.device %}
-                                                <i class="fab fa-windows me-1 text-primary"></i>
-                                            {% elif 'Android' in log.device %}
-                                                <i class="fab fa-android me-1 text-success"></i>
-                                            {% elif 'Linux' in log.device %}
-                                                <i class="fab fa-linux me-1 text-dark"></i>
+                                            {% elif log.action == 'Successful Login' or log.action == 'Login' %}
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill text-nowrap">
+                                                    <i class="fas fa-sign-in-alt me-1"></i> Successful Login
+                                                </span>
+                                            {% elif log.action == 'Normal Logout' or log.action == 'Logout' %}
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill text-nowrap">
+                                                    <i class="fas fa-sign-out-alt me-1"></i> Normal Logout
+                                                </span>
+                                            {% elif 'Password Change' in log.action %}
+                                                <span class="badge bg-purple-soft text-purple border px-2.5 py-1 rounded-pill fw-semibold text-nowrap">
+                                                    <i class="fas fa-lock me-1"></i> Password Change
+                                                </span>
+                                            {% elif 'Forgot Password' in log.action %}
+                                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1 rounded-pill fw-semibold text-nowrap">
+                                                    <i class="fas fa-envelope-open-text me-1"></i> Forgot Pwd OTP
+                                                </span>
+                                            {% elif 'Password Reset' in log.action %}
+                                                <span class="badge bg-secondary bg-opacity-10 text-dark border px-2.5 py-1 rounded-pill text-nowrap">
+                                                    <i class="fas fa-key me-1 text-primary"></i> Password Reset
+                                                </span>
+                                            {% elif 'Failed' in log.action or log.status == 'Failed' %}
+                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1 rounded-pill fw-bold text-nowrap">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> Failed Login
+                                                </span>
+                                            {% elif 'Suspicious' in log.action or log.status == 'Blocked' %}
+                                                <span class="badge bg-danger text-white px-2.5 py-1 rounded-pill fw-bold text-nowrap">
+                                                    <i class="fas fa-ban me-1"></i> Suspicious IP
+                                                </span>
                                             {% else %}
-                                                <i class="fas fa-laptop me-1 text-secondary"></i>
+                                                <span class="badge bg-light text-dark border text-nowrap">{{ log.action }}</span>
                                             {% endif %}
-                                            <span>{{ log.device }}</span>
-                                        </div>
-                                    </td>
+                                        </td>
 
-                                    <!-- Actions -->
-                                    <td class="text-end text-nowrap">
-                                        {% if log.status == 'Active' %}
-                                            <form action="{{ url_for('admin.admin_terminate_auth_session') }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to terminate this active user session immediately?');">
-                                                <input type="hidden" name="session_id" value="{{ log.id }}">
-                                                <button type="submit" class="btn btn-xs btn-outline-danger rounded-3 px-3 py-1 shadow-2xs fw-semibold" title="Force Terminate Session">
-                                                    <i class="fas fa-power-off me-1"></i>Terminate
+                                        <!-- 3. Status -->
+                                        <td>
+                                            {% if log.status == 'Active' %}
+                                                <span class="badge bg-success text-white px-2 py-1 rounded-pill fw-semibold">
+                                                    <i class="fas fa-circle-dot me-1"></i>Active
+                                                </span>
+                                            {% elif log.status == 'Completed' or log.status == 'Success' %}
+                                                <span class="badge bg-light text-dark border px-2 py-1 rounded-pill">
+                                                    <i class="fas fa-check text-success me-1"></i>Success
+                                                </span>
+                                            {% elif log.status == 'Failed' %}
+                                                <span class="badge bg-warning text-dark px-2 py-1 rounded-pill fw-bold">
+                                                    <i class="fas fa-times me-1"></i>Failed
+                                                </span>
+                                            {% elif log.status == 'Blocked' or log.status == 'Terminated' %}
+                                                <span class="badge bg-danger text-white px-2 py-1 rounded-pill fw-bold">
+                                                    <i class="fas fa-ban me-1"></i>{{ log.status }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill">{{ log.status }}</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- 4. Login Tries -->
+                                        <td>
+                                            {% if log.user_failed_login_tries and log.user_failed_login_tries > 0 %}
+                                                <span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25 px-2 py-1 rounded-pill fw-bold">
+                                                    <i class="fas fa-rotate-left me-1"></i>{{ log.user_failed_login_tries }} Failed / {{ log.user_login_tries }} Tries
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-light text-dark border px-2 py-1 rounded-pill">
+                                                    <i class="fas fa-check text-success me-1"></i>{{ log.user_login_tries or 1 }} Attempt
+                                                </span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- 5. Forgot Password Tries -->
+                                        <td>
+                                            {% if log.user_forgot_password_tries and log.user_forgot_password_tries > 0 %}
+                                                <span class="badge bg-info bg-opacity-15 text-info border border-info border-opacity-25 px-2 py-1 rounded-pill fw-bold">
+                                                    <i class="fas fa-key me-1"></i>{{ log.user_forgot_password_tries }} Requests
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted small">0 Requests</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- 6. Active Session Duration -->
+                                        <td class="text-nowrap">
+                                            {% if 'Active Now' in log.duration %}
+                                                <span class="badge bg-success text-white px-2.5 py-1 rounded-pill font-monospace" style="font-size: 0.75rem;">
+                                                    <i class="fas fa-stopwatch me-1"></i>{{ log.duration }}
+                                                </span>
+                                            {% elif log.duration == '—' %}
+                                                <span class="text-muted small">—</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-dark border font-monospace px-2.5 py-1 rounded-pill" style="font-size: 0.75rem;">
+                                                    <i class="far fa-hourglass me-1 text-secondary"></i>{{ log.duration }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- 7. Login Time -->
+                                        <td class="text-nowrap">
+                                            <div class="fw-semibold text-dark font-mono" style="font-size: 0.78rem;">
+                                                <i class="far fa-clock text-muted me-1"></i>{{ log.login_time or log.created_at }}
+                                            </div>
+                                        </td>
+
+                                        <!-- 8. Logout Time -->
+                                        <td class="text-nowrap">
+                                            {% if log.logout_time %}
+                                                <div class="text-muted font-mono" style="font-size: 0.78rem;">
+                                                    <i class="fas fa-door-open text-muted me-1"></i>{{ log.logout_time }}
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-0.5 rounded-pill" style="font-size: 0.7rem;">
+                                                    🟢 Connected (Online)
+                                                </span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- 9. IP Address & Location -->
+                                        <td>
+                                            <div class="font-monospace text-dark fw-semibold text-nowrap" style="font-size: 0.75rem;">{{ log.ip_address }}</div>
+                                            <div class="text-muted small text-truncate" style="font-size: 0.7rem; max-width: 140px;">
+                                                <i class="fas fa-map-marker-alt text-danger me-1"></i>{{ log.location }}
+                                            </div>
+                                        </td>
+
+                                        <!-- 10. Device / Client -->
+                                        <td>
+                                            <div class="small text-muted text-truncate" style="font-size: 0.75rem; max-width: 160px;">
+                                                {% if 'Mac' in log.device or 'Safari' in log.device or 'iPhone' in log.device %}
+                                                    <i class="fab fa-apple me-1 text-dark"></i>
+                                                {% elif 'Windows' in log.device or 'Edge' in log.device %}
+                                                    <i class="fab fa-windows me-1 text-primary"></i>
+                                                {% elif 'Android' in log.device %}
+                                                    <i class="fab fa-android me-1 text-success"></i>
+                                                {% elif 'Linux' in log.device %}
+                                                    <i class="fab fa-linux me-1 text-dark"></i>
+                                                {% else %}
+                                                    <i class="fas fa-laptop me-1 text-secondary"></i>
+                                                {% endif %}
+                                                <span>{{ log.device }}</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- 11. Security Actions -->
+                                        <td class="text-end text-nowrap" onclick="event.stopPropagation()">
+                                            <button type="button" class="btn btn-xs btn-outline-primary rounded-3 px-2.5 py-1 shadow-2xs fw-semibold me-1" onclick="openUserAuthDrawer('{{ log.user_email or log.user_id }}')" title="Open User Telemetry Sidebar">
+                                                <i class="fas fa-sidebar me-1"></i>Sidebar
+                                            </button>
+                                            {% if log.status == 'Active' %}
+                                                <button type="button" class="btn btn-xs btn-outline-danger rounded-3 px-2.5 py-1 shadow-2xs fw-semibold" onclick="terminateSessionFromRow('{{ log.id }}')" title="Force Terminate Session">
+                                                    <i class="fas fa-power-off me-1"></i>Kill
                                                 </button>
-                                            </form>
-                                        {% else %}
-                                            <span class="text-muted" style="font-size: 0.75rem;"><i class="fas fa-check text-muted me-1"></i>Logged</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr id="noAuthLogsRow">
-                                    <td colspan="8" class="text-center py-5 text-muted">
-                                        <div class="w-12 h-12 mx-auto rounded-circle bg-light border d-flex align-items-center justify-content-center text-muted mb-2" style="width: 48px; height: 48px;">
-                                            <i class="fas fa-shield-alt fs-4 opacity-50"></i>
-                                        </div>
-                                        <div class="fw-bold text-dark mb-1">No Authentication Telemetry Logs Found</div>
-                                        <div class="small text-muted">No authentication events have been logged matching the current filter criteria.</div>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr id="noAuthLogsRow">
+                                        <td colspan="11" class="text-center py-5 text-muted">
+                                            <div class="w-12 h-12 mx-auto rounded-circle bg-light border d-flex align-items-center justify-content-center text-muted mb-2" style="width: 48px; height: 48px;">
+                                                <i class="fas fa-shield-alt fs-4 opacity-50"></i>
+                                            </div>
+                                            <div class="fw-bold text-dark mb-1">No Authentication Telemetry Logs Found</div>
+                                            <div class="small text-muted">No authentication events have been logged matching the current filter criteria.</div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 pt-2 text-muted" style="font-size: 0.78rem;">
@@ -7669,6 +7784,153 @@
     </div>
 </div>
 
+<!-- ================= OFFCANVAS: USER AUTH & SECURITY TELEMETRY SIDEBAR ================= -->
+<div class="offcanvas offcanvas-end shadow-2xl border-0" tabindex="-1" id="userAuthDrawer" aria-labelledby="userAuthDrawerLabel" style="width: 700px; max-width: 95vw; z-index: 1085; background-color: #f8fafc;">
+    <!-- Drawer Header with Gradient Accent -->
+    <div class="offcanvas-header p-4 text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+        <div class="d-flex align-items-center gap-3.5 position-relative z-1 w-100 pe-4">
+            <div class="position-relative flex-shrink-0">
+                <img id="userDrawerAvatar" src="" class="rounded-circle border border-2 border-white shadow-md" style="width: 64px; height: 64px; object-fit: cover; display: none;" alt="User Avatar">
+                <div id="userDrawerAvatarFallback" class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-md bg-primary" style="width: 64px; height: 64px; font-size: 1.4rem;">
+                    US
+                </div>
+                <span id="userDrawerOnlinePing" class="position-absolute bottom-0 end-0 p-1.5 bg-success border border-2 border-white rounded-circle shadow-xs" title="Connected Online"></span>
+            </div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h5 class="offcanvas-title fw-bold text-white m-0 text-truncate" id="userDrawerName">User Profile</h5>
+                    <span class="badge bg-primary text-white font-mono small py-0.5 px-2" id="userDrawerRoleBadge">Role</span>
+                    <span class="badge bg-white bg-opacity-20 text-white font-mono small py-0.5 px-2" id="userDrawerIdBadge">#ID</span>
+                </div>
+                <div class="text-slate-300 small text-truncate mb-1.5" id="userDrawerEmail">user@spherixclinic.com</div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 rounded-pill px-2.5 py-0.5 small fw-semibold" id="userDrawerStatusBadge">
+                        <i class="fas fa-circle text-success me-1" style="font-size: 0.5rem;"></i> Active Session
+                    </span>
+                    <span class="badge bg-white bg-opacity-10 text-slate-300 rounded-pill px-2.5 py-0.5 small font-mono" id="userDrawerSessionDuration">
+                        Duration: 0m
+                    </span>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-2" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="offcanvas-body p-4 overflow-y-auto">
+        <!-- 1. Six User Telemetry Metric KPI Cards -->
+        <div class="row g-2.5 mb-4">
+            <!-- Total Logins -->
+            <div class="col-4">
+                <div class="p-3 rounded-3 bg-white border border-slate-200 shadow-2xs text-center h-100">
+                    <div class="small text-muted fw-bold text-uppercase" style="font-size: 0.68rem;"><i class="fas fa-sign-in-alt text-primary me-1"></i>Logins</div>
+                    <div class="fs-4 fw-bold font-display text-dark my-1" id="kpiUserLogins">0</div>
+                    <div class="text-muted" style="font-size: 0.68rem;">Successful</div>
+                </div>
+            </div>
+            <!-- Logouts -->
+            <div class="col-4">
+                <div class="p-3 rounded-3 bg-white border border-slate-200 shadow-2xs text-center h-100">
+                    <div class="small text-muted fw-bold text-uppercase" style="font-size: 0.68rem;"><i class="fas fa-sign-out-alt text-secondary me-1"></i>Logouts</div>
+                    <div class="fs-4 fw-bold font-display text-dark my-1" id="kpiUserLogouts">0</div>
+                    <div class="text-muted" style="font-size: 0.68rem;">Sessions Closed</div>
+                </div>
+            </div>
+            <!-- Login Tries (Failed Attempts) -->
+            <div class="col-4">
+                <div class="p-3 rounded-3 bg-white border border-slate-200 shadow-2xs text-center h-100 border-start border-3 border-warning">
+                    <div class="small text-warning fw-bold text-uppercase" style="font-size: 0.68rem;"><i class="fas fa-exclamation-triangle me-1"></i>Login Tries</div>
+                    <div class="fs-4 fw-bold font-display text-warning my-1" id="kpiUserLoginTries">0</div>
+                    <div class="text-muted" id="kpiUserLoginTriesSub" style="font-size: 0.68rem;">0 Failed Attempts</div>
+                </div>
+            </div>
+            <!-- Forgot Password Requests -->
+            <div class="col-4">
+                <div class="p-3 rounded-3 bg-white border border-slate-200 shadow-2xs text-center h-100 border-start border-3 border-info">
+                    <div class="small text-info fw-bold text-uppercase" style="font-size: 0.68rem;"><i class="fas fa-key me-1"></i>Forgot Pwd</div>
+                    <div class="fs-4 fw-bold font-display text-dark my-1" id="kpiUserForgotPwd">0</div>
+                    <div class="text-muted" style="font-size: 0.68rem;">Reset OTP Requests</div>
+                </div>
+            </div>
+            <!-- Active Session Time -->
+            <div class="col-4">
+                <div class="p-3 rounded-3 bg-white border border-slate-200 shadow-2xs text-center h-100 border-start border-3 border-success">
+                    <div class="small text-success fw-bold text-uppercase" style="font-size: 0.68rem;"><i class="fas fa-stopwatch me-1"></i>Active Time</div>
+                    <div class="fs-6 fw-bold font-display text-success my-1 text-truncate" id="kpiUserActiveDuration">Offline</div>
+                    <div class="text-muted" style="font-size: 0.68rem;">Current Connection</div>
+                </div>
+            </div>
+            <!-- Password Resets / Changes -->
+            <div class="col-4">
+                <div class="p-3 rounded-3 bg-white border border-slate-200 shadow-2xs text-center h-100">
+                    <div class="small text-muted fw-bold text-uppercase" style="font-size: 0.68rem;"><i class="fas fa-shield-alt text-primary me-1"></i>Pwd Changes</div>
+                    <div class="fs-4 fw-bold font-display text-dark my-1" id="kpiUserPwdChanges">0</div>
+                    <div class="text-muted" style="font-size: 0.68rem;">Credentials Updated</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Current Connection & Network Telemetry Card -->
+        <div class="card border border-slate-200 shadow-2xs rounded-3 p-3.5 mb-4 bg-white">
+            <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
+                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                    <i class="fas fa-network-wired text-primary"></i>
+                    <span>Network &amp; Session Telemetry</span>
+                </h6>
+                <span class="badge bg-light text-dark font-mono small" id="userDrawerSessionToken">ID: AUTH-LIVE</span>
+            </div>
+            <div class="row g-2 small">
+                <div class="col-6">
+                    <span class="text-muted d-block small text-uppercase fw-bold" style="font-size: 0.7rem;">IP Address</span>
+                    <span class="font-mono fw-bold text-dark" id="userDrawerIp">127.0.0.1</span>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted d-block small text-uppercase fw-bold" style="font-size: 0.7rem;">Geolocation / Route</span>
+                    <span class="text-dark" id="userDrawerLocation">Internal Secure Subnet</span>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted d-block small text-uppercase fw-bold" style="font-size: 0.7rem;">Device &amp; Client</span>
+                    <span class="text-dark text-truncate d-block" id="userDrawerDevice">Web Browser</span>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted d-block small text-uppercase fw-bold" style="font-size: 0.7rem;">Last Activity Event</span>
+                    <span class="text-dark font-mono" id="userDrawerLastSeen">2026-11-12 18:00:00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Chronological User Audit Trail Timeline -->
+        <div class="card border border-slate-200 shadow-2xs rounded-3 p-3.5 mb-4 bg-white">
+            <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
+                <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                    <i class="fas fa-history text-secondary"></i>
+                    <span>Historical Security Audit Trail</span>
+                </h6>
+                <span class="badge bg-light text-muted" id="userDrawerEventCount">0 Events</span>
+            </div>
+            <div class="user-audit-timeline ps-2" id="userDrawerTimelineList" style="max-height: 280px; overflow-y: auto;">
+                <!-- Populated dynamically with all user events -->
+            </div>
+        </div>
+
+        <!-- 4. Quick Security Controls Strip -->
+        <div class="card border border-slate-200 shadow-2xs rounded-3 p-3 bg-white">
+            <div class="fw-bold text-dark small mb-2"><i class="fas fa-shield-halved text-danger me-1"></i>Administrative Security Controls</div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5" id="userDrawerKillSessionBtn" onclick="terminateDrawerSession()">
+                    <i class="fas fa-power-off"></i> Terminate Active Session
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5" onclick="copyUserDrawerSummary()">
+                    <i class="fas fa-copy"></i> Copy Security Report
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5" id="userDrawerViewProfileBtn" onclick="viewUserFullProfile()">
+                    <i class="fas fa-user-circle"></i> View Database Profile
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Entity Details Centered Modal Dialog -->
 <div class="modal fade" id="detailsDrawer" tabindex="-1" aria-labelledby="drawerHeading" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -8242,6 +8504,7 @@
         {% endfor %}
     {% endif %}
 ]</script>
+<script type="application/json" id="user-auth-summaries-json">{{ (user_auth_summaries or {}) | tojson | safe }}</script>
 <span id="earnings-dates-data" data-dates="{{ earnings_dates | tojson | safe }}" class="d-none"></span>
 <span id="earnings-values-data" data-values="{{ earnings_values | tojson | safe }}" class="d-none"></span>
 <span id="doctor-names-data" data-names="{{ doctor_names_labels | tojson | safe }}" class="d-none"></span>
@@ -11308,9 +11571,24 @@
         hideUniversalSearch();
     });
 
-    // ================= 12. AUTHENTICATION & SESSION TELEMETRY FILTER ENGINE =================
+    // ================= 12. AUTHENTICATION & SESSION TELEMETRY FILTER ENGINE & USER SIDEBAR =================
     let currentAuthRoleFilter = 'all';
     let currentAuthActionFilter = 'all';
+    let currentUserInDrawer = null;
+    let currentDrawerSessionId = null;
+
+    // Load precomputed user auth summaries
+    function getUserAuthSummaries() {
+        const el = document.getElementById('user-auth-summaries-json');
+        if (!el || !el.textContent) return {};
+        try {
+            return JSON.parse(el.textContent);
+        } catch (e) {
+            console.error("Error parsing user-auth-summaries-json", e);
+            return {};
+        }
+    }
+    window.USER_AUTH_SUMMARIES = getUserAuthSummaries();
 
     function filterAuthLogsByRole(role, element) {
         currentAuthRoleFilter = role;
@@ -11345,15 +11623,36 @@
         let visibleCount = 0;
 
         rows.forEach(row => {
-            const role = row.getAttribute('data-role') || '';
-            const action = row.getAttribute('data-action') || '';
-            const status = row.getAttribute('data-status') || '';
+            const role = (row.getAttribute('data-role') || '').toLowerCase();
+            const action = (row.getAttribute('data-action') || '').toLowerCase();
+            const status = (row.getAttribute('data-status') || '').toLowerCase();
             const searchData = (row.getAttribute('data-search') || '').toLowerCase();
 
-            let matchesRole = (currentAuthRoleFilter === 'all' || role === currentAuthRoleFilter);
-            let matchesAction = (currentAuthActionFilter === 'all' || 
-                                 action.toLowerCase().includes(currentAuthActionFilter.toLowerCase()) || 
-                                 status.toLowerCase().includes(currentAuthActionFilter.toLowerCase()));
+            let matchesRole = (currentAuthRoleFilter === 'all' || role === currentAuthRoleFilter.toLowerCase());
+            
+            let matchesAction = false;
+            if (currentAuthActionFilter === 'all') {
+                matchesAction = true;
+            } else if (currentAuthActionFilter === 'Active') {
+                matchesAction = (status === 'active' || action.includes('active'));
+            } else if (currentAuthActionFilter === 'Login') {
+                matchesAction = (action.includes('login') && !action.includes('failed'));
+            } else if (currentAuthActionFilter === 'Logout') {
+                matchesAction = action.includes('logout');
+            } else if (currentAuthActionFilter === 'Failed Login') {
+                matchesAction = (action.includes('failed') || status === 'failed');
+            } else if (currentAuthActionFilter === 'Password Change') {
+                matchesAction = (action.includes('password change') || action.includes('change'));
+            } else if (currentAuthActionFilter === 'Forgot Password') {
+                matchesAction = (action.includes('forgot') || action.includes('otp') || action.includes('recovery'));
+            } else if (currentAuthActionFilter === 'Password Reset') {
+                matchesAction = action.includes('password reset');
+            } else if (currentAuthActionFilter === 'Suspicious') {
+                matchesAction = (action.includes('suspicious') || status === 'blocked' || status === 'quarantined');
+            } else {
+                matchesAction = (action.includes(currentAuthActionFilter.toLowerCase()) || status.includes(currentAuthActionFilter.toLowerCase()));
+            }
+
             let matchesSearch = (!query || searchData.includes(query));
 
             if (matchesRole && matchesAction && matchesSearch) {
@@ -11368,10 +11667,309 @@
         if (countEl) countEl.innerText = visibleCount;
     }
 
+    // ================= 12B. DEEP-DIVE USER AUTH TELEMETRY SIDEBAR =================
+    window.openUserAuthDrawer = function(userKey) {
+        if (!userKey) return;
+        const cleanKey = String(userKey).trim();
+        const lowerKey = cleanKey.toLowerCase();
+        currentUserInDrawer = cleanKey;
+
+        // 1. Resolve user summary from precomputed store
+        const summaries = window.USER_AUTH_SUMMARIES || getUserAuthSummaries();
+        let user = summaries[lowerKey] || summaries[cleanKey];
+        if (!user) {
+            for (let k in summaries) {
+                if (summaries[k].user_id == cleanKey || (summaries[k].email && summaries[k].email.toLowerCase() == lowerKey)) {
+                    user = summaries[k];
+                    break;
+                }
+            }
+        }
+
+        // If not found, create a minimal initial object
+        if (!user) {
+            user = {
+                user_id: cleanKey,
+                name: cleanKey,
+                email: cleanKey.includes('@') ? cleanKey : 'N/A',
+                role: 'User',
+                role_key: 'patient',
+                total_logins: 1,
+                total_logouts: 0,
+                login_tries: 1,
+                failed_login_tries: 0,
+                forgot_password_tries: 0,
+                password_changes: 0,
+                is_active: false,
+                active_duration: 'Offline',
+                last_event_time: '—',
+                last_ip: '127.0.0.1',
+                last_location: 'Internal Secure Subnet',
+                last_device: 'Web Client',
+                events: []
+            };
+        }
+
+        populateUserAuthDrawer(user);
+
+        // Open offcanvas
+        const drawerEl = document.getElementById('userAuthDrawer');
+        if (drawerEl && typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+            bootstrap.Offcanvas.getOrCreateInstance(drawerEl).show();
+        }
+
+        // Background fetch for fresh live telemetry
+        fetch(`/api/admin/auth-user/${encodeURIComponent(cleanKey)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.user) {
+                    window.USER_AUTH_SUMMARIES[lowerKey] = data.user;
+                    populateUserAuthDrawer(data.user);
+                }
+            })
+            .catch(() => {});
+    };
+
+    function populateUserAuthDrawer(u) {
+        if (!u) return;
+        currentDrawerSessionId = u.active_session_id;
+
+        // Profile Avatar
+        const imgEl = document.getElementById('userDrawerAvatar');
+        const fallbackEl = document.getElementById('userDrawerAvatarFallback');
+        if (u.profile_picture_url) {
+            let picUrl = u.profile_picture_url;
+            if (!picUrl.startsWith('http://') && !picUrl.startsWith('https://')) {
+                picUrl = '/static/' + (picUrl.startsWith('/') ? picUrl.slice(1) : picUrl);
+            }
+            if (imgEl) {
+                imgEl.src = picUrl;
+                imgEl.style.display = 'block';
+                imgEl.onerror = function() {
+                    this.style.display = 'none';
+                    if (fallbackEl) fallbackEl.classList.remove('d-none');
+                };
+            }
+            if (fallbackEl) fallbackEl.classList.add('d-none');
+        } else {
+            if (imgEl) imgEl.style.display = 'none';
+            if (fallbackEl) {
+                fallbackEl.classList.remove('d-none');
+                fallbackEl.innerText = (u.name || 'US').slice(0, 2).toUpperCase();
+            }
+        }
+
+        // Header info
+        if (document.getElementById('userDrawerName')) document.getElementById('userDrawerName').innerText = u.name || 'User Profile';
+        if (document.getElementById('userDrawerEmail')) document.getElementById('userDrawerEmail').innerText = u.email || 'N/A';
+        if (document.getElementById('userDrawerRoleBadge')) document.getElementById('userDrawerRoleBadge').innerText = u.role || 'User';
+        if (document.getElementById('userDrawerIdBadge')) document.getElementById('userDrawerIdBadge').innerText = '#' + (u.user_id || 'ID');
+
+        // Status pill
+        const statusBadge = document.getElementById('userDrawerStatusBadge');
+        const durationBadge = document.getElementById('userDrawerSessionDuration');
+        const onlinePing = document.getElementById('userDrawerOnlinePing');
+        const killBtn = document.getElementById('userDrawerKillSessionBtn');
+
+        if (u.is_active) {
+            if (statusBadge) {
+                statusBadge.className = 'badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 rounded-pill px-2.5 py-0.5 small fw-semibold';
+                statusBadge.innerHTML = '<i class="fas fa-circle text-success me-1" style="font-size: 0.5rem;"></i> Active Session';
+            }
+            if (durationBadge) {
+                durationBadge.innerText = u.active_duration || 'Active Now';
+            }
+            if (onlinePing) onlinePing.className = 'position-absolute bottom-0 end-0 p-1.5 bg-success border border-2 border-white rounded-circle shadow-xs';
+            if (killBtn) {
+                killBtn.classList.remove('d-none');
+                killBtn.disabled = false;
+            }
+        } else {
+            if (statusBadge) {
+                statusBadge.className = 'badge bg-secondary bg-opacity-20 text-slate-300 border border-slate-600 rounded-pill px-2.5 py-0.5 small fw-semibold';
+                statusBadge.innerHTML = '<i class="fas fa-circle-pause text-slate-400 me-1" style="font-size: 0.5rem;"></i> Disconnected (Offline)';
+            }
+            if (durationBadge) {
+                durationBadge.innerText = 'Last Session: ' + (u.active_duration || 'Closed');
+            }
+            if (onlinePing) onlinePing.className = 'position-absolute bottom-0 end-0 p-1.5 bg-secondary border border-2 border-white rounded-circle shadow-xs';
+            if (killBtn) {
+                killBtn.classList.add('d-none');
+            }
+        }
+
+        // 6 KPI Cards
+        if (document.getElementById('kpiUserLogins')) document.getElementById('kpiUserLogins').innerText = u.total_logins || 0;
+        if (document.getElementById('kpiUserLogouts')) document.getElementById('kpiUserLogouts').innerText = u.total_logouts || 0;
+        if (document.getElementById('kpiUserLoginTries')) document.getElementById('kpiUserLoginTries').innerText = u.login_tries || 1;
+        if (document.getElementById('kpiUserLoginTriesSub')) {
+            const failed = u.failed_login_tries || 0;
+            document.getElementById('kpiUserLoginTriesSub').innerText = failed > 0 ? `${failed} Failed Attempts` : '0 Failed Attempts';
+        }
+        if (document.getElementById('kpiUserForgotPwd')) document.getElementById('kpiUserForgotPwd').innerText = u.forgot_password_tries || 0;
+        if (document.getElementById('kpiUserActiveDuration')) document.getElementById('kpiUserActiveDuration').innerText = u.is_active ? (u.active_duration || 'Active Now') : 'Offline';
+        if (document.getElementById('kpiUserPwdChanges')) document.getElementById('kpiUserPwdChanges').innerText = u.password_changes || 0;
+
+        // Network telemetry card
+        if (document.getElementById('userDrawerSessionToken')) document.getElementById('userDrawerSessionToken').innerText = 'ID: ' + (u.active_session_id || 'CLOSED');
+        if (document.getElementById('userDrawerIp')) document.getElementById('userDrawerIp').innerText = u.last_ip || '127.0.0.1';
+        if (document.getElementById('userDrawerLocation')) document.getElementById('userDrawerLocation').innerText = u.last_location || 'Internal Secure Network';
+        if (document.getElementById('userDrawerDevice')) document.getElementById('userDrawerDevice').innerText = u.last_device || 'Web Browser';
+        if (document.getElementById('userDrawerLastSeen')) document.getElementById('userDrawerLastSeen').innerText = u.last_event_time || '—';
+
+        // Event timeline
+        const timelineList = document.getElementById('userDrawerTimelineList');
+        const eventCountBadge = document.getElementById('userDrawerEventCount');
+        const events = u.events || [];
+
+        if (eventCountBadge) eventCountBadge.innerText = `${events.length} Recorded Events`;
+
+        if (timelineList) {
+            if (!events.length) {
+                timelineList.innerHTML = '<div class="text-center py-4 text-muted small">No historical security events recorded for this user yet.</div>';
+            } else {
+                timelineList.innerHTML = events.map(ev => {
+                    let iconClass = 'fas fa-shield-alt text-primary';
+                    let iconBg = 'bg-primary bg-opacity-10 text-primary';
+                    let badgeClass = 'bg-light text-dark border';
+
+                    const actLower = String(ev.action || '').toLowerCase();
+                    const statLower = String(ev.status || '').toLowerCase();
+
+                    if (actLower.includes('active') || statLower === 'active') {
+                        iconClass = 'fas fa-bolt text-success';
+                        iconBg = 'bg-success bg-opacity-10 text-success';
+                        badgeClass = 'bg-success text-white';
+                    } else if (actLower.includes('login') && !actLower.includes('failed')) {
+                        iconClass = 'fas fa-sign-in-alt text-primary';
+                        iconBg = 'bg-primary bg-opacity-10 text-primary';
+                        badgeClass = 'bg-primary text-white';
+                    } else if (actLower.includes('logout')) {
+                        iconClass = 'fas fa-sign-out-alt text-secondary';
+                        iconBg = 'bg-secondary bg-opacity-10 text-secondary';
+                        badgeClass = 'bg-secondary text-white';
+                    } else if (actLower.includes('failed') || statLower === 'failed') {
+                        iconClass = 'fas fa-triangle-exclamation text-warning';
+                        iconBg = 'bg-warning bg-opacity-10 text-warning';
+                        badgeClass = 'bg-warning text-dark fw-bold';
+                    } else if (actLower.includes('forgot') || actLower.includes('otp')) {
+                        iconClass = 'fas fa-envelope-open-text text-info';
+                        iconBg = 'bg-info bg-opacity-10 text-info';
+                        badgeClass = 'bg-info text-white';
+                    } else if (actLower.includes('change') || actLower.includes('reset')) {
+                        iconClass = 'fas fa-key text-purple';
+                        iconBg = 'bg-purple-soft text-purple';
+                        badgeClass = 'bg-dark text-white';
+                    }
+
+                    return `
+                        <div class="d-flex align-items-start gap-2.5 mb-3 pb-2 border-bottom border-light">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${iconBg}" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                <i class="${iconClass}"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+                                    <span class="fw-bold text-dark small">${ev.action || 'Activity'}</span>
+                                    <span class="badge ${badgeClass} text-2xs">${ev.status || 'Logged'}</span>
+                                </div>
+                                <div class="text-muted small mt-0.5 text-truncate" title="${ev.details || ''}">${ev.details || ''}</div>
+                                <div class="d-flex align-items-center gap-2 text-2xs text-muted font-mono mt-1">
+                                    <span><i class="far fa-clock me-0.5"></i>${ev.login_time || ev.created_at || '—'}</span>
+                                    <span>&bull;</span>
+                                    <span><i class="fas fa-network-wired me-0.5"></i>${ev.ip_address || '127.0.0.1'}</span>
+                                    ${ev.duration ? `<span>&bull;</span><span><i class="fas fa-stopwatch me-0.5"></i>${ev.duration}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    }
+
+    // Terminate session from Drawer
+    window.terminateDrawerSession = function() {
+        if (!currentDrawerSessionId) {
+            showAdminToast('No active session associated with this user.', 'info');
+            return;
+        }
+        terminateSessionFromRow(currentDrawerSessionId);
+    };
+
+    // Terminate session helper
+    window.terminateSessionFromRow = function(sessionId) {
+        if (!sessionId) return;
+        if (!confirm('Are you sure you want to terminate this active user session immediately?')) return;
+
+        fetch('/admin/auth-telemetry/terminate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ session_id: sessionId })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showAdminToast('Session terminated successfully. User will be required to re-authenticate.', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showAdminToast(data.message || 'Error terminating session.', 'warning');
+            }
+        })
+        .catch(err => {
+            showAdminToast('Session terminated.', 'info');
+            setTimeout(() => window.location.reload(), 1000);
+        });
+    };
+
+    // Copy user telemetry report
+    window.copyUserDrawerSummary = function() {
+        if (!currentUserInDrawer) return;
+        const summaries = window.USER_AUTH_SUMMARIES || getUserAuthSummaries();
+        const u = summaries[currentUserInDrawer.toLowerCase()] || summaries[currentUserInDrawer];
+        if (!u) {
+            copyToClipboard(`User: ${currentUserInDrawer}`, 'User Telemetry');
+            return;
+        }
+
+        const report = `=====================================================
+SPHERIX CLINIC — USER AUTHENTICATION & SECURITY REPORT
+=====================================================
+User Name: ${u.name}
+Email Address: ${u.email}
+User Role: ${u.role} (ID: ${u.user_id})
+Live Status: ${u.is_active ? 'ACTIVE SESSION (CONNECTED)' : 'OFFLINE / DISCONNECTED'}
+Current Session Duration: ${u.active_duration}
+Total Successful Logins: ${u.total_logins}
+Total Completed Logouts: ${u.total_logouts}
+Total Login Attempts (Tries): ${u.login_tries} (Failed: ${u.failed_login_tries})
+Forgot Password / OTP Requests: ${u.forgot_password_tries}
+Password Changes / Resets: ${u.password_changes}
+Last Known IP: ${u.last_ip}
+Last Known Location: ${u.last_location}
+Last Known Device: ${u.last_device}
+Report Timestamp: ${new Date().toISOString()}
+=====================================================`;
+
+        copyToClipboard(report, 'Security Telemetry Report');
+    };
+
+    // View user full profile
+    window.viewUserFullProfile = function() {
+        if (!currentUserInDrawer) return;
+        const summaries = window.USER_AUTH_SUMMARIES || getUserAuthSummaries();
+        const u = summaries[currentUserInDrawer.toLowerCase()] || summaries[currentUserInDrawer];
+        if (u && typeof showEntityDetails === 'function') {
+            showEntityDetails(u.role_key || 'patient', u.user_id || currentUserInDrawer);
+        }
+    };
+
     function exportAuthLogsCSV() {
         const rows = document.querySelectorAll('.auth-log-row');
         let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "User Name,Email,Role,Action,Status,Login Time,Logout Time,Duration,IP Address,Location,Device\n";
+        csvContent += "User Name,Email,Role,Action,Status,Login Tries,Forgot Pwd Tries,Duration,Login Time,Logout Time,IP Address,Location,Device\n";
 
         rows.forEach(row => {
             if (!row.classList.contains('d-none')) {

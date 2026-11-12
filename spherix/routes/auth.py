@@ -325,6 +325,16 @@ def doctor_forgot_password():
             else:
                 print(f"DEBUG: OTP for {email} is {otp}")
                 flash(f"Failed to send OTP email. [DEV ONLY] OTP is: {otp}", "warning")
+
+            log_auth_activity(
+                user_id=doctor.id,
+                user_name=f"Dr. {doc_full_name}",
+                user_email=doctor.email,
+                role='Doctor',
+                action='Forgot Password Request',
+                status='Pending',
+                details=f"Doctor requested 6-digit OTP for password recovery via {email}"
+            )
             return redirect(url_for('doctor_reset_password'))
         else:
             flash("No doctor account found with that email.", "error")
@@ -352,6 +362,15 @@ def doctor_reset_password():
                     doctor.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
                     save_data()
                     session.pop('doctor_reset_data', None)
+                    log_auth_activity(
+                        user_id=doctor.id,
+                        user_name=getattr(doctor, 'name', '') or doctor.email,
+                        user_email=doctor.email,
+                        role='Doctor',
+                        action='Password Reset',
+                        status='Success',
+                        details='Doctor credentials updated successfully via verified OTP'
+                    )
                     flash("Password reset successfully! You can now log in.", "success")
                     return redirect(url_for('doctor_login'))
             else:
@@ -968,6 +987,16 @@ def hospital_forgot_password():
             else:
                 print(f"DEBUG: OTP for {email} is {otp}")
                 flash(f"Failed to send OTP email. [DEV ONLY] OTP is: {otp}", "warning")
+
+            log_auth_activity(
+                user_id=hospital.id,
+                user_name=hospital.name,
+                user_email=hospital.email,
+                role='Hospital',
+                action='Forgot Password Request',
+                status='Pending',
+                details=f"Hospital administrator requested password reset OTP via {email}"
+            )
             return redirect(url_for('hospital_reset_password'))
         else:
             flash("No hospital account found with that email.", "error")
@@ -995,6 +1024,15 @@ def hospital_reset_password():
                     hospital.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
                     save_data()
                     session.pop('hospital_reset_data', None)
+                    log_auth_activity(
+                        user_id=hospital.id,
+                        user_name=hospital.name,
+                        user_email=hospital.email,
+                        role='Hospital',
+                        action='Password Reset',
+                        status='Success',
+                        details='Hospital portal credentials updated successfully via verified OTP'
+                    )
                     flash("Password reset successfully! You can now log in.", "success")
                     return redirect(url_for('hospital_login'))
             else:
@@ -1515,6 +1553,16 @@ def patient_forgot_password():
             else:
                 print(f"DEBUG: OTP for {email} is {otp}")
                 flash(f"Failed to send OTP email. [DEV ONLY] OTP is: {otp}", "warning")
+
+            log_auth_activity(
+                user_id=patient.id,
+                user_name=patient.name,
+                user_email=patient.email,
+                role='Patient',
+                action='Forgot Password Request',
+                status='Pending',
+                details=f"Patient requested password reset verification OTP via {email}"
+            )
             return redirect(url_for('patient_reset_password'))
         else:
             flash("No account found with that email.", "error")
@@ -1542,6 +1590,15 @@ def patient_reset_password():
                     patient.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
                     save_data()
                     session.pop('reset_data', None)
+                    log_auth_activity(
+                        user_id=patient.id,
+                        user_name=patient.name,
+                        user_email=patient.email,
+                        role='Patient',
+                        action='Password Reset',
+                        status='Success',
+                        details='Patient account password reset completed successfully'
+                    )
                     flash("Password reset successfully! You can now log in.", "success")
                     return redirect(url_for('patient_login'))
             else:
@@ -1802,6 +1859,16 @@ def blood_donor_forgot_password():
             else:
                 print(f"DEBUG: OTP for {email} is {otp}")
                 flash(f"Failed to send OTP email. [DEV ONLY] OTP is: {otp}", "warning")
+
+            log_auth_activity(
+                user_id=donor.id,
+                user_name=donor.name,
+                user_email=donor.email,
+                role='Blood Donor',
+                action='Forgot Password Request',
+                status='Pending',
+                details=f"Blood donor requested recovery OTP via {email}"
+            )
             return redirect(url_for('blood_donor_reset_password'))
         else:
             flash("No donor account found with that email.", "error")
@@ -1829,6 +1896,15 @@ def blood_donor_reset_password():
                     donor.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
                     save_data()
                     session.pop('donor_reset_data', None)
+                    log_auth_activity(
+                        user_id=donor.id,
+                        user_name=donor.name,
+                        user_email=donor.email,
+                        role='Blood Donor',
+                        action='Password Reset',
+                        status='Success',
+                        details='Blood donor account password updated successfully via verified OTP'
+                    )
                     flash("Password reset successfully! You can now log in.", "success")
                     return redirect(url_for('blood_donor_login'))
             else:
@@ -1961,6 +2037,16 @@ def organ_donor_forgot_password():
             else:
                 print(f"DEBUG: OTP for {email} is {otp}")
                 flash(f"Failed to send OTP email. [DEV ONLY] OTP is: {otp}", "warning")
+
+            log_auth_activity(
+                user_id=donor.id,
+                user_name=donor.name,
+                user_email=donor.email,
+                role='Organ Donor',
+                action='Forgot Password Request',
+                status='Pending',
+                details=f"Organ donor requested password reset verification OTP via {email}"
+            )
             return redirect(url_for('organ_donor_reset_password'))
         else:
             flash("No donor account found with that email.", "error")
@@ -1988,6 +2074,15 @@ def organ_donor_reset_password():
                     donor.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
                     save_data()
                     session.pop('organ_donor_reset_data', None)
+                    log_auth_activity(
+                        user_id=donor.id,
+                        user_name=donor.name,
+                        user_email=donor.email,
+                        role='Organ Donor',
+                        action='Password Reset',
+                        status='Success',
+                        details='Organ donor account credentials updated successfully via verified OTP'
+                    )
                     flash("Password reset successfully! You can now log in.", "success")
                     return redirect(url_for('organ_donor_login'))
             else:

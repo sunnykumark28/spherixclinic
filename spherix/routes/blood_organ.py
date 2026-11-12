@@ -754,6 +754,19 @@ def blood_donor_dashboard():
 
             current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
             save_data()
+            try:
+                from spherix.services.database import log_auth_activity
+                log_auth_activity(
+                    user_id=current_user.id,
+                    user_name=getattr(current_user, 'name', '') or current_user.email,
+                    user_email=current_user.email,
+                    role='Blood Donor',
+                    action='Password Change',
+                    status='Success',
+                    details='Donor updated password from donor security settings'
+                )
+            except Exception:
+                pass
             flash('Password changed successfully!', 'success')
             return redirect(url_for('blood_donor_dashboard', tab='settings'))
 

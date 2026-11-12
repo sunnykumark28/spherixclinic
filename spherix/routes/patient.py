@@ -425,6 +425,19 @@ def patient_dashboard():
             current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
             save_data()
             sync_data_to_sql()
+            try:
+                from spherix.services.database import log_auth_activity
+                log_auth_activity(
+                    user_id=current_user.id,
+                    user_name=current_user.name,
+                    user_email=current_user.email,
+                    role='Patient',
+                    action='Password Change',
+                    status='Success',
+                    details='Patient updated account password from security settings'
+                )
+            except Exception:
+                pass
             if is_ajax:
                 return jsonify({'success': True, 'message': 'Password changed successfully!'})
             flash('Password changed successfully!', 'success')
