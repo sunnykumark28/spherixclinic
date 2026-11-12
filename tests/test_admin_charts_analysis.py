@@ -98,3 +98,36 @@ def test_admin_dashboard_charts_and_analysis_modal_rendered(client, auth_admin):
     assert 'toggleModalFullscreen' in html
     assert 'exportAnalysisChartPNG' in html
     assert 'exportAnalysisChartCSV' in html
+
+
+def test_admin_chart_analysis_draggable_sidebar(client, auth_admin):
+    """
+    Validates that:
+    1. Chart analysis opens as an offcanvas sidebar drawer (#chartAnalysisModal.offcanvas).
+    2. The draggable resize handle (#chart-sidebar-resizer) exists on the left edge.
+    3. Live width indicator (#chartDrawerWidthPill / #chartDrawerWidthText) is rendered.
+    4. Draggable resizing and width preset scripts (initChartSidebarResizer, setChartSidebarWidthPreset) exist.
+    """
+    response = client.get('/admin/dashboard')
+    assert response.status_code == 200
+    html = response.data.decode('utf-8')
+
+    # 1. Sidebar offcanvas container
+    assert 'id="chartAnalysisModal"' in html
+    assert 'offcanvas offcanvas-end' in html
+
+    # 2. Left-edge drag resizer handle
+    assert 'id="chart-sidebar-resizer"' in html
+    assert 'chart-resizer-handle' in html
+    assert 'cursor: ew-resize' in html
+
+    # 3. Dynamic width display and preset buttons
+    assert 'id="chartDrawerWidthPill"' in html
+    assert 'id="chartDrawerWidthText"' in html
+    assert 'setChartSidebarWidthPreset(640)' in html
+    assert 'setChartSidebarWidthPreset(980)' in html
+    assert "setChartSidebarWidthPreset('max')" in html
+
+    # 4. Controller scripts
+    assert 'initChartSidebarResizer' in html
+    assert 'setChartSidebarWidthPreset' in html

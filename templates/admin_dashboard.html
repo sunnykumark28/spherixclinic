@@ -282,6 +282,60 @@
             transform: translateY(-2px);
         }
 
+        /* ================= RESIZABLE CHART ANALYSIS SIDEBAR DRAWER ================= */
+        #chartAnalysisModal.offcanvas {
+            width: 760px;
+            max-width: 98vw;
+            z-index: 1085 !important;
+            background-color: #f8fafc !important;
+            box-shadow: -14px 0 45px rgba(15, 23, 42, 0.28) !important;
+            overflow: visible !important;
+        }
+
+        #chartAnalysisModal.drawer-fullscreen {
+            width: 98vw !important;
+        }
+
+        .chart-resizer-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 18px;
+            margin-left: -9px;
+            cursor: ew-resize !important;
+            z-index: 1095 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            touch-action: none;
+            background: transparent;
+            transition: background 0.15s ease;
+        }
+
+        .chart-resizer-handle:hover,
+        .chart-resizer-handle.is-dragging {
+            background: rgba(37, 99, 235, 0.12) !important;
+        }
+
+        .chart-resizer-handle .resizer-bar-indicator {
+            width: 5px;
+            height: 60px;
+            background-color: rgba(148, 163, 184, 0.8);
+            border-radius: 9999px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+        }
+
+        .chart-resizer-handle:hover .resizer-bar-indicator,
+        .chart-resizer-handle.is-dragging .resizer-bar-indicator {
+            background-color: #2563eb !important;
+            width: 7px !important;
+            height: 80px !important;
+            box-shadow: 0 0 14px rgba(37, 99, 235, 0.85) !important;
+        }
+
         /* Content Sections */
         .page-content { padding: 18px 28px 36px; max-width: 1600px; margin: 0 auto; width: 100%; }
         .content-section { display: none; }
@@ -8320,177 +8374,201 @@
     </div>
 </div>
 
-<!-- ================= MODAL: CHART FULLSCREEN & DEEP ANALYTICS ================= -->
-<div class="modal fade" id="chartAnalysisModal" tabindex="-1" aria-labelledby="chartAnalysisModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" id="chartAnalysisModalDialog">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <!-- Modal Header -->
-            <div class="modal-header bg-slate-900 text-white border-0 px-4 py-3">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="d-inline-flex align-items-center justify-content-center bg-primary rounded-circle shadow-sm" style="width: 40px; height: 40px;">
-                        <i id="analysisModalIcon" class="fas fa-chart-line text-white fs-5"></i>
-                    </span>
-                    <div>
-                        <div class="d-flex align-items-center gap-2">
-                            <h5 class="modal-title fw-bold text-white m-0" id="analysisModalTitle">Analytics Deep Dive</h5>
-                            <span class="badge bg-primary text-white font-mono small" id="analysisModalBadge">Telemetric</span>
-                        </div>
-                        <small class="text-white-50" id="analysisModalSubtitle">High-definition telemetry and itemized cohort breakdown</small>
+<!-- ================= OFFCANVAS SIDEBAR: CHART DEEP ANALYTICS & FULLSCREEN (DRAGGABLE RESIZER) ================= -->
+<div class="offcanvas offcanvas-end shadow-2xl border-0" tabindex="-1" id="chartAnalysisModal" aria-labelledby="chartAnalysisModalLabel" style="width: 760px; max-width: 98vw; z-index: 1085; background-color: #f8fafc; overflow: visible !important;">
+    
+    <!-- Drag Resizer Bar Handle (Left Edge) -->
+    <div id="chart-sidebar-resizer" 
+         class="chart-resizer-handle"
+         title="Drag left or right to resize sidebar (Double-click to expand or reset)">
+        <div class="resizer-bar-indicator d-flex flex-column align-items-center justify-content-center py-2">
+            <span style="display: block; width: 3px; height: 3px; border-radius: 50%; background: #ffffff; margin: 2px 0;"></span>
+            <span style="display: block; width: 3px; height: 3px; border-radius: 50%; background: #ffffff; margin: 2px 0;"></span>
+            <span style="display: block; width: 3px; height: 3px; border-radius: 50%; background: #ffffff; margin: 2px 0;"></span>
+        </div>
+    </div>
+
+    <!-- Inner Dialog / Content Container (maintains full backward compatibility) -->
+    <div class="d-flex flex-column h-100 w-100 position-relative overflow-hidden" id="chartAnalysisModalDialog">
+        <!-- Sidebar Header -->
+        <div class="offcanvas-header bg-slate-900 text-white border-0 px-4 py-3 flex-shrink-0">
+            <div class="d-flex align-items-center gap-3">
+                <span class="d-inline-flex align-items-center justify-content-center bg-primary rounded-circle shadow-sm" style="width: 40px; height: 40px;">
+                    <i id="analysisModalIcon" class="fas fa-chart-line text-white fs-5"></i>
+                </span>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h5 class="modal-title fw-bold text-white m-0" id="analysisModalTitle">Analytics Deep Dive</h5>
+                        <span class="badge bg-primary text-white font-mono small" id="analysisModalBadge">Telemetric</span>
+                        <!-- Drag-to-Resize Indicator Pill -->
+                        <span id="chartDrawerWidthPill" class="badge bg-slate-800 text-slate-300 font-mono small d-none d-sm-inline-flex align-items-center gap-1 border border-slate-700 py-1 px-2" title="Drag left edge or click to resize">
+                            <i class="fas fa-arrows-left-right text-primary"></i> <span id="chartDrawerWidthText">760px</span>
+                        </span>
                     </div>
+                    <small class="text-white-50" id="analysisModalSubtitle">Drag left edge to resize sidebar &bull; Itemized cohort breakdown</small>
                 </div>
-                <div class="d-flex align-items-center gap-2 ms-auto">
-                    <!-- Scope Filter -->
-                    <div class="btn-group btn-group-sm bg-slate-800 p-0.5 rounded-2" role="group" aria-label="Scope Filter">
-                        <button type="button" class="btn btn-xs text-white px-2.5 py-1 btn-primary" id="scopeBtnAll" onclick="switchAnalysisTimeframe('all')">All Records</button>
-                        <button type="button" class="btn btn-xs text-white px-2.5 py-1" id="scopeBtnTop5" onclick="switchAnalysisTimeframe('top5')">Top 5 Focus</button>
-                        <button type="button" class="btn btn-xs text-white px-2.5 py-1" id="scopeBtnCumulative" onclick="switchAnalysisTimeframe('cumulative')">Cumulative</button>
-                    </div>
+            </div>
 
-                    <!-- Chart Type Switcher -->
-                    <div class="btn-group btn-group-sm bg-slate-800 p-0.5 rounded-2" role="group" aria-label="Chart Type Switcher">
-                        <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnBar" onclick="switchAnalysisChartType('bar')" title="Bar View"><i class="fas fa-chart-bar"></i></button>
-                        <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnLine" onclick="switchAnalysisChartType('line')" title="Line View"><i class="fas fa-chart-line"></i></button>
-                        <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnPie" onclick="switchAnalysisChartType('doughnut')" title="Doughnut / Distribution View"><i class="fas fa-chart-pie"></i></button>
-                    </div>
+            <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+                <!-- Size Quick Presets -->
+                <div class="btn-group btn-group-sm bg-slate-800 p-0.5 rounded-2 d-none d-md-inline-flex" role="group" aria-label="Size Presets">
+                    <button type="button" class="btn btn-xs text-white px-2 py-0.5" onclick="setChartSidebarWidthPreset(640)" title="Compact View (640px)">640px</button>
+                    <button type="button" class="btn btn-xs text-white px-2 py-0.5" onclick="setChartSidebarWidthPreset(980)" title="Wide View (980px)">980px</button>
+                    <button type="button" class="btn btn-xs text-white px-2 py-0.5" onclick="setChartSidebarWidthPreset('max')" title="Full Screen View">Max</button>
+                </div>
 
-                    <!-- Fullscreen Toggle Button -->
-                    <button type="button" class="btn btn-sm btn-outline-light rounded-2 px-2.5 py-1" id="analysisFullscreenBtn" onclick="toggleModalFullscreen()" title="Toggle Fullscreen Mode">
-                        <i class="fas fa-expand"></i>
+                <!-- Scope Filter -->
+                <div class="btn-group btn-group-sm bg-slate-800 p-0.5 rounded-2" role="group" aria-label="Scope Filter">
+                    <button type="button" class="btn btn-xs text-white px-2.5 py-1 btn-primary" id="scopeBtnAll" onclick="switchAnalysisTimeframe('all')">All Records</button>
+                    <button type="button" class="btn btn-xs text-white px-2.5 py-1" id="scopeBtnTop5" onclick="switchAnalysisTimeframe('top5')">Top 5 Focus</button>
+                    <button type="button" class="btn btn-xs text-white px-2.5 py-1" id="scopeBtnCumulative" onclick="switchAnalysisTimeframe('cumulative')">Cumulative</button>
+                </div>
+
+                <!-- Chart Type Switcher -->
+                <div class="btn-group btn-group-sm bg-slate-800 p-0.5 rounded-2" role="group" aria-label="Chart Type Switcher">
+                    <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnBar" onclick="switchAnalysisChartType('bar')" title="Bar View"><i class="fas fa-chart-bar"></i></button>
+                    <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnLine" onclick="switchAnalysisChartType('line')" title="Line View"><i class="fas fa-chart-line"></i></button>
+                    <button type="button" class="btn btn-xs text-white px-2 py-1" id="chartTypeBtnPie" onclick="switchAnalysisChartType('doughnut')" title="Doughnut / Distribution View"><i class="fas fa-chart-pie"></i></button>
+                </div>
+
+                <!-- Fullscreen Toggle Button -->
+                <button type="button" class="btn btn-sm btn-outline-light rounded-2 px-2.5 py-1" id="analysisFullscreenBtn" onclick="toggleModalFullscreen()" title="Toggle Fullscreen Sidebar">
+                    <i class="fas fa-expand"></i>
+                </button>
+
+                <!-- Export Actions -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light dropdown-toggle rounded-2 px-2.5 py-1 fw-semibold" type="button" id="exportDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-download me-1 text-primary"></i> Export
                     </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdownBtn">
+                        <li>
+                            <button class="dropdown-item small" type="button" onclick="exportAnalysisChartPNG()">
+                                <i class="fas fa-file-image me-2 text-success"></i> Export High-Res PNG
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item small" type="button" onclick="exportAnalysisChartCSV()">
+                                <i class="fas fa-file-csv me-2 text-info"></i> Export Dataset CSV
+                            </button>
+                        </li>
+                    </ul>
+                </div>
 
-                    <!-- Export Actions -->
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-light dropdown-toggle rounded-2 px-2.5 py-1 fw-semibold" type="button" id="exportDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-download me-1 text-primary"></i> Export
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="exportDropdownBtn">
-                            <li>
-                                <button class="dropdown-item small" type="button" onclick="exportAnalysisChartPNG()">
-                                    <i class="fas fa-file-image me-2 text-success"></i> Export High-Res PNG
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item small" type="button" onclick="exportAnalysisChartCSV()">
-                                    <i class="fas fa-file-csv me-2 text-info"></i> Export Dataset CSV
-                                </button>
-                            </li>
-                        </ul>
+                <!-- Close Button -->
+                <button type="button" class="btn-close btn-close-white ms-1" data-bs-dismiss="offcanvas" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+        </div>
+
+        <!-- Sidebar Body (Scrollable) -->
+        <div class="offcanvas-body modal-body p-4 bg-light flex-grow-1 overflow-y-auto">
+            <!-- 1. KPI Metric Strip -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-success">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Peak / Max Cohort</span>
+                            <span class="badge bg-success bg-opacity-10 text-success small"><i class="fas fa-arrow-up"></i> Peak</span>
+                        </div>
+                        <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiPeak">--</h4>
+                        <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiPeakLabel">--</small>
                     </div>
-
-                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-warning">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Lowest Observation</span>
+                            <span class="badge bg-warning bg-opacity-10 text-warning small"><i class="fas fa-arrow-down"></i> Min</span>
+                        </div>
+                        <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiMin">--</h4>
+                        <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiMinLabel">--</small>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-primary">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Arithmetic Mean</span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary small"><i class="fas fa-calculator"></i> Avg</span>
+                        </div>
+                        <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiMean">--</h4>
+                        <small class="text-muted text-truncate d-block mt-0.5">Average across active cohorts</small>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-info">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Total Aggregate</span>
+                            <span class="badge bg-info bg-opacity-10 text-info small"><i class="fas fa-layer-group"></i> Sum</span>
+                        </div>
+                        <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiTotal">--</h4>
+                        <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiTotalSub">All sampled units</small>
+                    </div>
                 </div>
             </div>
 
-            <!-- Modal Body -->
-            <div class="modal-body p-4 bg-light">
-                <!-- 1. KPI Metric Strip -->
-                <div class="row g-3 mb-4">
-                    <div class="col-6 col-lg-3">
-                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-success">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Peak / Max Cohort</span>
-                                <span class="badge bg-success bg-opacity-10 text-success small"><i class="fas fa-arrow-up"></i> Peak</span>
-                            </div>
-                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiPeak">--</h4>
-                            <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiPeakLabel">--</small>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-warning">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Lowest Observation</span>
-                                <span class="badge bg-warning bg-opacity-10 text-warning small"><i class="fas fa-arrow-down"></i> Min</span>
-                            </div>
-                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiMin">--</h4>
-                            <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiMinLabel">--</small>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-primary">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Arithmetic Mean</span>
-                                <span class="badge bg-primary bg-opacity-10 text-primary small"><i class="fas fa-calculator"></i> Avg</span>
-                            </div>
-                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiMean">--</h4>
-                            <small class="text-muted text-truncate d-block mt-0.5">Average across active cohorts</small>
-                        </div>
-                    </div>
-                    <div class="col-6 col-lg-3">
-                        <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white h-100 border-start border-4 border-info">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Total Aggregate</span>
-                                <span class="badge bg-info bg-opacity-10 text-info small"><i class="fas fa-layer-group"></i> Sum</span>
-                            </div>
-                            <h4 class="fw-black text-dark mb-0 font-display" id="analysisKpiTotal">--</h4>
-                            <small class="text-muted text-truncate d-block mt-0.5" id="analysisKpiTotalSub">All sampled units</small>
-                        </div>
+            <!-- 2. High-Definition Visual Canvas Container -->
+            <div class="card border-0 shadow-2xs rounded-3 p-3 mb-4 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Interactive Telemetry Canvas</span>
+                    <span class="small text-muted"><i class="fas fa-arrows-left-right me-1 text-primary"></i>Drag left edge to resize &bull; Hover for data points</span>
+                </div>
+                <div style="position: relative; height: 380px; width: 100%;">
+                    <canvas id="analysisModalCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- 3. AI & Telemetric Intelligence Observations -->
+            <div class="card border-0 shadow-2xs rounded-3 p-3 mb-4 bg-white border-start border-4 border-primary">
+                <div class="d-flex align-items-center gap-2 mb-2 pb-2 border-bottom">
+                    <i class="fas fa-brain text-primary fs-5"></i>
+                    <div>
+                        <h6 class="fw-bold text-dark m-0">Algorithmic Telemetry &amp; Strategic Observations</h6>
+                        <small class="text-muted">Automated real-time analytical evaluation of this dataset</small>
                     </div>
                 </div>
+                <div class="ps-2 pt-1">
+                    <ul class="mb-0 ps-3 small text-dark d-flex flex-column gap-1.5" id="analysisInsightsList">
+                        <!-- Populated dynamically -->
+                    </ul>
+                </div>
+            </div>
 
-                <!-- 2. High-Definition Visual Canvas Container -->
-                <div class="card border-0 shadow-2xs rounded-3 p-3 mb-4 bg-white">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem;">Interactive Telemetry Canvas</span>
-                        <span class="small text-muted"><i class="fas fa-mouse-pointer me-1 text-primary"></i>Hover over data points or bars for localized telemetry</span>
+            <!-- 4. Itemized Data Breakdown Table -->
+            <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                        <h6 class="fw-bold text-dark m-0">Itemized Cohort Breakdown</h6>
+                        <small class="text-muted">Direct metric values and fractional distribution</small>
                     </div>
-                    <div style="position: relative; height: 380px; width: 100%;">
-                        <canvas id="analysisModalCanvas"></canvas>
+                    <div class="input-group input-group-sm" style="max-width: 320px;">
+                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="analysisTableSearch" class="form-control border-start-0" placeholder="Filter cohorts by name or value..." oninput="filterAnalysisTable()">
                     </div>
                 </div>
-
-                <!-- 3. AI & Telemetric Intelligence Observations -->
-                <div class="card border-0 shadow-2xs rounded-3 p-3 mb-4 bg-white border-start border-4 border-primary">
-                    <div class="d-flex align-items-center gap-2 mb-2 pb-2 border-bottom">
-                        <i class="fas fa-brain text-primary fs-5"></i>
-                        <div>
-                            <h6 class="fw-bold text-dark m-0">Algorithmic Telemetry &amp; Strategic Observations</h6>
-                            <small class="text-muted">Automated real-time analytical evaluation of this dataset</small>
-                        </div>
-                    </div>
-                    <div class="ps-2 pt-1">
-                        <ul class="mb-0 ps-3 small text-dark d-flex flex-column gap-1.5" id="analysisInsightsList">
+                <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0" id="analysisTable">
+                        <thead class="table-light text-uppercase small text-muted" style="font-size: 0.72rem; position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th style="width: 70px;">Rank</th>
+                                <th>Cohort / Entity Name</th>
+                                <th>Recorded Value</th>
+                                <th style="width: 130px;">% Share</th>
+                                <th style="min-width: 160px;">Volume Distribution</th>
+                                <th style="width: 110px;">Classification</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analysisTableBody" class="small">
                             <!-- Populated dynamically -->
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- 4. Itemized Data Breakdown Table -->
-                <div class="card border-0 shadow-2xs rounded-3 p-3 bg-white">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <div>
-                            <h6 class="fw-bold text-dark m-0">Itemized Cohort Breakdown</h6>
-                            <small class="text-muted">Direct metric values and fractional distribution</small>
-                        </div>
-                        <div class="input-group input-group-sm" style="max-width: 320px;">
-                            <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" id="analysisTableSearch" class="form-control border-start-0" placeholder="Filter cohorts by name or value..." oninput="filterAnalysisTable()">
-                        </div>
-                    </div>
-                    <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
-                        <table class="table table-hover align-middle mb-0" id="analysisTable">
-                            <thead class="table-light text-uppercase small text-muted" style="font-size: 0.72rem; position: sticky; top: 0; z-index: 1;">
-                                <tr>
-                                    <th style="width: 70px;">Rank</th>
-                                    <th>Cohort / Entity Name</th>
-                                    <th>Recorded Value</th>
-                                    <th style="width: 130px;">% Share</th>
-                                    <th style="min-width: 160px;">Volume Distribution</th>
-                                    <th style="width: 110px;">Classification</th>
-                                </tr>
-                            </thead>
-                            <tbody id="analysisTableBody" class="small">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
-            <!-- Modal Footer -->
-            <div class="modal-footer bg-white border-top px-4 py-2.5 d-flex justify-content-between align-items-center">
-                <span class="small text-muted"><i class="fas fa-shield-alt text-success me-1"></i>Spherix Healthcare Telemetry Engine &bull; Validated Enterprise Data</span>
-                <button type="button" class="btn btn-secondary rounded-3 px-4 fw-bold" data-bs-dismiss="modal">Close</button>
-            </div>
+        <!-- Sidebar Footer -->
+        <div class="modal-footer bg-white border-top px-4 py-2.5 d-flex justify-content-between align-items-center flex-shrink-0">
+            <span class="small text-muted"><i class="fas fa-shield-alt text-success me-1"></i>Spherix Healthcare Telemetry Engine &bull; Drag left edge to resize</span>
+            <button type="button" class="btn btn-secondary rounded-3 px-4 fw-bold" data-bs-dismiss="offcanvas" data-bs-dismiss="modal">Close</button>
         </div>
     </div>
 </div>
@@ -10681,7 +10759,7 @@
             }
         };
 
-        // Open Analysis Modal
+        // Open Analysis Sidebar Drawer
         window.openChartAnalysis = function(chartKey) {
             const config = window.SPHERIX_CHARTS_REGISTRY[chartKey];
             if (!config) return;
@@ -10715,12 +10793,30 @@
             // Render Chart & Data
             renderAnalysisDataset();
 
-            // Open Modal via Bootstrap
-            const modalEl = document.getElementById('chartAnalysisModal');
-            if (modalEl && typeof bootstrap !== 'undefined') {
-                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-                modal.show();
+            // Open Resizable Sidebar Drawer via Bootstrap
+            const drawerEl = document.getElementById('chartAnalysisModal');
+            if (drawerEl && typeof bootstrap !== 'undefined') {
+                if (typeof bootstrap.Offcanvas !== 'undefined') {
+                    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(drawerEl);
+                    offcanvas.show();
+                } else if (typeof bootstrap.Modal !== 'undefined') {
+                    const modal = bootstrap.Modal.getOrCreateInstance(drawerEl);
+                    modal.show();
+                }
             }
+
+            // Sync width text indicator
+            if (drawerEl) {
+                const w = Math.round(drawerEl.getBoundingClientRect().width || 760);
+                const widthText = document.getElementById('chartDrawerWidthText');
+                if (widthText) widthText.innerText = `${w}px`;
+            }
+
+            setTimeout(() => {
+                if (modalChartInstance) {
+                    modalChartInstance.resize();
+                }
+            }, 120);
         };
 
         function getPreparedAnalysisData() {
@@ -10988,24 +11084,64 @@
             });
         }
 
-        // Fullscreen Toggle
+        // Fullscreen / Maximize Sidebar Toggle
         window.toggleModalFullscreen = function() {
+            const drawer = document.getElementById('chartAnalysisModal');
             const modalDialog = document.getElementById('chartAnalysisModalDialog');
             const btn = document.getElementById('analysisFullscreenBtn');
-            if (!modalDialog || !btn) return;
-            const isFullscreen = modalDialog.classList.toggle('modal-fullscreen');
+            const widthText = document.getElementById('chartDrawerWidthText');
+            if (!drawer || !btn) return;
+
+            const isFullscreen = drawer.classList.toggle('drawer-fullscreen');
+            if (modalDialog) modalDialog.classList.toggle('modal-fullscreen', isFullscreen);
+
             if (isFullscreen) {
+                drawer.dataset.previousWidth = drawer.style.width || '760px';
+                drawer.style.width = '98vw';
+                if (widthText) widthText.innerText = '98vw (Max)';
                 btn.innerHTML = '<i class="fas fa-compress"></i>';
-                btn.title = 'Exit Fullscreen';
+                btn.title = 'Exit Fullscreen (Restore Size)';
             } else {
+                const restored = drawer.dataset.previousWidth || '760px';
+                drawer.style.width = restored;
+                if (widthText) widthText.innerText = `${parseInt(restored, 10) || 760}px`;
                 btn.innerHTML = '<i class="fas fa-expand"></i>';
-                btn.title = 'Enter Fullscreen';
+                btn.title = 'Enter Fullscreen Mode';
             }
             setTimeout(() => {
                 if (modalChartInstance) {
                     modalChartInstance.resize();
                 }
-            }, 150);
+            }, 180);
+        };
+
+        // Size Presets for Sidebar
+        window.setChartSidebarWidthPreset = function(targetWidth) {
+            const drawer = document.getElementById('chartAnalysisModal');
+            const widthText = document.getElementById('chartDrawerWidthText');
+            if (!drawer) return;
+
+            drawer.style.transition = 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+            let newWidth;
+            if (targetWidth === 'max') {
+                newWidth = Math.min(window.innerWidth - 10, Math.floor(window.innerWidth * 0.98));
+                if (widthText) widthText.innerText = 'Max';
+            } else {
+                newWidth = Math.min(targetWidth, Math.floor(window.innerWidth * 0.98));
+                if (widthText) widthText.innerText = `${newWidth}px`;
+            }
+            drawer.style.width = `${newWidth}px`;
+
+            try {
+                localStorage.setItem('spherix_admin_chart_drawer_width', newWidth);
+            } catch (e) {}
+
+            setTimeout(() => {
+                drawer.style.transition = '';
+                if (modalChartInstance) {
+                    modalChartInstance.resize();
+                }
+            }, 270);
         };
 
         // Export PNG
@@ -11061,6 +11197,165 @@
                 r.style.display = text.includes(q) ? '' : 'none';
             });
         };
+
+        // ================= INTERACTIVE DRAG-TO-RESIZE SIDEBAR CONTROLLER =================
+        (function initChartSidebarResizer() {
+            const resizer = document.getElementById('chart-sidebar-resizer');
+            const drawer = document.getElementById('chartAnalysisModal');
+            const widthText = document.getElementById('chartDrawerWidthText');
+            if (!resizer || !drawer) return;
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+            let animationFrameId = null;
+
+            // Restore saved width from localStorage
+            try {
+                const savedWidth = localStorage.getItem('spherix_admin_chart_drawer_width');
+                if (savedWidth && window.innerWidth >= 640) {
+                    const parsed = parseInt(savedWidth, 10);
+                    const maxWidth = Math.min(window.innerWidth - 10, Math.floor(window.innerWidth * 0.98));
+                    if (!isNaN(parsed) && parsed >= 420 && parsed <= maxWidth) {
+                        drawer.style.width = `${parsed}px`;
+                        if (widthText) widthText.innerText = `${parsed}px`;
+                    }
+                }
+            } catch (e) {}
+
+            function updateWidthDisplay(w) {
+                if (widthText) {
+                    widthText.innerText = `${Math.round(w)}px`;
+                }
+            }
+
+            function onMouseDown(e) {
+                if (window.innerWidth < 576) return; // Small mobile screens stay full width
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = drawer.getBoundingClientRect().width;
+
+                resizer.classList.add('is-dragging');
+                drawer.style.transition = 'none'; // Instant 60fps drag without latency
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+            }
+
+            function onMouseMove(e) {
+                if (!isResizing) return;
+                const deltaX = startX - e.clientX; // Moving left increases width
+                let newWidth = startWidth + deltaX;
+
+                const minWidth = 420;
+                const maxWidth = Math.min(window.innerWidth - 10, Math.floor(window.innerWidth * 0.98));
+
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+
+                drawer.style.width = `${newWidth}px`;
+                updateWidthDisplay(newWidth);
+
+                // Real-time chart resize throttled by requestAnimationFrame
+                if (!animationFrameId) {
+                    animationFrameId = requestAnimationFrame(() => {
+                        if (modalChartInstance) {
+                            modalChartInstance.resize();
+                        }
+                        animationFrameId = null;
+                    });
+                }
+            }
+
+            function onMouseUp() {
+                if (!isResizing) return;
+                isResizing = false;
+
+                resizer.classList.remove('is-dragging');
+                drawer.style.transition = '';
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+
+                const finalWidth = parseInt(drawer.style.width, 10);
+                if (!isNaN(finalWidth)) {
+                    try {
+                        localStorage.setItem('spherix_admin_chart_drawer_width', finalWidth);
+                    } catch (e) {}
+                    updateWidthDisplay(finalWidth);
+                }
+
+                if (modalChartInstance) {
+                    modalChartInstance.resize();
+                }
+
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+            }
+
+            // Double-click on resizer to toggle expand or reset
+            resizer.addEventListener('dblclick', function() {
+                const currentW = drawer.getBoundingClientRect().width;
+                const maxW = Math.min(window.innerWidth - 10, Math.floor(window.innerWidth * 0.98));
+                if (currentW < maxW * 0.8) {
+                    window.setChartSidebarWidthPreset('max');
+                } else {
+                    window.setChartSidebarWidthPreset(760);
+                }
+            });
+
+            resizer.addEventListener('mousedown', onMouseDown);
+
+            // Touch support for tablets & touchscreen devices
+            resizer.addEventListener('touchstart', function(e) {
+                if (window.innerWidth < 576 || !e.touches || !e.touches[0]) return;
+                isResizing = true;
+                startX = e.touches[0].clientX;
+                startWidth = drawer.getBoundingClientRect().width;
+                resizer.classList.add('is-dragging');
+                drawer.style.transition = 'none';
+            }, { passive: true });
+
+            window.addEventListener('touchmove', function(e) {
+                if (!isResizing || !e.touches || !e.touches[0]) return;
+                const deltaX = startX - e.touches[0].clientX;
+                let newWidth = startWidth + deltaX;
+                const minWidth = 360;
+                const maxWidth = Math.min(window.innerWidth - 10, Math.floor(window.innerWidth * 0.98));
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+                drawer.style.width = `${newWidth}px`;
+                updateWidthDisplay(newWidth);
+                if (modalChartInstance) {
+                    modalChartInstance.resize();
+                }
+            }, { passive: true });
+
+            window.addEventListener('touchend', function() {
+                if (!isResizing) return;
+                isResizing = false;
+                resizer.classList.remove('is-dragging');
+                drawer.style.transition = '';
+                if (modalChartInstance) modalChartInstance.resize();
+            });
+
+            // Re-render chart on drawer fully shown
+            drawer.addEventListener('shown.bs.offcanvas', function() {
+                if (modalChartInstance) modalChartInstance.resize();
+            });
+            drawer.addEventListener('shown.bs.modal', function() {
+                if (modalChartInstance) modalChartInstance.resize();
+            });
+        })();
+
+        // Mount chart drawer to document.body on load so it is outside nested stacking contexts
+        document.addEventListener('DOMContentLoaded', function() {
+            const drawerEl = document.getElementById('chartAnalysisModal');
+            if (drawerEl && drawerEl.parentElement !== document.body) {
+                document.body.appendChild(drawerEl);
+            }
+        });
 
         // ================= PHARMACY & INVENTORY HELPERS =================
         window.previewMedicineImage = function(input, imgId, iconId) {
