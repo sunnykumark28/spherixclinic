@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Spherix Clinic Health Dashboard{% endblock %}</title>
+
+  <!-- Favicon & Touch Icons -->
+  <link rel="icon" type="image/jpeg" sizes="32x32" href="{{ url_for('static', filename='images/spherixclinic.jpg') }}">
+  <link rel="icon" type="image/jpeg" sizes="192x192" href="{{ url_for('static', filename='images/spherixclinic.jpg') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/spherixclinic.jpg') }}">
+
+  <!-- Modern Fonts & Framework Assets -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="https://unpkg.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Ballet:opsz@16..72&family=Roboto+Slab:wght@400;500;600;700;800;900&family=Iceland&display=swap" rel="stylesheet">
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script defer src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    [style*="display: none"] { display: none !important; }
+
+    /* Universal Circular Cropper Styling */
+    .cropper-view-box,
+    .cropper-face {
+      border-radius: 50%;
+    }
+    .cropper-view-box {
+      outline: 2px solid #0284c7;
+      outline-color: rgba(2, 132, 199, 0.85);
+    }
+
+    :root {
+      --dashboard-bg: #f8fafc;
+      --panel-bg: transparent;
+      --surface: rgba(255, 255, 255, 0.75);
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(255, 255, 255, 0.7);
+      --primary: #0284c7;
+      --primary-soft: rgba(2, 132, 199, 0.08);
+      --shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-outfit: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-spherix: 'Roboto Slab', serif;
+      --font-clinic: 'Ballet', cursive;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      color: var(--text);
+      background: 
+        radial-gradient(circle at 10% 15%, rgba(56, 189, 248, 0.18) 0%, transparent 40%),
+        radial-gradient(circle at 90% 12%, rgba(99, 102, 241, 0.18) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.10) 0%, transparent 50%),
+        radial-gradient(circle at 80% 85%, rgba(14, 165, 233, 0.15) 0%, transparent 45%),
+        #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .font-display { font-family: var(--font-display); }
+    .font-outfit { font-family: var(--font-outfit); }
+
+    /* Custom Sleek Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.6);
+    }
+
+    /* Layout Structure */
+    .dashboard-wrapper {
+      display: flex;
+      min-height: 100vh;
+      width: 100vw;
+      position: relative;
+      z-index: 1;
+      background: var(--dashboard-bg);
+    }
+
+    /* Ultra-Modern Clean White Sidebar */
+    .dashboard-sidebar {
+      width: 280px;
+      min-width: 280px;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      background: #ffffff;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      z-index: 1040;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .sidebar-brand {
+      height: 84px;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      border-bottom: 1px solid #e2e8f0;
+      font-weight: 800;
+      font-size: 1.15rem;
+      gap: 12px;
+      color: #0f172a;
+      text-decoration: none;
+      background: #ffffff;
+    }
+
+    .sidebar-brand .sidebar-logo-box {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .sidebar-brand img {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .sidebar-menu {
+      padding: 20px 14px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .sidebar-section-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 800;
+      margin: 18px 0 8px 12px;
+      letter-spacing: 0.14em;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      color: #334155;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      margin-bottom: 3px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid transparent;
+    }
+
+    .sidebar-link:hover {
+      background: #f1f5f9;
+      color: #0284c7;
+      transform: translateX(4px);
+    }
+
+    .sidebar-link:hover i {
+      color: #0284c7;
+    }
+
+    .sidebar-link.active {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff !important;
+      box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+      font-weight: 700;
+    }
+
+    .sidebar-link.active i {
+      color: #ffffff !important;
+      opacity: 1;
+    }
+
+    .sidebar-link.active:hover {
+      transform: none;
+      color: #ffffff !important;
+    }
+
+    .sidebar-link i,
+    .sidebar-sublink i,
+    .sidebar-group-header .d-flex > i:not(.group-arrow) {
+      display: none !important;
+    }
+
+    /* Sidebar Collapsible Groups & Subtabs */
+    .sidebar-group {
+      margin-bottom: 4px;
+      border-radius: 10px;
+    }
+
+    .sidebar-group-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: #334155;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .sidebar-group-header:hover {
+      background: #f1f5f9;
+      color: #0284c7;
+    }
+
+    .sidebar-group.has-active .sidebar-group-header {
+      color: #0284c7;
+      background: rgba(2, 132, 199, 0.08);
+    }
+
+    .sidebar-group-header .group-arrow {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      transition: transform 0.25s ease;
+      margin-left: 6px;
+    }
+
+    .sidebar-group.open .sidebar-group-header .group-arrow {
+      transform: rotate(180deg);
+      color: #0284c7;
+    }
+
+    .sidebar-sublinks {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+      opacity: 0;
+      padding-left: 8px;
+      border-left: 2px solid #e2e8f0;
+      margin-left: 18px;
+      margin-top: 3px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-group.open .sidebar-sublinks {
+      max-height: 600px;
+      opacity: 1;
+    }
+
+    .sidebar-sublink {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      font-size: 0.81rem;
+      font-weight: 600;
+      color: #64748b;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+    }
+
+    .sidebar-sublink:hover {
+      background: #f1f5f9;
+      color: #0284c7;
+      transform: translateX(3px);
+    }
+
+    .sidebar-sublink:hover i {
+      color: #0284c7;
+    }
+
+    .sidebar-sublink.active {
+      background: #0284c7;
+      color: #ffffff !important;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+    }
+
+    .sidebar-sublink.active i {
+      color: #ffffff !important;
+    }
+
+    .sidebar-sublink i {
+      width: 16px;
+      text-align: center;
+      font-size: 0.82rem;
+    }
+
+    .text-xxs {
+      font-size: 0.68rem;
+    }
+
+    /* Sidebar Footer User Capsule */
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #ffffff;
+    }
+
+    .sidebar-footer .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #f0f9ff;
+      color: #0284c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      border: 1.5px solid #bae6fd;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-footer .user-info {
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .sidebar-footer .user-name {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-footer .user-role {
+      font-size: 0.7rem;
+      color: #0284c7;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+
+    .sidebar-footer .logout-btn {
+      color: #ef4444;
+      font-size: 1rem;
+      padding: 8px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sidebar-footer .logout-btn:hover {
+      background: #ef4444;
+      color: #ffffff;
+      transform: scale(1.05);
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 1030;
+      transition: all 0.3s ease;
+    }
+
+    /* Main Dashboard Panel */
+    .dashboard-panel {
+      flex-grow: 1;
+      min-height: 100vh;
+      background: var(--panel-bg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .dashboard-header {
+      display: none !important;
+    }
+
+    .dashboard-title {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      font-family: var(--font-display);
+      letter-spacing: -0.01em;
+      color: #0f172a;
+    }
+
+    .dashboard-subtitle {
+      margin: 2px 0 0;
+      color: #64748b;
+      font-size: 0.82rem;
+    }
+
+    /* Global Search Form */
+    .header-search-form {
+      position: relative;
+      width: 280px;
+    }
+
+    .header-search-form .form-control {
+      padding-left: 36px;
+      padding-right: 48px;
+      border-radius: 12px;
+      background-color: rgba(255, 255, 255, 0.7) !important;
+      backdrop-filter: blur(10px) !important;
+      border: 1px solid rgba(203, 213, 225, 0.8) !important;
+      color: #0f172a !important;
+      font-size: 0.85rem !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .header-search-form .form-control:focus {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      border-color: #0284c7 !important;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    }
+
+    .header-search-form .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    .header-search-form .search-shortcut {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 2px 5px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(10px);
+      color: #475569;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .header-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.95);
+      color: #0f172a;
+      transform: translateY(-1px);
+    }
+
+    /* Notification Drawer */
+    #notificationPanel {
+      display: none;
+      position: fixed;
+      top: 72px;
+      right: 24px;
+      width: 360px;
+      max-height: 480px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      z-index: 99999;
+      overflow: hidden;
+      flex-direction: column;
+    }
+
+    #notificationPanel.open {
+      display: flex;
+      animation: dropNotif 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes dropNotif {
+      from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    #notificationPanel .notif-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(9, 13, 22, 0.8);
+      flex-shrink: 0;
+    }
+
+    #notificationPanel .notif-header h6 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 14px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #notificationPanel .notif-scroll {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    #notificationPanel .notif-item {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #notificationPanel .notif-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    #notificationPanel .notif-item.unread {
+      background: rgba(2, 132, 199, 0.16);
+    }
+
+    #notificationPanel .notif-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(2, 132, 199, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: #38bdf8;
+    }
+
+    #notificationPanel .notif-body p {
+      margin: 0 0 3px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #e2e8f0;
+    }
+
+    #notificationPanel .notif-body .notif-time {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    #notificationPanel .notif-footer {
+      padding: 10px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(9, 13, 22, 0.8);
+      text-align: center;
+    }
+
+    .dashboard-content {
+      padding: 28px 32px 40px;
+      min-height: calc(100vh - 84px);
+      flex-grow: 1;
+    }
+
+    /* Component Utilities: Glass Cards & Table Wrappers */
+    .stat-card,
+    .card {
+      background: rgba(255, 255, 255, 0.75) !important;
+      backdrop-filter: blur(16px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.75) !important;
+      border-radius: 20px !important;
+      padding: 1.5rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 30px -4px rgba(15, 23, 42, 0.05) !important;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    .stat-card:hover,
+    .card:hover {
+      transform: translateY(-3px) !important;
+      background: rgba(255, 255, 255, 0.85) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1), 0 16px 36px -8px rgba(2, 132, 199, 0.12) !important;
+      border-color: rgba(2, 132, 199, 0.4) !important;
+    }
+
+    .table-wrapper {
+      background: rgba(255, 255, 255, 0.75) !important;
+      backdrop-filter: blur(18px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.75) !important;
+      border-radius: 18px !important;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 30px rgba(15, 23, 42, 0.04) !important;
+    }
+
+    .table-wrapper table {
+      width: 100%;
+      margin: 0;
+    }
+
+    .table-wrapper th {
+      background-color: rgba(241, 245, 249, 0.75) !important;
+      backdrop-filter: blur(10px) !important;
+      color: #64748b;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+    }
+
+    .table-wrapper td {
+      padding: 14px 18px;
+      font-size: 0.85rem;
+      color: #0f172a;
+      border-bottom: 1px solid rgba(241, 245, 249, 0.6) !important;
+      vertical-align: middle;
+    }
+
+    .table-wrapper tr:last-child td {
+      border-bottom: none;
+    }
+
+    .table-wrapper tbody tr:hover {
+      background-color: rgba(239, 246, 255, 0.6) !important;
+    }
+
+    /* Buttons */
+    .btn-primary-custom {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+      border: none !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 0.85rem !important;
+      border-radius: 12px !important;
+      padding: 0.6rem 1.4rem !important;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .btn-primary-custom:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4) !important;
+    }
+
+    .btn-secondary-custom {
+      background-color: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      color: #475569 !important;
+      font-weight: 700 !important;
+      font-size: 0.85rem !important;
+      border-radius: 12px !important;
+      padding: 0.6rem 1.4rem !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .btn-secondary-custom:hover {
+      background-color: #f8fafc !important;
+      color: #0f172a !important;
+      border-color: #94a3b8 !important;
+    }
+
+    /* Button Spacing & Breathing Room */
+    .btn + .btn,
+    .btn-primary-custom + .btn-secondary-custom,
+    .btn-secondary-custom + .btn-primary-custom,
+    form.d-inline + form.d-inline,
+    form.d-inline + .btn,
+    .btn + form.d-inline {
+      margin-left: 0.65rem !important;
+    }
+    .btn-group > .btn + .btn {
+      margin-left: -1px !important;
+    }
+    .d-flex.gap-2, .flex.gap-2 {
+      gap: 0.85rem !important;
+    }
+    .d-flex.gap-1\.5, .flex.gap-1\.5 {
+      gap: 0.75rem !important;
+    }
+
+    /* Card Grid Gutters Spacing */
+    .row.g-4 {
+      --bs-gutter-x: 1.75rem !important;
+      --bs-gutter-y: 1.75rem !important;
+    }
+    .row.g-3 {
+      --bs-gutter-x: 1.35rem !important;
+      --bs-gutter-y: 1.35rem !important;
+    }
+
+    /* Global Tab Overrides: Dark Blue & Animated Underline */
+    .nav-tabs {
+      border-bottom: 2px solid #e2e8f0 !important;
+      gap: 8px;
+    }
+
+    .nav-tabs .nav-link {
+      border: none !important;
+      background: transparent !important;
+      color: #1e3a8a !important; /* Dark Blue */
+      font-weight: 700 !important;
+      font-size: 0.88rem !important;
+      padding: 10px 18px !important;
+      position: relative !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      border-radius: 0 !important;
+    }
+
+    .nav-tabs .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 3px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.35);
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+      opacity: 0;
+    }
+
+    .nav-tabs .nav-link:hover {
+      color: #0f172a !important;
+    }
+
+    .nav-tabs .nav-link:hover::after {
+      width: 75%;
+      opacity: 0.85;
+    }
+
+    .nav-tabs .nav-link.active {
+      color: #1e3a8a !important;
+      font-weight: 800 !important;
+    }
+
+    .nav-tabs .nav-link.active::after {
+      width: 100%;
+      opacity: 1;
+      background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+      box-shadow: 0 2px 10px rgba(30, 58, 138, 0.5);
+    }
+
+    @media (max-width: 991px) {
+      .dashboard-sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+      }
+
+      .dashboard-sidebar.active {
+        left: 0;
+        box-shadow: 0 0 50px rgba(15, 23, 42, 0.4);
+      }
+
+      .dashboard-sidebar.active ~ .sidebar-overlay {
+        display: block;
+      }
+
+      .dashboard-header,
+      .dashboard-content {
+        padding: 16px 20px;
+      }
+
+      .header-search-form {
+        display: none;
+      }
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+  {% set current_role = 'patient' %}
+  {% if current_user.is_authenticated %}
+    {% if current_user.email == 'admin@spherixclinic.com' %}
+      {% set current_role = 'admin' %}
+    {% else %}
+      {% set role_parts = current_user.get_id().split('-') %}
+      {% set current_role = role_parts[0] %}
+    {% endif %}
+  {% endif %}
+
+  <div class="dashboard-wrapper">
+
+    <!-- Render sidebar for logged-in users (non-admin) -->
+    {% if current_user.is_authenticated and current_role != 'admin' %}
+    <aside class="dashboard-sidebar">
+      
+      <!-- Brand Header -->
+      <a href="{{ url_for('home') }}" class="sidebar-brand">
+        <div class="sidebar-logo-box bg-white flex items-center justify-center flex-shrink-0" style="background-color: #ffffff; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+          <img src="{{ url_for('static', filename='images/spherixclinic.jpg') }}" alt="Spherix Clinic" style="width: 42px; height: 42px; border-radius: 6px; object-fit: cover;" />
+        </div>
+        <div class="d-flex flex-column justify-content-center">
+          <span class="d-flex align-items-baseline gap-1" style="line-height: 1.15;">
+            <span class="spherix-brand-gradient brand-font-spherix font-iceland" style="font-size: 1.35rem; font-weight: 700;">Spherix</span>
+            <span class="brand-font-clinic font-ballet" style="color: #005eb8; font-size: 1.55rem;">Clinic</span>
+          </span>
+          <span class="font-bold uppercase tracking-wider" style="font-size: 0.82rem; color: #0284c7; letter-spacing: 0.05em; margin-top: 2px;">{{ current_role|replace('_', ' ')|capitalize }} Workspace</span>
+        </div>
+      </a>
+
+      <!-- Navigation Menu -->
+      <div class="sidebar-menu">
+        
+        <!-- ================= 1. PATIENT NAVIGATION ================= -->
+        {% if current_role == 'patient' %}
+        <div class="sidebar-section-title">My Health Portal</div>
+        {% set patient_nav = [
+          ('overview', 'fas fa-th-large', 'Overview'),
+          ('appointments', 'fas fa-calendar-check', 'My Consultations'),
+          ('telemedicine', 'fas fa-video', 'Telemedicine HD'),
+          ('diagnostics', 'fas fa-vial-virus', 'Diagnostic Tests'),
+          ('prescriptions', 'fas fa-file-prescription', 'Prescriptions'),
+          ('orders', 'fas fa-shopping-bag', 'Pharmacy Orders'),
+          ('medical_records', 'fas fa-file-medical', 'EHR Records'),
+          ('messages', 'fas fa-comments', 'Doctor Tele-Chat'),
+          ('settings', 'fas fa-user-cog', 'Profile & Settings')
+        ] %}
+        {% for id, icon, label in patient_nav %}
+        {% if id == 'telemedicine' %}
+        <a href="{{ url_for('telemedicine') }}"
+          class="sidebar-link {% if request.endpoint == 'telemedicine' %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% elif id == 'diagnostics' %}
+        <a href="{{ url_for('patient_dashboard', tab='diagnostics') }}"
+          class="sidebar-link {% if request.endpoint == 'patient_dashboard' and request.args.get('tab') == 'diagnostics' %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('patient_dashboard', tab=id) }}"
+          class="sidebar-link {% if request.endpoint == 'patient_dashboard' and (request.args.get('tab', 'overview') == id) %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% endif %}
+        {% endfor %}
+
+        <!-- ================= 2. DOCTOR NAVIGATION ================= -->
+        {% elif current_role == 'doctor' %}
+        <div class="sidebar-section-title">Doctor Portal</div>
+        {% set doctor_nav = [
+          ('overview', 'fas fa-th-large', 'Dashboard'),
+          ('today_schedule', 'fas fa-calendar-day', "Today's Schedule"),
+          ('appointments', 'fas fa-calendar-check', 'My Appointments'),
+          ('calendar', 'fas fa-calendar-alt', 'Calendar'),
+          ('availability', 'fas fa-clock', 'My Availability')
+        ] %}
+        {% for id, icon, label in doctor_nav %}
+        <a href="{{ url_for('doctor_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Patient Care</div>
+        {% set patient_care_nav = [
+          ('patient_list', 'fas fa-users', 'Patient List'),
+          ('health_tracker', 'fas fa-file-medical-alt', 'EHR Hub'),
+          ('prescriptions', 'fas fa-pills', 'Prescriptions'),
+          ('lab_requests', 'fas fa-vial', 'Diagnostic Referrals'),
+          ('ipd_management', 'fas fa-procedures', 'IPD Management'),
+          ('surgery_schedule', 'fas fa-syringe', 'Surgery Schedule')
+        ] %}
+        {% for id, icon, label in patient_care_nav %}
+        <a href="{{ url_for('doctor_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if request.args.get('tab') == id %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Communication</div>
+        {% set comms_nav = [
+          ('messages', 'fas fa-comments', 'Messages'),
+          ('telemedicine', 'fas fa-video', 'Telemedicine'),
+          ('notifications', 'fas fa-bell', 'Notifications')
+        ] %}
+        {% for id, icon, label in comms_nav %}
+        <a href="{{ url_for('doctor_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if request.args.get('tab') == id %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+
+        <div class="sidebar-section-title">Analytics & Profile</div>
+        <a href="{{ url_for('doctor_dashboard') }}?tab=stats"
+          class="sidebar-link {% if request.args.get('tab') == 'stats' %}active{% endif %}">
+          <span>Performance</span></a>
+        <a href="{{ url_for('doctor_dashboard') }}?tab=earnings"
+          class="sidebar-link {% if request.args.get('tab') == 'earnings' %}active{% endif %}">
+          <span>Earnings</span></a>
+        <a href="{{ url_for('doctor_dashboard') }}?tab=settings"
+          class="sidebar-link {% if request.args.get('tab') == 'settings' %}active{% endif %}">
+          <span>Settings</span></a>
+
+        <!-- ================= 3. HOSPITAL NAVIGATION ================= -->
+        {% elif current_role == 'hospital' %}
+        
+        <!-- Quick Command Center Link -->
+        <a href="{{ url_for('hospital_dashboard', tab='overview') }}"
+           class="sidebar-link hospital-sidebar-link mb-2 {% if request.args.get('tab', 'overview') == 'overview' %}active{% endif %}"
+           data-tab="overview">
+          <span>Command Center</span>
+        </a>
+
+        <!-- 1. GROUP: FACILITY OPERATIONS -->
+        {% set hosp_facility_tabs = ['overview', 'traffic', 'appointments', 'opd', 'ipd', 'emergency', 'telemedicine'] %}
+        <div class="sidebar-group {% if request.args.get('tab', 'overview') in hosp_facility_tabs and request.args.get('tab', 'overview') != 'overview' %}open has-active{% endif %}" id="hosp-group-facility">
+          <button type="button" class="sidebar-group-header" onclick="toggleHospSidebarGroup('facility')">
+            <div class="d-flex align-items-center gap-2">
+              <span>Facility Operations</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-chevron-down group-arrow"></i>
+            </div>
+          </button>
+          <div class="sidebar-sublinks">
+            {% set facility_nav = [
+              ('traffic', 'fas fa-satellite-dish', 'Live Traffic Stream'),
+              ('appointments', 'fas fa-calendar-check', 'Appointments'),
+              ('opd', 'fas fa-clinic-medical', 'OPD Management'),
+              ('ipd', 'fas fa-procedures', 'IPD Management'),
+              ('emergency', 'fas fa-first-aid', 'Emergency (ER)'),
+              ('telemedicine', 'fas fa-video', 'Telemedicine')
+            ] %}
+            {% for id, icon, label in facility_nav %}
+            <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+               class="sidebar-sublink hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}"
+               data-tab="{{ id }}" data-group="facility">
+              <span>{{ label }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- 2. GROUP: CLINICAL SERVICES -->
+        {% set hosp_clinical_tabs = ['emr', 'pharmacy', 'laboratory', 'diagnostics', 'radiology', 'ot_management', 'blood', 'organs'] %}
+        <div class="sidebar-group {% if request.args.get('tab', 'overview') in hosp_clinical_tabs %}open has-active{% endif %}" id="hosp-group-clinical">
+          <button type="button" class="sidebar-group-header" onclick="toggleHospSidebarGroup('clinical')">
+            <div class="d-flex align-items-center gap-2">
+              <span>Clinical Services</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-chevron-down group-arrow"></i>
+            </div>
+          </button>
+          <div class="sidebar-sublinks">
+            {% set clinical_nav = [
+              ('emr', 'fas fa-file-medical-alt', 'EMR Hub'),
+              ('pharmacy', 'fas fa-pills', 'Pharmacy'),
+              ('laboratory', 'fas fa-microscope', 'Pathology & Lab'),
+              ('diagnostics', 'fas fa-vial-virus', 'Diagnostic Tests'),
+              ('radiology', 'fas fa-x-ray', 'Radiology'),
+              ('ot_management', 'fas fa-syringe', 'OT Management'),
+              ('blood', 'fas fa-tint', 'Blood Bank'),
+              ('organs', 'fas fa-hand-holding-heart', 'Organ Network')
+            ] %}
+            {% for id, icon, label in clinical_nav %}
+            <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+               class="sidebar-sublink hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}"
+               data-tab="{{ id }}" data-group="clinical">
+              <span>{{ label }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- 3. GROUP: ADMINISTRATION & HR -->
+        {% set hosp_admin_tabs = ['doctors', 'staff', 'patients', 'nursing', 'departments', 'beds', 'ambulance', 'inventory', 'billing', 'insurance', 'payroll'] %}
+        <div class="sidebar-group {% if request.args.get('tab', 'overview') in hosp_admin_tabs %}open has-active{% endif %}" id="hosp-group-admin">
+          <button type="button" class="sidebar-group-header" onclick="toggleHospSidebarGroup('admin')">
+            <div class="d-flex align-items-center gap-2">
+              <span>Administration &amp; HR</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-chevron-down group-arrow"></i>
+            </div>
+          </button>
+          <div class="sidebar-sublinks">
+            {% set admin_nav = [
+              ('doctors', 'fas fa-user-md', 'Doctors'),
+              ('staff', 'fas fa-users-cog', 'Staff & HR'),
+              ('patients', 'fas fa-user-injured', 'Patients'),
+              ('nursing', 'fas fa-user-nurse', 'Nursing Station'),
+              ('departments', 'fas fa-sitemap', 'Departments'),
+              ('beds', 'fas fa-bed', 'Bed Management'),
+              ('ambulance', 'fas fa-ambulance', 'Emergency Fleet'),
+              ('inventory', 'fas fa-boxes', 'Medical Supplies'),
+              ('billing', 'fas fa-file-invoice-dollar', 'Billing & Invoicing'),
+              ('insurance', 'fas fa-shield-alt', 'Insurance (TPA)'),
+              ('payroll', 'fas fa-money-check-alt', 'Staff Payroll')
+            ] %}
+            {% for id, icon, label in admin_nav %}
+            <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+               class="sidebar-sublink hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}"
+               data-tab="{{ id }}" data-group="admin">
+              <span>{{ label }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- 4. GROUP: SYSTEM & INTELLIGENCE -->
+        {% set hosp_system_tabs = ['reports', 'ai_intelligence', 'audit_logs', 'settings'] %}
+        <div class="sidebar-group {% if request.args.get('tab', 'overview') in hosp_system_tabs %}open has-active{% endif %}" id="hosp-group-system">
+          <button type="button" class="sidebar-group-header" onclick="toggleHospSidebarGroup('system')">
+            <div class="d-flex align-items-center gap-2">
+              <span>System &amp; Settings</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-chevron-down group-arrow"></i>
+            </div>
+          </button>
+          <div class="sidebar-sublinks">
+            {% set system_nav = [
+              ('reports', 'fas fa-chart-pie', 'Reports & Analytics'),
+              ('ai_intelligence', 'fas fa-brain', 'Clinical AI'),
+              ('audit_logs', 'fas fa-history', 'Audit Logs'),
+              ('settings', 'fas fa-cog', 'Hospital Settings')
+            ] %}
+            {% for id, icon, label in system_nav %}
+            <a href="{{ url_for('hospital_dashboard', tab=id) }}"
+               class="sidebar-sublink hospital-sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}"
+               data-tab="{{ id }}" data-group="system">
+              <span>{{ label }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- ================= 5. DONORS & STAFF NAVIGATION ================= -->
+        {% elif current_role == 'blood_donor' %}
+        <div class="sidebar-section-title">Blood Donor Portal</div>
+        <a href="{{ url_for('blood_donor_dashboard', tab='overview') }}" class="sidebar-link {% if request.endpoint == 'blood_donor_dashboard' and request.args.get('tab', 'overview') == 'overview' %}active{% endif %}">
+          <span>Workspace</span>
+        </a>
+        <a href="{{ url_for('blood_donor_dashboard', tab='settings') }}" class="sidebar-link {% if request.endpoint == 'blood_donor_dashboard' and request.args.get('tab') == 'settings' %}active{% endif %}">
+          <span>Settings &amp; Profile</span>
+        </a>
+        <a href="{{ url_for('download_donation_certificate') }}" class="sidebar-link">
+          <span>PDF Certificate</span>
+        </a>
+        <a href="{{ url_for('download_blood_donor_id_card') }}" class="sidebar-link">
+          <span>Digital ID Card</span>
+        </a>
+        <a href="{{ url_for('blood_donation_camps') }}" class="sidebar-link {% if request.endpoint == 'blood_donation_camps' %}active{% endif %}">
+          <span>Donation Camps</span>
+        </a>
+        <a href="{{ url_for('blood_bank') }}" class="sidebar-link {% if request.endpoint == 'blood_bank' %}active{% endif %}">
+          <span>Search Blood Bank</span>
+        </a>
+
+        {% elif current_role == 'organ_donor' %}
+        <div class="sidebar-section-title">Organ Donor Portal</div>
+        <a href="{{ url_for('organ_donor_dashboard', tab='overview') }}" class="sidebar-link {% if request.endpoint == 'organ_donor_dashboard' and request.args.get('tab', 'overview') == 'overview' %}active{% endif %}">
+          <span>Workspace</span>
+        </a>
+        <a href="{{ url_for('organ_donor_dashboard', tab='settings') }}" class="sidebar-link {% if request.endpoint == 'organ_donor_dashboard' and request.args.get('tab') == 'settings' %}active{% endif %}">
+          <span>Settings &amp; Profile</span>
+        </a>
+        <a href="{{ url_for('download_organ_donor_certificate') }}" class="sidebar-link">
+          <span>PDF Certificate</span>
+        </a>
+        <a href="{{ url_for('download_organ_donor_id_card') }}" class="sidebar-link">
+          <span>Digital ID Card</span>
+        </a>
+        <a href="{{ url_for('organ_donors_list') }}" class="sidebar-link {% if request.endpoint == 'organ_donors_list' %}active{% endif %}">
+          <span>Donors Directory</span>
+        </a>
+
+        {% elif current_role == 'staff' %}
+        <div class="sidebar-section-title">Staff Portal</div>
+        {% if current_user.role in ['Receptionist', 'Appointment Management'] %}
+        {% set rec_nav = [
+          ('opd', 'fas fa-clipboard-list', 'OPD Queue & Flow'),
+          ('patients', 'fas fa-users', 'Registered Patients'),
+          ('doctors', 'fas fa-user-md', 'Doctors & Rosters')
+        ] %}
+        {% for id, icon, label in rec_nav %}
+        <a href="{{ url_for('staff_reception_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if (request.args.get('tab', 'opd') == id) %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+        {% elif current_user.role == 'Bed Management' %}
+        {% set bed_nav = [
+          ('floorplan', 'fas fa-th', 'Ward Floorplan'),
+          ('admissions', 'fas fa-clipboard-list', 'Allocation Requests'),
+          ('history', 'fas fa-history', 'Discharge History')
+        ] %}
+        {% for id, icon, label in bed_nav %}
+        <a href="{{ url_for('staff_bed_dashboard') }}?tab={{ id }}"
+          class="sidebar-link {% if (request.args.get('tab', 'floorplan') == id) %}active{% endif %}">
+          <span>{{ label }}</span>
+        </a>
+        {% endfor %}
+        {% elif current_user.role == 'Blood Donor Management' %}
+        {% set blood_nav = [
+          ('overview', 'fas fa-th-large', 'Overview'),
+          ('donor_management', 'fas fa-users', 'Donor Registry'),
+          ('inventory', 'fas fa-vials', 'Live Inventory'),
+          ('requests', 'fas fa-clipboard-list', 'Blood Requests'),
+          ('camps', 'fas fa-tent', 'Donation Camps')
+        ] %}
+        {% for id, icon, label in blood_nav %}
+        <a href="{{ url_for('staff_blood_dashboard', tab=id) }}"
+          class="sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <span>{{ label }}</span></a>
+        {% endfor %}
+        {% elif current_user.role == 'Organ Donor Management' %}
+        {% set organ_nav = [
+          ('overview', 'fas fa-th-large', 'Overview'),
+          ('donor_registry', 'fas fa-users', 'Donor Registry'),
+          ('transplant_requests', 'fas fa-clipboard-list', 'Transplant Requests'),
+          ('matching_log', 'fas fa-network-wired', 'Matching Log')
+        ] %}
+        {% for id, icon, label in organ_nav %}
+        <a href="{{ url_for('staff_organ_dashboard', tab=id) }}"
+          class="sidebar-link {% if request.args.get('tab', 'overview') == id %}active{% endif %}">
+          <span>{{ label }}</span></a>
+        {% endfor %}
+        {% elif current_user.role in ['Nurse', 'Nursing'] %}
+        <a href="{{ url_for('staff_nursing_dashboard') }}" class="sidebar-link active"><span>Nursing Station</span></a>
+        {% else %}
+        <a href="{{ url_for('staff_general_dashboard') }}" class="sidebar-link active"><span>Staff Workspace</span></a>
+        {% endif %}
+        {% endif %}
+
+        <div class="sidebar-section-title">Live Website</div>
+        <a href="{{ url_for('home') }}" class="sidebar-link">
+          <span>Go to Live Portal</span>
+        </a>
+      </div>
+
+      <!-- User Profile Footer -->
+      <div class="sidebar-footer">
+        <div class="user-avatar" style="overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #ffffff !important; color: #0284c7; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); padding: 2px;">
+          {% if current_user.is_doctor %}
+          <img src="{{ url_for('get_doctor_image', doc_id=current_user.id) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+          {% elif current_user.logo_url %}
+          <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital Avatar" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+          {% elif current_user.profile_picture_url %}
+          <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+          {% else %}
+          {{ current_user.name[0] if current_user.name else 'U' }}
+          {% endif %}
+        </div>
+        <div class="user-info">
+          <div class="user-name">
+            {% if current_user.is_doctor %}
+            Dr. {{ current_user.first_name }} {{ current_user.last_name }}
+            {% else %}
+            {{ current_user.name }}
+            {% endif %}
+          </div>
+          <div class="user-role d-flex align-items-center justify-content-between">
+            <span>{{ current_role|replace('_', ' ') }}</span>
+            {% if current_user.license_number or current_user.license_no %}
+            <span style="font-size: 8px; color: #0284c7; font-family: monospace; font-weight: 700; background: #f0f9ff; padding: 1px 4px; border-radius: 4px; border: 1px solid #bae6fd;">
+              {{ (current_user.license_number or current_user.license_no)|truncate(14, True, '..') }}
+            </span>
+            {% endif %}
+          </div>
+          {% if current_role == 'staff' and current_user.hospital_name %}
+          <div style="font-size: 10px; color: #0284c7; font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px;" title="{{ current_user.hospital_name }}">
+            <i class="fas fa-hospital me-1"></i>{{ current_user.hospital_name }}
+          </div>
+          {% endif %}
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn" title="Sign Out">
+          <i class="fas fa-sign-out-alt"></i>
+        </a>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <!-- Floating Mobile Sidebar Toggle Button -->
+    <button class="btn btn-light rounded-circle shadow border position-fixed d-lg-none" onclick="toggleSidebar()" style="top: 16px; left: 16px; z-index: 1035; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #ffffff;" title="Open Sidebar">
+      <i class="fas fa-bars text-slate-800 fs-5"></i>
+    </button>
+    {% endif %}
+
+    <!-- Main Dashboard Panel -->
+    <div class="dashboard-panel">
+      
+      {% block dashboard_top_header %}
+      <!-- Dashboard Top Header -->
+      <header class="dashboard-header">
+        <div class="d-flex align-items-center">
+          <div class="d-flex align-items-center dashboard-header-title">
+            {% if current_user.is_authenticated and current_role != 'admin' %}
+            <button class="btn btn-icon d-lg-none me-3" onclick="toggleSidebar()" style="padding: 0; border: none; background: transparent; color: #0f172a;">
+              <i class="fas fa-bars fs-4"></i>
+            </button>
+            {% endif %}
+            <div>
+              <h1 class="dashboard-title">{% block page_title %}Dashboard{% endblock %}</h1>
+              <p class="dashboard-subtitle">{% block page_subtitle %}Live clinical overview & operational controls{% endblock %}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Notification Bell Button -->
+          <div style="position: relative;">
+            <button class="header-icon-btn position-relative" type="button" onclick="toggleNotificationsPanel(event)" id="notificationBellBtn" title="Notifications">
+              <i class="fas fa-bell"></i>
+              {% if unread_notifications_count > 0 %}
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="font-size: 9px; padding: 2px 6px;">
+                {{ unread_notifications_count }}
+              </span>
+              {% else %}
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="font-size: 9px; padding: 2px 6px; display:none;">0</span>
+              {% endif %}
+            </button>
+          </div>
+
+          <!-- Notification Panel Drawer -->
+          <div id="notificationPanel">
+            <div class="notif-header">
+              <h6>
+                <i class="fas fa-bell me-2 text-sky-400"></i>Notifications
+                {% if unread_notifications_count > 0 %}
+                <span class="badge rounded-pill bg-primary ms-2" id="notifPanelCount" style="font-size: 10px;">{{ unread_notifications_count }} new</span>
+                {% else %}
+                <span class="badge rounded-pill bg-primary ms-2" id="notifPanelCount" style="font-size: 10px; display:none;">0 new</span>
+                {% endif %}
+              </h6>
+              <div class="d-flex gap-2 align-items-center">
+                <button onclick="markAllReadAjax()" id="markAllReadBtn" style="font-size: 11px; color: #38bdf8; font-weight: 700; background: none; border: none; cursor: pointer; padding: 0;">Mark all read</button>
+                <button onclick="closeNotificationsPanel()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0;line-height:1;">&#x2715;</button>
+              </div>
+            </div>
+            
+            <div class="notif-scroll">
+              {% for notif in notifications %}
+              <a href="{{ notif.link or '#' }}" class="text-decoration-none" onclick="closeNotificationsPanel()">
+                <div class="notif-item {% if notif.status == 'unread' %}unread{% endif %}">
+                  <div class="notif-icon">
+                    <i class="fas fa-bell"></i>
+                  </div>
+                  <div class="notif-body">
+                    <p class="{% if notif.status == 'unread' %}fw-bold{% endif %}">{{ notif.message }}</p>
+                    <span class="notif-time"><i class="fas fa-clock me-1"></i>{{ notif.created_at.strftime('%b %d, %Y %H:%M') if notif.created_at else '' }}</span>
+                  </div>
+                </div>
+              </a>
+              {% else %}
+              <div class="p-4 text-center" style="color: #94a3b8;">
+                <i class="fas fa-bell-slash" style="font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.4;"></i>
+                <p style="font-size: 12px; margin: 0;">No new notifications</p>
+              </div>
+              {% endfor %}
+            </div>
+            
+            <div class="notif-footer">
+              <small style="color: #94a3b8; font-size: 11px;">Showing {{ notifications|length }} notification(s)</small>
+            </div>
+          </div>
+
+          <!-- User Profile Dropdown -->
+          <div class="dropdown">
+            <button class="header-icon-btn p-0 d-flex align-items-center justify-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="overflow: hidden; width: 38px; height: 38px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" title="{{ current_user.name }}">
+              {% if current_user.is_doctor %}
+              <img src="{{ url_for('get_doctor_image', doc_id=current_user.id) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+              {% elif current_user.logo_url %}
+              <img src="{{ url_for('static', filename='uploads/hospital_logos/' + current_user.logo_url) }}" alt="Hospital" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/static/uploads/{{ current_user.logo_url }}';">
+              {% elif current_user.profile_picture_url %}
+              <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture_url) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+              <span class="font-bold text-sky-600 text-xs">{{ current_user.name[0] if current_user.name else 'U' }}</span>
+              {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end mt-2 shadow-lg border border-slate-200 rounded-3 p-2" style="min-width: 240px;">
+              <li class="px-3 py-2 border-bottom mb-1">
+                <div class="fw-bold text-slate-800 text-xs text-truncate">
+                  {% if current_user.is_doctor %}Dr. {{ current_user.first_name }} {{ current_user.last_name }}{% else %}{{ current_user.name }}{% endif %}
+                </div>
+                <div class="d-flex align-items-center justify-content-between mt-1">
+                  <span class="text-[10px] text-sky-600 font-mono font-semibold text-uppercase">{{ current_role|replace('_', ' ') }}</span>
+                  {% if current_user.license_number or current_user.license_no %}
+                  <span class="text-[9px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded font-mono font-bold border border-sky-200" title="Verified License / Registration ID">
+                    <i class="fas fa-shield-alt me-0.5 text-sky-600"></i>{{ current_user.license_number or current_user.license_no }}
+                  </span>
+                  {% endif %}
+                </div>
+              </li>
+              {% if current_role == 'doctor' %}
+              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('doctor_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Account Settings</a></li>
+              {% elif current_role == 'hospital' %}
+              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('hospital_dashboard', tab='settings') }}"><i class="fas fa-cog me-2 text-muted"></i>Hospital Settings</a></li>
+              {% elif current_role == 'patient' %}
+              <li><a class="dropdown-item rounded-2 py-2 text-xs font-bold" href="{{ url_for('patient_dashboard') }}?tab=settings"><i class="fas fa-cog me-2 text-muted"></i>Profile Settings</a></li>
+              {% endif %}
+              <li><hr class="dropdown-divider my-1"></li>
+              <li><a class="dropdown-item text-danger rounded-2 py-2 text-xs font-bold" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Sign Out</a></li>
+            </ul>
+          </div>
+
+        </div>
+      </header>
+      {% endblock %}
+
+      <!-- Floating System Notification Popup Center -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div id="dashboard-toast-container" class="position-fixed top-0 end-0 p-3 p-md-4" style="z-index: 999999; max-width: 440px; width: 100%; pointer-events: none;">
+            {% for category, message in messages %}
+              {% set cat_norm = category|lower %}
+              {% set is_success = cat_norm in ['success', 'ok'] %}
+              {% set is_warning = cat_norm in ['warning', 'attention', 'warn'] %}
+              {% set is_danger = cat_norm in ['error', 'danger', 'critical'] %}
+              {% set border_color = '#a7f3d0' if is_success else ('#fde68a' if is_warning else ('#fecdd3' if is_danger else '#bae6fd')) %}
+              {% set bar_bg = 'linear-gradient(90deg, #10b981, #14b8a6)' if is_success else ('linear-gradient(90deg, #f59e0b, #ea580c)' if is_warning else ('linear-gradient(90deg, #f43f5e, #e11d48)' if is_danger else 'linear-gradient(90deg, #0284c7, #6366f1)')) %}
+              {% set icon_bg = 'linear-gradient(135deg, #10b981, #059669)' if is_success else ('linear-gradient(135deg, #f59e0b, #d97706)' if is_warning else ('linear-gradient(135deg, #f43f5e, #be123c)' if is_danger else 'linear-gradient(135deg, #0284c7, #2563eb)')) %}
+              {% set badge_bg = '#d1fae5' if is_success else ('#fef3c7' if is_warning else ('#ffe4e6' if is_danger else '#e0f2fe')) %}
+              {% set badge_color = '#065f46' if is_success else ('#92400e' if is_warning else ('#9f1239' if is_danger else '#075985')) %}
+              {% set btn_bg = '#059669' if is_success else ('#d97706' if is_warning else ('#e11d48' if is_danger else '#0f172a')) %}
+              
+              <div class="card border-0 shadow-lg rounded-3 mb-3 overflow-hidden position-relative animate__animated animate__fadeInRight" 
+                   id="dash-flash-toast-{{ loop.index }}"
+                   style="pointer-events: auto; backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.96); --toast-border: {{ border_color }}; border: 1px solid var(--toast-border) !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;">
+                <div style="height: 5px; width: 100%; --bar-bg: {{ bar_bg }}; background: var(--bar-bg);"></div>
+                <div class="card-body p-3.5 p-md-4">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-sm"
+                         style="width: 42px; height: 42px; font-size: 18px; --icon-bg: {{ icon_bg }}; background: var(--icon-bg);">
+                      <i class="fas fa-{% if is_success %}check-circle{% elif is_warning %}exclamation-triangle{% elif is_danger %}shield-alt{% else %}info-circle{% endif %}"></i>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                      <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="badge rounded-2 text-uppercase px-2.5 py-1 fw-bold" 
+                              style="font-size: 10px; letter-spacing: 0.5px; --badge-bg: {{ badge_bg }}; --badge-col: {{ badge_color }}; background: var(--badge-bg); color: var(--badge-col);">
+                          {% if is_success %}Success{% elif is_warning %}Attention{% elif is_danger %}System Alert{% else %}Notice{% endif %}
+                        </span>
+                        <small class="text-muted" style="font-size: 11px;">Just now</small>
+                      </div>
+                      <h6 class="fw-bold text-dark mb-1" style="font-size: 13.5px;">
+                        {% if is_success %}Action Completed{% elif is_warning %}Attention{% elif is_danger %}Action Required{% else %}System Notice{% endif %}
+                      </h6>
+                      <p class="text-secondary small mb-2.5 leading-relaxed">{{ message }}</p>
+                      <div class="d-flex align-items-center gap-2 pt-2 border-top">
+                        <button type="button" 
+                                onclick="document.getElementById('dash-flash-toast-{{ loop.index }}').remove()" 
+                                class="btn btn-sm rounded-2 fw-bold text-white px-3 py-1 shadow-sm"
+                                style="font-size: 11.5px; --btn-bg: {{ btn_bg }}; background: var(--btn-bg);">
+                          <i class="fas fa-check me-1"></i> Got it
+                        </button>
+                        <button type="button" 
+                                onclick="document.getElementById('dash-flash-toast-{{ loop.index }}').remove()" 
+                                class="btn btn-sm btn-light rounded-2 text-muted px-2.5 py-1"
+                                style="font-size: 11.5px;">
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                    <button type="button" 
+                            onclick="document.getElementById('dash-flash-toast-{{ loop.index }}').remove()" 
+                            class="btn-close ms-auto flex-shrink-0" 
+                            aria-label="Close"></button>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Content Area -->
+      <div class="dashboard-content {% block dashboard_content_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Global Book Appointment Modal -->
+  <!-- Global Book Appointment Offcanvas Side Drawer (Slides smoothly in from the right) -->
+  <div id="bookAppointmentModal" class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" aria-labelledby="bookAppointmentModalLabel" style="width: 560px; max-width: 92vw; z-index: 1060;">
+    <div class="offcanvas-header bg-amber-400 text-white py-4 px-5 border-bottom border-slate-800">
+      <div class="d-flex align-items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-400 text-sky-400 d-flex align-items-center justify-content-center">
+          <i class="fas fa-calendar-plus fs-5"></i>
+        </div>
+        <div>
+          <h5 class="offcanvas-title font-display font-bold text-black fs-5 mb-0 bg-amber-400" id="bookAppointmentModalLabel">
+            Book Doctor Appointment
+          </h5>
+          <p class="text-xs text-black mb-0">Select attending specialist & lock your consultation slot</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    
+    <div class="offcanvas-body p-4 p-md-5 bg-white">
+      <form method="POST" action="{{ url_for('book_appointment') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Patient Full Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control rounded-3 py-2.5" value="{{ current_user.name if current_user.is_authenticated else '' }}" required placeholder="Full Name">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Email Address <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control rounded-3 py-2.5" value="{{ current_user.email if current_user.is_authenticated else '' }}" required placeholder="Enter email address">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Phone Number <span class="text-danger">*</span></label>
+            <input type="tel" name="phone" class="form-control rounded-3 py-2.5" value="{{ current_user.phone if current_user.is_authenticated and current_user.phone else '' }}" required placeholder="Phone Number">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Gender</label>
+            <select name="gender" class="form-select rounded-3 py-2.5">
+              <option value="Male" {% if current_user.is_authenticated and current_user.gender == 'Male' %}selected{% endif %}>Male</option>
+              <option value="Female" {% if current_user.is_authenticated and current_user.gender == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Other" {% if current_user.is_authenticated and current_user.gender == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Age / DOB</label>
+            <input type="text" name="dob" class="form-control rounded-3 py-2.5" value="{{ current_user.age if current_user.is_authenticated and current_user.age else '' }}" placeholder="Age">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Select Attending Specialist <span class="text-danger">*</span></label>
+            <select name="doctor_id" class="form-select rounded-3 py-2.5 fw-semibold" required>
+              <option value="">-- Choose Specialist Doctor --</option>
+              {% set doc_list = (doctors if doctors is defined and doctors else (global_doctors if global_doctors is defined and global_doctors else {})) %}
+              {% if doc_list %}
+                {% if doc_list is mapping %}
+                  {% for doc_id, doc in doc_list.items() %}
+                    {% if not doc.is_hidden and not doc.is_blocked %}
+                      <option value="{{ doc.id }}">
+                        Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.specialization or doc.department or 'General Medicine' }}) &bull; ₹{{ doc.consultation_fee or 500 }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {% for doc in doc_list %}
+                    {% if not doc.is_hidden and not doc.is_blocked %}
+                      <option value="{{ doc.id }}">
+                        Dr. {{ doc.first_name }} {{ doc.last_name }} ({{ doc.specialization or doc.department or 'General Medicine' }}) &bull; ₹{{ doc.consultation_fee or 500 }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endif %}
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Appointment Date <span class="text-danger">*</span></label>
+            <input type="date" name="date" class="form-control rounded-3 py-2.5" required min="{{ today.strftime('%Y-%m-%d') if today and today.strftime is defined else today }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Preferred Time Slot <span class="text-danger">*</span></label>
+            <input type="time" name="time" class="form-control rounded-3 py-2.5" required value="10:00">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label font-bold text-slate-700 text-xs uppercase tracking-wider">Reason for Consultation / Symptoms</label>
+            <textarea name="reason" class="form-control rounded-3 p-3" rows="3" placeholder="Briefly describe your symptoms or reason for the visit..."></textarea>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-top d-flex gap-3">
+          <button type="button" class="btn btn-secondary-custom rounded-lg flex-grow-1 py-3 text-xs" data-bs-dismiss="offcanvas" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary-custom rounded-lg flex-grow-1 py-3 text-xs shadow-lg">
+            <i class="fas fa-check-circle me-1"></i> Confirm &amp; Proceed
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Core Dashboard Scripts -->
+  <script>
+    function toggleNotificationsPanel(event) {
+      event.stopPropagation();
+      const panel = document.getElementById('notificationPanel');
+      if (!panel) return;
+      const isOpening = !panel.classList.contains('open');
+      panel.classList.toggle('open');
+      if (isOpening) {
+        _markAllReadAjax();
+      }
+    }
+
+    function closeNotificationsPanel() {
+      const panel = document.getElementById('notificationPanel');
+      if (panel) panel.classList.remove('open');
+    }
+
+    function markAllReadAjax() {
+      _markAllReadAjax();
+    }
+
+    function _markAllReadAjax() {
+      const badge = document.getElementById('notifBadge');
+      const panelCount = document.getElementById('notifPanelCount');
+
+      if (badge) badge.style.display = 'none';
+      if (panelCount) panelCount.style.display = 'none';
+
+      document.querySelectorAll('#notificationPanel .notif-item.unread').forEach(item => {
+        item.classList.remove('unread');
+        const icon = item.querySelector('.notif-icon');
+        if (icon) {
+          icon.style.background = 'rgba(2, 132, 199, 0.2)';
+          icon.style.color = '#38bdf8';
+        }
+        const p = item.querySelector('p');
+        if (p) p.classList.remove('fw-bold');
+      });
+
+      fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({})
+      }).catch(err => console.warn('Mark-all-read failed:', err));
+    }
+
+    document.addEventListener('click', function (e) {
+      const panel = document.getElementById('notificationPanel');
+      const btn = document.getElementById('notificationBellBtn');
+      if (panel && panel.classList.contains('open')) {
+        if (!panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
+          panel.classList.remove('open');
+        }
+      }
+    });
+
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      if (sidebar) {
+        sidebar.classList.toggle('active');
+      }
+    }
+
+    function toggleHospSidebarGroup(groupId) {
+      const grp = document.getElementById('hosp-group-' + groupId);
+      if (grp) {
+        grp.classList.toggle('open');
+      }
+    }
+
+    function openBookAppointmentModal() {
+      const drawerEl = document.getElementById('bookAppointmentModal');
+      if (drawerEl) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+          bootstrap.Offcanvas.getOrCreateInstance(drawerEl).show();
+        } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(drawerEl).show();
+        } else {
+          drawerEl.classList.add('show');
+          drawerEl.style.display = 'block';
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
+  </script>
+
+  <!-- Universal Image Cropper & Fixed Size Engine Include -->
+  {% include 'universal_crop_modal.html' %}
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

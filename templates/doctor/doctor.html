@@ -1,0 +1,675 @@
+{% extends 'layout.html' %}
+
+{% block title %}Board-Certified Specialists Directory & Telemedicine Booking | Spherix Clinic{% endblock %}
+
+{% block head %}
+<!-- Modern Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+    :root {
+        --primary-blue: #0284c7;
+        --primary-indigo: #4f46e5;
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f8fafc;
+        color: #0f172a;
+    }
+
+    .font-display {
+        font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .font-outfit {
+        font-family: 'Outfit', sans-serif;
+    }
+
+    /* Ambient Hero Mesh Background with Tech Grid */
+    .hero-mesh-doctor {
+        position: relative;
+        background-color: #ffffff;
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(2, 132, 199, 0.12) 0px, transparent 55%),
+            radial-gradient(at 100% 0%, rgba(79, 70, 229, 0.10) 0px, transparent 50%),
+            radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 55%),
+            radial-gradient(rgba(2, 132, 199, 0.07) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+    }
+
+    /* Floating animation */
+    @keyframes floatSlow {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+    }
+
+    @keyframes floatReverse {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(8px); }
+    }
+
+    .animate-float-slow {
+        animation: floatSlow 6s ease-in-out infinite;
+    }
+
+    .animate-float-reverse {
+        animation: floatReverse 7s ease-in-out infinite;
+    }
+
+    /* Glassmorphic Search Bar */
+    .hero-search-glass {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 2px solid rgba(226, 232, 240, 0.95);
+        box-shadow: 0 20px 50px -12px rgba(2, 132, 199, 0.12), 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .hero-search-glass:focus-within {
+        border-color: #0284c7;
+        box-shadow: 0 25px 60px -15px rgba(2, 132, 199, 0.22), 0 0 0 4px rgba(2, 132, 199, 0.12);
+    }
+
+    /* Doctor Card Luxury Hover Transitions */
+    .doctor-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .doctor-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 24px 50px -12px rgba(2, 132, 199, 0.16), 0 0 0 1px rgba(2, 132, 199, 0.25);
+        border-color: rgba(2, 132, 199, 0.35);
+    }
+
+    /* Radiant Action Buttons */
+    .btn-radiant-doctor {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%);
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.35);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-radiant-doctor:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 16px 36px -6px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Stat Pill Card */
+    .hero-stat-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.85);
+        transition: all 0.3s ease;
+    }
+
+    .hero-stat-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(2, 132, 199, 0.3);
+        box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.12);
+    }
+
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 text-slate-900 pb-24 selection:bg-sky-200 selection:text-sky-900">
+
+    <!-- ================= 1. CINEMATIC HERO & SPECIALIST SEARCH ================= -->
+    <section class="relative bg-slate-950 text-white pt-14 pb-24 px-4 sm:px-6 lg:px-8 xl:px-12 overflow-hidden border-b border-sky-900/50 shadow-2xl">
+        <!-- Half-Earth Orbital Background Image Layer -->
+        <div class="absolute inset-0 z-0 overflow-hidden select-none pointer-events-none">
+            <img src="{{ url_for('static', filename='images/half_earth_background.jpg') }}" 
+                 alt="Earth Horizon Space Background" 
+                 class="w-full h-full object-cover object-center lg:object-[center_65%] filter brightness-[0.88] contrast-110" />
+            <!-- Deep Space & Atmospheric Overlay Gradients for Contrast & Readability -->
+            <div class="absolute inset-0 bg-gradient-to-t from-[#06152b] via-[#06152b]/55 to-[#06152b]/85"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-[#06152b]/90 via-[#06152b]/35 to-[#06152b]/80"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-500/15 via-transparent to-black/50"></div>
+        </div>
+
+        <!-- Ambient Glowing Lights & Cyber Grid Overlay -->
+        <div class="absolute -top-32 -right-32 w-[600px] h-[600px] bg-sky-500/20 rounded-full blur-[140px] pointer-events-none z-[1]"></div>
+        <div class="absolute top-1/2 -left-32 w-[550px] h-[550px] bg-indigo-500/20 rounded-full blur-[140px] pointer-events-none z-[1]"></div>
+        <div class="absolute -bottom-20 right-1/3 w-[450px] h-[450px] bg-cyan-500/15 rounded-full blur-[120px] pointer-events-none z-[1]"></div>
+        <div class="absolute inset-0 opacity-[0.04] pointer-events-none z-[1]"
+             style="background-image: radial-gradient(#38bdf8 1.5px, transparent 1.5px); background-size: 32px 32px;"></div>
+
+        <div class="max-w-[1850px] w-full mx-auto relative z-10">
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+
+                <!-- Left Column: Headline, Scope Tabs & Advanced Search -->
+                <div class="w-full lg:w-7/12 text-center lg:text-left">
+                    
+                    <!-- Top Telemetry Pill -->
+                    <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-300 text-[11px] font-extrabold tracking-widest uppercase mb-6 shadow-sm backdrop-blur-md">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-400"></span>
+                        </span>
+                        <span>Verified Medical Specialist Directory &bull; 100% Board Certified</span>
+                    </div>
+
+                    <!-- Main Dynamic Headline -->
+                    <h1 class="text-4xl sm:text-6xl xl:text-7xl font-display font-black text-white leading-[1.08] mb-6 tracking-tight">
+                        Find Top Specialists, <br />
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-300 drop-shadow-sm">
+                            Book Personalized Care.
+                        </span>
+                    </h1>
+
+                    <!-- Descriptive Subtext -->
+                    <p class="text-base sm:text-lg text-slate-300 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
+                        Connect with verified physicians, oncologists, surgeons, and clinicians across India &amp; 195+ countries. Transparent consultation fees, authentic reviews, and instant HD telemedicine booking.
+                    </p>
+
+                    <!-- Scope Selection Segmented Switcher (All / Domestic / Global) -->
+                    <div class="flex items-center justify-center lg:justify-start gap-2.5 mb-5 flex-wrap">
+                        <span class="text-[11px] font-bold text-sky-300/80 uppercase tracking-wider hidden sm:inline-block mr-1">Region:</span>
+                        
+                        <a href="{{ url_for('doctors_list', q=q, dept=active_dept) }}" 
+                           class="px-4 py-2 rounded-lg text-xs font-bold transition-all {% if not active_scope or active_scope == 'all' %}bg-sky-500 text-slate-950 font-black shadow-lg shadow-sky-500/30 scale-[1.02]{% else %}bg-white/10 hover:bg-white/20 text-white border border-white/15{% endif %} flex items-center gap-1.5 backdrop-blur-md">
+                            <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                            <span>All Specialists</span>
+                        </a>
+                        
+                        <a href="{{ url_for('doctors_list', q=q, dept=active_dept, scope='domestic') }}" 
+                           class="px-4 py-2 rounded-lg text-xs font-bold transition-all {% if active_scope == 'domestic' %}bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/30 scale-[1.02]{% else %}bg-white/10 hover:bg-white/20 text-white border border-white/15{% endif %} flex items-center gap-1.5 backdrop-blur-md">
+                            <span>🇮🇳 Domestic (India)</span>
+                        </a>
+                        
+                        <a href="{{ url_for('doctors_list', q=q, dept=active_dept, scope='international') }}" 
+                           class="px-4 py-2 rounded-lg text-xs font-bold transition-all {% if active_scope == 'international' %}bg-indigo-400 text-slate-950 font-black shadow-lg shadow-indigo-400/30 scale-[1.02]{% else %}bg-white/10 hover:bg-white/20 text-white border border-white/15{% endif %} flex items-center gap-1.5 backdrop-blur-md">
+                            <span>🌍 International (195)</span>
+                        </a>
+                    </div>
+
+                    <!-- Integrated High-Performance Search Bar -->
+                    <form method="GET" action="{{ url_for('doctors_list') }}"
+                        class="relative max-w-3xl mx-auto lg:mx-0 mb-6">
+                        {% if active_scope %}
+                        <input type="hidden" name="scope" value="{{ active_scope }}">
+                        {% endif %}
+                        {% if active_dept %}
+                        <input type="hidden" name="dept" value="{{ active_dept }}">
+                        {% endif %}
+                        <div class="bg-white/95 backdrop-blur-xl border-2 border-sky-400/40 focus-within:border-sky-400 rounded-lg p-2 shadow-2xl shadow-black/40 transition-all flex flex-col sm:flex-row items-center gap-2">
+                            <!-- Search Query Input -->
+                            <div class="flex-1 flex items-center pl-3.5 w-full">
+                                <i data-lucide="search" class="w-5 h-5 text-sky-600 shrink-0 mr-3"></i>
+                                <input type="text" name="q" value="{{ q or '' }}"
+                                    placeholder="Search by doctor name, specialty, condition, or hospital..."
+                                    class="w-full bg-transparent border-0 focus:ring-0 text-slate-900 placeholder-slate-400 text-sm font-semibold py-3 outline-none">
+                            </div>
+
+                            <!-- 195 Country Autocomplete Search -->
+                            <div class="flex items-center pl-3 pr-3 border-t sm:border-t-0 sm:border-l border-slate-200 w-full sm:w-60 py-1.5 sm:py-0">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-indigo-500 shrink-0 mr-2"></i>
+                                <input list="all-195-countries" name="country" value="{{ active_country or '' }}"
+                                    placeholder="195 Countries..."
+                                    class="w-full bg-transparent border-0 focus:ring-0 text-slate-900 placeholder-slate-400 text-xs font-bold py-2.5 outline-none">
+                                <datalist id="all-195-countries">
+                                    <option value="">All 195 Countries</option>
+                                    {% for c in all_countries_195 %}
+                                    <option value="{{ c.name }}">{{ c.flag }} {{ c.name }} ({{ c.code }})</option>
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+
+                            <!-- Find Doctors Submit Button -->
+                            <button type="submit"
+                                class="btn-radiant-doctor w-full sm:w-auto px-8 py-3.5 rounded-lg text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-lg bg-sky-600 hover:bg-sky-500">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span>Find Doctors</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Fast Specialty Filter Chips -->
+                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs">
+                        <span class="text-sky-300/80 font-bold uppercase tracking-wider text-[10.5px]">Trending Specialties:</span>
+                        <a href="{{ url_for('doctors_list', dept='Cardiology', scope=active_scope) }}"
+                            class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 hover:text-white font-semibold transition-all shadow-xs backdrop-blur-sm">❤️ Cardiology</a>
+                        <a href="{{ url_for('doctors_list', dept='Oncology', scope=active_scope) }}"
+                            class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 hover:text-white font-semibold transition-all shadow-xs backdrop-blur-sm">🎗️ Oncology</a>
+                        <a href="{{ url_for('doctors_list', dept='Neurology', scope=active_scope) }}"
+                            class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 hover:text-white font-semibold transition-all shadow-xs backdrop-blur-sm">🧠 Neurology</a>
+                        <a href="{{ url_for('doctors_list', dept='Orthopedics', scope=active_scope) }}"
+                            class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 hover:text-white font-semibold transition-all shadow-xs backdrop-blur-sm">🦴 Orthopedics</a>
+                        <a href="{{ url_for('doctors_list', telemedicine='1') }}"
+                            class="px-3.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 hover:border-emerald-400 text-emerald-300 font-bold transition-all shadow-xs flex items-center gap-1.5 backdrop-blur-sm">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>📹 HD Telemedicine</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Column: Visual Telemedicine Showcase & Specialist Graphics -->
+                <div class="w-full lg:w-5/12 relative">
+                    <div class="relative z-10 w-full max-w-[440px] mx-auto">
+                        <!-- Main Visual Card -->
+                        <div class="rounded-lg overflow-hidden shadow-2xl shadow-sky-950/70 border-2 border-sky-400/30 hover:border-sky-400 transition-all duration-700 bg-slate-900 relative group">
+                            <img src="{{ url_for('static', filename='images/doctor_specialist_art.jpg') }}" 
+                                 alt="Expert Medical Specialist" 
+                                 class="w-full h-[610px] object-cover object-top group-hover:scale-105 transition-transform duration-700">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+                            
+                            <div class="absolute bottom-6 left-6 right-6 text-white">
+                                <span class="px-3 py-1 rounded-full bg-sky-500/90 backdrop-blur-md text-white text-[10px] font-extrabold uppercase tracking-widest border border-sky-400/40 inline-flex items-center gap-1.5 mb-2 shadow-sm">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                    Instant HD Consultation
+                                </span>
+                                <h3 class="text-xl font-display font-black text-white">Global Telehealth &amp; In-Clinic</h3>
+                                <p class="text-xs text-slate-300 mt-1 leading-relaxed">Book end-to-end encrypted video appointments with certified consultants and receive digital prescriptions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Stats & Trust Bar (4 Enhanced Frosted Cards) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-16 pt-8 border-t border-white/15">
+                <div class="p-4.5 sm:p-5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-md shadow-lg flex items-center gap-3.5 transition-all">
+                    <div class="w-12 h-12 rounded-lg bg-sky-500/20 text-sky-300 flex items-center justify-center shrink-0 border border-sky-400/30 shadow-xs">
+                        <i class="fas fa-user-doctor text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">{{ total_doctors_count }}+</p>
+                        <p class="text-[11px] text-slate-300 font-bold uppercase tracking-wider">Active Specialists</p>
+                    </div>
+                </div>
+
+                <div class="p-4.5 sm:p-5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-md shadow-lg flex items-center gap-3.5 transition-all">
+                    <div class="w-12 h-12 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-400/30 shadow-xs">
+                        <i class="fas fa-video text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">HD Video</p>
+                        <p class="text-[11px] text-slate-300 font-bold uppercase tracking-wider">Cross-Border Telehealth</p>
+                    </div>
+                </div>
+
+                <div class="p-4.5 sm:p-5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-md shadow-lg flex items-center gap-3.5 transition-all">
+                    <div class="w-12 h-12 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 border border-indigo-400/30 shadow-xs">
+                        <i class="fas fa-earth-americas text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">195 Countries</p>
+                        <p class="text-[11px] text-slate-300 font-bold uppercase tracking-wider">Global Medical Network</p>
+                    </div>
+                </div>
+
+                <div class="p-4.5 sm:p-5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 backdrop-blur-md shadow-lg flex items-center gap-3.5 transition-all">
+                    <div class="w-12 h-12 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-400/30 shadow-xs">
+                        <i class="fas fa-shield-halved text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">100%</p>
+                        <p class="text-[11px] text-slate-300 font-bold uppercase tracking-wider">Verified Accreditation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+<!-- ================= 2. DIRECTORY & RESULTS SUITE ================= -->
+    <div class="max-w-[1850px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 pt-12 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        <!-- LEFT SIDEBAR: DEPARTMENTS FILTER -->
+        <aside class="lg:col-span-3 xl:col-span-3 2xl:col-span-2.5">
+            <div class="sticky top-24 bg-white p-6 sm:p-7 rounded-lg border border-slate-200/90 shadow-md shadow-slate-100/80 space-y-5">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <h3 class="text-base font-display font-bold text-slate-900 flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
+                            <i data-lucide="layers" class="w-4 h-4 text-sky-600"></i>
+                        </span>
+                        <span>Departments</span>
+                    </h3>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100">Filtered</span>
+                </div>
+
+                <div class="space-y-1.5 max-h-[560px] overflow-y-auto custom-scrollbar pr-1">
+                    <!-- All Specialists Option -->
+                    <a href="{{ url_for('doctors_list', q=q, country=active_country, scope=active_scope) }}"
+                        class="flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all {% if not active_dept %}bg-sky-600 text-white shadow-md shadow-sky-600/20{% else %}bg-slate-50 hover:bg-slate-100 text-slate-700{% endif %}">
+                        <span class="flex items-center gap-2.5">
+                            <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                            <span>All Specialists</span>
+                        </span>
+                        <span
+                            class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if not active_dept %}bg-white/20 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">
+                            {{ total_doctors_count }}
+                        </span>
+                    </a>
+
+                    <!-- Department List -->
+                    {% for dept in departments %}
+                    <a href="{{ url_for('doctors_list', q=q, dept=dept.name, country=active_country, scope=active_scope) }}"
+                        class="flex items-center justify-between px-3.5 py-2 rounded-lg text-xs font-semibold transition-all {% if active_dept == dept.name %}bg-sky-600 text-white font-bold shadow-md shadow-sky-600/20{% else %}hover:bg-slate-100 text-slate-700{% endif %}">
+                        <span class="flex items-center gap-2.5 truncate">
+                            <i class="fas {{ dept.icon }} text-[11px] opacity-70"></i>
+                            <span class="truncate">{{ dept.name }}</span>
+                        </span>
+                        <span
+                            class="text-[10px] font-mono px-2 py-0.5 rounded-full {% if active_dept == dept.name %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">
+                            {{ dept.count }}
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+
+                {% if active_dept or q or active_country or active_scope %}
+                <div class="pt-3 border-t border-slate-100">
+                    <a href="{{ url_for('doctors_list') }}"
+                        class="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        <span>Reset Filters</span>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- RIGHT CONTENT: DOCTOR CARDS (4 CARDS PER ROW, 6 ROWS PER PAGE) -->
+        <div class="lg:col-span-9 xl:col-span-9 2xl:col-span-9.5 space-y-6">
+
+            <!-- Result Header Bar -->
+            <div
+                class="flex flex-col sm:flex-row sm:items-center justify-between pb-5 mb-7 border-b border-slate-200 gap-4">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-display font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                        <span>{% if active_dept %}{{ active_dept }} Specialists{% else %}Medical Specialists Directory{% endif %}</span>
+                        {% if active_scope == 'international' %}
+                        <span class="text-xs px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-bold">🌍 Global Partners</span>
+                        {% elif active_scope == 'domestic' %}
+                        <span class="text-xs px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-bold">🇮🇳 Domestic (India)</span>
+                        {% endif %}
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Showing verified clinicians ready for in-person or cross-border telemedicine booking.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="px-3.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm flex items-center gap-1.5">
+                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-sky-600"></i>
+                        <span>{{ total_filtered }} Specialists Listed</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Doctor Cards Grid (4 CARDS PER ROW - 4x6 LAYOUT) -->
+            {% if doctors %}
+            <div id="doctorsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4 xl:gap-5">
+                {% for doctor in doctors %}
+                <!-- PREMIUM DOCTOR CARD -->
+                <div class="doctor-card rounded-lg p-5 flex flex-col justify-between group border border-slate-200/90 hover:border-sky-400 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative"
+                     data-href="{{ url_for('doctor_detail', doc_id=doctor.id) }}"
+                     onclick="if(!event.target.closest('a, button')) { window.location.href=this.dataset.href; }">
+
+                    <div>
+                        <!-- Avatar / Photo Area -->
+                        <a href="{{ url_for('doctor_detail', doc_id=doctor.id) }}" 
+                           class="block relative mb-3 rounded-lg overflow-hidden bg-slate-100 aspect-[16/11] flex items-center justify-center border border-slate-200 shadow-inner group/photo"
+                           title="View Dr. {{ doctor.first_name }} {{ doctor.last_name }} Profile">
+                            <img src="{{ url_for('get_doctor_image', doc_id=doctor.id) }}"
+                                alt="Dr. {{ doctor.last_name }}"
+                                class="w-full h-[195px] object-cover object-top group-hover:scale-105 transition-transform duration-700">
+                        </a>
+
+                        <!-- Badges Row (Below the image) -->
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2.5">
+                            {% if doctor.email == 'admin@spherixclinic.com' or doctor.department == 'Administration' %}
+                            <span class="bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-lg text-[9.5px] font-extrabold flex items-center gap-1 shadow-2xs">
+                                <i class="fas fa-shield-alt text-blue-600"></i>
+                                <span>Administrator</span>
+                            </span>
+                            {% endif %}
+                            <!-- Department Pill -->
+                            <span class="bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-2xs">
+                                {{ doctor.department|default('General Specialist') }}
+                            </span>
+
+                            <!-- Verified Badge -->
+                            <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg text-[9.5px] font-bold flex items-center gap-1 shadow-2xs">
+                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                <span>Verified</span>
+                            </span>
+
+                            <!-- Origin Badge -->
+                            {% if doctor.is_international %}
+                            <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-lg text-[9.5px] font-bold flex items-center gap-1 shadow-2xs">
+                                <span>{{ doctor.country_flag }} Global Specialist</span>
+                            </span>
+                            {% else %}
+                            <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-lg text-[9.5px] font-bold flex items-center gap-1 shadow-2xs">
+                                <span>🇮🇳 India Resident</span>
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Doctor Names & Credentials -->
+                        <div class="mb-3">
+                            <div class="flex items-start justify-between gap-1.5">
+                                <a href="{{ url_for('doctor_detail', doc_id=doctor.id) }}" 
+                                   class="text-decoration-none block hover:text-sky-600 group-hover:text-sky-600 transition-colors">
+                                    <h3 class="text-base font-display font-bold text-slate-900 group-hover:text-sky-600 transition-colors leading-snug line-clamp-1">
+                                        Dr. {{ doctor.first_name }} {{ doctor.last_name }}
+                                    </h3>
+                                </a>
+                                <span class="text-base shrink-0" title="{{ doctor.country }}">{{ doctor.country_flag }}</span>
+                            </div>
+                            <p class="text-xs font-bold text-sky-600 mt-0.5 truncate">
+                                {{ doctor.specialization or 'Board-Certified Specialist' }}
+                            </p>
+                            <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 line-clamp-1">
+                                <i data-lucide="building-2" class="w-3 h-3 text-slate-400 shrink-0"></i>
+                                <span class="truncate">{{ doctor.hospital_name or 'Spherix Clinical Center' }}</span>
+                            </p>
+                            <p class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 truncate">
+                                <i data-lucide="globe" class="w-3 h-3 text-slate-400 shrink-0"></i>
+                                <span class="truncate">{{ doctor.city|default('') }}{% if doctor.state %}, {{ doctor.state }}{% endif %} ({{ doctor.country|default('India') }})</span>
+                            </p>
+                        </div>
+
+                        <!-- Doctor Short Bio -->
+                        <p class="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-3.5">
+                            {{ doctor.bio or 'Dedicated medical specialist committed to evidence-based clinical diagnostics, cross-border telemedicine, and personalized patient care.' }}
+                        </p>
+
+                        <!-- Consultation Fee & Telehealth Badge -->
+                        <div
+                            class="p-2.5 bg-sky-50/70 border border-sky-100 rounded-lg flex items-center justify-between mb-3.5">
+                            <div>
+                                <span class="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block">Consultation Fee</span>
+                                <span class="text-[9.5px] text-slate-500 font-medium">Dual-Currency Rate</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs sm:text-sm font-display font-extrabold text-sky-700 block" {% if doctor.consultation_fee %}data-inr-price="{{ doctor.consultation_fee|float }}"{% endif %}>
+                                    {% if doctor.formatted_fee %}
+                                        {{ doctor.formatted_fee }}
+                                    {% else %}
+                                        <span class="text-xs text-slate-500 font-medium italic">Fee not provided</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Rating & Telemedicine Modes -->
+                        <div
+                            class="flex items-center justify-between text-xs text-slate-500 pt-2.5 border-t border-slate-100 mb-4">
+                            <span class="font-semibold flex items-center gap-1 text-[10.5px]">
+                                <i data-lucide="clock" class="w-3 h-3 text-slate-400"></i>
+                                <span class="truncate">{{ doctor.timezone|default('IST (UTC+5:30)') }}</span>
+                            </span>
+                            {% if doctor.reviews and doctor.average_rating %}
+                            <span class="font-bold text-slate-800 flex items-center gap-1 text-xs">
+                                <i data-lucide="star" class="w-3.5 h-3.5 text-amber-500 fill-amber-400"></i>
+                                <span>{{ doctor.average_rating }}</span>
+                                <span class="text-slate-400 font-normal text-[10.5px]">({{ doctor.reviews|length }})</span>
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400 italic text-[10.5px]">Verified Clinician</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-1.5 pt-1">
+                        <a href="{{ url_for('doctor_detail', doc_id=doctor.id) }}"
+                            class="btn-radiant-doctor block w-full py-2.5 rounded-lg text-white text-xs font-bold uppercase tracking-wider text-center transition-all shadow-md bg-blue-700 flex items-center justify-center gap-1.5">
+                            <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                            <span>View Profile & Book &rarr;</span>
+                        </a>
+                        <a href="{{ url_for('telemedicine') }}" 
+                            onclick="event.stopPropagation();"
+                            class="block w-full py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold text-center transition-all flex items-center justify-center gap-1">
+                            <i data-lucide="video" class="w-3 h-3 text-emerald-600"></i>
+                            <span>HD Telemedicine Room</span>
+                        </a>
+                    </div>
+
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Numbered Pagination Controls (4 Columns x 6 Rows = 24 Cards Per Page) -->
+            {% if total_pages > 1 or total_filtered > 0 %}
+            <div class="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-xs text-slate-500 font-semibold text-center sm:text-left">
+                    {% if total_filtered > 0 %}
+                    Showing <span class="font-bold text-slate-800">{{ (page - 1) * per_page + 1 }}</span> &ndash; <span class="font-bold text-slate-800">{{ [page * per_page, total_filtered]|min }}</span> of <span class="font-bold text-slate-800">{{ total_filtered }}</span> specialists
+                    <span class="text-slate-400 mx-1.5">&bull;</span>
+                    Page <span class="font-bold text-slate-800">{{ page }}</span> of <span class="font-bold text-slate-800">{{ total_pages or 1 }}</span>
+                    {% else %}
+                    Showing 0 specialists
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                    <!-- Previous Button -->
+                    {% if page > 1 %}
+                    <a href="{{ url_for('doctors_list', page=page-1, q=q, dept=active_dept, country=active_country, scope=active_scope, telemedicine=request.args.get('telemedicine')) }}"
+                        class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-sky-300 text-slate-700 hover:text-sky-600 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs">
+                        <i class="fas fa-chevron-left text-[10px]"></i>
+                        <span>Previous</span>
+                    </a>
+                    {% else %}
+                    <span class="px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold cursor-not-allowed flex items-center gap-1.5 opacity-60">
+                        <i class="fas fa-chevron-left text-[10px]"></i>
+                        <span>Previous</span>
+                    </span>
+                    {% endif %}
+
+                    <!-- Page Numbers -->
+                    {% if total_pages > 1 %}
+                        {% set start_p = [1, page - 2]|max %}
+                        {% set end_p = [total_pages, page + 2]|min %}
+
+                        {% if start_p > 1 %}
+                            <a href="{{ url_for('doctors_list', page=1, q=q, dept=active_dept, country=active_country, scope=active_scope, telemedicine=request.args.get('telemedicine')) }}"
+                                class="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-sky-300 text-slate-700 hover:text-sky-600 text-xs font-bold flex items-center justify-center transition-all shadow-xs">
+                                1
+                            </a>
+                            {% if start_p > 2 %}
+                                <span class="w-7 text-center text-slate-400 text-xs font-bold">&hellip;</span>
+                            {% endif %}
+                        {% endif %}
+
+                        {% for p in range(start_p, end_p + 1) %}
+                            {% if p == page %}
+                            <span class="w-9 h-9 rounded-lg bg-sky-600 text-white text-xs font-black flex items-center justify-center shadow-md shadow-sky-600/30">
+                                {{ p }}
+                            </span>
+                            {% else %}
+                            <a href="{{ url_for('doctors_list', page=p, q=q, dept=active_dept, country=active_country, scope=active_scope, telemedicine=request.args.get('telemedicine')) }}"
+                                class="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-sky-300 text-slate-700 hover:text-sky-600 text-xs font-bold flex items-center justify-center transition-all shadow-xs">
+                                {{ p }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if end_p < total_pages %}
+                            {% if end_p < total_pages - 1 %}
+                                <span class="w-7 text-center text-slate-400 text-xs font-bold">&hellip;</span>
+                            {% endif %}
+                            <a href="{{ url_for('doctors_list', page=total_pages, q=q, dept=active_dept, country=active_country, scope=active_scope, telemedicine=request.args.get('telemedicine')) }}"
+                                class="w-9 h-9 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-sky-300 text-slate-700 hover:text-sky-600 text-xs font-bold flex items-center justify-center transition-all shadow-xs">
+                                {{ total_pages }}
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <span class="w-9 h-9 rounded-lg bg-sky-600 text-white text-xs font-black flex items-center justify-center shadow-md shadow-sky-600/30">
+                            1
+                        </span>
+                    {% endif %}
+
+                    <!-- Next Button -->
+                    {% if page < total_pages %}
+                    <a href="{{ url_for('doctors_list', page=page+1, q=q, dept=active_dept, country=active_country, scope=active_scope, telemedicine=request.args.get('telemedicine')) }}"
+                        class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 hover:border-sky-300 text-slate-700 hover:text-sky-600 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs">
+                        <span>Next</span>
+                        <i class="fas fa-chevron-right text-[10px]"></i>
+                    </a>
+                    {% else %}
+                    <span class="px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold cursor-not-allowed flex items-center gap-1.5 opacity-60">
+                        <span>Next</span>
+                        <i class="fas fa-chevron-right text-[10px]"></i>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="py-20 text-center bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+                <div
+                    class="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-sky-50 text-sky-600 mb-4 shadow-inner">
+                    <i class="fas fa-user-xmark text-4xl"></i>
+                </div>
+                <h3 class="text-2xl font-display font-bold text-slate-900 mb-2">No Specialists Found</h3>
+                <p class="text-slate-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                    We could not find doctors matching "{{ q or active_dept }}". Try selecting a different department or
+                    reset your search parameters.
+                </p>
+                <a href="{{ url_for('doctors_list') }}"
+                    class="btn-radiant-doctor inline-flex items-center gap-2 px-8 py-3.5 rounded-lg text-white text-xs font-bold uppercase tracking-wider">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span>View All Specialists</span>
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

@@ -573,6 +573,22 @@ def create_app(config_object=None):
     except Exception as e:
         print(f"⚠️ api_bp could not be loaded: {e}")
 
+    # Configure Universal Multi-Path Jinja Loader
+    # Allows rendering templates both with module prefix (e.g. 'doctor/doctor_dashboard.html')
+    # and directly by filename (e.g. 'doctor_dashboard.html'), matching cancer_care and insurance.
+    try:
+        import jinja2
+        templates_root = app.template_folder
+        template_subdirs = [
+            os.path.join(templates_root, d)
+            for d in sorted(os.listdir(templates_root))
+            if os.path.isdir(os.path.join(templates_root, d)) and not d.startswith('.')
+        ]
+        base_loader = jinja2.FileSystemLoader([templates_root] + template_subdirs)
+        app.jinja_loader = jinja2.ChoiceLoader([base_loader, app.create_global_jinja_loader()])
+    except Exception as e:
+        print(f"⚠️ Notice configuring multi-path jinja loader: {e}")
+
     @app.errorhandler(500)
     def handle_internal_error(error):
         try:

@@ -1,0 +1,2184 @@
+{% extends 'layout.html' %}
+
+{% block title %}AI Symptoms Analyzer - Step 2: Clinical Details | Spherix Clinic{% endblock %}
+
+{% block head_extra %}
+<!-- Premium Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: #0f172a;
+    }
+
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ultra-clean white card styling */
+    .white-glass-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.03);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Ambient Subtle Background Grid */
+    .hero-mesh-bg {
+        background-color: #ffffff;
+        background-image: 
+            radial-gradient(circle at 15% 20%, rgba(224, 242, 254, 0.7) 0%, transparent 45%),
+            radial-gradient(circle at 85% 15%, rgba(238, 242, 255, 0.7) 0%, transparent 40%),
+            radial-gradient(circle at 50% 80%, rgba(240, 253, 250, 0.6) 0%, transparent 50%),
+            linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Form control polish */
+    .input-field {
+        background-color: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        color: #0f172a;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .input-field:focus {
+        background-color: #ffffff;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .input-field:hover:not(:focus) {
+        border-color: #cbd5e1;
+        background-color: #ffffff;
+    }
+
+    /* Accordion Dropdown Section Architecture */
+    .part-accordion-card {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .part-accordion-card.open {
+        border-color: #3b82f6;
+        box-shadow: 0 12px 28px -6px rgba(37, 99, 235, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    }
+
+    .part-accordion-header {
+        background: #ffffff;
+        padding: 1.25rem 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+        transition: background 0.2s ease;
+    }
+
+    .part-accordion-card.open .part-accordion-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .part-accordion-header:hover {
+        background: #f8fafc;
+    }
+
+    .part-chevron {
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .part-accordion-card.open .part-chevron {
+        transform: rotate(180deg);
+        color: #2563eb;
+    }
+
+    .part-accordion-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
+        padding: 0 1.5rem;
+    }
+
+    .part-accordion-card.open .part-accordion-body {
+        max-height: 3500px;
+        padding: 1.75rem 1.5rem;
+    }
+
+    /* Body part buttons */
+    .body-part-btn {
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .body-part-btn:hover {
+        background: #ffffff;
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px -3px rgba(37, 99, 235, 0.1);
+    }
+
+    .body-part-btn.active {
+        background: #eff6ff;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        color: #1d4ed8;
+    }
+
+    /* Symptom chips */
+    .symptom-chip {
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .symptom-chip:hover {
+        background: #ffffff;
+        border-color: #94a3b8;
+        transform: scale(1.02);
+    }
+
+    .symptom-chip.active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    .symptom-chip.active i {
+        color: #ffffff !important;
+    }
+
+    /* Preset Quick Scenario Cards */
+    .preset-chip {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.85rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .preset-chip:hover {
+        background: #eff6ff;
+        border-color: #93c5fd;
+        color: #1d4ed8;
+        transform: translateY(-1px);
+    }
+
+    /* Voice recording pulse */
+    .mic-recording {
+        background-color: #ef4444 !important;
+        color: white !important;
+        animation: micPulse 1.5s infinite;
+    }
+
+    @keyframes micPulse {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    /* Pain Slider Styling */
+    .pain-range-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: linear-gradient(to right, #10b981 0%, #eab308 40%, #f97316 70%, #ef4444 100%);
+        outline: none;
+    }
+
+    .pain-range-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 3px solid #2563eb;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        transition: transform 0.15s ease;
+    }
+
+    .pain-range-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+
+    /* Step indicator animated pulse */
+    .pulse-dot {
+        animation: pulseScale 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseScale {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.6; }
+    }
+</style>
+
+<div class="hero-mesh-bg min-h-screen py-5 sm:py-7 lg:py-8 px-3 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14 relative overflow-hidden">
+
+    <!-- Top Navigation & Clinical Cockpit Control Ribbon (Full-Width Responsive Bar) -->
+    <div class="w-full max-w-[1880px] 2xl:max-w-[1920px] mx-auto mb-6">
+        <div class="flex items-center justify-between flex-wrap gap-3.5 bg-white/90 backdrop-blur-md px-4 sm:px-6 py-3 rounded-lg border border-slate-200/90 shadow-sm">
+            <!-- Left: Back Navigation & Workflow Step Breadcrumbs -->
+            <div class="flex items-center flex-wrap gap-3 sm:gap-4">
+                <a href="{{ url_for('symptoms') }}" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-xs font-bold text-slate-600 hover:text-blue-700 transition-all shadow-2xs">
+                    <i class="fas fa-arrow-left text-[11px]"></i>
+                    <span>Back to Step 1</span>
+                </a>
+
+                <div class="hidden md:flex items-center gap-2 text-xs font-mono-code font-bold">
+                    <span class="flex items-center gap-1.5 text-emerald-700">
+                        <i class="fas fa-check-circle text-emerald-500"></i>
+                        <span>Step 1: Profile</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-[10px] text-slate-300"></i>
+                    <span class="flex items-center gap-1.5 text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                        <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                        <span>Step 2: Double DNA Intake</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-[10px] text-slate-300"></i>
+                    <span class="text-slate-400">Step 3: AI Diagnosis</span>
+                </div>
+            </div>
+
+            <!-- Right: Status Badges & Quick View Controls -->
+            <div class="flex items-center flex-wrap gap-2.5">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200/80 text-sky-800 text-xs font-semibold shadow-2xs">
+                    <i class="fas fa-dna text-sky-600 text-xs animate-pulse"></i>
+                    <span class="font-mono-code font-bold text-[11px]">Double DNA Structure Active</span>
+                </div>
+
+                <button type="button" onclick="toggleAllAccordions()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold font-mono-code transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs">
+                    <i class="fas fa-expand-arrows-alt text-[10px]" id="toggleAllPartsIcon"></i>
+                    <span id="toggleAllPartsText">Expand All</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace Grid: Proportioned Cockpit Layout (Left 7 Cols : Right 5 Cols in md & lg) -->
+    <div class="w-full max-w-[1880px] 2xl:max-w-[1920px] mx-auto relative z-10">
+
+        <div class="grid grid-cols-1 md:grid-cols-12 lg:grid-cols-12 xl:grid-cols-12 2xl:grid-cols-12 gap-5 md:gap-6 lg:gap-8 items-start">
+
+            <!-- LEFT: MAIN CLINICAL FORM (PART-BY-PART DROPDOWNS) -->
+            <div class="col-span-1 md:col-span-7 lg:col-span-7 xl:col-span-7 2xl:col-span-7 white-glass-card rounded-lg p-5 md:p-6 lg:p-8 border border-slate-200/90 shadow-lg">
+
+                <!-- Stepper Progress Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 mb-6 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2.5 mb-2">
+                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-extrabold uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-check text-[10px]"></i> Step 1 Done
+                            </span>
+                            <span class="text-xs font-bold text-slate-400">&bull;</span>
+                            <span class="text-xs font-bold text-blue-600 uppercase tracking-widest font-mono-code flex items-center gap-1.5">
+                                <i class="fas fa-dna text-xs"></i>
+                                <span>Step 2: Double DNA Biomarker Analysis</span>
+                            </span>
+                        </div>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-['Space_Grotesk']">
+                            Precision <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Symptom Diagnostic Intake</span>
+                        </h1>
+                        <p class="text-slate-500 text-xs sm:text-sm mt-1">
+                            Use the dropdown sections below to provide structured, high-accuracy clinical context for the AI.
+                        </p>
+                    </div>
+
+                    <!-- Live Quality & Accuracy Potential Meter -->
+                    <div class="w-full sm:w-60 shrink-0 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+                        <div class="flex justify-between items-center text-[10px] font-extrabold font-mono-code text-slate-600 mb-1.5 uppercase tracking-wider">
+                            <span>Diagnostic Accuracy</span>
+                            <span class="text-blue-600 font-bold" id="diagnosticScoreText">85% High</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden p-0.5">
+                            <div id="diagnosticScoreBar" class="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 rounded-full transition-all duration-300" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Red Flag Symptom Sentinel Alert Banner (Hidden by default, shown if acute emergency keywords detected) -->
+                <div id="redFlagSentinel" class="hidden mb-6 p-4 rounded-lg bg-amber-50 border border-amber-300 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fas fa-bell-exclamation text-base"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-extrabold text-amber-900 uppercase font-mono-code">High-Priority Clinical Marker Detected</h4>
+                            <p class="text-xs text-amber-800 mt-0.5" id="redFlagSentinelText">
+                                Your reported symptoms contain critical markers. You can proceed with AI analysis, but immediate clinical evaluation or emergency services may be recommended.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                    <div class="p-4 rounded-lg text-xs font-semibold flex items-center gap-3 border {{ 'border-rose-200 bg-rose-50 text-rose-800' if category == 'error' else 'border-emerald-200 bg-emerald-50 text-emerald-800' }}">
+                        <i class="fas {{ 'fa-circle-exclamation text-rose-600' if category == 'error' else 'fa-circle-check text-emerald-600' }} text-sm"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <!-- Form with Dropdown Parts -->
+                <form method="POST" action="{{ url_for('symptoms_step2') }}" enctype="multipart/form-data" class="space-y-5" id="symptomsForm">
+                    <input type="hidden" name="camera_image_data" id="camera_image_data">
+                    <input type="hidden" name="body_part" id="selected_body_part" value="{{ session.get('body_part', '') }}">
+                    <input type="hidden" name="selected_symptoms" id="selected_symptoms">
+
+                    <!-- ================= PART 1 DROPDOWN: ANATOMICAL REGION & TARGETED CLINICAL SIGNS ================= -->
+                    <div class="part-accordion-card open" id="accordionPart1">
+                        
+                        <!-- Header Trigger -->
+                        <div class="part-accordion-header" onclick="toggleAccordion('accordionPart1')">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-black text-xs font-mono-code shrink-0">
+                                    01
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-bold text-slate-800">Part 1: Anatomical Region &amp; Symptoms</h3>
+                                        <span id="badgePart1" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 font-mono-code">IN PROGRESS</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-0.5">Select affected body system, location, and quick symptoms</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold text-slate-400 font-mono-code hidden sm:inline-block" id="part1SummaryTag">Not Selected</span>
+                                <i class="fas fa-chevron-down part-chevron text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Content Body -->
+                        <div class="part-accordion-body">
+                            <div class="space-y-6">
+                                
+                                <!-- 1-Click Fast Scenario Presets -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-bolt text-amber-500"></i>
+                                            <span>Quick Patient Scenario Templates</span>
+                                        </label>
+                                        <span class="text-[11px] text-slate-400">1-click fill &amp; customize</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" onclick="loadScenarioPreset('migraine')" class="preset-chip">
+                                            <span>🧠 Migraine / Throbbing Headache</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('flu')" class="preset-chip">
+                                            <span>🤒 Viral Flu &amp; High Fever</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('reflux')" class="preset-chip">
+                                            <span>🔥 Heartburn &amp; Acid Reflux</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('backpain')" class="preset-chip">
+                                            <span>🦴 Lower Back Strain</span>
+                                        </button>
+                                        <button type="button" onclick="loadScenarioPreset('allergy')" class="preset-chip">
+                                            <span>🌿 Skin Rash &amp; Allergy</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown Selector + Visual Region Picker -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label for="bodyPartDropdown" class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-street-view text-blue-500"></i>
+                                            <span>Primary Affected Anatomical Area <span class="text-rose-500">*</span></span>
+                                        </label>
+                                        <span class="text-[11px] text-slate-400">Select area below</span>
+                                    </div>
+
+                                    <!-- Direct Body Part Dropdown Selector -->
+                                    <div class="relative mb-3">
+                                        <select id="bodyPartDropdown" class="input-field w-full py-3 pl-4 pr-10 rounded-lg text-sm font-semibold appearance-none cursor-pointer">
+                                            <option value="">-- Choose Affected Body Area --</option>
+                                            <option value="Head" {% if session.get('body_part') == 'Head' %}selected{% endif %}>Head, Brain &amp; Neck (Headache, Migraine, Vertigo, Sinus)</option>
+                                            <option value="Chest" {% if session.get('body_part') == 'Chest' %}selected{% endif %}>Chest, Heart &amp; Lungs (Chest Pain, Cough, Shortness of Breath)</option>
+                                            <option value="Abdomen" {% if session.get('body_part') == 'Abdomen' %}selected{% endif %}>Abdomen, Gut &amp; Digestion (Stomach ache, Nausea, Cramps)</option>
+                                            <option value="Back" {% if session.get('body_part') == 'Back' %}selected{% endif %}>Back, Spine &amp; Shoulders (Lumbar pain, Sciatica, Stiffness)</option>
+                                            <option value="Arms" {% if session.get('body_part') == 'Arms' %}selected{% endif %}>Arms, Shoulders &amp; Hands (Joint pain, Numbness, Weakness)</option>
+                                            <option value="Legs" {% if session.get('body_part') == 'Legs' %}selected{% endif %}>Legs, Knees &amp; Feet (Swelling, Cramps, Sprains)</option>
+                                            <option value="Skin" {% if session.get('body_part') == 'Skin' %}selected{% endif %}>Skin &amp; General (Rash, Hives, Fever, Fatigue)</option>
+                                        </select>
+                                        <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                    </div>
+
+                                    <!-- Body Part Interactive Grid Buttons -->
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-2.5" id="bodyPartsGrid">
+                                        <button type="button" class="body-part-btn p-3 rounded-lg text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Head">
+                                            <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-head-side-virus"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Head &amp; Neck</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-lg text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Chest">
+                                            <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-heart"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Chest &amp; Heart</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-lg text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Abdomen">
+                                            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-child"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Abdomen &amp; Gut</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-lg text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Back">
+                                            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-spine"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Back &amp; Spine</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-lg text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Arms">
+                                            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-hands"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Arms &amp; Hands</span>
+                                        </button>
+                                        <button type="button" class="body-part-btn p-3 rounded-lg text-center flex items-center gap-2.5 cursor-pointer shadow-2xs" data-body="Legs">
+                                            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm shrink-0">
+                                                <i class="fas fa-person-hiking"></i>
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-700 text-left">Legs &amp; Feet</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Anatomy-Specific Dynamic Guided Questions (Shown automatically based on selected area) -->
+                                <div id="anatomyProbingBox" class="hidden p-4 rounded-lg bg-blue-50/70 border border-blue-200">
+                                    <h4 class="text-xs font-bold text-blue-950 uppercase font-mono-code mb-2 flex items-center gap-1.5">
+                                        <i class="fas fa-stethoscope text-blue-600"></i>
+                                        <span id="probingTitle">Targeted Clinical Indicators</span>
+                                    </h4>
+                                    <div class="flex flex-wrap gap-1.5" id="probingOptions">
+                                        <!-- Injected dynamically based on body part -->
+                                    </div>
+                                </div>
+
+                                <!-- Specific Sub-Location -->
+                                <div>
+                                    <label for="body_part_detail" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                        <i class="fas fa-location-crosshairs text-sky-500"></i>
+                                        <span>Precise Anatomical Sub-Location (Optional)</span>
+                                    </label>
+                                    <input type="text" id="body_part_detail" name="body_part_detail" value="{{ session.get('body_part_detail', '') }}"
+                                        placeholder="Specific Anatomical Location of Pain"
+                                        class="input-field w-full py-2.5 px-4 rounded-lg text-xs font-semibold placeholder:text-slate-400">
+                                </div>
+
+                                <!-- Universal Symptoms Selector & Chips -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-tags text-indigo-500"></i>
+                                            <span>Quick Associated Symptoms</span>
+                                        </label>
+                                        <span class="text-[11px] text-slate-400">Multi-select chips</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2" id="symptomsChips">
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Headache">
+                                            <i class="fas fa-head-side-virus text-sky-500"></i>
+                                            <span>Headache</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Fever">
+                                            <i class="fas fa-thermometer text-amber-500"></i>
+                                            <span>Fever</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Cough">
+                                            <i class="fas fa-lungs text-emerald-500"></i>
+                                            <span>Cough</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Chest Pain">
+                                            <i class="fas fa-heart text-rose-500"></i>
+                                            <span>Chest Pain</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Shortness of Breath">
+                                            <i class="fas fa-wind text-teal-500"></i>
+                                            <span>Shortness of Breath</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Stomach Pain">
+                                            <i class="fas fa-child text-orange-500"></i>
+                                            <span>Stomach Pain</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Nausea & Vomiting">
+                                            <i class="fas fa-face-dizzy text-teal-500"></i>
+                                            <span>Nausea &amp; Vomiting</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Back Pain">
+                                            <i class="fas fa-spine text-purple-500"></i>
+                                            <span>Back Pain</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Fatigue">
+                                            <i class="fas fa-battery-quarter text-indigo-500"></i>
+                                            <span>Fatigue</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Dizziness">
+                                            <i class="fas fa-arrows-spin text-sky-500"></i>
+                                            <span>Dizziness</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Skin Rash">
+                                            <i class="fas fa-allergies text-rose-500"></i>
+                                            <span>Skin Rash</span>
+                                        </button>
+                                        <button type="button" class="symptom-chip rounded-lg px-3.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer flex items-center gap-1.5 shadow-2xs" data-symptom="Joint Swelling">
+                                            <i class="fas fa-bone text-amber-600"></i>
+                                            <span>Joint Swelling</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Active Markers Summary -->
+                                <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="font-extrabold text-blue-700 font-mono-code uppercase">Active Markers:</span>
+                                        <span id="selectionSummary" class="text-slate-600 font-semibold">None selected</span>
+                                    </div>
+                                    <button type="button" id="clearSelectionBtn"
+                                        class="text-xs font-bold text-rose-600 hover:text-rose-700 transition-colors hidden cursor-pointer flex items-center gap-1 bg-transparent border-0 p-0">
+                                        <i class="fas fa-times-circle"></i>
+                                        <span>Clear</span>
+                                    </button>
+                                </div>
+
+                                <!-- Advance Button to Part 2 -->
+                                <div class="flex justify-end pt-2">
+                                    <button type="button" onclick="goToNextPart('accordionPart1', 'accordionPart2')" class="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer">
+                                        <span>Next: Clinical Details &amp; Severity Scale</span>
+                                        <i class="fas fa-arrow-down text-[10px]"></i>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ================= PART 2 DROPDOWN: CLINICAL DETAILS, PAIN SCALE & TIMELINE ================= -->
+                    <div class="part-accordion-card" id="accordionPart2">
+                        
+                        <!-- Header Trigger -->
+                        <div class="part-accordion-header" onclick="toggleAccordion('accordionPart2')">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-black text-xs font-mono-code shrink-0">
+                                    02
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-bold text-slate-800">Part 2: Clinical Description &amp; Severity Scale</h3>
+                                        <span id="badgePart2" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 font-mono-code">PENDING</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-0.5">Describe pain sensations, timeline, duration, triggers &amp; relief factors</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold text-slate-400 font-mono-code hidden sm:inline-block" id="part2SummaryTag">Standard</span>
+                                <i class="fas fa-chevron-down part-chevron text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Content Body -->
+                        <div class="part-accordion-body">
+                            <div class="space-y-6">
+                                
+                                <!-- Detailed Symptoms Narrative Textarea with Voice Dictation -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <label for="symptoms" class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-align-left text-blue-500"></i>
+                                            <span>Detailed Clinical Narrative <span class="text-rose-500">*</span></span>
+                                        </label>
+                                        <div class="flex items-center gap-3">
+                                            <button type="button" id="voiceDictateBtn" onclick="toggleVoiceDictation()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 cursor-pointer transition-all">
+                                                <i class="fas fa-microphone" id="voiceMicIcon"></i>
+                                                <span id="voiceMicText">Voice Dictation</span>
+                                            </button>
+                                            <button type="button" onclick="autoGenerateNarrative()" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 underline cursor-pointer bg-transparent border-0 p-0">
+                                                Auto-Draft
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <textarea name="symptoms" id="symptoms" rows="4"
+                                        placeholder="Describe how the symptom feels..."
+                                        class="input-field w-full p-4 rounded-lg text-xs sm:text-sm font-normal placeholder:text-slate-400 resize-none">{{ session.get('raw_symptoms') or session.get('symptoms', '') }}</textarea>
+                                </div>
+
+                                <!-- Interactive 0-10 Pain & Severity Scale (Wong-Baker) -->
+                                <div class="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-gauge-high text-amber-500"></i>
+                                            <span>Pain / Distress Intensity Scale (0 - 10)</span>
+                                        </label>
+                                        <span class="text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-blue-100 text-blue-800" id="painValueBadge">Level 4: Moderate</span>
+                                    </div>
+                                    <input type="range" id="painSlider" min="0" max="10" value="4" class="pain-range-slider mb-2" oninput="handlePainSlider(this.value)">
+                                    <div class="flex justify-between text-[10px] font-bold text-slate-500 font-mono-code">
+                                        <span>0 (None)</span>
+                                        <span>2 (Mild)</span>
+                                        <span>5 (Moderate)</span>
+                                        <span>8 (Severe)</span>
+                                        <span>10 (Worst / Emergency)</span>
+                                    </div>
+                                </div>
+
+                                <!-- Duration & Severity Dropdowns -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    
+                                    <!-- Duration Dropdown -->
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-clock text-teal-500"></i>
+                                            <span>Duration / Timeline</span>
+                                        </label>
+                                        <div class="relative">
+                                            <select name="duration_select" id="durationSelect" onchange="syncDuration(this.value)"
+                                                class="input-field w-full py-2.5 pl-3 pr-8 rounded-lg text-xs font-semibold appearance-none cursor-pointer mb-1.5">
+                                                <option value="">-- Choose Duration Window --</option>
+                                                <option value="Less than 24 hours">Less than 24 hours (Acute / Sudden onset)</option>
+                                                <option value="1 to 3 days">1 to 3 days</option>
+                                                <option value="4 to 7 days">4 to 7 days (Approx. 1 week)</option>
+                                                <option value="1 to 2 weeks">1 to 2 weeks</option>
+                                                <option value="More than 1 month">More than 1 month (Chronic / Persistent)</option>
+                                                <option value="custom">Custom timeline...</option>
+                                            </select>
+                                            <i class="fas fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
+                                        </div>
+                                        <input type="text" name="duration" id="durationInput" value="{{ session.get('symptom_duration', '') }}" placeholder="Symptom Duration"
+                                            class="input-field w-full py-2 px-3 rounded-lg text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+
+                                    <!-- Severity Dropdown -->
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-triangle-exclamation text-amber-500"></i>
+                                            <span>Severity Level</span>
+                                        </label>
+                                        <div class="relative">
+                                            {% set curr_sev = session.get('symptom_severity', '') %}
+                                            <select name="severity" id="severitySelect"
+                                                class="input-field w-full py-2.5 pl-3 pr-8 rounded-lg text-xs font-semibold appearance-none cursor-pointer">
+                                                <option value="" disabled {% if not curr_sev %}selected{% endif %}>-- Select Severity --</option>
+                                                <option value="Mild" {% if curr_sev == 'Mild' %}selected{% endif %}>Mild (Noticeable but does not restrict normal routine)</option>
+                                                <option value="Moderate" {% if curr_sev == 'Moderate' %}selected{% endif %}>Moderate (Disrupts daily activities or sleep)</option>
+                                                <option value="Severe" {% if curr_sev == 'Severe' %}selected{% endif %}>Severe (Debilitating / Requires immediate care)</option>
+                                                <option value="Very Severe" {% if curr_sev == 'Very Severe' %}selected{% endif %}>Very Severe / Emergency (Critical pain or distress)</option>
+                                            </select>
+                                            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Modifying Factors Dropdowns / Text -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-arrow-trend-up text-rose-500"></i>
+                                            <span>Aggravating Triggers (What makes it worse?)</span>
+                                        </label>
+                                        <input type="text" name="worse_factors" id="worseFactorsInput" value="{{ session.get('worse_factors', '') }}"
+                                            placeholder="Aggravating Factors"
+                                            class="input-field w-full py-2.5 px-3 rounded-lg text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-arrow-trend-down text-emerald-500"></i>
+                                            <span>Relieving Factors (What makes it better?)</span>
+                                        </label>
+                                        <input type="text" name="better_factors" id="betterFactorsInput" value="{{ session.get('better_factors', '') }}"
+                                            placeholder="Aggravating or Relieving Factors"
+                                            class="input-field w-full py-2.5 px-3 rounded-lg text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+                                </div>
+
+                                <!-- Medications & Known Allergies -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-pills text-sky-500"></i>
+                                            <span>Current Active Medications</span>
+                                        </label>
+                                        <input type="text" name="current_medicines" value="{{ session.get('current_medicines', '') }}"
+                                            placeholder="Current Medications"
+                                            class="input-field w-full py-2.5 px-3 rounded-lg text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 font-mono-code flex items-center gap-1.5">
+                                            <i class="fas fa-allergies text-purple-500"></i>
+                                            <span>Known Drug or Food Allergies</span>
+                                        </label>
+                                        <input type="text" name="allergies" value="{{ session.get('allergies', '') }}"
+                                            placeholder="Known Allergies"
+                                            class="input-field w-full py-2.5 px-3 rounded-lg text-xs font-medium placeholder:text-slate-400">
+                                    </div>
+                                </div>
+
+                                <!-- Advance Button to Part 3 -->
+                                <div class="flex items-center justify-between pt-2">
+                                    <button type="button" onclick="goToNextPart('accordionPart2', 'accordionPart1')" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fas fa-arrow-up text-[10px]"></i>
+                                        <span>Back to Part 1</span>
+                                    </button>
+                                    <button type="button" onclick="goToNextPart('accordionPart2', 'accordionPart3')" class="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-sm transition-all cursor-pointer">
+                                        <span>Next: Visual Evidence (Optional)</span>
+                                        <i class="fas fa-arrow-down text-[10px]"></i>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ================= PART 3 DROPDOWN: VISUAL EVIDENCE (OPTIONAL) ================= -->
+                    <div class="part-accordion-card" id="accordionPart3">
+                        
+                        <!-- Header Trigger -->
+                        <div class="part-accordion-header" onclick="toggleAccordion('accordionPart3')">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 border border-teal-200 flex items-center justify-center font-black text-xs font-mono-code shrink-0">
+                                    03
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-bold text-slate-800">Part 3: Visual Evidence &amp; Camera Capture</h3>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 font-mono-code">OPTIONAL</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-0.5">Attach skin rash, eye redness, swelling, or throat photo for AI vision scan</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold text-slate-400 font-mono-code hidden sm:inline-block" id="part3SummaryTag">No Photo</span>
+                                <i class="fas fa-chevron-down part-chevron text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Content Body -->
+                        <div class="part-accordion-body">
+                            <div class="space-y-5">
+                                
+                                <!-- Previous Upload Banner -->
+                                {% if session.get('symptom_image_path') %}
+                                <div id="attached-image-banner" class="p-3.5 rounded-lg bg-sky-50 border border-sky-200 shadow-2xs flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <img src="{{ session.get('symptom_image_path') }}" alt="Attached Symptom Capture" class="w-12 h-12 object-cover rounded-lg border border-sky-300">
+                                        <div>
+                                            <div class="flex items-center gap-1.5 text-xs font-bold text-sky-900">
+                                                <i class="fas fa-check-circle text-emerald-600"></i>
+                                                <span>Existing Photo Retained</span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 mt-0.5">Ready for Vision Multimodal inference.</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="removePreviousImage()" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0">
+                                        <i class="fas fa-trash-alt text-[10px]"></i>
+                                        <span>Remove</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" name="remove_image" id="remove_image_input" value="0">
+                                {% endif %}
+
+                                <!-- Live Camera Preview Container -->
+                                <div id="camera-container" class="hidden w-full rounded-lg overflow-hidden relative bg-slate-900 border border-slate-700 shadow-md">
+                                    <video id="video" autoplay playsinline class="w-full object-cover max-h-[320px]"></video>
+                                    <button type="button" id="capture-btn"
+                                        class="absolute bottom-4 left-1/2 -translate-y-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg w-12 h-12 shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer border-0">
+                                        <i class="fas fa-camera text-lg"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Canvas Preview Container -->
+                                <div id="canvas-container" class="hidden w-full rounded-lg overflow-hidden relative bg-slate-900 border border-slate-700 shadow-md">
+                                    <canvas id="canvas" class="w-full max-h-[320px] object-cover"></canvas>
+                                    <button type="button" id="retake-btn"
+                                        class="absolute top-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white rounded-lg px-3 py-1.5 text-xs font-bold backdrop-blur-md border border-slate-700 transition-colors cursor-pointer">
+                                        <i class="fas fa-redo mr-1"></i>Retake Photo
+                                    </button>
+                                </div>
+
+                                <!-- Camera & Upload Option Cards -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button type="button" id="start-camera-btn"
+                                        class="p-4 rounded-lg border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 shadow-2xs">
+                                        <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-base">
+                                            <i class="fas fa-camera"></i>
+                                        </div>
+                                        <span class="text-xs font-bold font-mono-code">Take Live Photo</span>
+                                    </button>
+                                    
+                                    <label class="p-4 rounded-lg border border-slate-200 hover:border-indigo-500 bg-slate-50 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-700 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 shadow-2xs">
+                                        <div class="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-base">
+                                            <i class="fas fa-cloud-arrow-up"></i>
+                                        </div>
+                                        <span class="text-xs font-bold font-mono-code">Upload Image File</span>
+                                        <input type="file" id="image-upload" name="symptom_image" accept="image/*" class="hidden">
+                                    </label>
+                                </div>
+
+                                <!-- Back navigation -->
+                                <div class="flex justify-start pt-1">
+                                    <button type="button" onclick="goToNextPart('accordionPart3', 'accordionPart2')" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fas fa-arrow-up text-[10px]"></i>
+                                        <span>Back to Clinical Details</span>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ================= EXECUTE DIAGNOSIS ACTION BAR ================= -->
+                    <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+                        <button type="button" id="reset-form-btn"
+                            class="w-full sm:w-1/3 py-3.5 px-5 rounded-lg text-slate-600 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-rotate-left text-xs"></i>
+                            <span>Reset All Parts</span>
+                        </button>
+                        <button type="submit" id="submit-btn"
+                            class="w-full sm:w-2/3 py-3.5 px-6 rounded-lg text-white text-sm font-extrabold uppercase tracking-wider bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer border-0">
+                            <span>Execute Deep AI Diagnosis</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- RIGHT: CLINICAL DIAGNOSTIC SIDEBAR (STICKY ON WIDE SCREENS IN MD & LG) -->
+            <div class="col-span-1 md:col-span-5 lg:col-span-5 xl:col-span-5 2xl:col-span-5 md:sticky md:top-20 space-y-5">
+
+                <!-- Ultra-Premium 3D Double DNA Structure Command Suite -->
+                <div class="white-glass-card rounded-lg p-5 md:p-6 relative overflow-hidden border border-slate-200/90 shadow-lg">
+                    <!-- Ambient luminous background glows -->
+                    <div class="absolute -top-16 -right-16 w-52 h-52 bg-sky-200/40 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="absolute -bottom-16 -left-16 w-52 h-52 bg-indigo-200/40 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <!-- Header with Title & Telemetry Status -->
+                    <div class="flex items-center justify-between gap-3 mb-3 relative z-10">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-10 h-10 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-blue-500/25">
+                                <i class="fas fa-dna text-base"></i>
+                            </span>
+                            <div>
+                                <h3 class="text-sm sm:text-base font-bold text-slate-900 leading-tight">Double DNA Structure</h3>
+                                <p class="text-[11px] text-slate-500 font-mono-code">Dual-Helix Biomarker &amp; Triage Engine</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold font-mono-code uppercase tracking-wider shadow-2xs">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Live Active
+                        </span>
+                    </div>
+
+                    <!-- Strand Identifiers Pill Bar -->
+                    <div class="grid grid-cols-2 gap-2.5 my-3 relative z-10 text-[11px] font-mono-code font-bold">
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50/90 border border-sky-200 text-sky-800 shadow-2xs">
+                            <span class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-sm shadow-sky-500/50"></span>
+                            <span class="truncate">Helix α: Patient Phenotype</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50/90 border border-purple-200 text-purple-800 shadow-2xs">
+                            <span class="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50"></span>
+                            <span class="truncate">Helix β: Clinical AI Model</span>
+                        </div>
+                    </div>
+
+                    <!-- 3D Canvas Viewport for Double DNA Structure -->
+                    <div class="relative w-full h-[360px] md:h-[400px] lg:h-[440px] xl:h-[480px] rounded-lg overflow-hidden bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950 border border-slate-800 shadow-xl flex items-center justify-center">
+                        <canvas id="step2DnaCanvas" class="w-full h-full block relative z-10 cursor-grab active:cursor-grabbing"></canvas>
+                        
+                        <!-- Floating HUD Overlay inside Canvas -->
+                        <div class="absolute top-3 left-3 z-20 pointer-events-none">
+                            <span class="px-2.5 py-1 rounded-md bg-slate-900/85 backdrop-blur-md border border-slate-700/80 text-[10px] font-mono-code text-cyan-300 uppercase tracking-widest flex items-center gap-1.5 shadow-md">
+                                <i class="fas fa-crosshairs text-[9px] animate-spin"></i>
+                                <span>Double Helix 3D &bull; 2.2 GHz</span>
+                            </span>
+                        </div>
+
+                        <!-- Rotation Toggle / Speed Pill Button -->
+                        <div class="absolute top-3 right-3 z-20">
+                            <button type="button" onclick="toggleDnaSpin()" id="dnaSpinBtn" class="px-3 py-1.5 rounded-lg bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-[11px] font-mono-code text-slate-200 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-md" title="Pause / Resume Rotation">
+                                <i class="fas fa-pause text-[10px]" id="dnaSpinIcon"></i>
+                                <span id="dnaSpinText">Spin</span>
+                            </button>
+                        </div>
+
+                        <!-- Drag Prompt Hint -->
+                        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center">
+                            <span class="px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-[10px] text-slate-300 font-mono-code border border-slate-800 flex items-center gap-1.5 whitespace-nowrap shadow-md">
+                                <i class="fas fa-hand-pointer text-[9px] text-cyan-400"></i>
+                                <span>Click &amp; Drag to rotate 3D Double Helices</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Telemetry Data Footer -->
+                    <div class="grid grid-cols-3 gap-2.5 mt-3.5 pt-3.5 border-t border-slate-100 text-center">
+                        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+                            <div class="text-[9px] text-slate-400 uppercase font-bold font-mono-code">Base Pairs</div>
+                            <div class="text-xs font-bold font-mono-code text-slate-800 mt-0.5">48 Base Pairs</div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+                            <div class="text-[9px] text-slate-400 uppercase font-bold font-mono-code">Cross-Resonance</div>
+                            <div class="text-xs font-bold font-mono-code text-emerald-600 mt-0.5">Active (Locked)</div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+                            <div class="text-[9px] text-slate-400 uppercase font-bold font-mono-code">Scan Velocity</div>
+                            <div class="text-xs font-bold font-mono-code text-blue-600 mt-0.5">2.2 GHz Sweep</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Diagnostic Engine Summary Card -->
+                <div class="white-glass-card rounded-lg p-5 md:p-6 border border-slate-200/90 shadow-lg">
+                    
+                    <!-- AI Status Badge -->
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 mb-4">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 font-mono-code">
+                            Neural Pipeline Active
+                        </span>
+                    </div>
+
+                    <h2 class="text-lg font-bold text-slate-900 leading-tight">
+                        Deep Diagnostic Intelligence
+                    </h2>
+
+                    <p class="mt-1.5 text-xs text-slate-500 leading-relaxed">
+                        Correlates anatomical focus, clinical descriptions, duration, modifying factors, and vision imagery across 5,000+ medical monographs.
+                    </p>
+
+                    <div class="border-t border-slate-100 my-4"></div>
+
+                    <!-- AI Confidence Indicator -->
+                    <div>
+                        <div class="flex justify-between items-center text-xs mb-1.5">
+                            <span class="font-bold text-slate-700 font-mono-code uppercase text-[11px]">Calibrated Precision</span>
+                            <span class="font-bold text-blue-600 font-mono-code">96.4%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                            <div class="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 rounded-full" style="width: 96.4%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-100 my-4"></div>
+
+                    <!-- Specialties Covered -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2.5 font-mono-code">
+                            Covered Specialties
+                        </h4>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold">🧠 Neurology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold">❤️ Cardiology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">🫁 Pulmonology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold">🩺 Internal Med</span>
+                            <span class="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-bold">👁 Dermatology</span>
+                            <span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold">🦴 Orthopedics</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-100 my-4"></div>
+
+                    <!-- Security Info -->
+                    <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                            <i class="fas fa-lock text-blue-600 text-sm mb-0.5"></i>
+                            <p class="text-[11px] font-bold text-slate-700 m-0">256-Bit TLS</p>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                            <i class="fas fa-shield-halved text-emerald-600 text-sm mb-0.5"></i>
+                            <p class="text-[11px] font-bold text-slate-700 m-0">HIPAA Compliant</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Emergency Notice -->
+                <div class="p-5 rounded-lg bg-rose-50 border border-rose-200 shadow-2xs">
+                    <div class="flex items-center gap-2 mb-1.5 text-rose-700">
+                        <i class="fas fa-triangle-exclamation text-sm"></i>
+                        <h4 class="text-xs font-bold uppercase tracking-wider font-mono-code">Emergency Triage Notice</h4>
+                    </div>
+                    <p class="text-xs leading-relaxed text-rose-800 m-0">
+                        For acute crushing chest pain, sudden one-sided facial/body numbness, extreme breathing distress, or severe trauma, call emergency <strong>108 / 112</strong> immediately.
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Core Interactive Script -->
+<script>
+    // Anatomy Probing Database
+    const ANATOMY_QUESTIONS = {
+        'Head': {
+            title: 'Head & Neurological Probing Signs',
+            options: ['Throbbing / Pulsating', 'Dull band-like pressure', 'Light Sensitivity (Photophobia)', 'Sound Sensitivity', 'Visual Aura / Flashes', 'Neck Stiffness', 'Vertigo / Spinning sensation']
+        },
+        'Chest': {
+            title: 'Cardiovascular & Respiratory Probing Signs',
+            options: ['Sharp pleuritic pain (worse on breath)', 'Crushing / Heavy pressure', 'Radiating to left arm/jaw', 'Palpitations / Rapid heartbeat', 'Dry Cough', 'Productive Cough with Phlegm', 'Worse on exertion']
+        },
+        'Abdomen': {
+            title: 'Gastrointestinal & Gut Probing Signs',
+            options: ['Sharp localized cramping', 'Burning epigastric pain', 'Worse after eating', 'Better after eating', 'Nausea / Vomiting', 'Bloating / Gas', 'Change in bowel habits']
+        },
+        'Back': {
+            title: 'Spinal & Musculoskeletal Probing Signs',
+            options: ['Shooting pain down leg (Sciatica)', 'Dull muscular ache', 'Morning stiffness > 30 mins', 'Worse on bending / lifting', 'Numbness in toes / fingers', 'Relieved by rest']
+        },
+        'Arms': {
+            title: 'Upper Limb & Joint Probing Signs',
+            options: ['Joint swelling / heat', 'Reduced range of motion', 'Tingling / Pins & needles', 'Muscle weakness', 'Morning joint stiffness']
+        },
+        'Legs': {
+            title: 'Lower Limb & Joint Probing Signs',
+            options: ['Calf pain / swelling', 'Knee locking / instability', 'Ankle swelling', 'Pain worse on walking', 'Night cramps']
+        },
+        'Skin': {
+            title: 'Dermatological & Systemic Probing Signs',
+            options: ['Intense itching (Pruritus)', 'Red spreading rash', 'Raised hives / wheals', 'Dry flaking skin', 'Blistering / Oozing', 'Chills & Night Sweats']
+        }
+    };
+
+    // Accordion Toggle Functions
+    let allAccordionsExpanded = false;
+    function toggleAllAccordions() {
+        allAccordionsExpanded = !allAccordionsExpanded;
+        const accordions = document.querySelectorAll('.part-accordion-card');
+        accordions.forEach(acc => {
+            if (allAccordionsExpanded) {
+                acc.classList.add('open');
+            } else {
+                acc.classList.remove('open');
+            }
+        });
+        const btnText = document.getElementById('toggleAllPartsText');
+        const btnIcon = document.getElementById('toggleAllPartsIcon');
+        if (btnText) btnText.innerText = allAccordionsExpanded ? 'Collapse All' : 'Expand All';
+        if (btnIcon) btnIcon.className = allAccordionsExpanded ? 'fas fa-compress-arrows-alt text-[10px]' : 'fas fa-expand-arrows-alt text-[10px]';
+        updateAccuracyScore();
+    }
+
+    function toggleAccordion(partId) {
+        const card = document.getElementById(partId);
+        if (!card) return;
+        card.classList.toggle('open');
+        updateAccuracyScore();
+    }
+
+    function goToNextPart(currentPartId, nextPartId) {
+        const curr = document.getElementById(currentPartId);
+        const next = document.getElementById(nextPartId);
+        if (curr) curr.classList.remove('open');
+        if (next) {
+            next.classList.add('open');
+            next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        updateAccuracyScore();
+    }
+
+    function syncDuration(val) {
+        const input = document.getElementById('durationInput');
+        if (!input) return;
+        if (val && val !== 'custom') {
+            input.value = val;
+        }
+        updateAccuracyScore();
+    }
+
+    // Pain Slider Handler
+    function handlePainSlider(val) {
+        const badge = document.getElementById('painValueBadge');
+        const severitySelect = document.getElementById('severitySelect');
+        const num = parseInt(val, 10);
+
+        if (num === 0) {
+            badge.innerText = 'Level 0: No Pain';
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-slate-100 text-slate-700';
+            if (severitySelect) severitySelect.value = 'Mild';
+        } else if (num <= 3) {
+            badge.innerText = `Level ${num}: Mild Pain`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800';
+            if (severitySelect) severitySelect.value = 'Mild';
+        } else if (num <= 6) {
+            badge.innerText = `Level ${num}: Moderate Pain`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-amber-100 text-amber-800';
+            if (severitySelect) severitySelect.value = 'Moderate';
+        } else if (num <= 8) {
+            badge.innerText = `Level ${num}: Severe Pain`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-orange-100 text-orange-800';
+            if (severitySelect) severitySelect.value = 'Severe';
+        } else {
+            badge.innerText = `Level ${num}: Critical / Unbearable`;
+            badge.className = 'text-xs font-black font-mono-code px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 animate-pulse';
+            if (severitySelect) severitySelect.value = 'Very Severe';
+        }
+        updateAccuracyScore();
+    }
+
+    // 1-Click Preset Scenario Loader
+    function loadScenarioPreset(type) {
+        const bodyPartDropdown = document.getElementById('bodyPartDropdown');
+        const symptomTextarea = document.getElementById('symptoms');
+        const durationInput = document.getElementById('durationInput');
+        const worseInput = document.getElementById('worseFactorsInput');
+        const betterInput = document.getElementById('betterFactorsInput');
+
+        if (type === 'migraine') {
+            selectBodyPart('Head');
+            symptomTextarea.value = 'Throbbing, pulsating unilateral headache with moderate sensitivity to bright lights and sound. Accompanied by mild nausea.';
+            if (durationInput) durationInput.value = '2 days';
+            if (worseInput) worseInput.value = 'Bright lights, loud noises, bending over';
+            if (betterInput) betterInput.value = 'Resting in a dark quiet room, cold compress';
+            handlePainSlider(6);
+        } else if (type === 'flu') {
+            selectBodyPart('Head');
+            symptomTextarea.value = 'Sudden onset high fever with severe generalized body aches, dry persistent cough, sore throat, and fatigue.';
+            if (durationInput) durationInput.value = '3 days';
+            if (worseInput) worseInput.value = 'Cold air, physical activity';
+            if (betterInput) betterInput.value = 'Bed rest, warm fluids, paracetamol';
+            handlePainSlider(5);
+        } else if (type === 'reflux') {
+            selectBodyPart('Chest');
+            symptomTextarea.value = 'Burning sensation behind breastbone (heartburn), sour taste in mouth, bloating and mild nausea after meals.';
+            if (durationInput) durationInput.value = '1 week';
+            if (worseInput) worseInput.value = 'Lying flat after meals, spicy or fatty foods';
+            if (betterInput) betterInput.value = 'Sitting upright, drinking cold water, antacids';
+            handlePainSlider(4);
+        } else if (type === 'backpain') {
+            selectBodyPart('Back');
+            symptomTextarea.value = 'Aching lower back stiffness that started after heavy lifting. Pain radiates mildly into glutes without numbness.';
+            if (durationInput) durationInput.value = '4 days';
+            if (worseInput) worseInput.value = 'Prolonged sitting, bending forward, lifting objects';
+            if (betterInput) betterInput.value = 'Lying on back with knees elevated, warm heat pack';
+            handlePainSlider(5);
+        } else if (type === 'allergy') {
+            selectBodyPart('Skin');
+            symptomTextarea.value = 'Intense itchy red bumps/hives across forearms and neck following contact with detergent. Mild swelling.';
+            if (durationInput) durationInput.value = '24 hours';
+            if (worseInput) worseInput.value = 'Scratching, hot water showers';
+            if (betterInput) betterInput.value = 'Cool water rinse, soothing calamine lotion';
+            handlePainSlider(3);
+        }
+
+        // Open Part 2 to review details
+        goToNextPart('accordionPart1', 'accordionPart2');
+    }
+
+    function selectBodyPart(part) {
+        const bodyPartDropdown = document.getElementById('bodyPartDropdown');
+        const selectedBodyPartInput = document.getElementById('selected_body_part');
+        const bodyPartBtns = document.querySelectorAll('.body-part-btn');
+
+        if (bodyPartDropdown) bodyPartDropdown.value = part;
+        if (selectedBodyPartInput) selectedBodyPartInput.value = part;
+
+        bodyPartBtns.forEach(btn => {
+            if (btn.dataset.body === part) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+
+        renderAnatomyProbing(part);
+        updateSummary();
+    }
+
+    function renderAnatomyProbing(part) {
+        const box = document.getElementById('anatomyProbingBox');
+        const title = document.getElementById('probingTitle');
+        const optionsContainer = document.getElementById('probingOptions');
+
+        if (!box || !title || !optionsContainer) return;
+
+        if (ANATOMY_QUESTIONS[part]) {
+            title.innerText = ANATOMY_QUESTIONS[part].title;
+            optionsContainer.innerHTML = '';
+            
+            ANATOMY_QUESTIONS[part].options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'probing-chip px-3 py-1 rounded-lg text-xs font-semibold bg-white border border-blue-200 text-slate-700 hover:bg-blue-600 hover:text-white transition-all cursor-pointer shadow-2xs';
+                btn.innerText = opt;
+                btn.onclick = function() {
+                    this.classList.toggle('bg-blue-600');
+                    this.classList.toggle('text-white');
+                    this.classList.toggle('border-blue-600');
+                    toggleSymptomFromProbing(opt);
+                };
+                optionsContainer.appendChild(btn);
+            });
+            box.classList.remove('hidden');
+        } else {
+            box.classList.add('hidden');
+        }
+    }
+
+    function toggleSymptomFromProbing(symptom) {
+        const textarea = document.getElementById('symptoms');
+        if (!textarea) return;
+        if (!textarea.value.includes(symptom)) {
+            textarea.value = (textarea.value.trim() ? textarea.value.trim() + ', ' : '') + symptom;
+        }
+        updateAccuracyScore();
+    }
+
+    // Voice Dictation (Web Speech API)
+    let recognition = null;
+    let isRecording = false;
+
+    function toggleVoiceDictation() {
+        const btn = document.getElementById('voiceDictateBtn');
+        const icon = document.getElementById('voiceMicIcon');
+        const text = document.getElementById('voiceMicText');
+        const textarea = document.getElementById('symptoms');
+
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('Voice dictation is supported in modern Chrome, Edge, and Safari browsers.');
+            return;
+        }
+
+        if (isRecording) {
+            if (recognition) recognition.stop();
+            isRecording = false;
+            if (btn) btn.classList.remove('mic-recording');
+            if (text) text.innerText = 'Voice Dictation';
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = function() {
+            isRecording = true;
+            if (btn) btn.classList.add('mic-recording');
+            if (text) text.innerText = 'Listening... (Click to stop)';
+        };
+
+        recognition.onresult = function(event) {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript + ' ';
+                }
+            }
+            if (finalTranscript && textarea) {
+                textarea.value = (textarea.value.trim() ? textarea.value.trim() + ' ' : '') + finalTranscript;
+                updateAccuracyScore();
+            }
+        };
+
+        recognition.onerror = function() {
+            isRecording = false;
+            if (btn) btn.classList.remove('mic-recording');
+            if (text) text.innerText = 'Voice Dictation';
+        };
+
+        recognition.onend = function() {
+            isRecording = false;
+            if (btn) btn.classList.remove('mic-recording');
+            if (text) text.innerText = 'Voice Dictation';
+        };
+
+        recognition.start();
+    }
+
+    // Real-Time Red Flag Symptom Sentinel
+    function checkRedFlagKeywords(text) {
+        const redFlagKeywords = [
+            'crushing chest pain', 'chest tightness', 'radiating to jaw', 'slurred speech', 
+            'facial droop', 'sudden weakness', 'sudden blindness', 'coughing blood', 
+            'severe breathlessness', 'unconscious', 'thunderclap headache', 'projectile vomiting'
+        ];
+        const lower = (text || '').toLowerCase();
+        const detected = redFlagKeywords.filter(k => lower.includes(k));
+        const banner = document.getElementById('redFlagSentinel');
+        const bannerText = document.getElementById('redFlagSentinelText');
+
+        if (detected.length > 0 && banner) {
+            banner.classList.remove('hidden');
+            if (bannerText) {
+                bannerText.innerHTML = `Your description mentions potential high-priority warning signs (<strong>${detected.join(', ')}</strong>). Please consider consulting emergency medical services if symptoms are severe.`;
+            }
+        } else if (banner) {
+            banner.classList.add('hidden');
+        }
+    }
+
+    // Dynamic Accuracy & Completeness Calculator
+    function updateAccuracyScore() {
+        const scoreBar = document.getElementById('diagnosticScoreBar');
+        const scoreText = document.getElementById('diagnosticScoreText');
+        const bodyPart = document.getElementById('selected_body_part')?.value;
+        const symptoms = document.getElementById('symptoms')?.value.trim() || '';
+        const duration = document.getElementById('durationInput')?.value.trim() || '';
+        const severity = document.getElementById('severitySelect')?.value || '';
+        const worse = document.getElementById('worseFactorsInput')?.value.trim() || '';
+        const better = document.getElementById('betterFactorsInput')?.value.trim() || '';
+
+        checkRedFlagKeywords(symptoms);
+
+        let score = 40;
+        if (bodyPart) score += 15;
+        if (symptoms.length > 20) score += 20;
+        if (symptoms.length > 60) score += 10;
+        if (duration) score += 5;
+        if (severity) score += 5;
+        if (worse || better) score += 5;
+
+        if (score > 100) score = 100;
+
+        if (scoreBar) scoreBar.style.width = `${score}%`;
+        if (scoreText) {
+            if (score >= 90) scoreText.innerText = `${score}% Maximum Precision`;
+            else if (score >= 70) scoreText.innerText = `${score}% High Quality`;
+            else scoreText.innerText = `${score}% Good`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Elements
+        const bodyPartDropdown = document.getElementById('bodyPartDropdown');
+        const bodyPartBtns = document.querySelectorAll('.body-part-btn');
+        const symptomChips = document.querySelectorAll('.symptom-chip');
+        const selectedBodyPartInput = document.getElementById('selected_body_part');
+        const selectedSymptomsInput = document.getElementById('selected_symptoms');
+        const selectionSummary = document.getElementById('selectionSummary');
+        const symptomTextarea = document.getElementById('symptoms');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+        // Camera elements
+        const startCameraBtn = document.getElementById('start-camera-btn');
+        const imageUploadInput = document.getElementById('image-upload');
+        const cameraContainer = document.getElementById('camera-container');
+        const canvasContainer = document.getElementById('canvas-container');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const cameraImageDataInput = document.getElementById('camera_image_data');
+
+        const resetFormBtn = document.getElementById('reset-form-btn');
+        const form = document.getElementById('symptomsForm');
+        const submitBtn = document.getElementById('submit-btn');
+
+        let stream = null;
+        let selectedBodyPart = selectedBodyPartInput.value || null;
+        let selectedSymptoms = [];
+
+        // Initialize from session
+        if (selectedBodyPart) {
+            selectBodyPart(selectedBodyPart);
+        }
+
+        // ===== BODY PART DROPDOWN & BUTTONS SYNC =====
+        if (bodyPartDropdown) {
+            bodyPartDropdown.addEventListener('change', () => {
+                selectBodyPart(bodyPartDropdown.value);
+            });
+        }
+
+        bodyPartBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const bodyPart = btn.dataset.body;
+                if (selectedBodyPart === bodyPart) {
+                    selectedBodyPart = null;
+                    btn.classList.remove('active');
+                    if (bodyPartDropdown) bodyPartDropdown.value = '';
+                    selectedBodyPartInput.value = '';
+                    renderAnatomyProbing(null);
+                } else {
+                    selectBodyPart(bodyPart);
+                }
+                updateSummary();
+            });
+        });
+
+        // ===== SYMPTOM CHIPS SELECTION =====
+        symptomChips.forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
+                const symptom = chip.dataset.symptom;
+
+                if (selectedSymptoms.includes(symptom)) {
+                    selectedSymptoms = selectedSymptoms.filter(s => s !== symptom);
+                    chip.classList.remove('active');
+                } else {
+                    selectedSymptoms.push(symptom);
+                    chip.classList.add('active');
+                }
+
+                selectedSymptomsInput.value = JSON.stringify(selectedSymptoms);
+                updateSummary();
+            });
+        });
+
+        // ===== UPDATE SUMMARY =====
+        window.updateSummary = function() {
+            let summary = [];
+            const part1SummaryTag = document.getElementById('part1SummaryTag');
+            const badgePart1 = document.getElementById('badgePart1');
+            const currentPart = selectedBodyPartInput.value;
+
+            if (currentPart) {
+                summary.push(`<span class="text-blue-600 font-bold">${currentPart}</span>`);
+                if (part1SummaryTag) part1SummaryTag.innerText = currentPart;
+                if (badgePart1) {
+                    badgePart1.innerText = 'CONFIGURED';
+                    badgePart1.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 font-mono-code';
+                }
+            } else {
+                if (part1SummaryTag) part1SummaryTag.innerText = 'Not Selected';
+                if (badgePart1) {
+                    badgePart1.innerText = 'IN PROGRESS';
+                    badgePart1.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 font-mono-code';
+                }
+            }
+
+            if (selectedSymptoms.length > 0) {
+                summary.push(`<span class="text-indigo-600 font-bold">${selectedSymptoms.join(', ')}</span>`);
+            }
+
+            if (summary.length > 0) {
+                selectionSummary.innerHTML = summary.join(' &bull; ');
+                clearSelectionBtn.classList.remove('hidden');
+            } else {
+                selectionSummary.innerHTML = '<span class="text-slate-400">None selected</span>';
+                clearSelectionBtn.classList.add('hidden');
+            }
+
+            updateAccuracyScore();
+        };
+
+        window.autoGenerateNarrative = function() {
+            let parts = [];
+            const currentPart = selectedBodyPartInput.value;
+            if (currentPart) parts.push(`Primary affected area: ${currentPart}`);
+            const detail = document.getElementById('body_part_detail')?.value;
+            if (detail) parts.push(`Specific location: ${detail}`);
+            if (selectedSymptoms.length > 0) parts.push(`Symptoms experienced: ${selectedSymptoms.join(', ')}`);
+            const dur = document.getElementById('durationInput')?.value;
+            if (dur) parts.push(`Duration: ${dur}`);
+            const sev = document.getElementById('severitySelect')?.value;
+            if (sev) parts.push(`Severity: ${sev}`);
+
+            if (parts.length > 0) {
+                symptomTextarea.value = parts.join('. ') + '.\n\nAdditional notes: ';
+                symptomTextarea.focus();
+                updateAccuracyScore();
+            } else {
+                alert('Please select an anatomical area or quick symptom markers first.');
+            }
+        };
+
+        // Textarea listener for completeness & red flags
+        symptomTextarea.addEventListener('input', () => {
+            const badgePart2 = document.getElementById('badgePart2');
+            if (badgePart2) {
+                if (symptomTextarea.value.trim().length > 5) {
+                    badgePart2.innerText = 'FILLED';
+                    badgePart2.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 font-mono-code';
+                } else {
+                    badgePart2.innerText = 'PENDING';
+                    badgePart2.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 font-mono-code';
+                }
+            }
+            updateAccuracyScore();
+        });
+
+        // ===== CLEAR SELECTION =====
+        clearSelectionBtn.addEventListener('click', () => {
+            selectedBodyPart = null;
+            selectedBodyPartInput.value = '';
+            if (bodyPartDropdown) bodyPartDropdown.value = '';
+            bodyPartBtns.forEach(b => b.classList.remove('active'));
+            renderAnatomyProbing(null);
+
+            selectedSymptoms = [];
+            selectedSymptomsInput.value = '';
+            symptomChips.forEach(chip => chip.classList.remove('active'));
+
+            updateSummary();
+        });
+
+        // ===== GLOBAL FORM RESET =====
+        resetFormBtn.addEventListener('click', () => {
+            clearSelectionBtn.click();
+            symptomTextarea.value = '';
+            cameraImageDataInput.value = '';
+            imageUploadInput.value = '';
+            cameraContainer.classList.add('hidden');
+            canvasContainer.classList.add('hidden');
+            startCameraBtn.classList.remove('hidden');
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            document.querySelectorAll('.part-accordion-card').forEach((card, idx) => {
+                if (idx === 0) card.classList.add('open');
+                else card.classList.remove('open');
+            });
+            updateSummary();
+        });
+
+        // ===== CAMERA CONTROLS =====
+        startCameraBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                cameraContainer.classList.remove('hidden');
+            } catch (err) {
+                console.error("Camera error: ", err);
+                alert("Could not access camera. Please check device permissions.");
+            }
+        });
+
+        // Capture Image
+        captureBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL('image/jpeg', 0.85);
+            cameraImageDataInput.value = imageData;
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            cameraContainer.classList.add('hidden');
+            canvasContainer.classList.remove('hidden');
+            document.getElementById('part3SummaryTag').innerText = 'Camera Photo Captured';
+            updateAccuracyScore();
+        });
+
+        // Retake Image
+        retakeBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            cameraImageDataInput.value = "";
+            canvasContainer.classList.add('hidden');
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = stream;
+                startCameraBtn.classList.add('hidden');
+                cameraContainer.classList.remove('hidden');
+            } catch (err) {
+                console.error("Camera error: ", err);
+                startCameraBtn.classList.remove('hidden');
+                cameraContainer.classList.add('hidden');
+            }
+        });
+
+        // Image Upload
+        imageUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        cameraImageDataInput.value = canvas.toDataURL('image/jpeg', 0.85);
+                        startCameraBtn.classList.add('hidden');
+                        cameraContainer.classList.add('hidden');
+                        canvasContainer.classList.remove('hidden');
+                        document.getElementById('part3SummaryTag').innerText = 'File Attached';
+                        updateAccuracyScore();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form Submit
+        form.addEventListener('submit', (e) => {
+            const currentPart = selectedBodyPartInput.value;
+            if (!symptomTextarea.value.trim()) {
+                let autoParts = [];
+                if (currentPart) {
+                    autoParts.push(`Primary affected area: ${currentPart}`);
+                }
+                if (selectedSymptoms.length > 0) {
+                    autoParts.push(`Reported symptoms: ${selectedSymptoms.join(', ')}`);
+                }
+                if (autoParts.length > 0) {
+                    symptomTextarea.value = autoParts.join('. ');
+                } else if (!cameraImageDataInput.value && !imageUploadInput.value) {
+                    e.preventDefault();
+                    alert('Please select an anatomical area in Part 1 or describe your symptoms in Part 2 before submitting.');
+                    document.getElementById('accordionPart1').classList.add('open');
+                    return;
+                }
+            } else if (selectedSymptoms.length > 0 && !symptomTextarea.value.includes(selectedSymptoms[0])) {
+                symptomTextarea.value = `Keywords: ${selectedSymptoms.join(', ')}\n\n` + symptomTextarea.value;
+            }
+
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Analyzing Symptoms with AI...';
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-90', 'cursor-wait');
+            }
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Initial setup
+        updateSummary();
+    });
+
+    function removePreviousImage() {
+        const banner = document.getElementById('attached-image-banner');
+        const removeInput = document.getElementById('remove_image_input');
+        if (banner) banner.style.display = 'none';
+        if (removeInput) removeInput.value = '1';
+    }
+
+    // ========================================================
+    // 🧬 ULTRA-PREMIUM 3D BIOLUMINESCENT DOUBLE DNA STRUCTURE ENGINE
+    // ========================================================
+    (function () {
+        const canvas = document.getElementById('step2DnaCanvas');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        let width = 0;
+        let height = 0;
+        let dpr = window.devicePixelRatio || 1;
+
+        // Double Helix Architecture Parameters
+        const NUM_RUNGS = 24;            // 24 rungs per helix = 48 base pairs total
+        let strandRadius = 40;           // Responsive radius of each individual double helix
+        let strandHeightSpan = 300;      // Responsive vertical span of the helices
+        let helixSeparation = 70;        // Responsive horizontal offset from center for each helix
+        let perspective = 350;
+
+        let rotY = 0;
+        let rotX = 0.16;
+        let targetRotY = 0;
+        let targetRotX = 0.16;
+        let velocityY = 0.013;
+        let isSpinning = true;
+        let isDragging = false;
+        let startPointerX = 0;
+        let startPointerY = 0;
+        let prevRotY = 0;
+        let prevRotX = 0;
+
+        // Genomic Laser Scanner Pulse
+        let scanY = -strandHeightSpan / 2;
+        let scanDir = 1;
+        const SCAN_SPEED = 2.4;
+
+        // Bioluminescent Ambient Particles
+        const PARTICLES_COUNT = 36;
+        const particles = [];
+        for (let i = 0; i < PARTICLES_COUNT; i++) {
+            particles.push({
+                x: (Math.random() - 0.5) * 260,
+                y: (Math.random() - 0.5) * 320,
+                z: (Math.random() - 0.5) * 200,
+                vy: -0.25 - Math.random() * 0.35,
+                vx: (Math.random() - 0.5) * 0.15,
+                size: 1.0 + Math.random() * 2.2,
+                color: Math.random() > 0.6 ? '#06b6d4' : (Math.random() > 0.3 ? '#a855f7' : '#10b981'),
+                alpha: 0.2 + Math.random() * 0.6,
+                pulse: Math.random() * Math.PI * 2
+            });
+        }
+
+        // Base Pairs for Helix 1 (Strand Alpha - Phenotype)
+        const baseColorsA = [
+            { a: '#00f2fe', b: '#f59e0b', code: 'A-T' },
+            { a: '#0284c7', b: '#fbbf24', code: 'T-A' },
+            { a: '#38bdf8', b: '#f97316', code: 'A-T' },
+            { a: '#2563eb', b: '#fde047', code: 'T-A' }
+        ];
+
+        // Base Pairs for Helix 2 (Strand Beta - Clinical AI Knowledge)
+        const baseColorsB = [
+            { a: '#c084fc', b: '#10b981', code: 'G-C' },
+            { a: '#9333ea', b: '#34d399', code: 'C-G' },
+            { a: '#a855f7', b: '#059669', code: 'G-C' },
+            { a: '#7c3aed', b: '#6ee7b7', code: 'C-G' }
+        ];
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            width = rect.width;
+            height = rect.height;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+
+            // Responsive 3D dimensions adapted to viewport width and height
+            strandHeightSpan = Math.max(260, Math.min(height * 0.74, 380));
+            helixSeparation = Math.max(52, Math.min(width * 0.22, 88));
+            strandRadius = Math.max(32, Math.min(width * 0.11, 46));
+            perspective = Math.max(300, Math.min(width * 0.85, 420));
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 3D Matrix Projection
+        function project3D(x, y, z) {
+            const cosX = Math.cos(rotX);
+            const sinX = Math.sin(rotX);
+            const y1 = y * cosX - z * sinX;
+            const z1 = y * sinX + z * cosX;
+
+            const cosY = Math.cos(rotY);
+            const sinY = Math.sin(rotY);
+            const x2 = x * cosY + z1 * sinY;
+            const z2 = -x * sinY + z1 * cosY;
+
+            const scale = perspective / (perspective + z2 + 100);
+            const px = width / 2 + x2 * scale;
+            const py = height / 2 + y1 * scale;
+
+            return { x: px, y: py, z: z2, scale: scale, origX: x, origY: y };
+        }
+
+        let animationFrameId = null;
+
+        function renderDna() {
+            ctx.clearRect(0, 0, width, height);
+
+            if (!isDragging && isSpinning) {
+                targetRotY += velocityY;
+            }
+            rotY += (targetRotY - rotY) * 0.12;
+            rotX += (targetRotX - rotX) * 0.12;
+
+            // Update Laser Scan Position
+            scanY += SCAN_SPEED * scanDir;
+            if (scanY > strandHeightSpan / 2) {
+                scanY = strandHeightSpan / 2;
+                scanDir = -1;
+            } else if (scanY < -strandHeightSpan / 2) {
+                scanY = -strandHeightSpan / 2;
+                scanDir = 1;
+            }
+
+            // 1. Draw Ambient Floating Bioluminescent Particles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                p.y += p.vy;
+                p.x += p.vx;
+                p.pulse += 0.04;
+                if (p.y < -strandHeightSpan / 2 - 30) {
+                    p.y = strandHeightSpan / 2 + 30;
+                    p.x = (Math.random() - 0.5) * 260;
+                }
+
+                const proj = project3D(p.x, p.y, p.z);
+                const currentAlpha = p.alpha * (0.5 + 0.5 * Math.sin(p.pulse));
+
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0.05, Math.min(0.85, currentAlpha));
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 8 * proj.scale;
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1.0;
+
+            // Arrays to store continuous backbone curve points for both helices
+            const h1Strand1Points = [];
+            const h1Strand2Points = [];
+            const h2Strand1Points = [];
+            const h2Strand2Points = [];
+
+            const renderItems = [];
+
+            // 2. Generate Points for Helix α (Left / Patient Phenotype) and Helix β (Right / Clinical AI)
+            for (let i = 0; i < NUM_RUNGS; i++) {
+                const progress = (i / (NUM_RUNGS - 1)) - 0.5; // -0.5 to +0.5
+                const y = progress * strandHeightSpan;
+                const angleA = progress * Math.PI * 4.2;
+                const angleB = progress * Math.PI * 4.2 + Math.PI * 0.45; // slight phase difference
+
+                const distToScan = Math.abs(y - scanY);
+                const scanIntensity = Math.max(0, 1 - distToScan / 36);
+
+                // --- HELIX α (LEFT: -helixSeparation) ---
+                const h1_x1 = -helixSeparation + Math.sin(angleA) * strandRadius;
+                const h1_z1 = Math.cos(angleA) * strandRadius;
+                const h1_x2 = -helixSeparation - Math.sin(angleA) * strandRadius;
+                const h1_z2 = -Math.cos(angleA) * strandRadius;
+
+                const p1A = project3D(h1_x1, y, h1_z1);
+                const p2A = project3D(h1_x2, y, h1_z2);
+
+                h1Strand1Points.push(p1A);
+                h1Strand2Points.push(p2A);
+
+                const avgZA = (p1A.z + p2A.z) / 2;
+                const baseA = baseColorsA[i % baseColorsA.length];
+
+                renderItems.push({
+                    type: 'rung',
+                    z: avgZA,
+                    p1: p1A,
+                    p2: p2A,
+                    baseInfo: baseA,
+                    scanIntensity: scanIntensity,
+                    helix: 'alpha'
+                });
+
+                renderItems.push({
+                    type: 'node',
+                    z: p1A.z,
+                    p: p1A,
+                    color: '#0284c7',
+                    glowColor: '#38bdf8',
+                    scanIntensity: scanIntensity
+                });
+
+                renderItems.push({
+                    type: 'node',
+                    z: p2A.z,
+                    p: p2A,
+                    color: '#2563eb',
+                    glowColor: '#60a5fa',
+                    scanIntensity: scanIntensity
+                });
+
+                // --- HELIX β (RIGHT: +helixSeparation) ---
+                const h2_x1 = helixSeparation + Math.sin(angleB) * strandRadius;
+                const h2_z1 = Math.cos(angleB) * strandRadius;
+                const h2_x2 = helixSeparation - Math.sin(angleB) * strandRadius;
+                const h2_z2 = -Math.cos(angleB) * strandRadius;
+
+                const p1B = project3D(h2_x1, y, h2_z1);
+                const p2B = project3D(h2_x2, y, h2_z2);
+
+                h2Strand1Points.push(p1B);
+                h2Strand2Points.push(p2B);
+
+                const avgZB = (p1B.z + p2B.z) / 2;
+                const baseB = baseColorsB[i % baseColorsB.length];
+
+                renderItems.push({
+                    type: 'rung',
+                    z: avgZB,
+                    p1: p1B,
+                    p2: p2B,
+                    baseInfo: baseB,
+                    scanIntensity: scanIntensity,
+                    helix: 'beta'
+                });
+
+                renderItems.push({
+                    type: 'node',
+                    z: p1B.z,
+                    p: p1B,
+                    color: '#9333ea',
+                    glowColor: '#c084fc',
+                    scanIntensity: scanIntensity
+                });
+
+                renderItems.push({
+                    type: 'node',
+                    z: p2B.z,
+                    p: p2B,
+                    color: '#059669',
+                    glowColor: '#34d399',
+                    scanIntensity: scanIntensity
+                });
+
+                // --- CROSS-HELICAL RESONANCE BRIDGES BETWEEN HELIX α AND HELIX β ---
+                if (scanIntensity > 0.08) {
+                    const midA = { x: (p1A.x + p2A.x) / 2, y: (p1A.y + p2A.y) / 2, z: avgZA, scale: (p1A.scale + p2A.scale) / 2 };
+                    const midB = { x: (p1B.x + p2B.x) / 2, y: (p1B.y + p2B.y) / 2, z: avgZB, scale: (p1B.scale + p2B.scale) / 2 };
+                    const avgZBridge = (avgZA + avgZB) / 2;
+
+                    renderItems.push({
+                        type: 'resonanceBridge',
+                        z: avgZBridge,
+                        midA: midA,
+                        midB: midB,
+                        scanIntensity: scanIntensity
+                    });
+                }
+            }
+
+            // 3. Draw Continuous Bioluminescent Backbone Strands for both Helices
+            function drawStrandCurve(points, colorStart, colorEnd, shadowCol) {
+                if (points.length < 2) return;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+
+                for (let i = 0; i < points.length - 1; i++) {
+                    const xc = (points[i].x + points[i + 1].x) / 2;
+                    const yc = (points[i].y + points[i + 1].y) / 2;
+                    ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+                }
+                ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+
+                const grad = ctx.createLinearGradient(0, height * 0.1, 0, height * 0.9);
+                grad.addColorStop(0, colorStart);
+                grad.addColorStop(1, colorEnd);
+
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 2.4;
+                ctx.shadowColor = shadowCol;
+                ctx.shadowBlur = 10;
+                ctx.globalAlpha = 0.9;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Helix α Strands (Cyan & Blue)
+            drawStrandCurve(h1Strand1Points, '#00f2fe', '#0284c7', '#38bdf8');
+            drawStrandCurve(h1Strand2Points, '#60a5fa', '#1d4ed8', '#2563eb');
+
+            // Helix β Strands (Purple & Emerald)
+            drawStrandCurve(h2Strand1Points, '#c084fc', '#7c3aed', '#a855f7');
+            drawStrandCurve(h2Strand2Points, '#34d399', '#059669', '#10b981');
+
+            // 4. Sort all 3D items by Z-depth (Painter's algorithm for true 3D occlusion)
+            renderItems.sort((a, b) => b.z - a.z);
+
+            // 5. Render 3D Items
+            for (let k = 0; k < renderItems.length; k++) {
+                const item = renderItems[k];
+
+                if (item.type === 'resonanceBridge') {
+                    // Cross-Helical Resonance Laser Bridge
+                    const a = item.midA;
+                    const b = item.midB;
+                    const avgScale = (a.scale + b.scale) / 2;
+
+                    ctx.save();
+                    const bridgeGrad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+                    bridgeGrad.addColorStop(0, 'rgba(6, 182, 212, ' + (item.scanIntensity * 0.9) + ')');
+                    bridgeGrad.addColorStop(0.5, 'rgba(255, 255, 255, ' + (item.scanIntensity * 1.0) + ')');
+                    bridgeGrad.addColorStop(1, 'rgba(168, 85, 247, ' + (item.scanIntensity * 0.9) + ')');
+
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.strokeStyle = bridgeGrad;
+                    ctx.lineWidth = (2.0 + item.scanIntensity * 2.5) * avgScale;
+                    ctx.shadowColor = '#00f2fe';
+                    ctx.shadowBlur = 14 * avgScale;
+                    ctx.stroke();
+
+                    // Central Quantum Photon Packet Pulse
+                    const centerBridgeX = (a.x + b.x) / 2;
+                    const centerBridgeY = (a.y + b.y) / 2;
+                    ctx.beginPath();
+                    ctx.arc(centerBridgeX, centerBridgeY, (3.2 + item.scanIntensity * 2) * avgScale, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 16 * avgScale;
+                    ctx.fill();
+
+                    ctx.restore();
+
+                } else if (item.type === 'rung') {
+                    const p1 = item.p1;
+                    const p2 = item.p2;
+                    const avgScale = (p1.scale + p2.scale) / 2;
+                    const isLaserHit = item.scanIntensity > 0.05;
+
+                    const grad = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+                    grad.addColorStop(0, item.baseInfo.a);
+                    grad.addColorStop(0.5, '#ffffff');
+                    grad.addColorStop(1, item.baseInfo.b);
+
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = grad;
+                    ctx.lineWidth = Math.max(1.3, (1.8 + item.scanIntensity * 2.0) * avgScale);
+                    ctx.globalAlpha = Math.min(1, 0.45 + (1 - (item.z + 80) / 180) * 0.55 + item.scanIntensity * 0.4);
+
+                    if (isLaserHit) {
+                        ctx.shadowColor = item.helix === 'alpha' ? '#00f2fe' : '#c084fc';
+                        ctx.shadowBlur = 10 * avgScale;
+                    }
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+
+                    // Central Hydrogen-Bond Connector Node
+                    const midX = (p1.x + p2.x) / 2;
+                    const midY = (p1.y + p2.y) / 2;
+                    const beadRadius = (1.8 + item.scanIntensity * 1.4) * avgScale;
+
+                    ctx.beginPath();
+                    ctx.arc(midX, midY, beadRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = isLaserHit ? '#ffffff' : (item.helix === 'alpha' ? '#00f2fe' : '#c084fc');
+                    ctx.shadowBlur = (5 + item.scanIntensity * 9) * avgScale;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.globalAlpha = 1.0;
+
+                } else if (item.type === 'node') {
+                    const p = item.p;
+                    const baseRadius = 4.6 * p.scale;
+                    const radius = baseRadius * (1 + item.scanIntensity * 0.3);
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+
+                    const radGrad = ctx.createRadialGradient(
+                        p.x - radius * 0.3,
+                        p.y - radius * 0.3,
+                        radius * 0.1,
+                        p.x,
+                        p.y,
+                        radius
+                    );
+                    radGrad.addColorStop(0, '#ffffff');
+                    radGrad.addColorStop(0.35, item.glowColor);
+                    radGrad.addColorStop(1, item.color);
+
+                    ctx.fillStyle = radGrad;
+                    ctx.shadowColor = item.glowColor;
+                    ctx.shadowBlur = (10 + item.scanIntensity * 12) * p.scale;
+                    ctx.fill();
+
+                    // Specular Glass Highlight Glint
+                    ctx.beginPath();
+                    ctx.arc(p.x - radius * 0.35, p.y - radius * 0.35, radius * 0.32, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            // 6. Draw Dual Holographic Genomic Scanner Wavefront Sweep Line
+            const scanProjA = project3D(-helixSeparation, scanY, 0);
+            const scanProjB = project3D(helixSeparation, scanY, 0);
+            const scanGradient = ctx.createLinearGradient(scanProjA.x - 45, scanProjA.y, scanProjB.x + 45, scanProjB.y);
+            scanGradient.addColorStop(0, 'rgba(6, 182, 212, 0)');
+            scanGradient.addColorStop(0.3, 'rgba(6, 182, 212, 0.7)');
+            scanGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
+            scanGradient.addColorStop(0.7, 'rgba(168, 85, 247, 0.7)');
+            scanGradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+
+            ctx.beginPath();
+            ctx.moveTo(scanProjA.x - 45, scanProjA.y);
+            ctx.lineTo(scanProjB.x + 45, scanProjB.y);
+            ctx.strokeStyle = scanGradient;
+            ctx.lineWidth = 2.0;
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            animationFrameId = requestAnimationFrame(renderDna);
+        }
+
+        renderDna();
+
+        // Tactile Smooth Drag Handling for 3D Double DNA Structure
+        canvas.addEventListener('pointerdown', function (e) {
+            isDragging = true;
+            startPointerX = e.clientX;
+            startPointerY = e.clientY;
+            prevRotY = targetRotY;
+            prevRotX = targetRotX;
+            canvas.setPointerCapture(e.pointerId);
+        });
+
+        canvas.addEventListener('pointermove', function (e) {
+            if (isDragging) {
+                const dx = e.clientX - startPointerX;
+                const dy = e.clientY - startPointerY;
+                targetRotY = prevRotY + dx * 0.012;
+                targetRotX = Math.max(-0.45, Math.min(0.45, prevRotX + dy * 0.008));
+            }
+        });
+
+        canvas.addEventListener('pointerup', function (e) {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('pointercancel', function (e) {
+            isDragging = false;
+        });
+
+        // Rotation Toggle Function exposed globally
+        window.toggleDnaSpin = function () {
+            isSpinning = !isSpinning;
+            const spinIcon = document.getElementById('dnaSpinIcon');
+            const spinText = document.getElementById('dnaSpinText');
+            if (spinIcon) spinIcon.className = isSpinning ? 'fas fa-pause text-[9px]' : 'fas fa-play text-[9px]';
+            if (spinText) spinText.innerText = isSpinning ? 'Pause' : 'Spin';
+        };
+
+        // Lifecycle Visibility Handling
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            } else {
+                animationFrameId = requestAnimationFrame(renderDna);
+            }
+        });
+    })();
+</script>
+{% endblock %}
