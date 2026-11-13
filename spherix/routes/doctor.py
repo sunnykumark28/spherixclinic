@@ -109,13 +109,6 @@ doctor_bp = Blueprint('doctor', __name__)
 
 @doctor_bp.route('/doctors')
 def doctors_list():
-    # Ensure verified oncology faculty are populated if needed
-    try:
-        from spherix.routes.cancer_care import seed_oncology_data_if_needed
-        seed_oncology_data_if_needed()
-    except Exception:
-        pass
-
     # This route fetches doctors from the database with global and domestic filtering
     all_db_doctors = deduplicate_entities([
         d for d in TEMP_DATA['doctors'].values() 

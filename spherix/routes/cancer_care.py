@@ -209,9 +209,13 @@ def get_oncology_specialists():
 
 
 def get_oncology_hospitals():
-    """Retrieves verified cancer hospitals and specialized centers from TEMP_DATA."""
+    """Retrieves verified cancer hospitals and specialized centers from original accounts or oncology catalog."""
     seed_oncology_data_if_needed()
-    hospitals = list(TEMP_DATA.get('hospitals', {}).values())
+    from spherix.models.user import is_original_hospital_account
+    hospitals = [
+        h for h in TEMP_DATA.get('hospitals', {}).values()
+        if is_original_hospital_account(h)
+    ]
     cancer_hubs = []
     
     for h in hospitals:
@@ -221,6 +225,9 @@ def get_oncology_hospitals():
         if any(term in name or term in htype or any(term in s for s in specs) for term in ['cancer', 'onco', 'memorial', 'speciality', 'multi', 'central']):
             cancer_hubs.append(h)
             
+    if not cancer_hubs:
+        return globals().get('ONCOLOGY_CATALOG_HOSPITALS', [])
+        
     return cancer_hubs
 
 

@@ -1491,7 +1491,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for appt in appointments|sort(attribute="appointment_date", reverse=True) %}
+                                    {% for appt in appointments %}
                                     {% if loop.index <= 6 %}
                                     <tr>
                                         <td>
@@ -1507,8 +1507,8 @@
                                             <div class="small text-muted">{{ appt.doctor.department if appt.doctor else 'General' }}</div>
                                         </td>
                                         <td>
-                                            <div class="fw-medium text-dark">{{ appt.appointment_date.strftime('%b %d, %Y') if appt.appointment_date else 'N/A' }}</div>
-                                            <div class="small text-muted">{{ appt.appointment_time.strftime('%I:%M %p') if appt.appointment_time else '' }}</div>
+                                            <div class="fw-medium text-dark">{{ appt.appointment_date.strftime('%b %d, %Y') if (appt.appointment_date and hasattr(appt.appointment_date, 'strftime')) else (appt.appointment_date or 'N/A') }}</div>
+                                            <div class="small text-muted">{{ appt.appointment_time.strftime('%I:%M %p') if (appt.appointment_time and hasattr(appt.appointment_time, 'strftime')) else (appt.appointment_time or '') }}</div>
                                         </td>
                                         <td class="fw-bold text-success">
                                             ₹{{ "%.2f"|format(appt.doctor.consultation_fee|float if appt.doctor and appt.doctor.consultation_fee else 500.0) }}
@@ -1537,10 +1537,10 @@
                             <span class="badge bg-primary rounded-pill px-2.5 py-1.5"><i class="far fa-clock me-1"></i> Live</span>
                         </div>
                         <div class="timeline" style="max-height: 380px; overflow-y: auto;">
-                            {% set upcoming = appointments | selectattr("status", "in", ["pending", "confirmed"]) | sort(attribute="appointment_date") | list %}
+                            {% set upcoming = upcoming_appointments if upcoming_appointments is defined else (appointments | selectattr("status", "in", ["pending", "confirmed"]) | list) %}
                             {% for appt in upcoming[:5] %}
                             <div class="timeline-item">
-                                <div class="timeline-time">{{ appt.appointment_time.strftime('%I:%M %p') if appt.appointment_time else 'Schedule' }} &bull; {{ appt.appointment_date.strftime('%b %d') if appt.appointment_date else 'Today' }}</div>
+                                <div class="timeline-time">{{ appt.appointment_time.strftime('%I:%M %p') if (appt.appointment_time and hasattr(appt.appointment_time, 'strftime')) else (appt.appointment_time or 'Schedule') }} &bull; {{ appt.appointment_date.strftime('%b %d') if (appt.appointment_date and hasattr(appt.appointment_date, 'strftime')) else (appt.appointment_date or 'Today') }}</div>
                                 <div class="timeline-content">
                                     <div class="fw-bold text-dark">Consultation &bull; Dr. {{ appt.doctor.last_name if appt.doctor else 'Specialist' }}</div>
                                     <div class="small text-muted mb-2">Patient: {{ appt.patient_name }} ({{ appt.reason or 'Routine Checkup' }})</div>
@@ -1612,7 +1612,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for booking in bed_bookings|sort(attribute="created_at", reverse=True) %}
+                                    {% for booking in bed_bookings %}
                                     {% if loop.index <= 5 %}
                                     {% set hosp = hospitals | selectattr("id", "equalto", booking.hospital_id) | first %}
                                     <tr>
@@ -1938,7 +1938,7 @@
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                     <div>
                         <h5 class="fw-bold m-0">Partner Hospitals & Facilities ({{ hospitals|length }})</h5>
-                        <small class="text-muted">Network of accredited medical institutions, clinical specializations, and bed telemetry</small>
+                        <small class="text-muted">Original verified &amp; registered hospital accounts, clinical specializations, and bed telemetry</small>
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <div class="input-group input-group-sm" style="min-width: 230px;">
@@ -1990,8 +1990,11 @@
                                         {% endif %}
                                         <div>
                                             <div class="fw-bold text-dark">{{ hospital.name }}</div>
-                                            <div class="small text-muted font-mono"><span class="badge bg-light text-info border" style="font-size: 0.68rem;">HOSP-{{ hospital.id }}</span></div>
+                                            <div class="small text-muted font-mono"><span class="badge bg-light text-info border" style="font-size: 0.68rem;">{{ hospital.id }}</span></div>
                                             <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size: 0.65rem;">
+                                                    <i class="fas fa-hospital-user me-1"></i>Hospital User
+                                                </span>
                                                 <span class="badge bg-black text-white border" style="font-size: 0.65rem;">
                                                     <i class="fas fa-tag me-1 text-white"></i>{{ hospital.hospital_type }}
                                                 </span>
@@ -2039,7 +2042,7 @@
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="5" class="text-center py-5 text-muted">No hospitals registered.</td></tr>
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No original hospital accounts registered yet.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -3668,7 +3671,7 @@
                             {% set barcode = req.sample_barcode|default('SPX-LAB-' ~ req_id) %}
                             {% set res_stat = req.result_status|default('Normal') %}
                             {% set priority = req.priority|default('Routine') %}
-                            {% set spec_date = req.specimen_collected_at|default(req.created_at.strftime('%Y-%m-%d %H:%M') if req.created_at else 'Today') %}
+                            {% set spec_date = req.specimen_collected_at|default((req.created_at.strftime('%Y-%m-%d %H:%M') if (req.created_at and hasattr(req.created_at, 'strftime')) else req.created_at) if req.created_at else 'Today') %}
                             <tr data-category="{{ req.category|default('Pathology')|lower }}"
                                 data-status="{% if 'critical' in res_stat|lower or 'stat' in priority|lower %}critical{% elif 'abnormal' in res_stat|lower %}abnormal{% elif req.status == 'processing' %}processing{% elif req.status == 'pending' %}pending{% else %}normal{% endif %}"
                                 data-searchable="{{ (req.patient_name ~ ' ' ~ req.test_name ~ ' ' ~ barcode ~ ' ' ~ req.category|default('') ~ ' ' ~ req.reported_by|default(''))|lower }}">
@@ -4873,7 +4876,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for appt in appointments|sort(attribute="appointment_date", reverse=True) %}
+                            {% for appt in appointments %}
                             <tr>
                                 <td class="fw-bold text-primary">#APT-{{ appt.id }}</td>
                                 <td>{{ appt.patient_name }}</td>
@@ -5232,7 +5235,7 @@
                                 <td>{{ order.patient_name | default('Customer') }}</td>
                                 <td><small>{{ order.items | default([]) | length }} items</small></td>
                                 <td class="fw-bold">₹{{ "%.2f"|format(order.total_price) }}</td>
-                                <td><small>{{ order.order_date.strftime('%Y-%m-%d') if order.order_date else 'N/A' }}</small></td>
+                                <td><small>{{ order.order_date.strftime('%Y-%m-%d') if (order.order_date and hasattr(order.order_date, 'strftime')) else (order.order_date or 'N/A') }}</small></td>
                                 <td><span class="status-badge bg-green-soft">Delivered</span></td>
                             </tr>
                             {% else %}
@@ -5317,7 +5320,7 @@
                                 <td class="fw-bold">{{ msg.sender | default('User') }}</td>
                                 <td>{% if msg.patient %}{{ msg.patient.name | default('Patient') }}{% elif msg.doctor %}Dr. {{ msg.doctor.first_name | default('Doctor') }}{% else %}Recipient{% endif %}</td>
                                 <td><small class="text-muted text-truncate">{{ msg.content | default('No content') | truncate(40) }}</small></td>
-                                <td><small>{{ msg.created_at.strftime('%H:%M') if msg.created_at else 'N/A' }}</small></td>
+                                <td><small>{{ msg.created_at.strftime('%H:%M') if (msg.created_at and hasattr(msg.created_at, 'strftime')) else (msg.created_at or 'N/A') }}</small></td>
                                 <td>
                                     <span class="status-badge bg-green-soft">Delivered</span>
                                 </td>

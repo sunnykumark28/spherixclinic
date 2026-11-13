@@ -110,19 +110,8 @@ hospital_bp = Blueprint('hospital', __name__)
 @hospital_bp.route('/hospitals')
 def hospitals_list():
     """Displays a list of registered hospitals with advanced multi-dimensional filtering."""
-    # Ensure verified oncology hospitals are populated if needed
-    try:
-        from spherix.routes.cancer_care import seed_oncology_data_if_needed
-        seed_oncology_data_if_needed()
-    except Exception:
-        pass
+    from spherix.models.user import is_original_hospital_account
 
-    all_hospitals = deduplicate_entities([
-        h for h in TEMP_DATA.get('hospitals', {}).values() 
-        if not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)
-        and getattr(h, 'publishing_status', 'published') in ['published', 'approved']
-    ])
-    
     # Query parameters
     search_query = request.args.get('q', '').strip()
     type_param = request.args.get('type', request.args.get('type_id', request.args.get('hospital_type', ''))).strip()
@@ -132,6 +121,14 @@ def hospitals_list():
     locality_query = request.args.get('locality', '').strip()
     country_filter = request.args.get('country', '').strip()
     scope = request.args.get('scope', '').strip()
+
+    is_onco_search = any(term in (specialty_query + ' ' + search_query).lower() for term in ['oncol', 'cancer'])
+    all_hospitals = deduplicate_entities([
+        h for h in TEMP_DATA.get('hospitals', {}).values() 
+        if (is_original_hospital_account(h) or is_onco_search)
+        and not getattr(h, 'is_hidden', False) and not getattr(h, 'is_blocked', False)
+        and getattr(h, 'publishing_status', 'published') in ['published', 'approved']
+    ])
     
     verified_raw = request.args.get('verified', '').strip().lower()
     verified_only = verified_raw in ['true', '1', 'yes', 'on']

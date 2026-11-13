@@ -231,7 +231,11 @@ def admin_dashboard():
     all_doctors = deduplicate_entities(list(TEMP_DATA['doctors'].values()))
     all_patients = deduplicate_entities(list(TEMP_DATA['patients'].values()))
     all_staff = deduplicate_entities(list(TEMP_DATA['staff'].values()))
-    all_hospitals = deduplicate_entities(list(TEMP_DATA['hospitals'].values()))
+    from spherix.models.user import is_original_hospital_account
+    all_hospitals = deduplicate_entities([
+        h for h in TEMP_DATA['hospitals'].values()
+        if is_original_hospital_account(h)
+    ])
     all_blood_donors = deduplicate_entities(list(TEMP_DATA['blood_donors'].values()))
     all_organ_donors = deduplicate_entities(list(TEMP_DATA['organ_donors'].values()))
     all_messages = list(TEMP_DATA['messages'].values())
@@ -281,8 +285,31 @@ def admin_dashboard():
     # Determine which pagination data to use based on the active tab
     total_pages = 1
 
+    def _safe_sort_key_date(val):
+        if not val:
+            return ""
+        if hasattr(val, 'strftime'):
+            try:
+                return val.strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                return str(val)
+        return str(val)
+
     # Calculate Real-time Stats for Dashboard
-    all_appointments = list(TEMP_DATA['appointments'].values())
+    all_appointments = sorted(
+        TEMP_DATA.get('appointments', {}).values(),
+        key=lambda a: _safe_sort_key_date(getattr(a, 'appointment_date', None)),
+        reverse=True
+    )
+    all_bed_bookings = sorted(
+        TEMP_DATA.get('bed_bookings', {}).values(),
+        key=lambda b: _safe_sort_key_date(getattr(b, 'created_at', None)),
+        reverse=True
+    )
+    upcoming_appointments = [
+        a for a in sorted(all_appointments, key=lambda a: _safe_sort_key_date(getattr(a, 'appointment_date', None)))
+        if str(getattr(a, 'status', '')).lower() in ['pending', 'confirmed']
+    ]
     pending_appointments_count = len([a for a in all_appointments if a.status == 'pending'])
     confirmed_appointments_count = len([a for a in all_appointments if a.status == 'confirmed'])
     completed_appointments_count = len([a for a in all_appointments if a.status == 'completed'])
@@ -303,9 +330,11 @@ def admin_dashboard():
 
     # Calculate earnings from Orders
     for order in all_orders:
-        total_order_amount += order.total_price
-        d = order.order_date.strftime('%Y-%m-%d')
-        earnings_map[d] = earnings_map.get(d, 0) + order.total_price
+        total_order_amount += getattr(order, 'total_price', 0)
+        od = getattr(order, 'order_date', None)
+        d = od.strftime('%Y-%m-%d') if hasattr(od, 'strftime') else str(od or '')
+        if d:
+            earnings_map[d] = earnings_map.get(d, 0) + getattr(order, 'total_price', 0)
 
     total_earnings = total_order_amount
 
@@ -318,8 +347,10 @@ def admin_dashboard():
                 try:
                     fee = float(doc.consultation_fee)
                     total_earnings += fee
-                    d = appt.appointment_date.strftime('%Y-%m-%d')
-                    earnings_map[d] = earnings_map.get(d, 0) + fee
+                    ad = getattr(appt, 'appointment_date', None)
+                    d = ad.strftime('%Y-%m-%d') if hasattr(ad, 'strftime') else str(ad or '')
+                    if d:
+                        earnings_map[d] = earnings_map.get(d, 0) + fee
                     
                     if doc.id not in doctor_earnings:
                         doctor_earnings[doc.id] = {
@@ -525,7 +556,8 @@ def admin_dashboard():
                            camps=list(TEMP_DATA['camps'].values()),
                            camp_registrations=list(TEMP_DATA['camp_registrations'].values()), 
                            search_query=search_query,
-                           appointments=all_appointments, 
+                           appointments=all_appointments,
+                           upcoming_appointments=upcoming_appointments,
                            pending_appointments_count=pending_appointments_count,
                            confirmed_appointments_count=confirmed_appointments_count,
                            completed_appointments_count=completed_appointments_count,
@@ -586,7 +618,10 @@ def admin_terminate_auth_session():
     for log in TEMP_DATA.get('auth_activity_logs', []):
         if log.get('id') == session_id:
             log['status'] = 'Terminated'
-            log['duration'] = log.get('duration', '').replace('Active Now', 'Terminated (Admin)')
+            if 'Active Now' in str(log.get('duration', '')):
+                log['duration'] = log['duration'].replace('Active Now', 'Terminated (Admin)')
+            else:
+                log['duration'] = f"Terminated (Admin) - {log.get('duration', '0m')}"
             log['logout_time'] = utcnow().strftime('%Y-%m-%d %H:%M:%S')
             TEMP_DATA.setdefault('terminated_auth_sessions', {})[session_id] = log['logout_time']
             session_terminated = True
@@ -652,7 +687,11 @@ def api_admin_classification_hospitals(type_id):
     if not ht_obj:
         return jsonify({'error': 'Classification not found'}), 404
         
-    all_hospitals = list(TEMP_DATA.get('hospitals', {}).values())
+    from spherix.models.user import is_original_hospital_account
+    all_hospitals = [
+        h for h in TEMP_DATA.get('hospitals', {}).values()
+        if is_original_hospital_account(h)
+    ]
     matched = []
     
     for h in all_hospitals:

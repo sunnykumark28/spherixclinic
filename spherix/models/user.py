@@ -1129,6 +1129,47 @@ class Hospital(UserMixin):
     def reviews_count(self):
         return len(self.reviews)
 
+    @property
+    def is_original_account(self):
+        """Returns True if this is an authentic registered hospital user account."""
+        return is_original_hospital_account(self)
+
+
+def is_original_hospital_account(hospital):
+    """
+    Validates whether an entity is a genuine, original registered hospital user account.
+    Excludes synthetic, dummy, or seeded fixtures (such as HOSP-ONCO-*).
+    """
+    if not hospital:
+        return False
+        
+    h_id = str(getattr(hospital, 'id', '') or '').strip()
+    email = str(getattr(hospital, 'email', '') or '').strip().lower()
+    name = str(getattr(hospital, 'name', '') or '').strip()
+    pwd = str(getattr(hospital, 'password', '') or '').strip()
+
+    # Must possess an ID, name, and email
+    if not h_id or not name or not email:
+        return False
+
+    # Exclude dummy/seeded mock prefixes
+    if h_id.upper().startswith(('HOSP-ONCO-', 'SEEDED-', 'DUMMY-', 'SYNTH-')):
+        return False
+
+    # Exclude seeded dummy passwords
+    if pwd.startswith('seeded_'):
+        return False
+
+    # Exclude seeded demo cancer facility emails
+    if email in ('cancer.institute@spherixclinic.com', 'proton.robotics@spherixclinic.com', 'bmt.cellular@spherixclinic.com'):
+        return False
+
+    # Must be a Hospital user entity
+    if not getattr(hospital, 'is_hospital', False) and getattr(hospital, 'role', '') != 'Hospital' and not isinstance(hospital, Hospital):
+        return False
+
+    return True
+
 
 class BloodDonor(UserMixin):
     def __init__(self, id, name, email, phone, blood_group, age, city, password=None, last_donation=None, **kwargs):

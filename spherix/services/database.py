@@ -2696,7 +2696,30 @@ def load_data():
                 try: h['facilities'] = json.loads(h['facilities'])
                 except Exception: h['facilities'] = [f.strip() for f in h['facilities'].split(',') if f.strip()]
             
-        TEMP_DATA['hospitals'] = {h['id']: Hospital(**h) for h in hosps}
+        loaded_hospitals = {}
+        to_purge_ids = []
+        from spherix.models.user import is_original_hospital_account
+        for h in hosps:
+            hosp_obj = Hospital(**h)
+            if is_original_hospital_account(hosp_obj):
+                loaded_hospitals[h['id']] = hosp_obj
+            else:
+                to_purge_ids.append(h['id'])
+            
+        TEMP_DATA['hospitals'] = loaded_hospitals
+
+        # Purge any legacy synthetic/dummy hospital rows from SQL DB if present
+        if to_purge_ids:
+            try:
+                conn = get_db_connection()
+                if conn:
+                    cur = conn.cursor()
+                    for pid in to_purge_ids:
+                        cur.execute("DELETE FROM hospitals WHERE id = ?", (str(pid),))
+                    conn.commit()
+                    conn.close()
+            except Exception:
+                pass
 
         # 4. Staff
         stf = fetch_dict("SELECT * FROM staff")
