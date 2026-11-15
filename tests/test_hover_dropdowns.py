@@ -35,6 +35,11 @@ def test_layout_hover_dropdowns_configured():
     assert "container.addEventListener('mouseenter'" in html
     assert "container.addEventListener('mouseleave'" in html
 
+    # 5. Ultra-fast speed & snappy transitions (75ms)
+    assert 'duration.75ms' in html
+    assert 'duration-75' in html
+    assert 'transition: opacity 75ms' in html
+
 def test_dashboard_layout_hover_dropdowns_configured():
     """Verifies that templates/shared/dashboard_layout.html has universal hover dropdown auto-open."""
     path = os.path.join('templates', 'shared', 'dashboard_layout.html')
@@ -49,6 +54,11 @@ def test_dashboard_layout_hover_dropdowns_configured():
     # 2. CSS bridge preventing cursor gap flickering
     assert '.dropdown-menu::before' in html
     assert "top: -12px;" in html
+
+    # 3. Ultra-fast snappy dropdown animations & CSS hover auto-open
+    assert '.dropdown:hover > .dropdown-menu' in html
+    assert 'transition: opacity 75ms' in html
+    assert 'dashboardDropdownFastIn' in html
 
 def test_admin_dashboard_hover_dropdowns_configured():
     """Verifies that templates/admin/admin_dashboard.html has hover auto-open on notifications & user profile."""
@@ -71,4 +81,9 @@ def test_admin_dashboard_hover_dropdowns_configured():
     # 3. CSS bridge for smooth hover across gaps
     assert '#adminNotifDropdownMenu::before' in html
     assert '#adminUserDropdownMenu::before' in html
+
+    # 4. Ultra-fast animation and instant CSS hover auto-open
+    assert 'dropdownFastIn' in html
+    assert '#adminNotifDropdownContainer:hover > #adminNotifDropdownMenu' in html
+    assert '#adminUserDropdownContainer:hover > #adminUserDropdownMenu' in html
 
