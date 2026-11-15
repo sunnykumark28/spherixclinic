@@ -199,6 +199,22 @@
         .search-wrapper input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); width: 360px; }
         .search-wrapper i.fa-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; }
         
+        /* Auto Hover Dropdown Bridge & Styling */
+        #adminNotifDropdownContainer,
+        #adminUserDropdownContainer {
+            cursor: pointer;
+        }
+        #adminNotifDropdownMenu::before,
+        #adminUserDropdownMenu::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 0;
+            right: 0;
+            height: 12px;
+            background: transparent;
+        }
+
         /* Universal Global Search Dropdown */
         .universal-search-dropdown {
             position: absolute;
@@ -10042,35 +10058,80 @@
     }
 
     // ================= 6. NOTIFICATION BELL & USER PROFILE DROPDOWN HANDLERS =================
+    let notifDropdownHoverTimeout = null;
+    let userDropdownHoverTimeout = null;
+
+    window.openAdminNotifDropdown = function() {
+        clearTimeout(notifDropdownHoverTimeout);
+        closeAdminUserDropdown();
+        const menu = document.getElementById('adminNotifDropdownMenu');
+        const btn = document.getElementById('adminNotifBellBtn');
+        if (!menu) return;
+        menu.style.display = 'block';
+        menu.classList.add('show');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+    };
+
+    window.closeAdminNotifDropdown = function(delay = 0) {
+        clearTimeout(notifDropdownHoverTimeout);
+        const doClose = () => {
+            const menu = document.getElementById('adminNotifDropdownMenu');
+            const btn = document.getElementById('adminNotifBellBtn');
+            if (menu) {
+                menu.style.display = 'none';
+                menu.classList.remove('show');
+            }
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        };
+        if (delay > 0) {
+            notifDropdownHoverTimeout = setTimeout(doClose, delay);
+        } else {
+            doClose();
+        }
+    };
+
     window.toggleAdminNotifDropdown = function(e) {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
         }
-        closeAdminUserDropdown();
-
         const menu = document.getElementById('adminNotifDropdownMenu');
-        const btn = document.getElementById('adminNotifBellBtn');
         if (!menu) return;
-
         const isVisible = menu.style.display === 'block';
         if (isVisible) {
-            closeAdminNotifDropdown();
+            closeAdminNotifDropdown(0);
         } else {
-            menu.style.display = 'block';
-            menu.classList.add('show');
-            if (btn) btn.setAttribute('aria-expanded', 'true');
+            openAdminNotifDropdown();
         }
     };
 
-    window.closeAdminNotifDropdown = function() {
-        const menu = document.getElementById('adminNotifDropdownMenu');
-        const btn = document.getElementById('adminNotifBellBtn');
-        if (menu) {
-            menu.style.display = 'none';
-            menu.classList.remove('show');
+    window.openAdminUserDropdown = function() {
+        clearTimeout(userDropdownHoverTimeout);
+        closeAdminNotifDropdown();
+        const menu = document.getElementById('adminUserDropdownMenu');
+        const btn = document.getElementById('adminHeaderUserMenu');
+        if (!menu) return;
+        menu.style.display = 'block';
+        menu.classList.add('show');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+    };
+
+    window.closeAdminUserDropdown = function(delay = 0) {
+        clearTimeout(userDropdownHoverTimeout);
+        const doClose = () => {
+            const menu = document.getElementById('adminUserDropdownMenu');
+            const btn = document.getElementById('adminHeaderUserMenu');
+            if (menu) {
+                menu.style.display = 'none';
+                menu.classList.remove('show');
+            }
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        };
+        if (delay > 0) {
+            userDropdownHoverTimeout = setTimeout(doClose, delay);
+        } else {
+            doClose();
         }
-        if (btn) btn.setAttribute('aria-expanded', 'false');
     };
 
     window.toggleAdminUserDropdown = function(e) {
@@ -10078,42 +10139,78 @@
             e.preventDefault();
             e.stopPropagation();
         }
-        closeAdminNotifDropdown();
-
         const menu = document.getElementById('adminUserDropdownMenu');
-        const btn = document.getElementById('adminHeaderUserMenu');
         if (!menu) return;
-
         const isVisible = menu.style.display === 'block';
         if (isVisible) {
-            closeAdminUserDropdown();
+            closeAdminUserDropdown(0);
         } else {
-            menu.style.display = 'block';
-            menu.classList.add('show');
-            if (btn) btn.setAttribute('aria-expanded', 'true');
+            openAdminUserDropdown();
         }
     };
 
-    window.closeAdminUserDropdown = function() {
-        const menu = document.getElementById('adminUserDropdownMenu');
-        const btn = document.getElementById('adminHeaderUserMenu');
-        if (menu) {
-            menu.style.display = 'none';
-            menu.classList.remove('show');
+    // Attach mouse hover auto-open triggers for admin header dropdowns and Bootstrap dropdowns
+    document.addEventListener('DOMContentLoaded', function() {
+        const notifContainer = document.getElementById('adminNotifDropdownContainer');
+        if (notifContainer) {
+            notifContainer.addEventListener('mouseenter', () => openAdminNotifDropdown());
+            notifContainer.addEventListener('mouseleave', () => closeAdminNotifDropdown(180));
         }
-        if (btn) btn.setAttribute('aria-expanded', 'false');
-    };
+
+        const userContainer = document.getElementById('adminUserDropdownContainer');
+        if (userContainer) {
+            userContainer.addEventListener('mouseenter', () => openAdminUserDropdown());
+            userContainer.addEventListener('mouseleave', () => closeAdminUserDropdown(180));
+        }
+
+        // Universal handler for all other Bootstrap dropdowns in Admin Dashboard
+        function initAdminHoverDropdowns() {
+            document.querySelectorAll('.dropdown, .dropstart, .dropend, .dropup').forEach(function(container) {
+                if (container.id === 'adminNotifDropdownContainer' || container.id === 'adminUserDropdownContainer') return;
+                if (container.dataset.hoverActive) return;
+                container.dataset.hoverActive = 'true';
+
+                const toggle = container.querySelector('[data-bs-toggle="dropdown"]');
+                const menu = container.querySelector('.dropdown-menu');
+                if (!toggle || !menu) return;
+
+                let hTimeout = null;
+                container.addEventListener('mouseenter', function() {
+                    clearTimeout(hTimeout);
+                    if (window.bootstrap && bootstrap.Dropdown) {
+                        bootstrap.Dropdown.getOrCreateInstance(toggle).show();
+                    } else {
+                        menu.classList.add('show');
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+
+                container.addEventListener('mouseleave', function() {
+                    hTimeout = setTimeout(function() {
+                        if (window.bootstrap && bootstrap.Dropdown) {
+                            const inst = bootstrap.Dropdown.getInstance(toggle);
+                            if (inst) inst.hide();
+                        } else {
+                            menu.classList.remove('show');
+                            toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    }, 180);
+                });
+            });
+        }
+        initAdminHoverDropdowns();
+    });
 
     // Close dropdowns on outside click
     document.addEventListener('click', function(e) {
         const notifContainer = document.getElementById('adminNotifDropdownContainer');
         if (notifContainer && !notifContainer.contains(e.target)) {
-            closeAdminNotifDropdown();
+            closeAdminNotifDropdown(0);
         }
 
         const userContainer = document.getElementById('adminUserDropdownContainer');
         if (userContainer && !userContainer.contains(e.target)) {
-            closeAdminUserDropdown();
+            closeAdminUserDropdown(0);
         }
     });
 

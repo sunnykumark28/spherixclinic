@@ -1400,7 +1400,7 @@
                     current_user.is_staff) else ('Blood Donor' if (current_user.is_blood_donor is defined and
                     current_user.is_blood_donor) else ('Organ Donor' if (current_user.is_organ_donor is defined and
                     current_user.is_organ_donor) else 'Patient Profile'))))) %}
-                    <div class="relative inline-block text-left z-50">
+                    <div class="relative inline-block text-left z-50" id="userProfileContainer">
                         <button id="userProfileBtn"
                             class="group relative inline-flex items-center gap-2 px-2.5 py-1 bg-white/15 text-white text-xs font-semibold rounded-md shadow-sm border border-white/25 hover:bg-white/25 hover:border-white transition-all duration-200"
                             style="background-color: rgba(255, 255, 255, 0.15) !important;" onclick="toggleUserProfileMenu(event)">
@@ -1444,7 +1444,7 @@
                         </button>
 
                         <div id="userProfileMenu"
-                            class="mega-menu-glass absolute right-0 mt-3 w-64 p-2.5 transform scale-95 opacity-0 invisible transition-all duration-200 origin-top-right z-50">
+                            class="mega-menu-glass absolute right-0 mt-3 w-64 p-2.5 transform scale-95 opacity-0 invisible transition-all duration-200 origin-top-right z-50 before:content-[''] before:absolute before:-top-3 before:left-0 before:right-0 before:h-3">
                             <div
                                 class="p-2.5 bg-slate-50 rounded-lg mb-2 border border-slate-100 flex items-center gap-2.5">
                                 <div
@@ -1520,7 +1520,7 @@
                         </div>
                     </div>
                     {% else %}
-                    <div class="relative inline-block text-left z-50">
+                    <div class="relative inline-block text-left z-50" id="loginDropdownContainer">
                         <!-- Account Access Tab Button -->
                         <button id="loginBtn"
                             class="spherix-nav-tab group cursor-pointer {% if request.endpoint in ['patient_login', 'doctor_login', 'hospital_login', 'blood_donor_login', 'organ_donor_login', 'staff_login', 'admin_login'] %}active{% endif %}">
@@ -1532,7 +1532,7 @@
 
                         <!-- Categorized Mega Menu Dropdown -->
                         <div id="loginMenu"
-                            class="mega-menu-glass fixed md:absolute left-3 right-3 md:left-auto md:right-0 top-16 md:top-full md:mt-3 w-auto md:w-96 lg:w-[380px] max-w-[calc(100vw-1.5rem)] p-3 transform scale-95 opacity-0 invisible transition-all duration-200 origin-top md:origin-top-right max-h-[85vh] overflow-y-auto z-[99999]">
+                            class="mega-menu-glass fixed md:absolute left-3 right-3 md:left-auto md:right-0 top-16 md:top-full md:mt-3 w-auto md:w-96 lg:w-[380px] max-w-[calc(100vw-1.5rem)] p-3 transform scale-95 opacity-0 invisible transition-all duration-200 origin-top md:origin-top-right max-h-[85vh] overflow-y-auto z-[99999] before:content-[''] before:absolute before:-top-3 before:left-0 before:right-0 before:h-3">
 
                             <!-- SECTION 1: CLINICAL & HEALTHCARE PROVIDERS -->
                             <div class="mb-2">
@@ -3264,49 +3264,126 @@
 
     <!-- Logic Scripts -->
     <script>
-        // Login Dropdown
+        // Login Dropdown (Click & Auto-open on Hover)
         const loginBtn = document.getElementById('loginBtn');
         const loginMenu = document.getElementById('loginMenu');
         const loginBtnArrow = document.getElementById('loginBtnArrow');
+        const loginDropdownContainer = document.getElementById('loginDropdownContainer');
+        let loginTimeout = null;
+
+        function openLoginMenu() {
+            if (!loginMenu) return;
+            clearTimeout(loginTimeout);
+            loginMenu.classList.remove('invisible', 'opacity-0', 'scale-95');
+            if (loginBtnArrow) loginBtnArrow.style.transform = 'rotate(180deg)';
+        }
+
+        function closeLoginMenu(delay = 0) {
+            if (!loginMenu) return;
+            clearTimeout(loginTimeout);
+            loginTimeout = setTimeout(() => {
+                loginMenu.classList.add('invisible', 'opacity-0', 'scale-95');
+                if (loginBtnArrow) loginBtnArrow.style.transform = 'rotate(0deg)';
+            }, delay);
+        }
 
         function toggleLoginMenu() {
             if (!loginMenu) return;
             const isOpen = !loginMenu.classList.contains('invisible');
             if (isOpen) {
-                loginMenu.classList.add('invisible', 'opacity-0', 'scale-95');
-                if (loginBtnArrow) loginBtnArrow.style.transform = 'rotate(0deg)';
+                closeLoginMenu(0);
             } else {
-                loginMenu.classList.remove('invisible', 'opacity-0', 'scale-95');
-                if (loginBtnArrow) loginBtnArrow.style.transform = 'rotate(180deg)';
+                openLoginMenu();
             }
+        }
+
+        if (loginDropdownContainer) {
+            loginDropdownContainer.addEventListener('mouseenter', () => openLoginMenu());
+            loginDropdownContainer.addEventListener('mouseleave', () => closeLoginMenu(180));
         }
 
         if (loginBtn) {
             loginBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLoginMenu(); });
         }
 
-        // User Profile Dropdown
+        // User Profile Dropdown (Click & Auto-open on Hover)
         const userProfileBtn = document.getElementById('userProfileBtn');
         const userProfileMenu = document.getElementById('userProfileMenu');
+        const userProfileContainer = document.getElementById('userProfileContainer');
+        let userProfileTimeout = null;
+
+        function openUserProfileMenu() {
+            if (!userProfileMenu) return;
+            clearTimeout(userProfileTimeout);
+            userProfileMenu.classList.remove('invisible', 'opacity-0', 'scale-95');
+        }
+
+        function closeUserProfileMenu(delay = 0) {
+            if (!userProfileMenu) return;
+            clearTimeout(userProfileTimeout);
+            userProfileTimeout = setTimeout(() => {
+                userProfileMenu.classList.add('invisible', 'opacity-0', 'scale-95');
+            }, delay);
+        }
 
         function toggleUserProfileMenu(e) {
             if (e) e.stopPropagation();
             if (!userProfileMenu) return;
             const isOpen = !userProfileMenu.classList.contains('invisible');
             if (isOpen) {
-                userProfileMenu.classList.add('invisible', 'opacity-0', 'scale-95');
+                closeUserProfileMenu(0);
             } else {
-                userProfileMenu.classList.remove('invisible', 'opacity-0', 'scale-95');
+                openUserProfileMenu();
             }
         }
 
+        if (userProfileContainer) {
+            userProfileContainer.addEventListener('mouseenter', () => openUserProfileMenu());
+            userProfileContainer.addEventListener('mouseleave', () => closeUserProfileMenu(180));
+        }
+
+        // Universal Hover Auto-Open for all Bootstrap dropdowns in layout
+        function initUniversalHoverDropdowns() {
+            document.querySelectorAll('.dropdown, .dropstart, .dropend, .dropup').forEach(function(container) {
+                if (container.dataset.hoverBound) return;
+                container.dataset.hoverBound = 'true';
+
+                const toggle = container.querySelector('[data-bs-toggle="dropdown"]');
+                const menu = container.querySelector('.dropdown-menu');
+                if (!toggle || !menu) return;
+
+                let hTimeout = null;
+                container.addEventListener('mouseenter', function() {
+                    clearTimeout(hTimeout);
+                    if (window.bootstrap && bootstrap.Dropdown) {
+                        bootstrap.Dropdown.getOrCreateInstance(toggle).show();
+                    } else {
+                        menu.classList.add('show');
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+
+                container.addEventListener('mouseleave', function() {
+                    hTimeout = setTimeout(function() {
+                        if (window.bootstrap && bootstrap.Dropdown) {
+                            const inst = bootstrap.Dropdown.getInstance(toggle);
+                            if (inst) inst.hide();
+                        } else {
+                            menu.classList.remove('show');
+                            toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    }, 180);
+                });
+            });
+        }
+        initUniversalHoverDropdowns();
+
         document.addEventListener('click', (e) => {
             if (loginBtn && loginMenu && !loginBtn.contains(e.target) && !loginMenu.contains(e.target)) {
-                loginMenu.classList.add('invisible', 'opacity-0', 'scale-95');
-                if (loginBtnArrow) loginBtnArrow.style.transform = 'rotate(0deg)';
+                closeLoginMenu(0);
             }
             if (userProfileBtn && userProfileMenu && !userProfileBtn.contains(e.target) && !userProfileMenu.contains(e.target)) {
-                userProfileMenu.classList.add('invisible', 'opacity-0', 'scale-95');
+                closeUserProfileMenu(0);
             }
         });
 

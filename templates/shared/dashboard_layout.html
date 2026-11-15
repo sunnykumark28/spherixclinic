@@ -98,6 +98,20 @@
       background: rgba(148, 163, 184, 0.6);
     }
 
+    /* Hover Dropdown Bridge & Pointer Handling */
+    .dropdown:hover > .dropdown-menu {
+      pointer-events: auto;
+    }
+    .dropdown-menu::before {
+      content: '';
+      position: absolute;
+      top: -12px;
+      left: 0;
+      right: 0;
+      height: 12px;
+      background: transparent;
+    }
+
     /* Layout Structure */
     .dashboard-wrapper {
       display: flex;
@@ -1626,10 +1640,49 @@
       }
     }
 
+    // Universal Auto-Open Dropdowns on Cursor Hover
     document.addEventListener('DOMContentLoaded', () => {
       if (typeof lucide !== 'undefined') {
         lucide.createIcons();
       }
+
+      function initDashboardHoverDropdowns() {
+        document.querySelectorAll('.dropdown, .dropstart, .dropend, .dropup').forEach(container => {
+          if (container.dataset.hoverBound) return;
+          container.dataset.hoverBound = 'true';
+
+          const toggle = container.querySelector('[data-bs-toggle="dropdown"]');
+          const menu = container.querySelector('.dropdown-menu');
+          if (!toggle || !menu) return;
+
+          let hoverTimeout = null;
+          container.addEventListener('mouseenter', () => {
+            clearTimeout(hoverTimeout);
+            if (window.bootstrap && bootstrap.Dropdown) {
+              bootstrap.Dropdown.getOrCreateInstance(toggle).show();
+            } else {
+              menu.classList.add('show');
+              toggle.setAttribute('aria-expanded', 'true');
+            }
+          });
+
+          container.addEventListener('mouseleave', () => {
+            hoverTimeout = setTimeout(() => {
+              if (window.bootstrap && bootstrap.Dropdown) {
+                const inst = bootstrap.Dropdown.getInstance(toggle);
+                if (inst) inst.hide();
+              } else {
+                menu.classList.remove('show');
+                toggle.setAttribute('aria-expanded', 'false');
+              }
+            }, 180);
+          });
+        });
+      }
+
+      initDashboardHoverDropdowns();
+      const obs = new MutationObserver(initDashboardHoverDropdowns);
+      obs.observe(document.body, { childList: true, subtree: true });
     });
   </script>
 
