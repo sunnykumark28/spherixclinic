@@ -1,3 +1,4 @@
+import os
 import re
 import pytest
 from spherix import create_app
@@ -12,7 +13,8 @@ def client():
 
 def test_hospital_settings_default_view_mode_and_edit_buttons(client):
     """Verifies that all hospital settings subtabs start in view mode by default and only open editing via the Edit button."""
-    with open("templates/hospital_dashboard.html", "r", encoding="utf-8") as f:
+    hosp_path = "templates/hospital/hospital_dashboard.html" if os.path.exists("templates/hospital/hospital_dashboard.html") else "templates/hospital_dashboard.html"
+    with open(hosp_path, "r", encoding="utf-8") as f:
         html = f.read()
 
     # 1. Verify CSS prevents display: none overrides from Bootstrap !important rules

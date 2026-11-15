@@ -1,3 +1,4 @@
+import os
 import re
 import pytest
 from spherix import create_app
@@ -12,7 +13,8 @@ def client():
 
 def test_hospital_settings_cards_spacing_and_merged_text(client):
     """Verify that templates/hospital_dashboard.html implements spaces between two cards and merges text and cards."""
-    with open("templates/hospital_dashboard.html", "r", encoding="utf-8") as f:
+    hosp_path = "templates/hospital/hospital_dashboard.html" if os.path.exists("templates/hospital/hospital_dashboard.html") else "templates/hospital_dashboard.html"
+    with open(hosp_path, "r", encoding="utf-8") as f:
         html = f.read()
 
     # 1. Verify CSS styles for card spacing and merged info boxes

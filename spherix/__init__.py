@@ -579,12 +579,18 @@ def create_app(config_object=None):
     try:
         import jinja2
         templates_root = app.template_folder
-        template_subdirs = [
-            os.path.join(templates_root, d)
-            for d in sorted(os.listdir(templates_root))
-            if os.path.isdir(os.path.join(templates_root, d)) and not d.startswith('.')
+        priority_order = [
+            'main', 'shared', 'hospital', 'doctor', 'admin', 'patient', 'staff',
+            'pharmacy', 'pathology', 'clinical_ai', 'blood_organ', 'auth'
         ]
-        base_loader = jinja2.FileSystemLoader([templates_root] + template_subdirs)
+        other_dirs = [
+            d for d in os.listdir(templates_root)
+            if os.path.isdir(os.path.join(templates_root, d)) and not d.startswith('.')
+            and d not in priority_order
+        ]
+        ordered_subdirs = [os.path.join(templates_root, d) for d in priority_order if os.path.isdir(os.path.join(templates_root, d))]
+        ordered_subdirs += [os.path.join(templates_root, d) for d in other_dirs]
+        base_loader = jinja2.FileSystemLoader([templates_root] + ordered_subdirs)
         app.jinja_loader = jinja2.ChoiceLoader([base_loader, app.create_global_jinja_loader()])
     except Exception as e:
         print(f"⚠️ Notice configuring multi-path jinja loader: {e}")
