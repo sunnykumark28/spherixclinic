@@ -221,3 +221,45 @@ def test_admin_insurance_console_admin_layout_and_slide_over_sidebar(client):
         assert 'class="sidebar" id="sidebar"' in html_tab
         assert 'id="postPlanSidebar"' in html_tab
 
+def test_admin_insurance_console_rich_features(client):
+    """Verify that /admin/insurance/console has real-time search, filters, live preview, inspector, and sync API."""
+    login_as_admin(client)
+
+    # 1. Main console features
+    res = client.get('/admin/insurance/console')
+    assert res.status_code == 200
+    html = res.data.decode('utf-8')
+
+    # Real-time search & filter bar
+    assert 'id="adminTableSearchInput"' in html
+    assert 'handleTableFilter' in html
+    assert 'filterByCategory' in html
+    assert 'category-filter-btn' in html
+
+    # Live card preview in slide-over drawer
+    assert 'id="previewArtworkImg"' in html
+    assert 'id="previewPlanTitle"' in html
+    assert 'id="previewEstPremium"' in html
+    assert 'updateLiveCardPreview' in html
+
+    # Proposal Inspector Drawer
+    assert 'id="proposalInspectorSidebar"' in html
+    assert 'id="proposalDrawerOverlay"' in html
+    assert 'inspectProposal' in html
+
+    # Gateway Sync & CSV Export
+    assert 'id="btnSyncGateway"' in html
+    assert 'triggerGatewaySync' in html
+    assert 'exportActiveTableCSV' in html
+    assert 'id="adminToastContainer"' in html
+
+    # 2. Test Gateway Sync API Endpoint
+    res_sync = client.post('/admin/insurance/api/sync-gateway')
+    assert res_sync.status_code == 200
+    data = res_sync.get_json()
+    assert data['success'] is True
+    assert 'IRDAI Integration Gateway Synchronized' in data['message']
+    assert 'synced_at' in data
+    assert data['products_live'] >= 1
+
+

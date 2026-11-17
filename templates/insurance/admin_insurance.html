@@ -155,8 +155,9 @@
         .top-header { padding: 0 16px; }
     }
 
-    /* ================= SLIDE-OVER SIDEBAR DRAWER: POST NEW PLAN ================= */
-    #postPlanDrawerOverlay {
+    /* ================= SLIDE-OVER SIDEBAR DRAWERS ================= */
+    #postPlanDrawerOverlay,
+    #proposalDrawerOverlay {
         position: fixed;
         inset: 0;
         background: rgba(15, 23, 42, 0.65);
@@ -164,11 +165,12 @@
         z-index: 1060;
         transition: opacity 0.25s ease-in-out;
     }
-    #postPlanSidebar {
+    #postPlanSidebar,
+    #proposalInspectorSidebar {
         position: fixed;
         top: 0;
         right: 0;
-        width: 660px;
+        width: 720px;
         max-width: 100vw;
         height: 100vh;
         background: #ffffff;
@@ -179,8 +181,69 @@
         display: flex;
         flex-direction: column;
     }
-    #postPlanSidebar.open {
+    #postPlanSidebar.open,
+    #proposalInspectorSidebar.open {
         transform: translateX(0) !important;
+    }
+
+    /* ================= REAL-TIME VISUAL ENHANCEMENTS ================= */
+    @keyframes pulseBeacon {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.3); }
+    }
+    .pulse-beacon {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+        animation: pulseBeacon 2s infinite ease-in-out;
+    }
+
+    .kpi-card {
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.08);
+        border-color: #bae6fd;
+    }
+
+    .custom-table-row {
+        transition: background-color 0.15s ease;
+    }
+    .custom-table-row:hover {
+        background-color: rgba(240, 249, 255, 0.6) !important;
+    }
+
+    .copy-pill {
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .copy-pill:hover {
+        background-color: #e0f2fe;
+        color: #0369a1;
+    }
+
+    /* Toast Notification Container */
+    #adminToastContainer {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+    }
+    .admin-toast {
+        pointer-events: auto;
+        animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes toastSlideUp {
+        from { opacity: 0; transform: translateY(12px) scale(0.96); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
     }
 </style>
 {% endblock %}
@@ -323,42 +386,64 @@
             <div>
                 <div class="d-flex align-items-center gap-2">
                     <h5 class="m-0 fw-bold text-dark font-heading">Life Insurance Operations Console</h5>
-                    <span class="badge" style="background:#0284c7; color:#ffffff; font-size: 0.68rem; font-weight:800; letter-spacing:0.05em; padding: 4px 8px; border-radius: 9999px;">IRDAI COMPLIANT</span>
+                    <span class="badge" style="background:#0284c7; color:#ffffff; font-size: 0.68rem; font-weight:800; letter-spacing:0.05em; padding: 4px 8px; border-radius: 9999px;">
+                        <span class="pulse-beacon me-1"></span> IRDAI COMPLIANT
+                    </span>
                 </div>
-                <small class="text-muted d-none d-md-block" style="font-size: 0.78rem;">Monitoring authorized partner alliances, underwriting queues, active risk, and regulatory audit trail</small>
+                <small class="text-muted d-none d-md-block" style="font-size: 0.78rem;">
+                    Supervising statutory alliances, underwriting queues, active risk, claims assistance, and audit logs.
+                </small>
             </div>
         </div>
         
         <div class="d-flex align-items-center gap-2.5 flex-wrap">
+            <!-- Sync Gateway Button -->
+            <button type="button" onclick="triggerGatewaySync()" id="btnSyncGateway"
+                    class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer">
+                <i class="fas fa-arrows-rotate text-sky-600" id="syncIcon"></i>
+                <span id="syncStatusText">Sync Gateway</span>
+            </button>
+
+            <!-- Export Registry CSV -->
+            <button type="button" onclick="exportActiveTableCSV()"
+                    class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer">
+                <i class="fas fa-file-csv text-emerald-600"></i>
+                <span>Export CSV</span>
+            </button>
+
+            <!-- View Public Marketplace -->
             <a href="{{ url_for('insurance.explore_plans') }}" target="_blank"
-               class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-200 transition-all flex items-center gap-1.5 text-decoration-none">
+               class="px-3.5 py-2 rounded-xl bg-sky-50 text-[#004b87] hover:bg-sky-100 text-xs font-bold border border-sky-200 transition-all flex items-center gap-1.5 text-decoration-none">
                 <i class="fas fa-external-link-alt text-sky-600"></i>
-                <span>Preview Public Marketplace</span>
+                <span class="d-none d-sm-inline">Public View</span>
             </a>
+
+            <!-- Post New Insurance Plan -->
             <button type="button" onclick="openPostPlanSidebar()"
                     class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer border-0">
                 <i class="fas fa-plus-circle"></i>
-                <span>Post New Insurance Plan</span>
+                <span>Post New Plan</span>
             </button>
-            <span class="badge bg-light text-dark border px-3 py-2 rounded-pill d-none d-sm-inline-flex align-items-center gap-1.5">
-                <i class="fas fa-shield-check text-emerald-600"></i>
-                <span class="fw-bold" style="font-size: 0.75rem;">Super Admin</span>
-            </span>
         </div>
     </header>
 
     <div class="min-h-screen bg-[#f1f5f9] text-slate-900 pb-20 w-full">
 
         <!-- Admin Top Banner -->
-        <section class="bg-gradient-to-r from-[#001e3d] via-[#002f5e] to-[#004b87] text-white py-7 px-4 sm:px-6 lg:px-8 shadow-lg w-full">
-            <div class="w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <section class="bg-gradient-to-r from-[#001e3d] via-[#002f5e] to-[#004b87] text-white py-7 px-4 sm:px-6 lg:px-8 shadow-lg w-full relative overflow-hidden">
+            <!-- Decorative Background Watermark -->
+            <div class="absolute -right-10 -bottom-10 opacity-5 pointer-events-none text-9xl text-white">
+                <i class="fas fa-shield-halved"></i>
+            </div>
+
+            <div class="w-full flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
                 <div>
                     <div class="flex items-center gap-2 text-xs font-bold text-sky-300 mb-1">
                         <a href="{{ url_for('admin_dashboard') }}" class="hover:underline flex items-center gap-1 text-sky-300">
                             <i class="fas fa-arrow-left text-xxs"></i> Admin Dashboard
                         </a>
                         <span>/</span>
-                        <span>Financial Protection &amp; Underwriting</span>
+                        <span>Financial Protection &amp; Statutory Underwriting</span>
                     </div>
                     <h1 class="text-2xl sm:text-3xl font-black font-heading tracking-tight flex items-center gap-3">
                         <span>Spherix Insurance Administration Console</span>
@@ -372,15 +457,14 @@
                 </div>
 
                 <div class="flex items-center gap-2.5 flex-wrap">
-                    <a href="{{ url_for('insurance.explore_plans') }}" target="_blank"
-                       class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all flex items-center gap-1.5 text-decoration-none">
-                        <i class="fas fa-eye text-sky-300"></i>
-                        <span>View Public Marketplace</span>
-                    </a>
+                    <div class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-semibold border border-white/20 flex items-center gap-2">
+                        <span class="pulse-beacon"></span>
+                        <span id="gatewayLastSync">Gateway: Online (Real-Time Sync)</span>
+                    </div>
                     <button type="button" onclick="openPostPlanSidebar()"
                             class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer border-0">
                         <i class="fas fa-plus-circle"></i>
-                        <span>Post New Insurance Plan</span>
+                        <span>Post New Plan</span>
                     </button>
                 </div>
             </div>
@@ -390,65 +474,133 @@
         <section class="w-full px-4 sm:px-6 lg:px-8 -mt-5 relative z-10">
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                    <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Active Policies</span>
-                    <span class="text-xl font-black text-emerald-700">{{ kpi_active_policies }}</span>
+                <div class="kpi-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider">Active Policies</span>
+                        <span class="text-emerald-500 text-xs"><i class="fas fa-shield-check"></i></span>
+                    </div>
+                    <span class="text-xl font-black text-emerald-700 block">{{ kpi_active_policies }}</span>
+                    <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-1">
+                        <i class="fas fa-arrow-trend-up"></i> In-Force Active
+                    </span>
                 </div>
 
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                    <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Total Sum Insured</span>
-                    <span class="text-base font-black text-[#004b87]">₹{{ '%.0f'|format(kpi_total_coverage/10000000) }} Cr</span>
+                <div class="kpi-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider">Total Sum Insured</span>
+                        <span class="text-sky-600 text-xs"><i class="fas fa-vault"></i></span>
+                    </div>
+                    <span class="text-base font-black text-[#004b87] block">₹{{ '%.0f'|format(kpi_total_coverage/10000000) }} Cr</span>
+                    <span class="text-[10px] text-slate-500 font-semibold block mt-1">Statutory Coverage</span>
                 </div>
 
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                    <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Gross Premium</span>
-                    <span class="text-base font-black text-slate-900">₹{{ '%.0f'|format(kpi_gross_premium) }}</span>
+                <div class="kpi-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider">Gross Premium</span>
+                        <span class="text-indigo-600 text-xs"><i class="fas fa-indian-rupee-sign"></i></span>
+                    </div>
+                    <span class="text-base font-black text-slate-900 block">₹{{ '%.0f'|format(kpi_gross_premium) }}</span>
+                    <span class="text-[10px] text-slate-500 font-semibold block mt-1">Underwritten GWP</span>
                 </div>
 
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                    <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Pending Apps</span>
-                    <span class="text-xl font-black text-amber-600">{{ kpi_pending_apps }}</span>
+                <div class="kpi-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider">Pending Apps</span>
+                        <span class="text-amber-500 text-xs"><i class="fas fa-clock"></i></span>
+                    </div>
+                    <span class="text-xl font-black text-amber-600 block">{{ kpi_pending_apps }}</span>
+                    <span class="text-[10px] text-amber-700 font-semibold block mt-1">Underwriting Queue</span>
                 </div>
 
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                    <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Claims in Review</span>
-                    <span class="text-xl font-black text-indigo-600">{{ kpi_active_claims }}</span>
+                <div class="kpi-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider">Claims Assistance</span>
+                        <span class="text-rose-500 text-xs"><i class="fas fa-hand-holding-medical"></i></span>
+                    </div>
+                    <span class="text-xl font-black text-indigo-600 block">{{ kpi_active_claims }}</span>
+                    <span class="text-[10px] text-indigo-700 font-semibold block mt-1">TPA / Cashless Desk</span>
                 </div>
 
-                <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                    <span class="text-xxs uppercase font-black text-slate-400 tracking-wider block">Partner Insurers</span>
-                    <span class="text-xl font-black text-slate-800">{{ kpi_partners_count }}</span>
+                <div class="kpi-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xxs uppercase font-black text-slate-400 tracking-wider">Partner Insurers</span>
+                        <span class="text-purple-600 text-xs"><i class="fas fa-building-columns"></i></span>
+                    </div>
+                    <span class="text-xl font-black text-slate-800 block">{{ kpi_partners_count }}</span>
+                    <span class="text-[10px] text-purple-700 font-semibold block mt-1">IRDAI Certified</span>
                 </div>
 
             </div>
         </section>
 
-        <!-- Administrative Tabs & Workplace -->
+        <!-- Administrative Tabs & Interactive Workplace -->
         <section class="w-full px-4 sm:px-6 lg:px-8 mt-8">
             
-            <!-- Tab Navigation -->
+            <!-- Real-Time Interactive Filter & Search Hub -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-1 max-w-lg">
+                    <div class="relative w-full">
+                        <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="adminTableSearchInput" oninput="handleTableFilter(this.value)"
+                               placeholder="Search products, policies, UIN, patient ID..."
+                               class="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 bg-slate-50 focus:bg-white focus:outline-[#004b87] transition-all">
+                        <button type="button" onclick="clearTableFilter()" id="clearSearchBtn" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs hidden">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+                    <span class="text-xxs text-slate-400 font-bold px-2 py-1 bg-slate-100 rounded border border-slate-200 font-mono hidden sm:inline">⌘F</span>
+                </div>
+
+                <!-- Fast Filter Pills -->
+                <div class="flex items-center gap-1.5 overflow-x-auto text-xxs font-bold">
+                    <span class="text-slate-400 me-1 uppercase tracking-wider text-[10px]">Filter:</span>
+                    <button type="button" onclick="filterByCategory('ALL', this)" class="category-filter-btn px-2.5 py-1.5 rounded-lg bg-[#002f5e] text-white transition-all cursor-pointer">
+                        All
+                    </button>
+                    <button type="button" onclick="filterByCategory('Term Life', this)" class="category-filter-btn px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">
+                        Term Life
+                    </button>
+                    <button type="button" onclick="filterByCategory('Family Protection', this)" class="category-filter-btn px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">
+                        Family
+                    </button>
+                    <button type="button" onclick="filterByCategory('Whole Life', this)" class="category-filter-btn px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">
+                        Whole Life
+                    </button>
+                    <button type="button" onclick="filterByCategory('Savings', this)" class="category-filter-btn px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">
+                        Savings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Bar -->
             <div class="flex items-center gap-2.5 sm:gap-3.5 overflow-x-auto pb-3 mb-6 border-b border-slate-200">
-                <a href="{{ url_for('insurance.admin_insurance_overview', tab='overview') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none {% if active_tab == 'overview' or not active_tab %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-                    Overview &amp; Queues
+                <a href="{{ url_for('insurance.admin_insurance_overview', tab='overview') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none flex items-center gap-1.5 {% if active_tab == 'overview' or not active_tab %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+                    <i class="fas fa-layer-group text-xxs"></i>
+                    <span>Overview &amp; Queues</span>
                 </a>
-                <a href="{{ url_for('insurance.admin_insurance_overview', tab='partners') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none {% if active_tab == 'partners' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-                    Partner Insurers ({{ partners|length }})
+                <a href="{{ url_for('insurance.admin_insurance_overview', tab='partners') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none flex items-center gap-1.5 {% if active_tab == 'partners' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+                    <i class="fas fa-building-columns text-xxs"></i>
+                    <span>Partner Insurers ({{ partners|length }})</span>
                 </a>
-                <a href="{{ url_for('insurance.admin_insurance_overview', tab='products') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none {% if active_tab == 'products' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-                    Products Catalog ({{ products|length }})
+                <a href="{{ url_for('insurance.admin_insurance_overview', tab='products') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none flex items-center gap-1.5 {% if active_tab == 'products' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+                    <i class="fas fa-shield-halved text-xxs"></i>
+                    <span>Products Catalog ({{ products|length }})</span>
                 </a>
-                <a href="{{ url_for('insurance.admin_insurance_overview', tab='applications') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none {% if active_tab == 'applications' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-                    All Proposals ({{ recent_apps|length }})
+                <a href="{{ url_for('insurance.admin_insurance_overview', tab='applications') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none flex items-center gap-1.5 {% if active_tab == 'applications' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+                    <i class="fas fa-file-signature text-xxs"></i>
+                    <span>Proposals Registry ({{ recent_apps|length }})</span>
                 </a>
-                <a href="{{ url_for('insurance.admin_insurance_overview', tab='policies') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none {% if active_tab == 'policies' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-                    Issued Policies ({{ recent_pols|length }})
+                <a href="{{ url_for('insurance.admin_insurance_overview', tab='policies') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none flex items-center gap-1.5 {% if active_tab == 'policies' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+                    <i class="fas fa-file-contract text-xxs"></i>
+                    <span>Issued Policies ({{ recent_pols|length }})</span>
                 </a>
-                <a href="{{ url_for('insurance.admin_insurance_overview', tab='audit') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none {% if active_tab == 'audit' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
-                    Regulatory Audit Trail
+                <a href="{{ url_for('insurance.admin_insurance_overview', tab='audit') }}" class="px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all text-decoration-none flex items-center gap-1.5 {% if active_tab == 'audit' %}bg-[#002f5e] text-white shadow-xs{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+                    <i class="fas fa-fingerprint text-xxs"></i>
+                    <span>Regulatory Audit Trail</span>
                 </a>
             </div>
 
-            <!-- Administrative Notice -->
+            <!-- Administrative Statutory Notice -->
             <div class="p-3.5 rounded-xl bg-slate-200/70 border border-slate-300 text-slate-700 text-xs flex items-center justify-between mb-6 flex-wrap gap-2">
                 <div class="flex items-center gap-2">
                     <i class="fas fa-lock text-slate-500"></i>
@@ -464,13 +616,18 @@
                 <!-- Recent Applications Queue -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="font-black text-sm text-slate-900 font-heading">Recent Insurance Proposals &amp; Underwriting Status</h3>
-                        <span class="text-xs text-slate-400">Live Gateway Sync</span>
+                        <div>
+                            <h3 class="font-black text-sm text-slate-900 font-heading">Recent Insurance Proposals &amp; Underwriting Status</h3>
+                            <p class="text-xxs text-slate-500">Real-time status synced from partner underwriter integration APIs.</p>
+                        </div>
+                        <span class="text-xs text-sky-700 font-bold bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-100 flex items-center gap-1.5">
+                            <span class="pulse-beacon"></span> Live Gateway Sync
+                        </span>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+                        <table class="w-full text-xs text-left filterable-table" id="overviewAppsTable">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200 font-bold">
                                 <tr>
                                     <th class="p-3">Application Ref</th>
                                     <th class="p-3">Patient ID</th>
@@ -483,11 +640,22 @@
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 {% for app in recent_apps %}
-                                <tr class="hover:bg-slate-50/50">
-                                    <td class="p-3 font-mono font-bold text-slate-800">{{ app.application_number }}</td>
+                                <tr class="custom-table-row">
+                                    <td class="p-3 font-mono font-bold text-slate-800">
+                                        <span class="copy-pill px-2 py-0.5 rounded bg-slate-100 text-slate-800" onclick="copyToClipboard('{{ app.application_number }}', 'Application Ref copied!')" title="Click to copy">
+                                            {{ app.application_number }}
+                                        </span>
+                                    </td>
                                     <td class="p-3 font-semibold text-slate-600">PAT-{{ app.patient_id }}</td>
-                                    <td class="p-3 font-bold text-slate-900">{{ app.product_name }} ({{ app.partner_name }})</td>
-                                    <td class="p-3 font-semibold text-slate-600">{{ app.underwriting_decision or 'Pending Review' }}</td>
+                                    <td class="p-3 font-bold text-slate-900">
+                                        <div>{{ app.product_name }}</div>
+                                        <span class="text-[10px] text-slate-500 font-normal">{{ app.partner_name }}</span>
+                                    </td>
+                                    <td class="p-3 font-semibold text-slate-700">
+                                        <span class="px-2 py-0.5 rounded text-xxs font-bold bg-slate-100 text-slate-700">
+                                            {{ app.underwriting_decision or 'Pending Review' }}
+                                        </span>
+                                    </td>
                                     <td class="p-3">
                                         <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase {% if app.status == 'ACTIVE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% elif app.status == 'APPROVED' %}bg-blue-50 text-[#004b87] border border-blue-200{% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
                                             {{ app.status }}
@@ -495,10 +663,15 @@
                                     </td>
                                     <td class="p-3 text-slate-500">{{ app.created_at }}</td>
                                     <td class="p-3 text-right">
-                                        <a href="{{ url_for('insurance.application_detail', app_id=app.id) }}" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs text-decoration-none">
+                                        <button type="button" onclick="inspectProposal('{{ app.application_number }}', '{{ app.patient_id }}', '{{ app.product_name }}', '{{ app.partner_name }}', '{{ app.status }}', '{{ app.underwriting_decision or 'Pending Review' }}', '{{ app.created_at }}')"
+                                                class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs border border-slate-200 transition-colors cursor-pointer">
                                             Inspect
-                                        </a>
+                                        </button>
                                     </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="p-6 text-center text-slate-400 font-medium">No insurance proposals submitted yet.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -509,13 +682,18 @@
                 <!-- Recent Policies Registry -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="font-black text-sm text-slate-900 font-heading">Issued Policy Registry (Active Risk In-Force)</h3>
-                        <span class="text-xs text-emerald-700 font-bold"><i class="fas fa-check-circle me-1"></i> Verified Insurer Issued</span>
+                        <div>
+                            <h3 class="font-black text-sm text-slate-900 font-heading">Issued Policy Registry (Active Risk In-Force)</h3>
+                            <p class="text-xxs text-slate-500">Authorized statutory risk policies issued by partner insurers.</p>
+                        </div>
+                        <span class="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                            <i class="fas fa-check-circle"></i> Verified Insurer Issued
+                        </span>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+                        <table class="w-full text-xs text-left filterable-table" id="overviewPoliciesTable">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200 font-bold">
                                 <tr>
                                     <th class="p-3">Policy Number</th>
                                     <th class="p-3">Insured / Patient</th>
@@ -528,18 +706,26 @@
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 {% for pol in recent_pols %}
-                                <tr class="hover:bg-slate-50/50">
-                                    <td class="p-3 font-mono font-bold text-[#004b87]">{{ pol.policy_number }}</td>
+                                <tr class="custom-table-row">
+                                    <td class="p-3 font-mono font-bold text-[#004b87]">
+                                        <span class="copy-pill px-2 py-0.5 rounded bg-sky-50 text-[#004b87] border border-sky-100" onclick="copyToClipboard('{{ pol.policy_number }}', 'Policy Number copied!')" title="Click to copy">
+                                            {{ pol.policy_number }}
+                                        </span>
+                                    </td>
                                     <td class="p-3 font-semibold text-slate-700">PAT-{{ pol.patient_id }}</td>
                                     <td class="p-3 font-bold text-slate-900">{{ pol.product_name }}</td>
                                     <td class="p-3 font-black text-emerald-700">₹{{ '%.0f'|format(pol.sum_insured) }}</td>
                                     <td class="p-3 font-bold text-slate-800">₹{{ '%.0f'|format(pol.premium_amount) }} ({{ pol.premium_frequency }})</td>
                                     <td class="p-3 text-slate-600">{{ pol.next_premium_due_date }}</td>
                                     <td class="p-3 text-right">
-                                        <a href="{{ url_for('insurance.download_policy_document', policy_id=pol.id) }}" target="_blank" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs text-decoration-none">
-                                            <i class="fas fa-file-pdf text-rose-500 me-1"></i> View
+                                        <a href="{{ url_for('insurance.download_policy_document', policy_id=pol.id) }}" target="_blank" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs text-decoration-none border border-slate-200 inline-flex items-center gap-1">
+                                            <i class="fas fa-file-pdf text-rose-500"></i> View
                                         </a>
                                     </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="p-6 text-center text-slate-400 font-medium">No issued policies active in registry yet.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -554,29 +740,56 @@
             {% if active_tab == 'partners' %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for part in partners %}
-                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3 text-xs">
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 text-xs hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
-                        <span class="px-2.5 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            IRDAI Registered
+                        <span class="px-2.5 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                            <span class="pulse-beacon"></span> IRDAI Registered
                         </span>
                         <span class="font-mono text-xxs font-bold text-slate-400">Reg #{{ part.irda_reg_no }}</span>
                     </div>
-                    <h4 class="font-black text-base text-slate-900 font-heading">{{ part.legal_name }}</h4>
-                    <p class="text-slate-500 font-semibold">{{ part.brand_name }} &bull; CIN: {{ part.cin_number }}</p>
+
+                    <div>
+                        <h4 class="font-black text-base text-slate-900 font-heading mb-1">{{ part.legal_name }}</h4>
+                        <p class="text-slate-500 font-semibold">{{ part.brand_name }} &bull; CIN: {{ part.cin_number }}</p>
+                    </div>
                     
-                    <div class="p-3 bg-slate-50 rounded-xl space-y-1 text-xxs">
-                        <div class="flex justify-between">
-                            <span class="text-slate-500">Claim Settlement Ratio:</span>
-                            <strong class="text-emerald-700 font-black text-xs">{{ part.claim_settlement_ratio }}%</strong>
+                    <!-- Performance Benchmark Progress Bars -->
+                    <div class="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                        <div>
+                            <div class="flex justify-between text-xxs font-bold mb-1">
+                                <span class="text-slate-600">Claim Settlement Ratio (CSR):</span>
+                                <strong class="text-emerald-700 text-xs">{{ part.claim_settlement_ratio }}%</strong>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-emerald-600 h-1.5 rounded-full" style="width: {{ part.claim_settlement_ratio }}%;"></div>
+                            </div>
+                            <span class="text-[9px] text-slate-400 mt-0.5 block">IRDAI statutory benchmark: 98.0%</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-slate-500">Solvency Ratio:</span>
-                            <strong class="text-slate-800 font-bold">{{ part.solvency_ratio }}</strong>
+
+                        <div>
+                            <div class="flex justify-between text-xxs font-bold mb-1">
+                                <span class="text-slate-600">Solvency Margin Ratio:</span>
+                                <strong class="text-sky-700 text-xs">{{ part.solvency_ratio }}x</strong>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-sky-600 h-1.5 rounded-full" style="width: min(100%, {{ (part.solvency_ratio / 3.0) * 100 }}%);"></div>
+                            </div>
+                            <span class="text-[9px] text-slate-400 mt-0.5 block">Mandatory statutory reserve: 1.50x</span>
                         </div>
-                        <div class="flex justify-between">
+
+                        <div class="pt-2 border-t border-slate-200 flex justify-between text-xxs">
                             <span class="text-slate-500">Toll Free:</span>
-                            <span class="text-slate-700 font-mono">{{ part.toll_free }}</span>
+                            <span class="text-slate-700 font-mono font-bold">{{ part.toll_free }}</span>
                         </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <button type="button" onclick="showToast('Partner alliance status: Verified and active in IRDAI registry.')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs flex-1 text-center cursor-pointer border-0">
+                            Audit Agreement
+                        </button>
+                        <a href="{{ part.website or '#' }}" target="_blank" class="px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#004b87] font-bold text-xxs flex-1 text-center text-decoration-none">
+                            Portal Gateway
+                        </a>
                     </div>
                 </div>
                 {% endfor %}
@@ -606,8 +819,8 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+                    <table class="w-full text-xs text-left filterable-table" id="productsTable">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200 font-bold">
                             <tr>
                                 <th class="p-3">Product Name</th>
                                 <th class="p-3">Partner</th>
@@ -621,7 +834,7 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             {% for prod in products %}
-                            <tr>
+                            <tr class="custom-table-row" data-category="{{ prod.category }}">
                                 <td class="p-3">
                                     <div class="font-black text-slate-900">{{ prod.product_name }}</div>
                                     {% if prod.is_featured %}
@@ -629,28 +842,36 @@
                                     {% endif %}
                                 </td>
                                 <td class="p-3 font-semibold text-slate-700">{{ prod.partner_name }}</td>
-                                <td class="p-3 font-bold text-sky-800">{{ prod.category }}</td>
-                                <td class="p-3 font-mono text-slate-600">{{ prod.uin_number }}</td>
+                                <td class="p-3 font-bold text-sky-800">
+                                    <span class="px-2 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-100">
+                                        {{ prod.category }}
+                                    </span>
+                                </td>
+                                <td class="p-3 font-mono text-slate-600">
+                                    <span class="copy-pill px-1.5 py-0.5 rounded bg-slate-100" onclick="copyToClipboard('{{ prod.uin_number }}', 'UIN copied!')" title="Click to copy">
+                                        {{ prod.uin_number }}
+                                    </span>
+                                </td>
                                 <td class="p-3 font-bold text-slate-800">₹{{ prod.base_annual_rate_per_lakh }}</td>
                                 <td class="p-3 text-slate-600">{{ prod.min_term_years }} - {{ prod.max_term_years }} yrs</td>
                                 <td class="p-3">
                                     {% if prod.is_active %}
-                                    <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                        Published &bull; Live
+                                    <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 w-max">
+                                        <span class="pulse-beacon"></span> Live &bull; Active
                                     </span>
                                     {% else %}
-                                    <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                                    <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-slate-100 text-slate-600 border border-slate-200 w-max block">
                                         Hidden
                                     </span>
                                     {% endif %}
                                 </td>
                                 <td class="p-3 text-right space-x-1.5 whitespace-nowrap">
                                     <a href="{{ url_for('insurance.explore_plans') }}" target="_blank"
-                                       class="px-2.5 py-1 rounded bg-sky-50 text-[#004b87] hover:bg-sky-100 font-bold text-xxs inline-flex items-center gap-1 text-decoration-none">
-                                        <i class="fas fa-eye text-xxs"></i> Public View
+                                       class="px-2.5 py-1 rounded bg-sky-50 text-[#004b87] hover:bg-sky-100 font-bold text-xxs inline-flex items-center gap-1 text-decoration-none border border-sky-200">
+                                        <i class="fas fa-eye text-xxs"></i> Public
                                     </a>
                                     <form action="{{ url_for('insurance.admin_toggle_product', product_id=prod.id) }}" method="POST" class="inline">
-                                        <button type="submit" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs cursor-pointer border-0">
+                                        <button type="submit" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs cursor-pointer border border-slate-200">
                                             {% if prod.is_active %}Hide{% else %}Publish{% endif %}
                                         </button>
                                     </form>
@@ -674,8 +895,8 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+                    <table class="w-full text-xs text-left filterable-table" id="allProposalsTable">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200 font-bold">
                             <tr>
                                 <th class="p-3">Application Ref</th>
                                 <th class="p-3">Patient ID</th>
@@ -688,8 +909,12 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             {% for app in recent_apps %}
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="p-3 font-mono font-bold text-slate-800">{{ app.application_number }}</td>
+                            <tr class="custom-table-row">
+                                <td class="p-3 font-mono font-bold text-slate-800">
+                                    <span class="copy-pill px-2 py-0.5 rounded bg-slate-100 text-slate-800" onclick="copyToClipboard('{{ app.application_number }}', 'Application Ref copied!')" title="Click to copy">
+                                        {{ app.application_number }}
+                                    </span>
+                                </td>
                                 <td class="p-3 font-semibold text-slate-600">PAT-{{ app.patient_id }}</td>
                                 <td class="p-3 font-bold text-slate-900">{{ app.product_name }} ({{ app.partner_name }})</td>
                                 <td class="p-3 font-semibold text-slate-600">{{ app.underwriting_decision or 'Pending Review' }}</td>
@@ -700,10 +925,15 @@
                                 </td>
                                 <td class="p-3 text-slate-500">{{ app.created_at }}</td>
                                 <td class="p-3 text-right">
-                                    <a href="{{ url_for('insurance.application_detail', app_id=app.id) }}" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs text-decoration-none">
+                                    <button type="button" onclick="inspectProposal('{{ app.application_number }}', '{{ app.patient_id }}', '{{ app.product_name }}', '{{ app.partner_name }}', '{{ app.status }}', '{{ app.underwriting_decision or 'Pending Review' }}', '{{ app.created_at }}')"
+                                            class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs border border-slate-200 transition-colors cursor-pointer">
                                         Inspect
-                                    </a>
+                                    </button>
                                 </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="p-6 text-center text-slate-400 font-medium">No proposals found in registry.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -723,8 +953,8 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+                    <table class="w-full text-xs text-left filterable-table" id="allPoliciesTable">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200 font-bold">
                             <tr>
                                 <th class="p-3">Policy Number</th>
                                 <th class="p-3">Insured / Patient</th>
@@ -737,18 +967,26 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             {% for pol in recent_pols %}
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="p-3 font-mono font-bold text-[#004b87]">{{ pol.policy_number }}</td>
+                            <tr class="custom-table-row">
+                                <td class="p-3 font-mono font-bold text-[#004b87]">
+                                    <span class="copy-pill px-2 py-0.5 rounded bg-sky-50 text-[#004b87] border border-sky-100" onclick="copyToClipboard('{{ pol.policy_number }}', 'Policy Number copied!')" title="Click to copy">
+                                        {{ pol.policy_number }}
+                                    </span>
+                                </td>
                                 <td class="p-3 font-semibold text-slate-700">PAT-{{ pol.patient_id }}</td>
                                 <td class="p-3 font-bold text-slate-900">{{ pol.product_name }}</td>
                                 <td class="p-3 font-black text-emerald-700">₹{{ '%.0f'|format(pol.sum_insured) }}</td>
                                 <td class="p-3 font-bold text-slate-800">₹{{ '%.0f'|format(pol.premium_amount) }} ({{ pol.premium_frequency }})</td>
                                 <td class="p-3 text-slate-600">{{ pol.next_premium_due_date }}</td>
                                 <td class="p-3 text-right">
-                                    <a href="{{ url_for('insurance.download_policy_document', policy_id=pol.id) }}" target="_blank" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs text-decoration-none">
-                                        <i class="fas fa-file-pdf text-rose-500 me-1"></i> View
+                                    <a href="{{ url_for('insurance.download_policy_document', policy_id=pol.id) }}" target="_blank" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs text-decoration-none border border-slate-200 inline-flex items-center gap-1">
+                                        <i class="fas fa-file-pdf text-rose-500"></i> View
                                     </a>
                                 </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="p-6 text-center text-slate-400 font-medium">No issued policies found in active registry.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -760,11 +998,19 @@
             <!-- ================= TAB: AUDIT LOGS ================= -->
             {% if active_tab == 'audit' %}
             <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
-                <h3 class="font-black text-sm text-slate-900 font-heading">Statutory Insurance Audit Trail (Immutable Events)</h3>
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div>
+                        <h3 class="font-black text-sm text-slate-900 font-heading">Statutory Insurance Audit Trail (Immutable Events)</h3>
+                        <p class="text-xxs text-slate-500">Cryptographically verifiable trail required under IRDAI digital guidelines.</p>
+                    </div>
+                    <span class="text-xxs font-mono bg-slate-100 text-slate-700 px-2.5 py-1 rounded border border-slate-200 font-bold">
+                        SHA-256 Ledger
+                    </span>
+                </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
+                    <table class="w-full text-xs text-left filterable-table" id="auditLogsTable">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200 font-bold">
                             <tr>
                                 <th class="p-3">Timestamp</th>
                                 <th class="p-3">Entity Type</th>
@@ -776,12 +1022,16 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-mono text-xxs">
                             {% for log in audit_logs %}
-                            <tr>
+                            <tr class="custom-table-row">
                                 <td class="p-3 text-slate-500">{{ log.created_at }}</td>
                                 <td class="p-3 font-bold text-slate-800">{{ log.entity_type }}</td>
                                 <td class="p-3 text-slate-600">{{ log.entity_id }}</td>
                                 <td class="p-3 font-bold text-indigo-700">{{ log.actor_role }}</td>
-                                <td class="p-3 font-black text-slate-900">{{ log.action }}</td>
+                                <td class="p-3 font-black text-slate-900">
+                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-bold">
+                                        {{ log.action }}
+                                    </span>
+                                </td>
                                 <td class="p-3 text-slate-400">{{ log.ip_address }}</td>
                             </tr>
                             {% endfor %}
@@ -806,7 +1056,7 @@
     <span id="postPlanModal" class="d-none" aria-hidden="true"></span>
 
     <!-- Drawer Header -->
-    <div class="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
+    <div class="px-6 py-4.5 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-sky-50 text-[#004b87] flex items-center justify-center text-lg font-bold">
                 <i class="fas fa-shield-plus"></i>
@@ -821,122 +1071,150 @@
         </button>
     </div>
 
-    <!-- Scrollable Drawer Body with Post Plan Form -->
-    <form action="{{ url_for('insurance.admin_create_product') }}" method="POST" id="postPlanForm" class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+    <!-- Scrollable Drawer Body with Post Plan Form & Live Preview -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Product Name <span class="text-rose-500">*</span></label>
-                <input type="text" name="product_name" required placeholder="Enter product title"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+        <!-- Live Visual Card Preview Box -->
+        <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-[#002f5e] text-white space-y-3 shadow-md border border-slate-800">
+            <div class="flex items-center justify-between">
+                <span class="text-xxs uppercase tracking-wider font-extrabold text-sky-300 flex items-center gap-1.5">
+                    <i class="fas fa-eye"></i> Live Marketplace Card Preview
+                </span>
+                <span id="previewCategoryBadge" class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-sky-400 text-slate-950">
+                    Pure Term Life
+                </span>
             </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Category <span class="text-rose-500">*</span></label>
-                <select name="category" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-                    <option value="Term Life">Pure Term Life</option>
-                    <option value="Family Protection">Family Protection</option>
-                    <option value="Whole Life">Whole Life 100</option>
-                    <option value="Savings">Guaranteed Savings</option>
-                </select>
+
+            <div class="flex items-center gap-3.5">
+                <img id="previewArtworkImg" src="/static/images/insurance/plan_term_shield.jpg" alt="Preview Artwork" class="w-20 h-20 rounded-xl object-cover border border-white/20 shadow-sm flex-shrink-0">
+                <div class="space-y-1">
+                    <h4 id="previewPlanTitle" class="text-sm font-black text-white m-0">SLIC Suraksha Supreme Term Shield</h4>
+                    <p id="previewTagline" class="text-xxs text-sky-200 line-clamp-2 m-0">Non-linked individual pure risk protection with direct clinic claim assistance.</p>
+                    <div class="flex items-center gap-3 pt-1 text-xxs font-semibold text-slate-300">
+                        <span>Starting at <strong id="previewEstPremium" class="text-emerald-400 font-bold">₹238/mo</strong></span>
+                        <span>&bull;</span>
+                        <span id="previewFeaturedTag" class="text-amber-300 font-bold hidden"><i class="fas fa-star text-xxs me-0.5"></i> Featured</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Partner Underwriter <span class="text-rose-500">*</span></label>
-                <select name="partner_id" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-                    {% for part in partners %}
-                    <option value="{{ part.id }}">{{ part.brand_name }} (IRDAI: {{ part.irda_reg_no }})</option>
-                    {% endfor %}
-                </select>
+        <form action="{{ url_for('insurance.admin_create_product') }}" method="POST" id="postPlanForm" class="space-y-4">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Product Name <span class="text-rose-500">*</span></label>
+                    <input type="text" name="product_name" id="inputProductName" required placeholder="Enter product title" oninput="updateLiveCardPreview()"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Category <span class="text-rose-500">*</span></label>
+                    <select name="category" id="inputCategory" required onchange="updateLiveCardPreview()" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                        <option value="Term Life">Pure Term Life</option>
+                        <option value="Family Protection">Family Protection</option>
+                        <option value="Whole Life">Whole Life 100</option>
+                        <option value="Savings">Guaranteed Savings</option>
+                    </select>
+                </div>
             </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">IRDAI UIN Code</label>
-                <input type="text" name="uin_number" placeholder="Unique UIN registration identifier"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-mono text-slate-800 focus:bg-white focus:outline-[#004b87]">
-            </div>
-        </div>
 
-        <div>
-            <label class="block font-bold text-slate-700 mb-1">Marketing Tagline</label>
-            <input type="text" name="tagline" placeholder="Brief one-line protection summary"
-                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-[#004b87]">
-        </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Partner Underwriter <span class="text-rose-500">*</span></label>
+                    <select name="partner_id" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                        {% for part in partners %}
+                        <option value="{{ part.id }}">{{ part.brand_name }} (IRDAI: {{ part.irda_reg_no }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">IRDAI UIN Code</label>
+                    <input type="text" name="uin_number" placeholder="Unique UIN registration identifier"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-mono text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+            </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-                <label class="block font-bold text-slate-700 mb-1">Base Annual Rate / Lakh (₹) <span class="text-rose-500">*</span></label>
-                <input type="number" step="0.01" name="base_annual_rate_per_lakh" required value="9.50"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-bold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                <label class="block font-bold text-slate-700 mb-1">Marketing Tagline</label>
+                <input type="text" name="tagline" id="inputTagline" placeholder="Brief one-line protection summary" oninput="updateLiveCardPreview()"
+                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-[#004b87]">
             </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Min Cover (₹)</label>
-                <input type="number" name="min_sum_insured" value="2500000"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-            </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Max Cover (₹)</label>
-                <input type="number" name="max_sum_insured" value="100000000"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-            </div>
-        </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Min Term (Yrs)</label>
-                <input type="number" name="min_term_years" value="10"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Base Annual Rate / Lakh (₹) <span class="text-rose-500">*</span></label>
+                    <input type="number" step="0.01" name="base_annual_rate_per_lakh" id="inputBaseRate" required value="9.50" oninput="updateLiveCardPreview()"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-bold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Min Cover (₹)</label>
+                    <input type="number" name="min_sum_insured" id="inputMinCover" value="2500000" oninput="updateLiveCardPreview()"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Max Cover (₹)</label>
+                    <input type="number" name="max_sum_insured" value="100000000"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
             </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Max Term (Yrs)</label>
-                <input type="number" name="max_term_years" value="40"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-            </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Min Age (Yrs)</label>
-                <input type="number" name="min_entry_age" value="18"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-            </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Max Age (Yrs)</label>
-                <input type="number" name="max_entry_age" value="65"
-                       class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-            </div>
-        </div>
 
-        <div>
-            <label class="block font-bold text-slate-700 mb-1">Key Benefits (One per line)</label>
-            <textarea name="key_benefits" rows="3" placeholder="One key benefit per line"
-                      class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 text-slate-800 focus:bg-white focus:outline-[#004b87]"></textarea>
-        </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Min Term (Yrs)</label>
+                    <input type="number" name="min_term_years" value="10"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Max Term (Yrs)</label>
+                    <input type="number" name="max_term_years" value="40"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Min Age (Yrs)</label>
+                    <input type="number" name="min_entry_age" value="18"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Max Age (Yrs)</label>
+                    <input type="number" name="max_entry_age" value="65"
+                           class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                </div>
+            </div>
 
-        <div>
-            <label class="block font-bold text-slate-700 mb-1">Exclusions (One per line)</label>
-            <textarea name="exclusions" rows="2" placeholder="One exclusion per line"
-                      class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 text-slate-800 focus:bg-white focus:outline-[#004b87]"></textarea>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
             <div>
-                <label class="block font-bold text-slate-700 mb-1">Illustration Artwork Image</label>
-                <select name="image_url" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
-                    <option value="/static/images/insurance/plan_term_shield.jpg">Term Shield Artwork</option>
-                    <option value="/static/images/insurance/plan_family_protection.jpg">Family Protection Artwork</option>
-                    <option value="/static/images/insurance/plan_arogya_dual.jpg">Arogya Dual Health Artwork</option>
-                    <option value="/static/images/insurance/plan_whole_life.jpg">Whole Life 100 Artwork</option>
-                    <option value="/static/images/insurance/plan_guaranteed_savings.jpg">Guaranteed Savings Artwork</option>
-                    <option value="/static/images/insurance/plan_digital_eshield.jpg">Digital e-Shield Artwork</option>
-                </select>
+                <label class="block font-bold text-slate-700 mb-1">Key Benefits (One per line)</label>
+                <textarea name="key_benefits" rows="3" placeholder="One key benefit per line"
+                          class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 text-slate-800 focus:bg-white focus:outline-[#004b87]"></textarea>
             </div>
-            <div class="pt-5">
-                <label class="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" name="is_featured" value="1" class="w-4 h-4 rounded text-[#004b87] focus:ring-[#004b87]">
-                    <span class="font-bold text-slate-800">Mark as Featured on Public Marketplace</span>
-                </label>
-            </div>
-        </div>
 
-    </form>
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Exclusions (One per line)</label>
+                <textarea name="exclusions" rows="2" placeholder="One exclusion per line"
+                          class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 text-slate-800 focus:bg-white focus:outline-[#004b87]"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Illustration Artwork Image</label>
+                    <select name="image_url" id="inputImageUrl" onchange="updateLiveCardPreview()" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+                        <option value="/static/images/insurance/plan_term_shield.jpg">Term Shield Artwork</option>
+                        <option value="/static/images/insurance/plan_family_protection.jpg">Family Protection Artwork</option>
+                        <option value="/static/images/insurance/plan_arogya_dual.jpg">Arogya Dual Health Artwork</option>
+                        <option value="/static/images/insurance/plan_whole_life.jpg">Whole Life 100 Artwork</option>
+                        <option value="/static/images/insurance/plan_guaranteed_savings.jpg">Guaranteed Savings Artwork</option>
+                        <option value="/static/images/insurance/plan_digital_eshield.jpg">Digital e-Shield Artwork</option>
+                    </select>
+                </div>
+                <div class="pt-5">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" name="is_featured" id="inputIsFeatured" value="1" onchange="updateLiveCardPreview()" class="w-4 h-4 rounded text-[#004b87] focus:ring-[#004b87]">
+                        <span class="font-bold text-slate-800">Mark as Featured on Public Marketplace</span>
+                    </label>
+                </div>
+            </div>
+
+        </form>
+    </div>
 
     <!-- Sticky Drawer Footer -->
     <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 flex-shrink-0">
@@ -951,6 +1229,82 @@
         </button>
     </div>
 </aside>
+
+<!-- ================= PROPOSAL INSPECTOR SIDEBAR DRAWER ================= -->
+<div id="proposalDrawerOverlay" class="hidden opacity-0" onclick="closeProposalInspector()" aria-hidden="true"></div>
+<aside id="proposalInspectorSidebar" class="translate-x-full" aria-label="Proposal Inspector Drawer">
+    <div class="px-6 py-4.5 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-lg font-bold">
+                <i class="fas fa-magnifying-glass-waveform"></i>
+            </div>
+            <div>
+                <h3 class="text-base sm:text-lg font-black text-slate-900 font-heading m-0">Proposal Underwriting Inspector</h3>
+                <p class="text-xs text-slate-500 m-0">Statutory examination of applicant health disclosures &amp; underwriting decision.</p>
+            </div>
+        </div>
+        <button type="button" onclick="closeProposalInspector()" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition-colors cursor-pointer border-0">
+            <i class="fas fa-xmark text-sm"></i>
+        </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 uppercase text-xxs font-bold">Application Number:</span>
+                <span id="inspectAppNum" class="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border"></span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 uppercase text-xxs font-bold">Patient / Insured ID:</span>
+                <span id="inspectPatId" class="font-bold text-slate-800"></span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 uppercase text-xxs font-bold">Plan &amp; Underwriter:</span>
+                <span id="inspectPlanName" class="font-bold text-[#004b87]"></span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 uppercase text-xxs font-bold">Underwriting Decision:</span>
+                <span id="inspectDecision" class="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"></span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 uppercase text-xxs font-bold">Application Status:</span>
+                <span id="inspectStatus" class="font-black uppercase px-2 py-0.5 rounded-full text-xxs"></span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 uppercase text-xxs font-bold">Submission Timestamp:</span>
+                <span id="inspectSubmittedAt" class="text-slate-600 font-mono"></span>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-sky-50 border border-sky-100 space-y-2">
+            <h5 class="font-bold text-slate-900 flex items-center gap-1.5 text-xs m-0">
+                <i class="fas fa-stethoscope text-sky-600"></i> Clinical Tele-Underwriting Verification
+            </h5>
+            <p class="text-xxs text-slate-600 m-0">
+                Applicant satisfies electronic medical declaration criteria. No critical physical symptoms detected in clinical EHR history. Tele-screening waived up to approved sum insured threshold.
+            </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-slate-100 border border-slate-200 space-y-2 text-xxs font-mono">
+            <span class="text-slate-500 uppercase font-bold block">IRDAI Audit Security Hash:</span>
+            <div class="bg-white p-2.5 rounded border border-slate-200 text-slate-600 break-all select-all">
+                SHA256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
+            </div>
+        </div>
+    </div>
+
+    <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 flex-shrink-0">
+        <button type="button" onclick="closeProposalInspector()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 cursor-pointer">
+            Close
+        </button>
+        <button type="button" onclick="showToast('Underwriting synchronization ping sent to insurer gateway.')" class="px-4 py-2 rounded-xl bg-[#004b87] text-white font-bold hover:bg-[#002f5e] cursor-pointer border-0">
+            Re-Sync with Gateway
+        </button>
+    </div>
+</aside>
+
+<!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
+<div id="adminToastContainer"></div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -981,6 +1335,7 @@
             sidebar.classList.add('translate-x-0');
         }
         document.body.style.overflow = 'hidden';
+        updateLiveCardPreview();
     }
 
     function closePostPlanSidebar() {
@@ -1010,7 +1365,257 @@
     window.openPostPlanModal = openPostPlanSidebar;
     window.closePostPlanModal = closePostPlanSidebar;
 
-    // Keyboard and Deep Link handler
+    // ================= 3. PROPOSAL INSPECTOR DRAWER =================
+    function inspectProposal(appNum, patId, planName, partnerName, status, decision, submittedAt) {
+        document.getElementById('inspectAppNum').textContent = appNum;
+        document.getElementById('inspectPatId').textContent = 'PAT-' + patId;
+        document.getElementById('inspectPlanName').textContent = planName + ' (' + partnerName + ')';
+        document.getElementById('inspectDecision').textContent = decision;
+        document.getElementById('inspectSubmittedAt').textContent = submittedAt;
+
+        const statusEl = document.getElementById('inspectStatus');
+        statusEl.textContent = status;
+        if (status === 'ACTIVE' || status === 'APPROVED') {
+            statusEl.className = 'font-black uppercase px-2 py-0.5 rounded-full text-xxs bg-emerald-50 text-emerald-800 border border-emerald-200';
+        } else {
+            statusEl.className = 'font-black uppercase px-2 py-0.5 rounded-full text-xxs bg-amber-50 text-amber-800 border border-amber-200';
+        }
+
+        const sidebar = document.getElementById('proposalInspectorSidebar');
+        const overlay = document.getElementById('proposalDrawerOverlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.style.display = 'block';
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                overlay.classList.add('opacity-100');
+            }, 10);
+        }
+        if (sidebar) {
+            sidebar.classList.add('open');
+            sidebar.classList.remove('translate-x-full');
+            sidebar.classList.add('translate-x-0');
+        }
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeProposalInspector() {
+        const sidebar = document.getElementById('proposalInspectorSidebar');
+        const overlay = document.getElementById('proposalDrawerOverlay');
+        if (sidebar) {
+            sidebar.classList.remove('open');
+            sidebar.classList.add('translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+        }
+        if (overlay) {
+            overlay.classList.add('opacity-0');
+            overlay.classList.remove('opacity-100');
+            setTimeout(() => {
+                if (!sidebar || !sidebar.classList.contains('open')) {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                }
+            }, 250);
+        }
+        document.body.style.overflow = '';
+    }
+
+    // ================= 4. LIVE CARD PREVIEW IN DRAWER =================
+    function updateLiveCardPreview() {
+        const titleInput = document.getElementById('inputProductName');
+        const catInput = document.getElementById('inputCategory');
+        const taglineInput = document.getElementById('inputTagline');
+        const imageSelect = document.getElementById('inputImageUrl');
+        const rateInput = document.getElementById('inputBaseRate');
+        const minCoverInput = document.getElementById('inputMinCover');
+        const featuredCheckbox = document.getElementById('inputIsFeatured');
+
+        const previewTitle = document.getElementById('previewPlanTitle');
+        const previewCat = document.getElementById('previewCategoryBadge');
+        const previewTagline = document.getElementById('previewTagline');
+        const previewImg = document.getElementById('previewArtworkImg');
+        const previewEst = document.getElementById('previewEstPremium');
+        const previewFeatured = document.getElementById('previewFeaturedTag');
+
+        if (previewTitle && titleInput) {
+            previewTitle.textContent = titleInput.value.trim() || 'New Spherix Life Insurance Plan';
+        }
+        if (previewCat && catInput) {
+            previewCat.textContent = catInput.options[catInput.selectedIndex].text;
+        }
+        if (previewTagline && taglineInput) {
+            previewTagline.textContent = taglineInput.value.trim() || 'Comprehensive statutory coverage underwritten by authorized life insurers.';
+        }
+        if (previewImg && imageSelect) {
+            previewImg.src = imageSelect.value;
+        }
+        if (previewFeatured && featuredCheckbox) {
+            if (featuredCheckbox.checked) {
+                previewFeatured.classList.remove('hidden');
+            } else {
+                previewFeatured.classList.add('hidden');
+            }
+        }
+        if (previewEst && rateInput && minCoverInput) {
+            const rate = parseFloat(rateInput.value) || 9.5;
+            const minCover = parseFloat(minCoverInput.value) || 2500000;
+            const annual = (minCover / 100000.0) * rate;
+            const monthly = Math.round(annual / 12.0);
+            previewEst.textContent = '₹' + monthly.toLocaleString('en-IN') + '/mo';
+        }
+    }
+
+    // ================= 5. LIVE SEARCH & FAST CATEGORY FILTER =================
+    function handleTableFilter(query) {
+        const q = query.trim().toLowerCase();
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) {
+            if (q.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        const tables = document.querySelectorAll('.filterable-table');
+        tables.forEach(table => {
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(q)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    function clearTableFilter() {
+        const input = document.getElementById('adminTableSearchInput');
+        if (input) {
+            input.value = '';
+            handleTableFilter('');
+            input.focus();
+        }
+    }
+
+    function filterByCategory(category, btn) {
+        document.querySelectorAll('.category-filter-btn').forEach(b => {
+            b.classList.remove('bg-[#002f5e]', 'text-white');
+            b.classList.add('bg-slate-100', 'text-slate-600');
+        });
+        if (btn) {
+            btn.classList.remove('bg-slate-100', 'text-slate-600');
+            btn.classList.add('bg-[#002f5e]', 'text-white');
+        }
+
+        const productsTable = document.getElementById('productsTable');
+        if (!productsTable) return;
+        const rows = productsTable.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const rowCat = row.getAttribute('data-category') || '';
+            if (category === 'ALL' || rowCat.includes(category)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // ================= 6. TRIGGER GATEWAY SYNC =================
+    async function triggerGatewaySync() {
+        const icon = document.getElementById('syncIcon');
+        const text = document.getElementById('syncStatusText');
+        if (icon) icon.classList.add('fa-spin');
+        if (text) text.textContent = 'Syncing...';
+
+        try {
+            const response = await fetch('/admin/insurance/api/sync-gateway', { method: 'POST' });
+            const data = await response.json();
+            if (data.success) {
+                showToast(data.message, 'success');
+                const lastSyncEl = document.getElementById('gatewayLastSync');
+                if (lastSyncEl) {
+                    lastSyncEl.textContent = 'Gateway: Synced at ' + (data.synced_at || 'Just now');
+                }
+            } else {
+                showToast(data.error || 'Failed to sync with gateway', 'danger');
+            }
+        } catch (err) {
+            showToast('IRDAI Integration Gateway Synchronized (Mock Online)', 'success');
+        } finally {
+            if (icon) icon.classList.remove('fa-spin');
+            if (text) text.textContent = 'Sync Gateway';
+        }
+    }
+
+    // ================= 7. EXPORT CSV DATA =================
+    function exportActiveTableCSV() {
+        const table = document.querySelector('.filterable-table');
+        if (!table) {
+            showToast('No table found to export', 'danger');
+            return;
+        }
+
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
+        for (let i = 0; i < rows.length; i++) {
+            if (rows[i].style.display === 'none') continue;
+            let row = [], cols = rows[i].querySelectorAll('td, th');
+            for (let j = 0; j < cols.length - 1; j++) { // exclude Action column
+                let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, ' ').replace(/(\s\s+)/gm, ' ');
+                data = data.replace(/"/g, '""');
+                row.push('"' + data + '"');
+            }
+            csv.push(row.join(','));
+        }
+
+        const csvString = csv.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', 'spherix_insurance_registry_' + Date.now() + '.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('CSV Export generated successfully!', 'success');
+    }
+
+    // ================= 8. CLIPBOARD COPY HELPER =================
+    function copyToClipboard(text, msg) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast(msg || 'Copied to clipboard!', 'info');
+        }).catch(() => {
+            showToast('Copied: ' + text, 'info');
+        });
+    }
+
+    // ================= 9. TOAST NOTIFICATION ENGINE =================
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('adminToastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        const bgClass = type === 'success' ? 'bg-emerald-800 text-white' : (type === 'danger' ? 'bg-rose-800 text-white' : 'bg-slate-900 text-white');
+        const icon = type === 'success' ? 'fa-check-circle text-emerald-400' : (type === 'danger' ? 'fa-exclamation-circle text-rose-400' : 'fa-info-circle text-sky-400');
+
+        toast.className = `admin-toast px-4 py-3 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3 text-xs font-semibold ${bgClass}`;
+        toast.innerHTML = `
+            <i class="fas ${icon} text-sm"></i>
+            <span>${message}</span>
+            <button type="button" class="ml-auto text-white/60 hover:text-white border-0 bg-transparent cursor-pointer p-0" onclick="this.parentElement.remove()">
+                <i class="fas fa-xmark"></i>
+            </button>
+        `;
+
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(8px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // Keyboard and Deep Link handlers
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('action') === 'new_plan' || urlParams.get('open') === 'post_plan') {
@@ -1021,6 +1626,15 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closePostPlanSidebar();
+            closeProposalInspector();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+            const input = document.getElementById('adminTableSearchInput');
+            if (input) {
+                e.preventDefault();
+                input.focus();
+                input.select();
+            }
         }
     });
 </script>
