@@ -101,6 +101,48 @@ def insurance_home():
         selected_category=request.args.get('category', 'all')
     )
 
+PRODUCT_IMAGE_MAP = {
+    'PROD-SLIC-SHIELD': '/static/images/insurance/plan_term_shield.jpg',
+    'PROD-SLIC-PARIVAR': '/static/images/insurance/plan_family_protection.jpg',
+    'PROD-SLIC-AROGYA': '/static/images/insurance/plan_arogya_dual.jpg',
+    'PROD-SLIC-JEEVAN': '/static/images/insurance/plan_whole_life.jpg',
+    'PROD-SLIC-BHAVISHYA': '/static/images/insurance/plan_guaranteed_savings.jpg',
+    'PROD-SLIC-DIGITAL': '/static/images/insurance/plan_digital_eshield.jpg',
+}
+
+PRODUCT_HIGHLIGHTS_MAP = {
+    'PROD-SLIC-SHIELD': [
+        'Terminal Illness Payout up to ₹1 Crore with Zero Waiting Period',
+        'Accidental Death Benefit Rider Option with 2x Payout',
+        'Tax Exemption on Premiums Paid u/s 80C & Payouts u/s 10(10D)'
+    ],
+    'PROD-SLIC-PARIVAR': [
+        'Auto-Increase Sum Assured on Marriage (+25%) & Childbirth (+15%)',
+        'Zero Repeat Medical Tests for Milestone Life Events',
+        'Spouse & Child Continuity Protection Benefit'
+    ],
+    'PROD-SLIC-AROGYA': [
+        'Dual Shield: 36 Critical Illnesses + Full Life Protection',
+        'Instant 100% Cashless Payout on Verified Cancer or Cardiac Diagnosis',
+        'No Deductions for ICU Stays at 14,500+ Partner Hospitals'
+    ],
+    'PROD-SLIC-JEEVAN': [
+        'Lifetime Financial Shield Covered Guarantee Up to Age 100',
+        'Annual Compound Bonus Accruals from 5th Policy Year',
+        'Guaranteed Surrender Value & Immediate Liquidity Loan Facility'
+    ],
+    'PROD-SLIC-BHAVISHYA': [
+        'Guaranteed Maturity Endowment for Child Education / Retirement',
+        'Guaranteed Additions of 7.5% Accruing Annually',
+        'Life Risk Cover Continues Throughout Policy Tenure'
+    ],
+    'PROD-SLIC-DIGITAL': [
+        '100% Paperless Digital Application with Instant e-KYC Verification',
+        'Tele-Medical Screening: No Physical Clinic Visit Needed up to ₹1.5 Cr',
+        'Digital Policy Bond Delivered to WhatsApp & Email within 24 Hours'
+    ]
+}
+
 @insurance_bp.route('/patient/insurance/plans', endpoint='explore_plans')
 @insurance_bp.route('/patient/insurance/plans/catalog', endpoint='plans_catalog')
 def explore_plans():
@@ -111,6 +153,11 @@ def explore_plans():
 
     conn = get_insurance_db()
     cursor = conn.cursor()
+
+    # Total counts per category for the filter pills
+    cursor.execute("SELECT category, COUNT(*) as count FROM insurance_products WHERE is_active = 1 GROUP BY category")
+    category_counts = {row['category']: row['count'] for row in dict_list_from_rows(cursor.fetchall())}
+    total_plans_count = sum(category_counts.values())
 
     query = """
     SELECT p.*, ip.brand_name as partner_name, ip.legal_name as partner_legal_name,
@@ -143,6 +190,14 @@ def explore_plans():
         pr['key_benefits'] = json.loads(pr.get('key_benefits') or '[]')
         pr['exclusions'] = json.loads(pr.get('exclusions') or '[]')
         pr['important_conditions'] = json.loads(pr.get('important_conditions') or '[]')
+        pr['image_url'] = PRODUCT_IMAGE_MAP.get(pr['id'], '/static/images/insurance/plan_term_shield.jpg')
+        pr['highlights'] = PRODUCT_HIGHLIGHTS_MAP.get(pr['id'], pr['key_benefits'][:3])
+
+        # Calculated indicative rates for standard ₹1 Cr coverage at age 30
+        annual_rate = float(pr.get('base_annual_rate_per_lakh') or 9.5) * 100.0
+        pr['indicative_annual_premium'] = int(round(annual_rate))
+        pr['indicative_monthly_premium'] = int(round(annual_rate / 12.0))
+        pr['daily_equivalent'] = max(18, int(round(annual_rate / 365.0)))
 
     cursor.execute("SELECT * FROM insurance_partners WHERE is_active = 1")
     partners = dict_list_from_rows(cursor.fetchall())
@@ -154,7 +209,9 @@ def explore_plans():
         partners=partners,
         selected_category=category,
         selected_partner=partner_id,
-        selected_sort=sort_by
+        selected_sort=sort_by,
+        category_counts=category_counts,
+        total_plans_count=total_plans_count
     )
 
 @insurance_bp.route('/patient/insurance/compare', endpoint='compare')
