@@ -187,3 +187,37 @@ def test_all_insurance_templates_full_screen(client):
     assert res_admin.status_code == 200
     html_admin = res_admin.data.decode('utf-8')
     assert 'max-w-7xl' not in html_admin
+
+def test_admin_insurance_console_admin_layout_and_slide_over_sidebar(client):
+    """Verify that /admin/insurance/console uses the Admin Layout and slide-over sidebar drawer for posting plans."""
+    login_as_admin(client)
+
+    # 1. Main console in admin layout
+    res = client.get('/admin/insurance/console')
+    assert res.status_code == 200
+    html = res.data.decode('utf-8')
+
+    # Must extend dashboard_layout and render admin sidebar
+    assert 'class="sidebar" id="sidebar"' in html
+    assert 'class="top-header"' in html
+    assert 'Life Insurance Console' in html
+    assert 'nav-item active' in html
+    assert 'toggleSidebar()' in html
+    assert 'admin-dashboard-shell' in html
+
+    # Slide-over sidebar drawer for posting new plan
+    assert 'id="postPlanSidebar"' in html
+    assert 'id="postPlanDrawerOverlay"' in html
+    assert 'openPostPlanSidebar()' in html
+    assert 'closePostPlanSidebar()' in html
+    assert 'action="/admin/insurance/product/new"' in html
+    assert "urlParams.get('action') === 'new_plan'" in html
+
+    # Test tabs rendering
+    for tab in ['overview', 'partners', 'products', 'applications', 'policies', 'audit']:
+        res_tab = client.get(f'/admin/insurance/console?tab={tab}')
+        assert res_tab.status_code == 200
+        html_tab = res_tab.data.decode('utf-8')
+        assert 'class="sidebar" id="sidebar"' in html_tab
+        assert 'id="postPlanSidebar"' in html_tab
+
