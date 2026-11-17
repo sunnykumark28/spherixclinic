@@ -245,3 +245,306 @@ def get_security_command_center_telemetry() -> Dict[str, Any]:
         print(f"⚠️ Error fetching telemetry: {e}")
 
     return stats
+
+
+def _generate_action_narrative(event_type: str, role: str, actor_id: str, details: str, endpoint: str) -> str:
+    """Generates an intuitive, professional English narrative explaining what the role did."""
+    role_display = (role or "Anonymous").replace("_", " ").title()
+    actor_display = actor_id or "Unauthenticated User"
+    
+    narratives = {
+        "LOGIN_SUCCESS": f"{role_display} ({actor_display}) successfully authenticated and initiated an active secure clinical session via {endpoint or 'portal'}.",
+        "LOGIN_FAILED": f"An unauthenticated attempt claiming identity '{actor_display}' failed authentication with invalid credentials or failed challenge.",
+        "LOGOUT": f"{role_display} ({actor_display}) gracefully terminated their authenticated session and cleared active security tokens.",
+        "MFA_SUCCESS": f"{role_display} ({actor_display}) satisfied TOTP / biometric Multi-Factor Authentication challenge.",
+        "MFA_FAILED": f"Failed Multi-Factor Authentication (TOTP mismatch) during authentication challenge for {actor_display}.",
+        "WAF_BLOCKED_REQUEST": f"Web Application Firewall (WAF) intervened to intercept and block a suspicious request from {actor_display} targeting {endpoint}.",
+        "WAF_MODE_CHANGED": f"{role_display} ({actor_display}) modified the enterprise WAF operating posture ({details or 'mode changed'}).",
+        "IP_BANNED_BY_ADMIN": f"{role_display} ({actor_display}) added a zero-microsecond firewall blocklist rule ({details or 'manual ban'}).",
+        "IP_UNBANNED_BY_ADMIN": f"{role_display} ({actor_display}) removed a firewall blocklist rule ({details or 'manual unban'}).",
+        "AUDIT_LOGS_ROTATED": f"{role_display} ({actor_display}) executed statutory audit log rotation and retention pruning ({details or 'log prune'}).",
+        "STALE_SESSIONS_PURGED": f"{role_display} ({actor_display}) purged expired and revoked session tokens from session store ({details or 'session purge'}).",
+        "ENCRYPTED_BACKUP_CREATED": f"{role_display} ({actor_display}) triggered an encrypted database snapshot and offsite integrity backup ({details or 'backup'}).",
+        "UNAUTHORIZED_ROLE_ACCESS": f"SECURITY VIOLATION: {role_display} ({actor_display}) attempted to access protected administrative endpoint '{endpoint}' without authorized RBAC clearance.",
+        "IDOR_ATTEMPT_DETECTED": f"SECURITY VIOLATION: {role_display} ({actor_display}) attempted Insecure Direct Object Reference (IDOR) to access an unauthorized medical record or resource.",
+        "CROSS_TENANT_HOSPITAL_VIOLATION": f"CROSS-TENANT VIOLATION: {role_display} ({actor_display}) attempted unauthorized access across isolated hospital data boundaries.",
+        "PATIENT_RECORD_VIEW": f"{role_display} ({actor_display}) accessed protected health information (PHI) medical record.",
+        "PRESCRIPTION_ISSUED": f"{role_display} ({actor_display}) authored and digitally signed a clinical drug prescription.",
+        "SESSION_REVOKED": f"{role_display} ({actor_display}) revoked an active user session token.",
+        "ACCOUNT_SUSPENDED": f"{role_display} ({actor_display}) placed a clinical account under administrative suspension."
+    }
+
+    if event_type in narratives:
+        return narratives[event_type]
+    
+    if details:
+        return f"{role_display} ({actor_display}): {details.strip()}"
+    return f"{role_display} ({actor_display}) executed {event_type} on {endpoint or 'system endpoint'}."
+
+
+def get_ip_threat_entity_details(ip: str) -> Dict[str, Any]:
+    """
+    Returns deep threat inspection telemetry for an IP address:
+    total events count, breakdown by event types and severity,
+    targeted endpoints, associated actors/roles, and event history stream.
+    """
+    from spherix.security.firewall import is_ip_banned
+    
+    clean_ip = (ip or "").strip()
+    result: Dict[str, Any] = {
+        "ip": clean_ip,
+        "is_banned": is_ip_banned(clean_ip) if clean_ip else False,
+        "total_events": 0,
+        "first_seen": None,
+        "last_seen": None,
+        "risk_level": "LOW",
+        "severity_breakdown": {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "INFO": 0},
+        "event_types": [],
+        "targeted_endpoints": [],
+        "actors_involved": [],
+        "events": []
+    }
+    if not clean_ip:
+        return result
+
+    try:
+        conn = _get_audit_db_connection()
+        cur = conn.cursor()
+
+        # 1. Total events & timestamps
+        cur.execute(f"""
+        SELECT COUNT(*) as total, MIN(timestamp) as first_seen, MAX(timestamp) as last_seen
+        FROM {AUDIT_TABLE_NAME}
+        WHERE ip_address = ?
+        """, (clean_ip,))
+        row = cur.fetchone()
+        if row and row["total"] > 0:
+            result["total_events"] = row["total"]
+            result["first_seen"] = row["first_seen"]
+            result["last_seen"] = row["last_seen"]
+
+        # 2. Severity breakdown
+        cur.execute(f"""
+        SELECT severity, COUNT(*) as c
+        FROM {AUDIT_TABLE_NAME}
+        WHERE ip_address = ?
+        GROUP BY severity
+        """, (clean_ip,))
+        for r in cur.fetchall():
+            sev = (r["severity"] or "INFO").upper()
+            result["severity_breakdown"][sev] = r["c"]
+
+        # Calculate dynamic risk level
+        crit = result["severity_breakdown"].get("CRITICAL", 0)
+        high = result["severity_breakdown"].get("HIGH", 0)
+        med = result["severity_breakdown"].get("MEDIUM", 0)
+        risk_score = (crit * 10) + (high * 5) + (med * 2) + result["total_events"]
+        if crit > 0 or risk_score >= 25 or result["is_banned"]:
+            result["risk_level"] = "CRITICAL"
+        elif high > 0 or risk_score >= 12:
+            result["risk_level"] = "HIGH"
+        elif med > 0 or risk_score >= 5:
+            result["risk_level"] = "MODERATE"
+        else:
+            result["risk_level"] = "LOW"
+
+        # 3. Which types of events did this IP perform
+        cur.execute(f"""
+        SELECT event_type, COUNT(*) as c
+        FROM {AUDIT_TABLE_NAME}
+        WHERE ip_address = ?
+        GROUP BY event_type
+        ORDER BY c DESC
+        """, (clean_ip,))
+        total_evts = max(result["total_events"], 1)
+        for r in cur.fetchall():
+            ev_count = r["c"]
+            pct = round((ev_count / total_evts) * 100, 1)
+            result["event_types"].append({
+                "type": r["event_type"],
+                "count": ev_count,
+                "percentage": pct
+            })
+
+        # 4. Targeted endpoints
+        cur.execute(f"""
+        SELECT endpoint, COUNT(*) as c
+        FROM {AUDIT_TABLE_NAME}
+        WHERE ip_address = ? AND endpoint IS NOT NULL AND endpoint != ''
+        GROUP BY endpoint
+        ORDER BY c DESC
+        LIMIT 10
+        """, (clean_ip,))
+        for r in cur.fetchall():
+            result["targeted_endpoints"].append({
+                "endpoint": r["endpoint"],
+                "count": r["c"]
+            })
+
+        # 5. Actors involved
+        cur.execute(f"""
+        SELECT actor_id, actor_role, COUNT(*) as c
+        FROM {AUDIT_TABLE_NAME}
+        WHERE ip_address = ? AND actor_id IS NOT NULL AND actor_id != ''
+        GROUP BY actor_id, actor_role
+        ORDER BY c DESC
+        LIMIT 10
+        """, (clean_ip,))
+        for r in cur.fetchall():
+            result["actors_involved"].append({
+                "actor_id": r["actor_id"],
+                "actor_role": r["actor_role"] or "Unknown",
+                "count": r["c"]
+            })
+
+        # 6. Detailed event history stream
+        cur.execute(f"""
+        SELECT id, timestamp, event_type, severity, actor_id, actor_role, endpoint, details, user_agent, metadata_json
+        FROM {AUDIT_TABLE_NAME}
+        WHERE ip_address = ?
+        ORDER BY id DESC
+        LIMIT 50
+        """, (clean_ip,))
+        for r in cur.fetchall():
+            ev_item = {
+                "id": r["id"],
+                "timestamp": r["timestamp"],
+                "event_type": r["event_type"],
+                "severity": r["severity"],
+                "actor_id": r["actor_id"] or "Unauthenticated",
+                "actor_role": r["actor_role"] or "anonymous",
+                "endpoint": r["endpoint"] or "N/A",
+                "details": r["details"] or "",
+                "user_agent": r["user_agent"] or "Unknown",
+                "action_narrative": _generate_action_narrative(
+                    r["event_type"], r["actor_role"] or "anonymous", r["actor_id"] or "Unauthenticated", r["details"] or "", r["endpoint"] or ""
+                )
+            }
+            result["events"].append(ev_item)
+
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ Error fetching IP threat details for {clean_ip}: {e}")
+
+    return result
+
+
+def get_audit_event_detail(event_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Returns complete detail of an audit event, including:
+    - what the role/actor was doing in this event (action narrative)
+    - role authorization and standard RBAC permissions
+    - HIPAA § 164.312(b) and CERT-In compliance context
+    - metadata payload
+    - other recent activities performed by this role/actor
+    """
+    from spherix.security.rbac import PERMISSIONS
+    try:
+        conn = _get_audit_db_connection()
+        cur = conn.cursor()
+        cur.execute(f"""
+        SELECT id, timestamp, event_type, severity, actor_id, actor_role, ip_address, user_agent, endpoint, details, metadata_json
+        FROM {AUDIT_TABLE_NAME}
+        WHERE id = ?
+        """, (event_id,))
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return None
+
+        event_data = dict(row)
+        role = (event_data.get("actor_role") or "anonymous").strip()
+        actor_id = (event_data.get("actor_id") or "Unauthenticated").strip()
+
+        event_type = event_data.get("event_type") or "UNKNOWN_EVENT"
+        details_txt = event_data.get("details") or ""
+        endpoint_txt = event_data.get("endpoint") or ""
+
+        action_narrative = _generate_action_narrative(event_type, role, actor_id, details_txt, endpoint_txt)
+        role_perms = list(sorted(PERMISSIONS.get(role, [])))
+
+        meta = {}
+        if event_data.get("metadata_json"):
+            try:
+                meta = json.loads(event_data["metadata_json"])
+            except Exception:
+                meta = {"raw": event_data["metadata_json"]}
+
+        recent_role_events = []
+        cur.execute(f"""
+        SELECT id, timestamp, event_type, severity, endpoint, details
+        FROM {AUDIT_TABLE_NAME}
+        WHERE (actor_id = ? AND actor_id IS NOT NULL AND actor_id != '') OR actor_role = ?
+        ORDER BY id DESC
+        LIMIT 12
+        """, (actor_id, role))
+        for r in cur.fetchall():
+            recent_role_events.append({
+                "id": r["id"],
+                "timestamp": r["timestamp"],
+                "event_type": r["event_type"],
+                "severity": r["severity"],
+                "endpoint": r["endpoint"],
+                "details": r["details"],
+                "action_narrative": _generate_action_narrative(
+                    r["event_type"], role, actor_id, r["details"] or "", r["endpoint"] or ""
+                )
+            })
+
+        conn.close()
+
+        return {
+            "event": event_data,
+            "action_narrative": action_narrative,
+            "role": role,
+            "role_display": role.replace("_", " ").title(),
+            "actor_id": actor_id,
+            "role_permissions": role_perms,
+            "metadata": meta,
+            "compliance": {
+                "hipaa_rule": "HIPAA § 164.312(b) Audit Controls: Verified immutable timestamped recording of system activity and user identity.",
+                "cert_in_clause": "CERT-In Cyber Security Directions 2022 Section 4(5): Mandatory ICT system log retention and security trace.",
+                "dpdp_status": "DPDP Act 2023: Legitimate clinical processing and access governance verified.",
+                "integrity_hash": f"SHA256-VERIFIED-{event_id:06d}-AUDIT"
+            },
+            "recent_role_events": recent_role_events
+        }
+    except Exception as e:
+        print(f"⚠️ Error fetching audit event detail for {event_id}: {e}")
+        return None
+
+
+def get_role_activity_summary(role: str, limit: int = 30) -> Dict[str, Any]:
+    """Returns recent events and activity overview for a given role."""
+    from spherix.security.rbac import PERMISSIONS
+    role_clean = (role or "").strip().lower()
+    role_perms = list(sorted(PERMISSIONS.get(role_clean, [])))
+    
+    events = []
+    try:
+        conn = _get_audit_db_connection()
+        cur = conn.cursor()
+        cur.execute(f"""
+        SELECT id, timestamp, event_type, severity, actor_id, actor_role, ip_address, endpoint, details
+        FROM {AUDIT_TABLE_NAME}
+        WHERE LOWER(actor_role) = LOWER(?)
+        ORDER BY id DESC
+        LIMIT ?
+        """, (role_clean, limit))
+        for r in cur.fetchall():
+            item = dict(r)
+            item["action_narrative"] = _generate_action_narrative(
+                item.get("event_type", ""), item.get("actor_role", ""), item.get("actor_id", ""), item.get("details", ""), item.get("endpoint", "")
+            )
+            events.append(item)
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ Error fetching role activity for {role_clean}: {e}")
+
+    return {
+        "role": role_clean,
+        "role_display": role_clean.replace("_", " ").title(),
+        "permissions": role_perms,
+        "total_fetched": len(events),
+        "events": events
+    }

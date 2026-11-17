@@ -139,3 +139,51 @@ def test_session_and_audit_hygiene():
     assert 'total_events' in telemetry
     assert 'waf_mode' in telemetry
     assert 'blocked_ips' in telemetry
+
+
+def test_ip_threat_entity_details_endpoint(client, auth_admin):
+    resp = client.get('/admin/security/ip-entity-details?ip=127.0.0.1')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data is not None
+    assert 'ip' in data
+    assert 'total_events' in data
+    assert 'risk_level' in data
+    assert 'severity_breakdown' in data
+    assert 'event_types' in data
+    assert isinstance(data['event_types'], list)
+
+
+def test_audit_event_details_and_role_narrative_endpoint(client, auth_admin):
+    from spherix.security.audit import log_security_event
+    log_security_event(
+        event_type="UNAUTHORIZED_ACCESS",
+        severity="HIGH",
+        actor_id="TEST-ROLE-USER",
+        actor_role="doctor",
+        details="Attempted access to restricted patient audit trail",
+        metadata={"endpoint": "/api/v1/clinical-records", "client_ip": "192.0.2.45"}
+    )
+    # Fetch details for the latest or first event
+    resp = client.get('/admin/security/audit-event-details/1')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data is not None
+    assert 'action_narrative' in data
+    assert len(data['action_narrative']) > 0
+    assert 'role' in data
+    assert 'role_permissions' in data
+    assert 'compliance' in data
+    assert 'hipaa_rule' in data['compliance']
+    assert 'cert_in_clause' in data['compliance']
+
+
+def test_role_activity_summary_endpoint(client, auth_admin):
+    resp = client.get('/admin/security/role-activity/super_admin')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data is not None
+    assert data.get('role') == 'super_admin'
+    assert 'permissions' in data
+    assert isinstance(data['permissions'], list)
+

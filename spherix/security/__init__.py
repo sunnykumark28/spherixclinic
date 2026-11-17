@@ -48,7 +48,10 @@ from spherix.security.rbac import (
 from spherix.security.audit import (
     log_security_event,
     get_security_command_center_telemetry,
-    prune_audit_logs
+    prune_audit_logs,
+    get_ip_threat_entity_details,
+    get_audit_event_detail,
+    get_role_activity_summary
 )
 from spherix.security.session_manager import (
     register_new_session,
@@ -115,6 +118,9 @@ __all__ = [
     'log_security_event',
     'get_security_command_center_telemetry',
     'prune_audit_logs',
+    'get_ip_threat_entity_details',
+    'get_audit_event_detail',
+    'get_role_activity_summary',
     'register_new_session',
     'validate_active_session',
     'revoke_session',

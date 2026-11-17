@@ -3175,6 +3175,45 @@ def admin_security_telemetry():
     return jsonify(get_security_command_center_telemetry())
 
 
+@admin_bp.route('/admin/security/ip-entity-details', methods=['GET'])
+@admin_bp.route('/admin/security/ip-entity-details/<path:ip>', methods=['GET'])
+@admin_required
+def admin_security_ip_entity_details(ip=None):
+    """Returns deep threat breakdown, incident counts, and event types performed by an IP address."""
+    from spherix.security import get_ip_threat_entity_details
+    target_ip = ip or request.args.get('ip') or ''
+    target_ip = target_ip.strip()
+    if not target_ip:
+        return jsonify({'error': 'IP address parameter is required', 'total_events': 0}), 400
+    data = get_ip_threat_entity_details(target_ip)
+    return jsonify(data)
+
+
+@admin_bp.route('/admin/security/audit-event-details/<int:event_id>', methods=['GET'])
+@admin_required
+def admin_security_audit_event_details(event_id):
+    """Returns complete event dossier showing what the actor/role was doing in this audit event."""
+    from spherix.security import get_audit_event_detail
+    data = get_audit_event_detail(event_id)
+    if not data:
+        return jsonify({'error': f'Audit event #{event_id} not found'}), 404
+    return jsonify(data)
+
+
+@admin_bp.route('/admin/security/role-activity', methods=['GET'])
+@admin_bp.route('/admin/security/role-activity/<path:role_name>', methods=['GET'])
+@admin_required
+def admin_security_role_activity(role_name=None):
+    """Returns recent activities and action narratives performed by a specific role."""
+    from spherix.security import get_role_activity_summary
+    target_role = role_name or request.args.get('role') or ''
+    target_role = target_role.strip()
+    if not target_role:
+        return jsonify({'error': 'Role parameter is required', 'events': []}), 400
+    data = get_role_activity_summary(target_role)
+    return jsonify(data)
+
+
 @admin_bp.route('/admin/security/ban-ip', methods=['POST'])
 @admin_required
 def admin_security_ban_ip():
