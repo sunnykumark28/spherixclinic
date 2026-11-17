@@ -31,9 +31,11 @@ def test_explore_plans_stacked_layout_and_images(client):
     assert res.status_code == 200
     html = res.data.decode('utf-8')
 
-    # Stacked layout (one below one)
+    # Stacked layout (one below one, full screen touching side)
     assert 'space-y-6' in html
     assert 'plan-card' in html
+    assert 'border-x-0' in html
+    assert 'max-w-7xl' not in html
 
     # Images referenced
     assert '/static/images/insurance/plan_term_shield.jpg' in html
