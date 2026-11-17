@@ -62,3 +62,41 @@ def test_explore_plans_category_filters(client):
     html = res_term.data.decode('utf-8')
     assert 'SLIC Suraksha Supreme Term Shield' in html
     assert 'SLIC Arogya Raksha Dual Health' in html
+
+def test_explore_plans_cta_ecosystem(client):
+    """Verify the high-converting Call-To-Action (CTA) ecosystem on /patient/insurance/plans."""
+    res = client.get('/patient/insurance/plans')
+    assert res.status_code == 200
+    html = res.data.decode('utf-8')
+
+    # 1. Main Dedicated CTA section
+    assert 'id="plans-cta-section"' in html
+    assert 'Speak to a Certified Life Advisor in 2 Minutes' in html
+    assert '2-Min Callback Guarantee' in html
+    assert '100% Spam-Free Promise' in html
+    assert '15% Clinic Discount' in html
+    assert 'WhatsApp Policy Bond' in html
+
+    # 2. Direct Hotlines (Toll-Free and WhatsApp)
+    assert '1800 266 8888' in html
+    assert 'tel:18002668888' in html
+    assert 'wa.me/9118002668888' in html
+
+    # 3. Interactive Callback Request Form
+    assert 'id="ctaCallbackForm"' in html
+    assert 'id="ctaCallbackName"' in html
+    assert 'id="ctaCallbackPhone"' in html
+    assert 'id="ctaCallbackPlan"' in html
+    assert 'id="ctaCallbackTime"' in html
+    assert 'id="ctaCallbackSubmitBtn"' in html
+    assert 'Request Free 2-Min Callback' in html
+
+    # 4. In-Card Upgraded CTAs
+    assert 'Apply Online Now' in html
+    assert 'Zero Medicals up to ₹1.5 Cr' in html
+    assert 'Speak to Advisor About This Plan' in html
+    assert 'Calculate My Quote' in html
+
+    # 5. Floating Quick-Contact Pill
+    assert 'id="floatingAdvisorPill"' in html
+    assert 'Free Advisor Callback' in html
