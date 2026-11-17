@@ -13,7 +13,7 @@ def app():
 def test_template_module_directories_exist(app):
     """
     Verifies that all modular template directories exist under templates/
-    matching cancer_care and insurance structure.
+    matching cancer_care and pathology structure.
     """
     templates_root = app.template_folder
     expected_modules = [
@@ -24,7 +24,6 @@ def test_template_module_directories_exist(app):
         'clinical_ai',
         'doctor',
         'hospital',
-        'insurance',
         'main',
         'pathology',
         'patient',
@@ -71,10 +70,6 @@ def test_universal_loader_dual_path_resolution(app):
         # 5. Cancer Care (existing modular standard)
         t_cc_pref = app.jinja_env.get_template('cancer_care/awareness.html')
         assert t_cc_pref is not None
-
-        # 6. Insurance (existing modular standard)
-        t_ins_pref = app.jinja_env.get_template('insurance/plans.html')
-        assert t_ins_pref is not None
 
 def test_base_layouts_accessible_across_modules(app):
     """

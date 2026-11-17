@@ -13,7 +13,6 @@ def _find_template(filename):
         os.path.join('templates', 'admin', filename),
         os.path.join('templates', 'patient', filename),
         os.path.join('templates', 'pathology', filename),
-        os.path.join('templates', 'insurance', filename),
         os.path.join('templates', 'main', filename)
     ]:
         if os.path.exists(candidate):
@@ -31,7 +30,7 @@ def test_layout_secondary_navbar_tabs_spacing():
 
     # 2. Services mega-menu secondary tab items spacing
     assert 'space-y-1.5 sm:space-y-2' in html
-    assert 'grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3' in html
+    assert 'grid grid-cols-1 md:grid-cols-2 gap-4' in html
 
 def test_doctor_dashboard_subtabs_spacing():
     with open(_find_template('doctor_dashboard.html'), 'r', encoding='utf-8') as f:
@@ -76,17 +75,6 @@ def test_pathology_layout_secondary_tab_bar_spacing():
 
     assert 'gap-2 sm:gap-3 lg:gap-3.5 shrink-0' in html
     assert 'px-3.5 py-2' in html
-
-def test_insurance_subtabs_spacing():
-    with open(_find_template('insurance/my_insurance.html'), 'r', encoding='utf-8') as f:
-        my_ins = f.read()
-    assert 'gap-2.5 sm:gap-3.5' in my_ins
-    assert 'px-4.5 py-2.5' in my_ins
-
-    with open(_find_template('insurance/admin_insurance.html'), 'r', encoding='utf-8') as f:
-        admin_ins = f.read()
-    assert 'gap-2.5 sm:gap-3.5' in admin_ins
-    assert 'px-4.5 py-2.5' in admin_ins
 
 def test_dropdown_icons_on_services_donor_more_tabs():
     with open(_find_template('layout.html'), 'r', encoding='utf-8') as f:

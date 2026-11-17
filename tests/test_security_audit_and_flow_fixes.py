@@ -26,6 +26,7 @@ def test_admin_backdoor_passwords_rejected(client, test_app):
     """Ensure weak default passwords like admin, admin123, Admin@1234 are rejected."""
     admin_doc = next((d for d in TEMP_DATA.get('doctors', {}).values() if getattr(d, 'email', '').lower() == 'admin@spherixclinic.com'), None)
     if not admin_doc:
+        TEMP_DATA['patients'] = {k: v for k, v in TEMP_DATA.get('patients', {}).items() if getattr(v, 'email', '').lower() != 'admin@spherixclinic.com'}
         setup_admin_user()
         admin_doc = next((d for d in TEMP_DATA.get('doctors', {}).values() if getattr(d, 'email', '').lower() == 'admin@spherixclinic.com'), None)
 

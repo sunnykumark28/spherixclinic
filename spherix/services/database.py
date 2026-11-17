@@ -2600,12 +2600,6 @@ def load_data():
         except Exception as diag_err:
             print(f"⚠️ Diagnostic init note: {diag_err}")
 
-        try:
-            from spherix.services.insurance_db import init_insurance_schema
-            init_insurance_schema()
-        except Exception as ins_err:
-            print(f"⚠️ Insurance init note: {ins_err}")
-
         def fetch_dict(query):
             cursor.execute(query)
             cols = [column[0] for column in cursor.description]

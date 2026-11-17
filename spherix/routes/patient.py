@@ -912,16 +912,6 @@ def patient_dashboard():
 
     diagnostic_data = {'bookings': [], 'referrals': [], 'reports': [], 'categories': [], 'tests': []}
 
-    # Fetch Spherix Insurance summary for current patient
-    patient_insurance_policies = []
-    patient_insurance_applications = []
-    try:
-        from spherix.services.insurance_db import get_patient_insurance_policies, get_patient_insurance_applications
-        patient_insurance_policies = get_patient_insurance_policies(str(current_user.id))
-        patient_insurance_applications = get_patient_insurance_applications(str(current_user.id))
-    except Exception as ins_err:
-        pass
-
     return render_template('patient_dashboard.html', 
                            patient=current_user, 
                            today=today, 
@@ -937,12 +927,6 @@ def patient_dashboard():
                            all_registered_doctors=all_registered_doctors,
                            medical_records=patient_medical_records,
                            lab_requests=patient_lab_requests,
-                           insurance_policies=patient_insurance_policies,
-                           insurance_policies_count=len(patient_insurance_policies),
-                           patient_insurance_policies=patient_insurance_policies,
-                           insurance_applications=patient_insurance_applications,
-                           insurance_applications_count=len(patient_insurance_applications),
-                           patient_insurance_applications=patient_insurance_applications,
                            diagnostic_bookings=diagnostic_data.get('bookings', []),
                            diagnostic_referrals=diagnostic_data.get('referrals', []),
                            diagnostic_reports=diagnostic_data.get('reports', []),
