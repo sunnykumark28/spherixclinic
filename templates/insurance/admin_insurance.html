@@ -6,8 +6,8 @@
 <div class="min-h-screen bg-[#f1f5f9] text-slate-900 pb-20 w-full">
 
   <!-- Admin Top Banner -->
-  <section class="bg-gradient-to-r from-[#001e3d] via-[#002f5e] to-[#004b87] text-white py-8 px-4 sm:px-6 lg:px-12 shadow-lg">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <section class="bg-gradient-to-r from-[#001e3d] via-[#002f5e] to-[#004b87] text-white py-8 px-4 sm:px-6 lg:px-8 shadow-lg w-full">
+    <div class="w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-2 text-xs font-bold text-sky-300 mb-1">
           <a href="{{ url_for('admin.admin_dashboard') }}" class="hover:underline flex items-center gap-1">
@@ -27,8 +27,18 @@
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
-        <span class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-bold border border-white/20">
+      <div class="flex items-center gap-3 flex-wrap">
+        <a href="{{ url_for('insurance.explore_plans') }}" target="_blank"
+           class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all flex items-center gap-1.5 text-decoration-none">
+          <i class="fas fa-eye text-sky-300"></i>
+          <span>View Public Marketplace</span>
+        </a>
+        <button type="button" onclick="openPostPlanModal()"
+                class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer">
+          <i class="fas fa-plus-circle"></i>
+          <span>Post New Insurance Plan</span>
+        </button>
+        <span class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-bold border border-white/20 hidden sm:inline-flex items-center">
           <i class="fas fa-user-shield text-emerald-400 me-1"></i> Admin: Super Admin
         </span>
       </div>
@@ -36,7 +46,7 @@
   </section>
 
   <!-- Executive KPIs Ribbon -->
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 -mt-5 relative z-10">
+  <section class="w-full px-4 sm:px-6 lg:px-8 -mt-5 relative z-10">
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       
       <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
@@ -73,7 +83,7 @@
   </section>
 
   <!-- Administrative Tabs & Workplace -->
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 mt-8">
+  <section class="w-full px-4 sm:px-6 lg:px-8 mt-8">
     
     <!-- Tab Navigation -->
     <div class="flex items-center gap-2.5 sm:gap-3.5 overflow-x-auto pb-3 mb-6 border-b border-slate-200">
@@ -234,7 +244,26 @@
 
     <!-- ================= TAB: PRODUCTS ================= -->
     {% if active_tab == 'products' %}
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-black text-sm text-slate-900 font-heading">Underwritten Products Catalog</h3>
+          <p class="text-xxs text-slate-500">All active products appear immediately on the public insurance directory and comparison engine.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="{{ url_for('insurance.explore_plans') }}" target="_blank"
+             class="px-3.5 py-2 rounded-xl bg-sky-50 text-[#004b87] hover:bg-sky-100 text-xs font-bold border border-sky-200 transition-all flex items-center gap-1.5 text-decoration-none">
+            <i class="fas fa-arrow-up-right-from-square text-xxs"></i>
+            <span>Preview Public View</span>
+          </a>
+          <button type="button" onclick="openPostPlanModal()"
+                  class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer">
+            <i class="fas fa-plus-circle"></i>
+            <span>Post New Insurance Plan</span>
+          </button>
+        </div>
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full text-xs text-left">
           <thead class="bg-slate-50 text-slate-500 uppercase text-xxs border-b border-slate-200">
@@ -246,21 +275,44 @@
               <th class="p-3">Base Rate / Lakh</th>
               <th class="p-3">Term Limits</th>
               <th class="p-3">Status</th>
+              <th class="p-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             {% for prod in products %}
             <tr>
-              <td class="p-3 font-black text-slate-900">{{ prod.product_name }}</td>
+              <td class="p-3">
+                <div class="font-black text-slate-900">{{ prod.product_name }}</div>
+                {% if prod.is_featured %}
+                <span class="text-[9px] uppercase font-black text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">Featured</span>
+                {% endif %}
+              </td>
               <td class="p-3 font-semibold text-slate-700">{{ prod.partner_name }}</td>
               <td class="p-3 font-bold text-sky-800">{{ prod.category }}</td>
               <td class="p-3 font-mono text-slate-600">{{ prod.uin_number }}</td>
               <td class="p-3 font-bold text-slate-800">₹{{ prod.base_annual_rate_per_lakh }}</td>
               <td class="p-3 text-slate-600">{{ prod.min_term_years }} - {{ prod.max_term_years }} yrs</td>
               <td class="p-3">
+                {% if prod.is_active %}
                 <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  Published
+                  Published &bull; Live
                 </span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded-full text-xxs font-black uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                  Hidden
+                </span>
+                {% endif %}
+              </td>
+              <td class="p-3 text-right space-x-1.5 whitespace-nowrap">
+                <a href="{{ url_for('insurance.explore_plans') }}" target="_blank"
+                   class="px-2.5 py-1 rounded bg-sky-50 text-[#004b87] hover:bg-sky-100 font-bold text-xxs inline-flex items-center gap-1 text-decoration-none">
+                  <i class="fas fa-eye text-xxs"></i> Public View
+                </a>
+                <form action="{{ url_for('insurance.admin_toggle_product', product_id=prod.id) }}" method="POST" class="inline">
+                  <button type="submit" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xxs cursor-pointer">
+                    {% if prod.is_active %}Hide{% else %}Publish{% endif %}
+                  </button>
+                </form>
               </td>
             </tr>
             {% endfor %}
@@ -306,6 +358,166 @@
 
   </section>
 
+  <!-- ================= MODAL: POST / PUBLISH NEW INSURANCE PLAN ================= -->
+  <div id="postPlanModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 animate-in fade-in zoom-in-95 duration-150">
+      
+      <button type="button" onclick="closePostPlanModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition-colors cursor-pointer">
+        <i class="fas fa-xmark text-sm"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5 pb-3 border-b border-slate-100">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#004b87] flex items-center justify-center text-lg font-bold">
+          <i class="fas fa-shield-plus"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-black text-slate-900 font-heading">Post New Insurance Plan</h3>
+          <p class="text-xs text-slate-500">Publish a new IRDAI-underwritten insurance product directly to the public marketplace.</p>
+        </div>
+      </div>
+
+      <form action="{{ url_for('insurance.admin_create_product') }}" method="POST" class="space-y-4 text-xs">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Product Name <span class="text-rose-500">*</span></label>
+            <input type="text" name="product_name" required placeholder="Enter product title"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Category <span class="text-rose-500">*</span></label>
+            <select name="category" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+              <option value="Term Life">Pure Term Life</option>
+              <option value="Family Protection">Family Protection</option>
+              <option value="Whole Life">Whole Life 100</option>
+              <option value="Savings">Guaranteed Savings</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Partner Underwriter <span class="text-rose-500">*</span></label>
+            <select name="partner_id" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+              {% for part in partners %}
+              <option value="{{ part.id }}">{{ part.brand_name }} (IRDAI: {{ part.irda_reg_no }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">IRDAI UIN Code</label>
+            <input type="text" name="uin_number" placeholder="Unique UIN registration identifier"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-mono text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Marketing Tagline</label>
+          <input type="text" name="tagline" placeholder="Brief one-line protection summary"
+                 class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-[#004b87]">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Base Annual Rate / Lakh (₹) <span class="text-rose-500">*</span></label>
+            <input type="number" step="0.01" name="base_annual_rate_per_lakh" required value="9.50"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-bold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Min Cover (₹)</label>
+            <input type="number" name="min_sum_insured" value="2500000"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Max Cover (₹)</label>
+            <input type="number" name="max_sum_insured" value="100000000"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Min Term (Yrs)</label>
+            <input type="number" name="min_term_years" value="10"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Max Term (Yrs)</label>
+            <input type="number" name="max_term_years" value="40"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Min Age (Yrs)</label>
+            <input type="number" name="min_entry_age" value="18"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Max Age (Yrs)</label>
+            <input type="number" name="max_entry_age" value="65"
+                   class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Key Benefits (One per line)</label>
+          <textarea name="key_benefits" rows="3" placeholder="One key benefit per line"
+                    class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 text-slate-800 focus:bg-white focus:outline-[#004b87]"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Exclusions (One per line)</label>
+          <textarea name="exclusions" rows="2" placeholder="One exclusion per line"
+                    class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 text-slate-800 focus:bg-white focus:outline-[#004b87]"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Illustration Artwork Image</label>
+            <select name="image_url" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 font-semibold text-slate-800 focus:bg-white focus:outline-[#004b87]">
+              <option value="/static/images/insurance/plan_term_shield.jpg">Term Shield Artwork</option>
+              <option value="/static/images/insurance/plan_family_protection.jpg">Family Protection Artwork</option>
+              <option value="/static/images/insurance/plan_arogya_dual.jpg">Arogya Dual Health Artwork</option>
+              <option value="/static/images/insurance/plan_whole_life.jpg">Whole Life 100 Artwork</option>
+              <option value="/static/images/insurance/plan_guaranteed_savings.jpg">Guaranteed Savings Artwork</option>
+              <option value="/static/images/insurance/plan_digital_eshield.jpg">Digital e-Shield Artwork</option>
+            </select>
+          </div>
+          <div class="pt-5">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" name="is_featured" value="1" class="w-4 h-4 rounded text-[#004b87] focus:ring-[#004b87]">
+              <span class="font-bold text-slate-800">Mark as Featured on Public Marketplace</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <button type="button" onclick="closePostPlanModal()"
+                  class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-colors cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="px-5 py-2.5 rounded-xl bg-[#004b87] hover:bg-[#002f5e] text-white font-black shadow-md transition-all flex items-center gap-2 cursor-pointer">
+            <i class="fas fa-check-circle"></i>
+            <span>Publish to Public Insurance Marketplace</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
 </div>
+
+<script>
+  function openPostPlanModal() {
+    const modal = document.getElementById('postPlanModal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closePostPlanModal() {
+    const modal = document.getElementById('postPlanModal');
+    if (modal) modal.classList.add('hidden');
+  }
+</script>
 {% endblock %}
 

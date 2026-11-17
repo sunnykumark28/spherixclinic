@@ -102,12 +102,19 @@ def init_insurance_schema():
         important_conditions TEXT, -- JSON array
         brochure_url TEXT,
         terms_url TEXT,
+        image_url TEXT,
         is_active INTEGER DEFAULT 1,
         is_featured INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (partner_id) REFERENCES insurance_partners(id) ON DELETE CASCADE
     )
     """)
+
+    # Ensure image_url column exists on existing databases
+    try:
+        cursor.execute("ALTER TABLE insurance_products ADD COLUMN image_url TEXT")
+    except Exception:
+        pass
 
     # 3. Insurance Product Versions
     cursor.execute("""

@@ -59,6 +59,7 @@ def insurance_home():
     for pr in products:
         pr['key_benefits'] = json.loads(pr.get('key_benefits') or '[]')
         pr['exclusions'] = json.loads(pr.get('exclusions') or '[]')
+        pr['image_url'] = pr.get('image_url') or PRODUCT_IMAGE_MAP.get(pr['id'], '/static/images/insurance/plan_term_shield.jpg')
 
     # Fetch partners
     cursor.execute("SELECT * FROM insurance_partners WHERE is_active = 1 ORDER BY claim_settlement_ratio DESC")
@@ -189,9 +190,14 @@ def explore_plans():
     for pr in products:
         pr['key_benefits'] = json.loads(pr.get('key_benefits') or '[]')
         pr['exclusions'] = json.loads(pr.get('exclusions') or '[]')
+        pr['image_url'] = pr.get('image_url') or PRODUCT_IMAGE_MAP.get(pr['id'], '/static/images/insurance/plan_term_shield.jpg')
         pr['important_conditions'] = json.loads(pr.get('important_conditions') or '[]')
-        pr['image_url'] = PRODUCT_IMAGE_MAP.get(pr['id'], '/static/images/insurance/plan_term_shield.jpg')
-        pr['highlights'] = PRODUCT_HIGHLIGHTS_MAP.get(pr['id'], pr['key_benefits'][:3])
+        pr['image_url'] = pr.get('image_url') or PRODUCT_IMAGE_MAP.get(pr['id'], '/static/images/insurance/plan_term_shield.jpg')
+        pr['highlights'] = PRODUCT_HIGHLIGHTS_MAP.get(pr['id'], pr['key_benefits'][:3] if pr.get('key_benefits') else [
+            '100% Paperless Digital Application with Instant e-KYC Verification',
+            'Tele-Medical Screening: No Physical Clinic Visit Needed up to ₹1.5 Cr',
+            'Digital Policy Bond Delivered to WhatsApp & Email within 24 Hours'
+        ])
 
         # Calculated indicative rates for standard ₹1 Cr coverage at age 30
         annual_rate = float(pr.get('base_annual_rate_per_lakh') or 9.5) * 100.0
@@ -820,6 +826,138 @@ def admin_insurance_overview():
         audit_logs=audit_logs,
         active_tab=request.args.get('tab', 'overview')
     )
+
+@insurance_bp.route('/admin/insurance/product/new', methods=['GET', 'POST'], endpoint='admin_create_product')
+@admin_required
+def admin_create_product():
+    """Create / Post a new Insurance Plan from the Admin Console, immediately visible on public catalog."""
+    conn = get_insurance_db()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        product_name = request.form.get('product_name', '').strip()
+        partner_id = request.form.get('partner_id', '').strip() or 'INS-PARTNER-SLIC'
+        category = request.form.get('category', 'Term Life').strip()
+        uin_number = request.form.get('uin_number', '').strip()
+        tagline = request.form.get('tagline', '').strip()
+        base_rate = float(request.form.get('base_annual_rate_per_lakh') or 9.50)
+        min_sum = float(request.form.get('min_sum_insured') or 2500000.0)
+        max_sum = float(request.form.get('max_sum_insured') or 100000000.0)
+        default_sum = float(request.form.get('default_sum_insured') or 10000000.0)
+        min_term = int(request.form.get('min_term_years') or 10)
+        max_term = int(request.form.get('max_term_years') or 40)
+        min_age = int(request.form.get('min_entry_age') or 18)
+        max_age = int(request.form.get('max_entry_age') or 65)
+        max_maturity_age = int(request.form.get('max_maturity_age') or 85)
+        is_featured = 1 if request.form.get('is_featured') else 0
+        custom_image = request.form.get('image_url', '').strip()
+
+        # Parse key benefits & exclusions from lines
+        benefits_raw = request.form.get('key_benefits', '').strip()
+        if benefits_raw:
+            key_benefits = [b.strip() for b in benefits_raw.split('\n') if b.strip()]
+        else:
+            key_benefits = [
+                '100% Paperless Digital Application with Instant e-KYC Verification',
+                'Tele-Medical Screening: No Physical Clinic Visit Needed up to ₹1.5 Cr',
+                'Digital Policy Bond Delivered to WhatsApp & Email within 24 Hours'
+            ]
+
+        exclusions_raw = request.form.get('exclusions', '').strip()
+        if exclusions_raw:
+            exclusions = [e.strip() for e in exclusions_raw.split('\n') if e.strip()]
+        else:
+            exclusions = [
+                'Suicide within 12 months from the date of risk inception',
+                'Pre-existing illnesses not disclosed at the time of proposal'
+            ]
+
+        # Generate unique product ID and code
+        slug = ''.join(c.upper() for c in product_name if c.isalnum())[:12] or 'PLAN'
+        rand_suffix = secrets.token_hex(2).upper()
+        prod_id = f"PROD-SLIC-{slug}-{rand_suffix}"
+        prod_code = f"SLIC-{slug}-{rand_suffix}"
+
+        if not uin_number:
+            uin_number = f"SLIC101N{secrets.token_hex(3).upper()}V01"
+
+        # Determine image URL
+        if not custom_image:
+            cat_lower = category.lower()
+            if 'term' in cat_lower:
+                custom_image = '/static/images/insurance/plan_term_shield.jpg'
+            elif 'family' in cat_lower or 'dual' in cat_lower:
+                custom_image = '/static/images/insurance/plan_family_protection.jpg'
+            elif 'whole' in cat_lower or 'life' in cat_lower:
+                custom_image = '/static/images/insurance/plan_whole_life.jpg'
+            elif 'saving' in cat_lower:
+                custom_image = '/static/images/insurance/plan_guaranteed_savings.jpg'
+            else:
+                custom_image = '/static/images/insurance/plan_digital_eshield.jpg'
+
+        cursor.execute("""
+        INSERT INTO insurance_products (
+            id, partner_id, product_name, product_code, uin_number, category,
+            tagline, min_sum_insured, max_sum_insured, default_sum_insured,
+            min_entry_age, max_entry_age, max_maturity_age, min_term_years, max_term_years,
+            allowed_frequencies, base_annual_rate_per_lakh, smoker_surcharge_pct,
+            female_discount_pct, key_benefits, exclusions, important_conditions,
+            brochure_url, terms_url, is_active, is_featured, image_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        """, (
+            prod_id, partner_id, product_name, prod_code, uin_number, category,
+            tagline, min_sum, max_sum, default_sum, min_age, max_age, max_maturity_age,
+            min_term, max_term, 'ANNUAL,SEMI_ANNUAL,QUARTERLY,MONTHLY', base_rate,
+            45.0, 10.0, json.dumps(key_benefits), json.dumps(exclusions),
+            json.dumps(['30-day Free-Look provision with 100% full refund']),
+            f"/patient/insurance/brochure/{prod_id}",
+            f"/patient/insurance/terms/{prod_id}",
+            is_featured, custom_image
+        ))
+
+        # Initial version
+        cursor.execute("""
+        INSERT OR IGNORE INTO insurance_product_versions (
+            id, product_id, version_number, effective_from, effective_to, rules_json
+        ) VALUES (?, ?, 'v1.0', CURRENT_DATE, '2030-12-31', ?)
+        """, (f"VER-{prod_id}-V1", prod_id, json.dumps({"min_age": min_age, "max_age": max_age})))
+
+        # Audit log
+        log_insurance_audit(
+            entity_type='PRODUCT',
+            entity_id=prod_id,
+            actor_id=str(current_user.id if current_user and current_user.is_authenticated else 'admin'),
+            actor_role='ADMIN',
+            action='PUBLISH_PRODUCT',
+            details={'product_name': product_name, 'category': category, 'uin': uin_number}
+        )
+
+        conn.commit()
+        conn.close()
+
+        flash(f"Insurance Plan '{product_name}' published successfully! It is now live on the public marketplace.", 'success')
+        return redirect(url_for('insurance.explore_plans'))
+
+    cursor.execute("SELECT * FROM insurance_partners WHERE is_active = 1")
+    partners = dict_list_from_rows(cursor.fetchall())
+    conn.close()
+    return redirect(url_for('insurance.admin_insurance_overview', tab='products'))
+
+@insurance_bp.route('/admin/insurance/product/<product_id>/toggle-status', methods=['POST'], endpoint='admin_toggle_product')
+@admin_required
+def admin_toggle_product(product_id):
+    """Toggle an insurance product active/inactive state."""
+    conn = get_insurance_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_active, product_name FROM insurance_products WHERE id = ?", (product_id,))
+    row = cursor.fetchone()
+    if row:
+        new_status = 0 if row['is_active'] else 1
+        cursor.execute("UPDATE insurance_products SET is_active = ? WHERE id = ?", (new_status, product_id))
+        conn.commit()
+        flash(f"Product '{row['product_name']}' is now {'active (live on public marketplace)' if new_status else 'hidden/inactive'}.", 'info')
+    conn.close()
+    return redirect(url_for('insurance.admin_insurance_overview', tab='products'))
 
 # ==============================================================================
 # 8. BLUEPRINT URL ALIASES (SEAMLESS ROUTING ACROSS TEMPLATES)

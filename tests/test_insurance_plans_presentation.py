@@ -102,3 +102,88 @@ def test_explore_plans_cta_ecosystem(client):
     # 5. Floating Quick-Contact Pill
     assert 'id="floatingAdvisorPill"' in html
     assert 'Free Advisor Callback' in html
+
+def login_as_admin(client, admin_id='DOC/2026/001'):
+    from spherix.models.user import Doctor
+    from spherix.services.database import TEMP_DATA
+    from werkzeug.security import generate_password_hash
+    if 'doctors' not in TEMP_DATA:
+        TEMP_DATA['doctors'] = {}
+    admin = Doctor(
+        id='DOC/2026/001',
+        first_name='Sunny',
+        last_name='Kushwaha',
+        email='admin@spherixclinic.com',
+        role='admin',
+        department='Administration',
+        password=generate_password_hash('Admin123!', method='pbkdf2:sha256:260000')
+    )
+    TEMP_DATA['doctors']['DOC/2026/001'] = admin
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(admin_id)
+        sess['_fresh'] = True
+        sess['user_role'] = 'admin'
+        sess['_user_type'] = 'admin'
+
+def test_admin_post_new_insurance_shows_on_public_view(client):
+    """Verify that when spherix clinic admin creates/posts a new insurance plan, it immediately shows on public view."""
+    login_as_admin(client)
+
+    # 1. Admin accesses console products tab
+    res_admin = client.get('/admin/insurance/console?tab=products')
+    assert res_admin.status_code == 200
+    html_admin = res_admin.data.decode('utf-8')
+    assert 'Post New Insurance Plan' in html_admin
+    assert 'postPlanModal' in html_admin
+
+    # 2. Admin posts a brand new plan
+    new_plan_name = "SLIC AyurRaksha Special Life Protection"
+    post_data = {
+        'product_name': new_plan_name,
+        'partner_id': 'INS-PARTNER-SLIC',
+        'category': 'Term Life',
+        'uin_number': 'SLIC101N999V01',
+        'tagline': 'Integrates clinical wellness and full-spectrum financial security.',
+        'base_annual_rate_per_lakh': '8.80',
+        'min_sum_insured': '2500000',
+        'max_sum_insured': '50000000',
+        'default_sum_insured': '10000000',
+        'min_term_years': '10',
+        'max_term_years': '40',
+        'min_entry_age': '18',
+        'max_entry_age': '65',
+        'key_benefits': 'Direct cashless settlement\nWellness premium discounts up to 15%',
+        'exclusions': 'Standard suicide exclusion within 1 year',
+        'image_url': '/static/images/insurance/plan_term_shield.jpg',
+        'is_featured': '1'
+    }
+    res_post = client.post('/admin/insurance/product/new', data=post_data, follow_redirects=True)
+    assert res_post.status_code == 200
+
+    # 3. Verify public view immediately displays the new insurance plan
+    res_public = client.get('/patient/insurance/plans')
+    assert res_public.status_code == 200
+    public_html = res_public.data.decode('utf-8')
+    assert new_plan_name in public_html
+    assert 'SLIC101N999V01' in public_html
+    assert 'Integrates clinical wellness' in public_html
+
+def test_all_insurance_templates_full_screen(client):
+    """Verify that all insurance pages have removed max-w-7xl and use full-screen architecture."""
+    pages = [
+        '/patient/insurance/plans',
+        '/patient/insurance/hub',
+        '/patient/insurance/compare'
+    ]
+    for page in pages:
+        res = client.get(page)
+        assert res.status_code == 200
+        html = res.data.decode('utf-8')
+        assert 'max-w-7xl' not in html, f"Page {page} still has max-w-7xl"
+
+    # Also verify admin console is full-screen
+    login_as_admin(client)
+    res_admin = client.get('/admin/insurance/console')
+    assert res_admin.status_code == 200
+    html_admin = res_admin.data.decode('utf-8')
+    assert 'max-w-7xl' not in html_admin
