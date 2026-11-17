@@ -27,9 +27,8 @@ from spherix.config import (
     convert_currency, get_currency_symbol, generate_user_license_id, BLOG_POSTS
 )
 
-# Instantiate Application (WSGI compatible)
+# Instantiate Application
 app = create_app()
-application = app
 
 if __name__ == '__main__':
     # SSL/HTTPS Configuration
